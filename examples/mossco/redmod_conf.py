@@ -15,5 +15,8 @@ uq.params = OrderedDict({
            'bioturbation': Uniform(0.2, 2.0)
          })
 
+# Parameter files
+config.param_files = ['fabm_sed.nml', 'run_sed.nml']
+
 # How to run the model code
 config.command = os.path.join(config.template_dir, 'sediment_io')
