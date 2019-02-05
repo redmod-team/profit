@@ -11,12 +11,15 @@ from os import path, mkdir, walk, listdir
 from shutil import copytree, rmtree, ignore_patterns
 from subprocess import Popen
 from config import template_dir, dont_copy, eval_points
-import h5py
+import pandas as pd
 
+import numpy as np
 import config
 import sys
 import uq
 import importlib
+
+import matplotlib.pyplot as plt
 
 yes = True # always answer 'y'
 
@@ -66,32 +69,23 @@ def fill_run_dir():
             
     config.eval_points = uq.get_eval_points()
     nrun = config.eval_points.shape[1]
-            
-    digits = len(str(nrun-1))
-    formstr = '{:0'+str(digits)+'d}'
-    
-    f = h5py.File('runs.hdf5', 'w')
-    
-    subdirs = []
-    param_val = []
     
     for krun in range(nrun):
-        run_dir_single = path.join(config.run_dir, str(formstr.format(krun)))
+        run_dir_single = path.join(config.run_dir, str(krun))
         if path.exists(run_dir_single):
             rmtree(run_dir_single)
         copy_template(run_dir_single)
         fill_template(krun, run_dir_single)
-        
-        subdirs.append(run_dir_single)
-        param_val_single = []
-        kp = 0
-        for item in uq.params:
-            param_val_single.append(config.eval_points[kp, krun])
-            kp = kp+1
-        param_val.append(param_val_single)
     # TODO: write out parameter combinations   
-    #dset = f.create_dataset('', (100,), dtype='f')
-        
+    write_input()
+    
+def write_input():
+    np.savetxt(os.path.join(config.run_dir, 'input.txt'), 
+               config.eval_points.T, header=' '.join(uq.params.keys()))
+    
+def read_input():
+    data = np.genfromtxt(os.path.join(config.run_dir, 'input.txt'), names = True)
+    config.eval_points = data.view((float, len(data.dtype.names))).T
 
 def start_runs():
     for subdir in listdir(config.run_dir):
@@ -102,14 +96,40 @@ def start_runs():
                   stderr=open('stderr.txt','w'))
             
 def postprocess():
-    for subdir in listdir(config.run_dir):
-        fulldir = path.join(config.run_dir, subdir)
-        if path.isdir(fulldir):
-            print(fulldir)
+    outp = importlib.import_module('interface')
+    
+    read_input()
+    nrun = config.eval_points.shape[1]
+    
+    cwd = os.getcwd()
+    
+    data = np.empty([nrun, outp.shape()])
+    
+    for krun in range(nrun):
+        fulldir = path.join(config.run_dir, str(krun))
+        print(fulldir)
+        try:
+            os.chdir(fulldir)
+            data[krun, :] = outp.get_output()
+        finally:
+            os.chdir(cwd)
+            
+    
+            
+    plt.figure()
+    plt.scatter(config.eval_points[0,:], config.eval_points[1,:], c = data[:,0])
+        
+
+def print_usage():
+    print("Usage: redmod.py <base_dir> <mode>")
+    print("Modes:")
+    print("uq pre  ... preprocess for UQ")
+    print("uq run  ... run model for UQ")
+    print("uq post ... postprocess model output for UQ")
 
 def main():
-    if len(sys.argv) < 2:
-        print("Usage: redmod.py <base_dir>")
+    if len(sys.argv) < 4:
+        print_usage()
         return
     
     config.base_dir = sys.argv[1]
@@ -122,10 +142,19 @@ def main():
     
     config.run_dir = path.join(config.base_dir, 'run')
     
-    fill_run_dir()
-    start_runs()
-    #postprocess()
-    
+    if(sys.argv[2] == 'uq'):
+        if(sys.argv[3] == 'pre'):
+            fill_run_dir()
+        if(sys.argv[3] == 'run'):
+            start_runs()
+        elif(sys.argv[3] == 'post'):
+            postprocess()
+        else:
+            print_usage()
+            return
+    else:
+        print_usage()
+        return
     
 
 if __name__ == '__main__':
