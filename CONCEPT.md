@@ -18,6 +18,7 @@ TODO:
 * extensibility: should be able to add runs afterwards
 * cluster: should interact with qsub and qstat
 * must be able to restart and continue runs!
+* user should specify number and type of output quantities
 
 * Backends UQ
   * chaospy PCE

@@ -73,3 +73,4 @@ if __name__ == '__main__':
     plt.xlabel('mole_concentr._of_nitrate_upward_flux_at_soil_surface')
     plt.ylabel('probability density')
     plt.title('{:.2e} +- {:.2e} ({:.2f} %)'.format(F0, dF, abs(100*dF/F0)))
+    
