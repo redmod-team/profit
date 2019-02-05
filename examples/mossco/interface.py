@@ -5,11 +5,13 @@ Created on Mon Feb  4 08:34:52 2019
 
 @author: Christopher Albert
 """
+import config
 import numpy as np
+import os
 from netCDF4 import Dataset
 
 def shape():
-    nc = Dataset('sediment1d.nc', 'r')
+    nc = Dataset(os.path.join(config.run_dir,'0/sediment1d.nc'), 'r')
     ncv = nc.variables
     return [2,len(ncv['time'])]
     nc.close()

@@ -19,6 +19,7 @@ TODO:
 * cluster: should interact with qsub and qstat
 * must be able to restart and continue runs!
 * user should specify number and type of output quantities
+* custom hooks while processing to be able to plot
 
 * Backends UQ
   * chaospy PCE

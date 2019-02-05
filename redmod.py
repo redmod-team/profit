@@ -21,6 +21,8 @@ import importlib
 
 import matplotlib.pyplot as plt
 
+from chaospy import J, generate_quadrature, orth_ttr, fit_quadrature
+
 yes = True # always answer 'y'
 
 class SafeDict(dict):
@@ -92,8 +94,10 @@ def start_runs():
         fulldir = path.join(config.run_dir, subdir)
         if path.isdir(fulldir):
             print(fulldir)
-            Popen(config.command.split(), cwd=fulldir, stdout=open('stdout.txt','w'),
-                  stderr=open('stderr.txt','w'))
+            print(config.command.split())
+            Popen(config.command.split(), cwd=fulldir, 
+                  stdout=open(os.path.join(fulldir,'stdout.txt'),'w'),
+                  stderr=open(os.path.join(fulldir,'stderr.txt'),'w'))
             
 def postprocess():
     outp = importlib.import_module('interface')
@@ -103,7 +107,12 @@ def postprocess():
     
     cwd = os.getcwd()
     
-    data = np.empty([nrun, outp.shape()])
+    data = np.empty(np.append(nrun, outp.shape()))
+    
+    # TODO move this to UQ module
+    distribution = J(*uq.params.values())
+    nodes, weights = generate_quadrature(uq.order + 1, distribution, rule='G')
+    expansion = orth_ttr(uq.order, distribution)
     
     for krun in range(nrun):
         fulldir = path.join(config.run_dir, str(krun))
@@ -114,10 +123,19 @@ def postprocess():
         finally:
             os.chdir(cwd)
             
-    
+    # TODO move this to testing
+    approx = fit_quadrature(expansion, nodes, weights, data[:,0,0])
+    urange = uq.params['ksNO3denit'].range()
+    vrange = uq.params['bioturbation'].range()
+    u = np.linspace(urange[0], urange[1], 100)
+    v = np.linspace(vrange[0], vrange[1], 100)
+    U, V = np.meshgrid(u, v)
             
     plt.figure()
-    plt.scatter(config.eval_points[0,:], config.eval_points[1,:], c = data[:,0])
+    plt.contour(U, V, approx(U,V), 20)
+    plt.colorbar()
+    plt.scatter(config.eval_points[0,:], config.eval_points[1,:], c = data[:,0,0])
+    plt.show()
         
 
 def print_usage():
@@ -132,11 +150,11 @@ def main():
         print_usage()
         return
     
-    config.base_dir = sys.argv[1]
+    config.base_dir = os.path.abspath(sys.argv[1])
     sys.path.append(config.base_dir)
+    config.template_dir = path.join(config.base_dir, 'template')
     importlib.import_module('redmod_conf')
     
-    config.template_dir = path.join(config.base_dir, 'template')
     if not path.exists(config.template_dir):
         print("Error: template directory {} doesn't exist.".format(config.template_dir))
     
@@ -145,7 +163,7 @@ def main():
     if(sys.argv[2] == 'uq'):
         if(sys.argv[3] == 'pre'):
             fill_run_dir()
-        if(sys.argv[3] == 'run'):
+        elif(sys.argv[3] == 'run'):
             start_runs()
         elif(sys.argv[3] == 'post'):
             postprocess()
