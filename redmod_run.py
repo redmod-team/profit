@@ -9,9 +9,10 @@ from config import (base_dir, template_dir, executable, dont_copy,
     title, param_files, params_uq, params)
 from mpi4py import MPI
 from os import path, walk
+import config
                     
 def start_run(cwd):
-    Popen(executable, cwd=cwd, stdout=open('stdout.txt','w'))
+    Popen(config.command, cwd=cwd, stdout=open('stdout.txt','w'))
     
 if __name__ == '__main__':
     comm = MPI.COMM_WORLD
