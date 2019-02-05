@@ -6,7 +6,7 @@ import config
 
 # Backend for uncertainty quantification
 uq.backend = 'chaospy'
-uq.order =3
+uq.order = 3
 
 # Parameters for uncertainty quantification
 uq.params = OrderedDict({
