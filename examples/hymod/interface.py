@@ -6,15 +6,10 @@ Created on Mon Feb  4 08:34:52 2019
 @author: Christopher Albert
 """
 import numpy as np
-from HyMod import hymod_nse
-
-data = None
-
-def init():
-    global data
-    data = np.genfromtxt('LeafCatch.txt', comments='%')
 
 def hymod_wrapper(X_0):
+    from HyMod import hymod_nse
+    data = np.genfromtxt('LeafCatch.txt', comments='%')
     rain = data[0:365,0] # precipitation (1-year simulation)
     ept = data[0:365,1] # potential evapotranspiration
     flow = data[0:365,2] # streamflow (output) measurements 

@@ -10,13 +10,11 @@ import os
 from os import path, mkdir, walk, listdir
 from shutil import copytree, rmtree, ignore_patterns
 from subprocess import Popen
-from config import template_dir, dont_copy, eval_points
-import pandas as pd
 
 import numpy as np
 import config
 import sys
-import uq
+import uq, run
 import importlib
 
 import matplotlib.pyplot as plt
@@ -76,7 +74,6 @@ def create_run_dir():
                 raise Exception("exit()")
                 
 def fill_run_dir():
-                
     nrun = config.eval_points.shape[1]
 
     # if present, use progress bar    
@@ -122,8 +119,8 @@ def postprocess():
     
     # TODO move this to UQ module
     distribution = J(*uq.params.values())
-    nodes, weights = generate_quadrature(uq.order + 1, distribution, rule='G')
-    expansion = orth_ttr(uq.order, distribution)
+    nodes, weights = generate_quadrature(uq.backend.order + 1, distribution, rule='G')
+    expansion = orth_ttr(uq.backend.order, distribution)
     
     for krun in range(nrun):
         fulldir = path.join(config.run_dir, str(krun))
@@ -138,8 +135,8 @@ def postprocess():
             
     # TODO move this to testing
     approx = fit_quadrature(expansion, nodes, weights, np.mean(data[:,0,:], axis=1))
-    urange = uq.params['ksNO3denit'].range()
-    vrange = uq.params['bioturbation'].range()
+    urange = list(uq.params.values())[0].range()
+    vrange = list(uq.params.values())[1].range()
     u = np.linspace(urange[0], urange[1], 100)
     v = np.linspace(vrange[0], vrange[1], 100)
     U, V = np.meshgrid(u, v)
@@ -148,6 +145,8 @@ def postprocess():
     plt.contour(U, V, approx(U,V), 20)
     plt.colorbar()
     plt.scatter(config.eval_points[0,:], config.eval_points[1,:], c = np.mean(data[:,0,:], axis=1))    
+    
+    plt.show()
     
     F0 = E(approx, distribution)
     dF = Std(approx, distribution)
@@ -177,16 +176,17 @@ def main():
     config.template_dir = path.join(config.base_dir, 'template')
     importlib.import_module('redmod_conf')
     
-    if not path.exists(config.template_dir):
-        print("Error: template directory {} doesn't exist.".format(config.template_dir))
-    
     config.run_dir = path.join(config.base_dir, 'run')
     
     if(sys.argv[2] == 'uq'):
         if(sys.argv[3] == 'pre'):
             config.eval_points = uq.get_eval_points()
+            create_run_dir()
             write_input()
-            #fill_run_dir()
+            if(not isinstance(run.backend, run.PythonFunction)):
+                if not path.exists(config.template_dir):
+                    print("Error: template directory {} doesn't exist.".format(config.template_dir))
+                fill_run_dir()
         elif(sys.argv[3] == 'run'):
             start_runs()
         elif(sys.argv[3] == 'post'):
