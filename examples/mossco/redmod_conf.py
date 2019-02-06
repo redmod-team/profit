@@ -1,19 +1,13 @@
 # Configuration file for RedMod scripts v0.1
-from collections import OrderedDict
-from chaospy import Uniform
 import os
-import uq
-import config
+from redmod import uq, config
 
 # Backend for uncertainty quantification
-uq.backend = 'chaospy'
-uq.order = 3
+uq.backend = uq.ChaosPy(order = 3)
 
 # Parameters for uncertainty quantification
-uq.params = OrderedDict({
-           'ksNO3denit': Uniform(1.0, 0.5),
-           'bioturbation': Uniform(0.2, 2.0)
-         })
+uq.params['ksNO3denit'] = uq.Uniform(1.0, 0.5)
+uq.params['bioturbation'] = uq.Uniform(0.2, 2.0)
 
 # Parameter files
 config.param_files = ['fabm_sed.nml', 'run_sed.nml']
