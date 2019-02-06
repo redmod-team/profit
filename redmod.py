@@ -21,7 +21,8 @@ import importlib
 
 import matplotlib.pyplot as plt
 
-from chaospy import J, generate_quadrature, orth_ttr, fit_quadrature
+from chaospy import (J, generate_quadrature, orth_ttr, fit_quadrature, E, Std,
+    descriptives)
 
 yes = True # always answer 'y'
 
@@ -123,8 +124,10 @@ def postprocess():
         finally:
             os.chdir(cwd)
             
+    print(data.shape)        
+            
     # TODO move this to testing
-    approx = fit_quadrature(expansion, nodes, weights, data[:,0,0])
+    approx = fit_quadrature(expansion, nodes, weights, np.mean(data[:,0,:], axis=1))
     urange = uq.params['ksNO3denit'].range()
     vrange = uq.params['bioturbation'].range()
     u = np.linspace(urange[0], urange[1], 100)
@@ -134,9 +137,16 @@ def postprocess():
     plt.figure()
     plt.contour(U, V, approx(U,V), 20)
     plt.colorbar()
-    plt.scatter(config.eval_points[0,:], config.eval_points[1,:], c = data[:,0,0])
-    plt.show()
-        
+    plt.scatter(config.eval_points[0,:], config.eval_points[1,:], c = np.mean(data[:,0,:], axis=1))    
+    
+    F0 = E(approx, distribution)
+    dF = Std(approx, distribution)
+    sobol1 = descriptives.sensitivity.Sens_m(approx, distribution)
+    sobol2 = descriptives.sensitivity.Sens_m2(approx, distribution)
+    
+    print('F = {} +- {}%'.format(F0, 100*abs(dF/F0)))
+    print('1st order sensitivity indices:\n {}'.format(sobol1))
+    print('2nd order sensitivity indices:\n {}'.format(sobol2))
 
 def print_usage():
     print("Usage: redmod.py <base_dir> <mode>")
