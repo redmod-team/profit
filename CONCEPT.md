@@ -21,6 +21,10 @@ TODO:
 * user should specify number and type of output quantities
 * custom hooks while processing to be able to plot
 
+* Backends config
+  * redmod_conf.py
+  * params.txt
+
 * Backends UQ
   * uq.ChaosPy: chaospy PCE
   * uq.Dakota: Sandia's Dakota code
