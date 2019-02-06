@@ -142,10 +142,12 @@ def postprocess():
     F0 = E(approx, distribution)
     dF = Std(approx, distribution)
     sobol1 = descriptives.sensitivity.Sens_m(approx, distribution)
+    sobolt = descriptives.sensitivity.Sens_t(approx, distribution)
     sobol2 = descriptives.sensitivity.Sens_m2(approx, distribution)
     
     print('F = {} +- {}%'.format(F0, 100*abs(dF/F0)))
     print('1st order sensitivity indices:\n {}'.format(sobol1))
+    print('Total order sensitivity indices:\n {}').format(sobolt))
     print('2nd order sensitivity indices:\n {}'.format(sobol2))
 
 def print_usage():
