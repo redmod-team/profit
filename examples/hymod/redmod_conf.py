@@ -7,11 +7,11 @@ uq.backend = uq.ChaosPy(order = 3)
 
 # Define parameters' uncertainty (5 parateres)
 uq.params = OrderedDict({
-              'Sm': uq.Uniform(190, 210),
-              'beta': uq.Uniform(0.9, 1.1),
-              'alfa': uq.Uniform(0.45, 0.55),
-              'Rs': uq.Uniform(0.045, 0.055),
-              'Rf': uq.Uniform(0.45, 0.55)
+              'Sm':   uq.Uniform(100, 120),
+              'beta': uq.Uniform(0.2, 0.4),
+              'alfa': uq.Uniform(0.7, 0.8),
+              'Rs':   uq.Uniform(0.02, 0.03),
+              'Rf':   uq.Uniform(0.8, 0.9)
             })
 
 # How to run the model code

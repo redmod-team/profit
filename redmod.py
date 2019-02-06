@@ -56,8 +56,8 @@ def fill_template(krun, out_dir):
                     content = fill_uq(krun, content)
                 with open(filepath, 'w') as f:
                     f.write(content)
-
-def fill_run_dir():
+                    
+def create_run_dir():
     try:
         mkdir(config.run_dir)
     except OSError:
@@ -69,8 +69,9 @@ def fill_run_dir():
             answer = input(question)
             if (not yes) and (answer == 'y' or answer == 'Y'):
                 raise Exception("exit()")
-            
-    config.eval_points = uq.get_eval_points()
+                
+def fill_run_dir():
+                
     nrun = config.eval_points.shape[1]
     
     for krun in range(nrun):
@@ -79,8 +80,6 @@ def fill_run_dir():
             rmtree(run_dir_single)
         copy_template(run_dir_single)
         fill_template(krun, run_dir_single)
-    # TODO: write out parameter combinations   
-    write_input()
     
 def write_input():
     np.savetxt(os.path.join(config.run_dir, 'input.txt'), 
@@ -174,7 +173,9 @@ def main():
     
     if(sys.argv[2] == 'uq'):
         if(sys.argv[3] == 'pre'):
-            fill_run_dir()
+            config.eval_points = uq.get_eval_points()
+            write_input()
+            #fill_run_dir()
         elif(sys.argv[3] == 'run'):
             start_runs()
         elif(sys.argv[3] == 'post'):
