@@ -20,6 +20,11 @@ import uq
 import importlib
 
 import matplotlib.pyplot as plt
+try:
+  from tqdm import tqdm
+  use_tqdm=True
+except:
+  use_tqdm=False
 
 from chaospy import (J, generate_quadrature, orth_ttr, fit_quadrature, E, Std,
     descriptives)
@@ -73,8 +78,14 @@ def create_run_dir():
 def fill_run_dir():
                 
     nrun = config.eval_points.shape[1]
-    
-    for krun in range(nrun):
+
+    # if present, use progress bar    
+    if use_tqdm:
+      kruns = tqdm(range(nrun))
+    else:
+      kruns = range(nrun)
+
+    for krun in kruns:
         run_dir_single = path.join(config.run_dir, str(krun))
         if path.exists(run_dir_single):
             rmtree(run_dir_single)
