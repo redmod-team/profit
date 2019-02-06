@@ -22,13 +22,16 @@ TODO:
 * custom hooks while processing to be able to plot
 
 * Backends UQ
-  * chaospy PCE
-  * Roland PCE
+  * uq.ChaosPy: chaospy PCE
+  * uq.Dakota: Sandia's Dakota code
+  * uq.VVUQ: Roland's PCE
 
 * Backends SM
-  * gpflow GP
-  * Roland GP
+  * sm.GPFlow: GP
+  * sm.VVGP: Roland's GP
 
 * Backends RUN
-  * MPI
-  * qsub/qstat
+  * run.PythonFunction: direct call via Python function
+  * run.Subprocess: Parallel call with subprocesses
+  * run.MPI: Distribute via MPI
+  * run.Slurm: Use slurm qsub/qstat
