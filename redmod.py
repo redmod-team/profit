@@ -7,9 +7,8 @@ Created on Wed Sep 12 16:36:34 2018
 """
 
 import os
-from os import path, mkdir, walk, listdir
+from os import path, mkdir, walk
 from shutil import copytree, rmtree, ignore_patterns
-from subprocess import Popen
 
 import numpy as np
 import config
@@ -98,14 +97,7 @@ def read_input():
     config.eval_points = data.view((float, len(data.dtype.names))).T
 
 def start_runs():
-    for subdir in listdir(config.run_dir):
-        fulldir = path.join(config.run_dir, subdir)
-        if path.isdir(fulldir):
-            print(fulldir)
-            print(config.command.split())
-            Popen(config.command.split(), cwd=fulldir, 
-                  stdout=open(os.path.join(fulldir,'stdout.txt'),'w'),
-                  stderr=open(os.path.join(fulldir,'stderr.txt'),'w'))
+    run.backend.start()
             
 def postprocess():
     outp = importlib.import_module('interface')
@@ -188,6 +180,7 @@ def main():
                     print("Error: template directory {} doesn't exist.".format(config.template_dir))
                 fill_run_dir()
         elif(sys.argv[3] == 'run'):
+            read_input()
             start_runs()
         elif(sys.argv[3] == 'post'):
             postprocess()

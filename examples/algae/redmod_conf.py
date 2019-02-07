@@ -2,7 +2,7 @@
 from redmod import uq
 
 # Backend for uncertainty quantification
-uq.backend = uq.ChaosPy(order = 3, sparse = True)
+uq.backend = uq.ChaosPy(order = 3, sparse = False)
 
 # Define parameters' uncertainties
-uq.read_params('params.txt')
+uq.read_params('params_1998.txt')

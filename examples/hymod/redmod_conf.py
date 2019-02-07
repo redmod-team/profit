@@ -2,7 +2,7 @@
 from redmod import uq, run
 
 # Backend for uncertainty quantification
-uq.backend = uq.ChaosPy(order = 3)
+uq.backend = uq.ChaosPy(order = 3, sparse = True)
 
 # Define parameters' uncertainty (5 parateres)
 uq.params['Sm']   = uq.Uniform(100, 120)
