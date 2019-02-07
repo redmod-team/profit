@@ -38,3 +38,4 @@ interface.py :
 
 * get_output() should return model output as a numpy array. The current path is the 
   respective run directory.
+  
