@@ -125,11 +125,12 @@ def postprocess():
             
     print(data.shape)        
             
-    # TODO move this to testing
-    approx = fit_quadrature(expansion, nodes, weights, np.mean(data[:,0,:], axis=1))
-    return distribution,data,approx
+    return distribution,data,expansion
 
-def evaluate_postprocessing(distribution,data,approx):
+def evaluate_postprocessing(distribution,data,expansion):
+    nodes, weights = generate_quadrature(uq.backend.order+1, distribution, rule='G')
+    expansion = orth_ttr(uq.backend.order, distribution)
+    approx = fit_quadrature(expansion, nodes, weights, np.mean(data[:,0,:], axis=1))
     urange = list(uq.params.values())[0].range()
     vrange = list(uq.params.values())[1].range()
     u = np.linspace(urange[0], urange[1], 100)
@@ -196,7 +197,7 @@ def main():
             distribution,data,approx = postprocess()
             import pickle
             with open('approximation.pickle','wb') as pf:
-              pickle.dump((distribution,data,approx),pf,protocol=-1)
+              pickle.dump((distribution,data,approx),pf,protocol=-1) # remove approx, since this can easily be reproduced
             evaluate_postprocessing(distribution,data,approx)
         else:
             print_usage()
