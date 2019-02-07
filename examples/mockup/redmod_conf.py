@@ -1,18 +1,14 @@
 # Configuration file for RedMod scripts v0.1
-from collections import OrderedDict
-from chaospy import Uniform, Normal
 import uq
 import config
 
 # Backend for uncertainty quantification
-uq.backend = 'chaospy'
-uq.order = 3
+uq.backend = uq.ChaosPy(order = 3, sparse = True)
 
 # Parameters for uncertainty quantification
-uq.params = OrderedDict({
-              'u': Normal(5.0, 0.3),
-              'v': Uniform(0.55, 0.6)
-            })
+#uq.params['u'] = uq.Normal(5.0, 0.3)
+uq.params['u'] = uq.Uniform(4.7, 5.3)
+uq.params['v'] = uq.Uniform(0.55, 0.6)
 
 # How to run the model code
 config.command = 'python mockup.py'
