@@ -10,29 +10,29 @@ Regression is under development.
 
 ## HowTo
 
-1) Create a directory <dir> with redmod_conf.py and interface.py specific for your code
+1) Create a directory `<dir>` containing `redmod_conf.py` and `interface.py` specific for your code.
+   If your code is based on text configuration files for each run, copy the according directory to `<dir>/template`
+   and replace values of parameters to be varied within UQ/surrogate models by placeholders `{parameter_name}`.
 2) Run 
   
-  python /path/to/redmod.py <dir> uq pre
+  ```python /path/to/redmod.py <dir> uq pre```
   
-  to generate points where model is evaluated, and possibly run directories.
-  Evaluation points are stored inside <dir>/run/input.txt
+  to generate points where model is evaluated, and possibly run directories based on `template`.
+  Evaluation points are stored inside `<dir>/run/input.txt`
   
 3) Run
 
-  python /path/to/redmod.py <dir> uq run
+  ```python /path/to/redmod.py <dir> uq run```
   
-  to start simulations at all the points. If uq.backend = PythonFunction, results
-  of model runs are stored in <dir>/run/output.txt . Otherwise output is stored
-  in model code-specific format.
+  to start simulations at all the points. If `uq.backend` is of type `PythonFunction`, results
+  of model runs are stored in `<dir>/run/output.txt`. Otherwise output is stored in model code-specific format.
   
 4) Run 
 
-  python /path/to/redmod.py <dir> uq post
+  ```python /path/to/redmod.py <dir> uq post```
   
   to get postprocessing results from UQ via PCE.
-  (not fully working yet)
-  
+  (not fully operational yet)
   
 interface.py :
 
