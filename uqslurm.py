@@ -36,8 +36,8 @@ jobcommand=%s
 # get start and end number of simulations
 startn=$(expr $task \* $num_per_task)
 endn=$(expr $startn + $num_per_task - 1)
-if [ "$endn" -gt "$total_num" ] ; then
-  endn=$total_num
+if [ "$endn" -ge "$total_num" ] ; then
+  endn=$(expr $total_num - 1)
 fi
 
 # start the simulations

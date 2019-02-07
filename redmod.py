@@ -127,14 +127,24 @@ def postprocess():
             
     # TODO move this to testing
     approx = fit_quadrature(expansion, nodes, weights, np.mean(data[:,0,:], axis=1))
+    return distribution,data,approx
+
+def evaluate_postprocessing(distribution,data,approx):
     urange = list(uq.params.values())[0].range()
     vrange = list(uq.params.values())[1].range()
     u = np.linspace(urange[0], urange[1], 100)
     v = np.linspace(vrange[0], vrange[1], 100)
     U, V = np.meshgrid(u, v)
+    c = approx(U,V)    
+
+    # for 3 parameters:
+    #wrange = list(uq.params.values())[2].range()
+    #w = np.linspace(wrange[0], wrange[1], 100)
+    #W = 0.03*np.ones(U.shape)
+    #c = approx(U,V,W)
             
     plt.figure()
-    plt.contour(U, V, approx(U,V), 20)
+    plt.contour(U, V, c, 20)
     plt.colorbar()
     plt.scatter(config.eval_points[0,:], config.eval_points[1,:], c = np.mean(data[:,0,:], axis=1))    
     
@@ -183,7 +193,11 @@ def main():
             read_input()
             start_runs()
         elif(sys.argv[3] == 'post'):
-            postprocess()
+            distribution,data,approx = postprocess()
+            import pickle
+            with open('approximation.pickle','wb') as pf:
+              pickle.dump((distribution,data,approx),pf,protocol=-1)
+            evaluate_postprocessing(distribution,data,approx)
         else:
             print_usage()
             return
