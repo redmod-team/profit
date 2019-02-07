@@ -35,12 +35,11 @@ class PythonFunction:
     
         try:
             os.chdir(config.base_dir)
-            results = []
+            output = [] # TODO: make this more efficient with preallocation based on shape
             for krun in kruns:
                 res = self.function(config.eval_points[:, krun])
-                results.append(res)
-            results = np.array(results)
-            np.savetxt('results.txt', results)
+                output.append(res)
+            np.savetxt('run/output.txt', np.array(output))
         finally:
             os.chdir(cwd)
         
