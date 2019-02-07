@@ -10,7 +10,10 @@ import os
 import subprocess
 import numpy as np
 
-import config
+try:
+    import config
+except:
+    pass
 
 try:
   from tqdm import tqdm
