@@ -51,11 +51,11 @@ Examples for different model codes are available under `examples/`:
   
 ## User-supplied files
 * `redmod_conf.py`
-  * Set `uq.backend` to a class available inside `redmod.uq` (currently only `ChaosPy` available)
-  * Add uncertain parameters and their distributions via `uq.params['<param>'] = <distribution>`
-  * Optional: set `run.backend` to a class available inside `redmod.run`
+    * Set `uq.backend` to a class available inside `redmod.uq` (currently only `ChaosPy` available)
+    * Add uncertain parameters and their distributions via `uq.params['<param>'] = <distribution>`
+    * Optional: set `run.backend` to a class available inside `redmod.run`
   
 * `interface.py`
-  * `shape()` should return shape of the model output as a list of integers.
-  * `get_output()` should return model output as a numpy array of shape `interface.shape()`.
-    The current path is the respective run directory. Can be skipped if `uq.backend` is of type `PythonFunction`.
+    * `shape()` should return shape of the model output as a list of integers.
+    * `get_output()` should return model output as a numpy array of shape `interface.shape()`.
+      The current path is the respective run directory. Can be skipped if `uq.backend` is of type `PythonFunction`.
