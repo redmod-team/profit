@@ -8,11 +8,11 @@ class slurm_backend():
   created from the configuration.
   '''
 
-  def call_run():
+  def call_run(self):
     os.system('sbatch slurm_uq_job.sh')
 
 
-  def write_slurm_scripts(tasks_per_node=36, account='xy0123'):
+  def write_slurm_scripts(self, tasks_per_node=36, account='xy0123'):
 
     # first write script for single node
     jobcommand='./sediment_io' # to be taken from config
