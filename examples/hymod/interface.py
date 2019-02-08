@@ -12,7 +12,7 @@ def hymod_wrapper(X_0):
     data = np.genfromtxt('LeafCatch.txt', comments='%')
     rain = data[0:365,0] # precipitation (1-year simulation)
     ept = data[0:365,1] # potential evapotranspiration
-    flow = data[0:365,2] # streamflow (output) measurements 
+    flow = data[0:365,2] # streamflow (output) measurements
     warmup = 30 # Model warmup period (days)
 
     # Example how to run the model using the baseline point in the parameter space

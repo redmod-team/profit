@@ -13,8 +13,9 @@ from netCDF4 import Dataset
 def shape():
     nc = Dataset(os.path.join(config.run_dir,'0/sediment1d.nc'), 'r')
     ncv = nc.variables
-    return [2,len(ncv['time'])]
+    ret = [2,len(ncv['time'])]
     nc.close()
+    return ret
 
 def get_output():
     nc = Dataset('sediment1d.nc', 'r')
