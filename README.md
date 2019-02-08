@@ -7,7 +7,7 @@ UQ/surrogate backends are necessary, and to minimize interfacing effort by the u
 
 Current functionality covers uncertainty quantification via PCE with 
 *chaospy* as a backend. Support for surrogate models via Gaussian 
-Progress Regression is under development.
+Progress regression is under development.
 
 ## Features
 * Compute evaluation points to run simulation on for UQ (full or sparse grid)
