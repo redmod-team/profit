@@ -10,19 +10,19 @@ Current functionality covers uncertainty quantification via PCE with
 Progress regression is under development.
 
 ## Features
-  * Compute evaluation points to run simulation for UQ (full or sparse grid)
-  * Template replacement and automatic generation of run directories
-  * Starting parallel runs locally or on the cluster (SLURM)
-  * Collection of result output and postprocessing with UQ
+* Compute evaluation points to run simulation for UQ (full or sparse grid)
+* Template replacement and automatic generation of run directories
+* Starting parallel runs locally or on the cluster (SLURM)
+* Collection of result output and postprocessing with UQ
 
 ## HowTo
 
 Examples for different model codes are available under `examples/`:
-  * `mockup`: Simple model called by console command based on template directory.
-  * `hymod`: Model called as Python function via `PythonFunction` backend.
-  * `mossco`: More complex model called by console command based on template directory.
-  * `idealiron`: More complex model called by console command based on template directory.
-  * `algae`: Generation of evaluation points only (`run/input.txt`) without model run.
+* `mockup`: Simple model called by console command based on template directory.
+* `hymod`: Model called as Python function via `PythonFunction` backend.
+* `mossco`: More complex model called by console command based on template directory.
+* `idealiron`: More complex model called by console command based on template directory.
+* `algae`: Generation of evaluation points only (`run/input.txt`) without model run.
 
 1. Create a directory `<dir>` containing `redmod_conf.py` and `interface.py` specific for your code.
    If your code is based on text configuration files for each run, copy the according directory to `<dir>/template`
