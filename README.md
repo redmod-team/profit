@@ -1,12 +1,19 @@
-# Reduced complexity models 
+# Toolkit for reduced complexity models 
 
 This is a collection of scripts to construct reduced complexity models
 based on a blackbox simulation code called at different parameters.
+The scripts are designed such that no changes in simulation code and
+UQ/surrogate backends are necessary, and to minimize interfacing effort by the user.
 
 Current functionality covers uncertainty quantification via PCE with 
-chaospy as a backend. Support for surrogate models via Gaussian Progress 
-Regression is under development.
+*chaospy* as a backend. Support for surrogate models via Gaussian 
+Progress Regression is under development.
 
+## Features
+* Compute evaluation points to run simulation on for UQ (full or sparse grid)
+* Template replacement and automatic generation of run directories
+* Starting parallel runs locally or on the cluster (SLURM)
+* Collection of result output and postprocessing with UQ
 
 ## HowTo
 
