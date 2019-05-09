@@ -10,10 +10,9 @@ import os
 from os import path, mkdir, walk
 from shutil import copytree, rmtree, ignore_patterns
 
-import numpy as np
-import config
 import sys
-import uq, run
+import numpy as np
+from . import config, uq, run
 import importlib
 
 import matplotlib.pyplot as plt

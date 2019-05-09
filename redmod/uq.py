@@ -11,7 +11,10 @@ from redmod import config
 import os
     
 backend = None
+Normal = None
+Uniform = None
 params = OrderedDict()
+
 
 class ChaosPy:
     import chaospy as cp
