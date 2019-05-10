@@ -1,0 +1,17 @@
+language: python
+python:
+- '3.6'
+before_install:
+- sudo apt-get install gfortran
+install:
+- pip install git+https://github.com/pyccel/fffi#egg=fffi
+- pip install coverage codacy-coverage
+- git clone $UQP
+- cd uqp && make && cd ..
+- export UQP_HOME=`cwd`+'/uqp'
+script:
+- ln -s $UQP_HOME/libuq.so tests/backend_uqp/libuqp.so
+- coverage run setup.py test
+- coverage xml
+- python-codacy-coverage
+

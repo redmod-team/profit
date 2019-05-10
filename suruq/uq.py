@@ -7,7 +7,7 @@ Created on Fri Dec 21 09:27:19 2018
 """
 from collections import OrderedDict
 import numpy as np
-from redmod import config
+from . import config
 import os
     
 backend = None
