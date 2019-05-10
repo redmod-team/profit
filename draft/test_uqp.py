@@ -16,8 +16,8 @@ uqp = fffi.fortran_module('uq', 'mod_unqu')
 uqp.fdef("""
   integer :: np, nall, npar, nt, iflag_run, iflag_mod, iflag_pol  
 
-  subroutine allocate_params  end
-  subroutine init_uq  end
+  subroutine allocate_params end
+  subroutine init_uq end
   
   subroutine set_legendre_borders(kpar, lower, upper)
     integer, intent(in) :: kpar
@@ -30,10 +30,10 @@ uqp.fdef("""
   end
   
   subroutine pre_uq(axi)
-    double precision, dimension(:,:), intent(out) :: axi
+    double precision, intent(inout) :: axi(:,:)
   end
   
-  subroutine run_uq  end
+  subroutine run_uq end
   """)
 
 uqp.compile(verbose=1)
@@ -58,10 +58,13 @@ uq.backend = uq.ChaosPy(order = 3, sparse = False)
 
 uq.params['u'] = uq.Normal(mean1, std1)
 uq.params['v'] = uq.Normal(mean2, std2)
-#%%
+
 axis = axi[np.lexsort((axi[:,0], axi[:,1]))]
 
 axi2 = uq.get_eval_points().T
 axi2s = axi2[np.lexsort((axi2[:,0], axi2[:,1]))]
 
 np.testing.assert_almost_equal(axis, axi2s)
+
+# TODO: move this into unit test
+
