@@ -28,9 +28,7 @@ setup_args = dict(
 packages = find_packages(exclude=["*.tests", "*.tests.*", "tests.*", "tests"])
 # ...
 
-# Requirements from local "requirements.txt" file
-install_requires = []
-
+install_requires = ['chaospy']
 
 def setup_package():
     setup(packages=packages,
