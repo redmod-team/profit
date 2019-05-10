@@ -8,7 +8,7 @@ install:
 - pip install coverage codacy-coverage
 - git clone $UQP
 - cd uqp && make && cd ..
-- export UQP_HOME=`cwd`+'/uqp'
+- export UQP_HOME=`pwd`+'/uqp'
 script:
 - ln -s $UQP_HOME/libuq.so tests/backend_uqp/libuqp.so
 - coverage run setup.py test
