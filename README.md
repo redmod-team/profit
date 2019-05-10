@@ -1,4 +1,4 @@
-# Gaussian processes with nested uncertainty quantification
+# Surrogates with nested uncertainty quantification
 
 This is a collection of scripts to construct reduced complexity models
 based on a blackbox simulation code called at different parameters.
