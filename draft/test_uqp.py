@@ -2,9 +2,11 @@
 Created: Tue Mar 26 09:45:46 2019
 @author: Christopher Albert <albert@alumni.tugraz.at>
 """
-from redmod import uq
+from suruq import uq
 import numpy as np
 import fffi
+
+from time import time
 
 mean1 = 5.0
 std1 = 0.1
@@ -36,9 +38,12 @@ uqp.fdef("""
   subroutine run_uq end
   """)
 
-uqp.compile(verbose=1)
+uqp.compile(verbose=0)
 uqp.load()
 
+print('=== Hermite 2D quadrature points ===')
+
+t = time()  # UQP timing
 uqp.npar = 2
 uqp.allocate_params()
 
@@ -54,17 +59,21 @@ uqp.init_uq()
 axi = np.zeros((uqp.nall,uqp.npar), order='F')
 uqp.pre_uq(axi)
 
-uq.backend = uq.ChaosPy(order = 3, sparse = False)
+print('UQP: {:4.2f} ms'.format(1000*(time() - t)))
 
+t = time()  # ChaosPy timing
+uq.backend = uq.ChaosPy(order = 3, sparse = False)
 uq.params['u'] = uq.Normal(mean1, std1)
 uq.params['v'] = uq.Normal(mean2, std2)
+axi2 = uq.get_eval_points().T
+
+print('ChaosPy: {:4.2f} ms'.format(1000*(time() - t)))
 
 axis = axi[np.lexsort((axi[:,0], axi[:,1]))]
-
-axi2 = uq.get_eval_points().T
 axi2s = axi2[np.lexsort((axi2[:,0], axi2[:,1]))]
 
 np.testing.assert_almost_equal(axis, axi2s)
+print('Success: UQP and ChaosPy results match')
 
 # TODO: move this into unit test
 

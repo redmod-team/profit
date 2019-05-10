@@ -27,7 +27,6 @@ class ChaosPy:
         self.sparse = sparse
         
     def get_eval_points(self):
-        print(params)
         distribution = self.cp.J(*params.values())
         nodes, weights = self.cp.generate_quadrature(self.order+1, distribution, rule='G',
                                              sparse = self.sparse)
