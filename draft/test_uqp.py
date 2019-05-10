@@ -4,7 +4,7 @@ Created: Tue Mar 26 09:45:46 2019
 """
 from suruq import uq
 import numpy as np
-import fffi
+from fffi import fortran_module
 
 from time import time
 
@@ -13,10 +13,10 @@ std1 = 0.1
 mean2 = 2.0
 std2 = 0.2
 
-uqp = fffi.fortran_module('uq', 'mod_unqu')
+uqp = fortran_module('uq', 'mod_unqu')
 
 uqp.fdef("""
-  integer :: np, nall, npar, nt, iflag_run, iflag_mod, iflag_pol  
+  integer :: np, nall, npar, nt, iflag_run, iflag_mod, iflag_pol
 
   subroutine allocate_params end
   subroutine init_uq end
@@ -38,16 +38,16 @@ uqp.fdef("""
   subroutine run_uq end
   """)
 
-uqp.compile(verbose=0)
+uqp.compile(verbose=1)
 uqp.load()
-
+#%%
 print('=== Hermite 2D quadrature points ===')
 
 t = time()  # UQP timing
 uqp.npar = 2
 uqp.allocate_params()
 
-uqp.np = 3
+uqp.np = 30 + 1
 uqp.nt = 1
 uqp.iflag_run = 1
 uqp.iflag_mod = 2
@@ -62,7 +62,7 @@ uqp.pre_uq(axi)
 print('UQP: {:4.2f} ms'.format(1000*(time() - t)))
 
 t = time()  # ChaosPy timing
-uq.backend = uq.ChaosPy(order = 3, sparse = False)
+uq.backend = uq.ChaosPy(order = uqp.np - 1, sparse = False)
 uq.params['u'] = uq.Normal(mean1, std1)
 uq.params['v'] = uq.Normal(mean2, std2)
 axi2 = uq.get_eval_points().T
