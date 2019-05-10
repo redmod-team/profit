@@ -9,6 +9,7 @@ install:
 - git clone $UQP
 - cd uqp && make && cd ..
 - export UQP_HOME=`pwd`+'/uqp'
+- pip install scipy==1.2.1  # bugfix for chaospy scipy.misc.comb
 script:
 - ln -s $UQP_HOME/libuq.so tests/backend_uqp/libuqp.so
 - coverage run setup.py test

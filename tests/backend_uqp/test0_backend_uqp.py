@@ -7,6 +7,7 @@ Compiles CFF for test_arrays
 
 import os
 import numpy as np
+from time import time
 from unittest import TestCase
 from fffi import fortran_module
 from suruq import uq
@@ -63,6 +64,9 @@ class TestBackendUQP(TestCase):
         """
         Test Hermite quadrature points in 2D
         """
+        
+        print('=== Hermite 2D quadrature points ===')
+
         mean1 = 5.0
         std1 = 0.1
         mean2 = 2.0
@@ -70,9 +74,9 @@ class TestBackendUQP(TestCase):
 
         uqp = self.uqp
         
+        t = time()  # UQP timing
         uqp.npar = 2
         uqp.allocate_params()
-        
         uqp.np = 3
         uqp.nt = 1
         uqp.iflag_run = 1
@@ -81,21 +85,22 @@ class TestBackendUQP(TestCase):
         uqp.set_hermite_mean_std(1, mean1, std1)
         uqp.set_hermite_mean_std(2, mean2, std2)
         uqp.init_uq()
-        
         axi = np.zeros((uqp.nall,uqp.npar), order='F')
         uqp.pre_uq(axi)
+        print('UQP: {:4.2f} ms'.format(1000*(time() - t)))
         
+        t = time()  # ChaosPy timing
         uq.backend = uq.ChaosPy(order = 3, sparse = False)
-        
         uq.params['u'] = uq.Normal(mean1, std1)
         uq.params['v'] = uq.Normal(mean2, std2)
+        axi2 = uq.get_eval_points().T
+        print('ChaosPy: {:4.2f} ms'.format(1000*(time() - t)))
         
         axis = axi[np.lexsort((axi[:,0], axi[:,1]))]
-        
-        axi2 = uq.get_eval_points().T
         axi2s = axi2[np.lexsort((axi2[:,0], axi2[:,1]))]
         
         np.testing.assert_almost_equal(axis, axi2s)
+        print('Success: UQP and ChaosPy results match')
 
 if __name__ == "__main__":
     test = TestBackendUQP()
