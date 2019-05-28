@@ -13,10 +13,10 @@ std1 = 0.1
 mean2 = 2.0
 std2 = 0.2
 
-uqp = fortran_module('uq', 'mod_unqu')
+uqp = fortran_module('uqp', 'mod_unqu')
 
 uqp.fdef("""
-  integer :: np, nall, npar, nt, iflag_run, iflag_mod, iflag_pol
+  integer :: nporder, nall, npar, nt, iflag_run, iflag_mod, iflag_pol
 
   subroutine allocate_params end
   subroutine init_uq end
@@ -47,7 +47,7 @@ t = time()  # UQP timing
 uqp.npar = 2
 uqp.allocate_params()
 
-uqp.np = 30 + 1
+uqp.nporder = 30
 uqp.nt = 1
 uqp.iflag_run = 1
 uqp.iflag_mod = 2
@@ -62,7 +62,7 @@ uqp.pre_uq(axi)
 print('UQP: {:4.2f} ms'.format(1000*(time() - t)))
 
 t = time()  # ChaosPy timing
-uq.backend = uq.ChaosPy(order = uqp.np - 1, sparse = False)
+uq.backend = uq.ChaosPy(order = uqp.nporder, sparse = False)
 uq.params['u'] = uq.Normal(mean1, std1)
 uq.params['v'] = uq.Normal(mean2, std2)
 axi2 = uq.get_eval_points().T
@@ -76,4 +76,3 @@ np.testing.assert_almost_equal(axis, axi2s)
 print('Success: UQP and ChaosPy results match')
 
 # TODO: move this into unit test
-
