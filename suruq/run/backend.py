@@ -11,7 +11,7 @@ import subprocess
 import numpy as np
 
 try:
-    import config
+    from suruq import config
 except:
     pass
 
@@ -47,17 +47,16 @@ class PythonFunction:
             os.chdir(cwd)
         
 class LocalCommand:
-    def __init__(self):
-        pass
+    def __init__(self, command):
+        self.command = command
     
     def start(self):
         for subdir in os.listdir(config.run_dir):
             fulldir = os.path.join(config.run_dir, subdir)
             if os.path.isdir(fulldir):
                 print(fulldir)
-                print(config.command.split())
-                subprocess.Popen(config.command.split(), cwd=fulldir, 
+                print(self.command.split())
+                subprocess.Popen(self.command.split(), cwd=fulldir, 
                       stdout=open(os.path.join(fulldir,'stdout.txt'),'w'),
                       stderr=open(os.path.join(fulldir,'stderr.txt'),'w'))
 
-backend = LocalCommand()

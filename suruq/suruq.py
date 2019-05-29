@@ -12,7 +12,9 @@ from shutil import copytree, rmtree, ignore_patterns
 
 import sys
 import numpy as np
-from . import config, uq, run
+from . import config
+from collections import OrderedDict
+#import config, uq, run
 import importlib
 
 import matplotlib.pyplot as plt
@@ -36,95 +38,10 @@ def copy_template(out_dir):
         copytree(config.template_dir, out_dir, ignore=ignore_patterns(*config.dont_copy))
     else:
         copytree(config.template_dir, out_dir)
-        
-
-def fill_uq(krun, content):
-    params_fill = SafeDict()
-    kp = 0
-    for item in uq.params:
-        params_fill[item] = config.eval_points[kp, krun]
-        kp = kp+1
-    return content.format_map(params_fill)
-
-def fill_template(krun, out_dir):
-    for root, dirs, files in walk(out_dir):
-        for filename in files:
-            if not config.param_files or filename in config.param_files:
-                filepath = path.join(root, filename)
-                with open(filepath, 'r') as f:
-                    content = f.read()
-                    #content = content.format_map(SafeDict(params))
-                    content = fill_uq(krun, content)
-                with open(filepath, 'w') as f:
-                    f.write(content)
-                    
-def create_run_dir():
-    try:
-        mkdir(config.run_dir)
-    except OSError:
-        question = ("Warning: Run directory {} already exists "
-                    "and will be deleted. Continue? (y/N) ").format(config.run_dir)
-        if (yes):
-            print(question+'y')
-        else:
-            answer = input(question)
-            if (not yes) and (answer == 'y' or answer == 'Y'):
-                raise Exception("exit()")
-                
-def fill_run_dir():
-    nrun = config.eval_points.shape[1]
-
-    # if present, use progress bar    
-    if use_tqdm:
-      kruns = tqdm(range(nrun))
-    else:
-      kruns = range(nrun)
-
-    for krun in kruns:
-        run_dir_single = path.join(config.run_dir, str(krun))
-        if path.exists(run_dir_single):
-            rmtree(run_dir_single)
-        copy_template(run_dir_single)
-        fill_template(krun, run_dir_single)
-    
-def write_input():
-    np.savetxt(os.path.join(config.run_dir, 'input.txt'), 
-               config.eval_points.T, header=' '.join(uq.params.keys()))
     
 def read_input():
     data = np.genfromtxt(os.path.join(config.run_dir, 'input.txt'), names = True)
-    config.eval_points = data.view((float, len(data.dtype.names))).T
-
-def start_runs():
-    run.backend.start()
-            
-def postprocess():
-    outp = importlib.import_module('interface')
-    
-    read_input()
-    nrun = config.eval_points.shape[1]
-    
-    cwd = os.getcwd()
-    
-    data = np.empty(np.append(nrun, outp.shape()))
-    
-    # TODO move this to UQ module
-    distribution = J(*uq.params.values())
-    nodes, weights = generate_quadrature(uq.backend.order + 1, distribution, rule='G')
-    expansion = orth_ttr(uq.backend.order, distribution)
-    
-    for krun in range(nrun):
-        fulldir = path.join(config.run_dir, str(krun))
-        print(fulldir)
-        try:
-            os.chdir(fulldir)
-            data[krun, :] = outp.get_output()
-        finally:
-            os.chdir(cwd)
-            
-    print(data.shape)        
-            
-    return distribution,data,expansion
+    return data.view((float, len(data.dtype.names))).T
 
 def evaluate_postprocessing(distribution,data,expansion):
     nodes, weights = generate_quadrature(uq.backend.order+1, distribution, rule='G')
@@ -167,7 +84,97 @@ def print_usage():
     print("uq pre  ... preprocess for UQ")
     print("uq run  ... run model for UQ")
     print("uq post ... postprocess model output for UQ")
-
+    
+    
+class UQ:
+    def __init__(self, backend, template_dir = 'template/', run_dir = 'run/'):
+        self.backend = backend
+        self.params = OrderedDict()
+        self.template_dir = template_dir
+        self.run_dir = run_dir
+        self.Normal = self.backend.Normal
+        self.Uniform = self.backend.Uniform
+        
+    def write_input(self, run_dir='run/'):
+        self.eval_points = self.backend.get_eval_points(self.params)
+        np.savetxt(os.path.join(run_dir, 'input.txt'), 
+               self.eval_points.T, header=' '.join(self.params.keys()))
+    
+    def pre(self):
+        self.write_input()
+#        if(not isinstance(run.backend, run.PythonFunction)):
+        if not path.exists(config.template_dir):
+            print("Error: template directory {} doesn't exist.".format(config.template_dir))
+        self.fill_run_dir()     
+    
+    def fill_uq(self, krun, content):
+        params_fill = SafeDict()
+        kp = 0
+        for item in self.params:
+            params_fill[item] = self.eval_points[kp, krun]
+            kp = kp+1
+        return content.format_map(params_fill)
+    
+    def fill_template(self,krun, out_dir):
+        for root, dirs, files in walk(out_dir):
+            for filename in files:
+                if not self.param_files or filename in self.param_files:
+                    filepath = path.join(root, filename)
+                    with open(filepath, 'r') as f:
+                        content = f.read()
+                        #content = content.format_map(SafeDict(params))
+                        content = self.fill_uq(krun, content)
+                    with open(filepath, 'w') as f:
+                        f.write(content)
+                    
+    def fill_run_dir(self):
+        nrun = self.eval_points.shape[1]
+    
+        # if present, use progress bar    
+        if use_tqdm:
+          kruns = tqdm(range(nrun))
+        else:
+          kruns = range(nrun)
+    
+        for krun in kruns:
+            run_dir_single = path.join(self.run_dir, str(krun))
+            if path.exists(run_dir_single):
+                rmtree(run_dir_single)
+            copy_template(run_dir_single)
+            self.fill_template(krun, run_dir_single)
+        
+class Runner:
+    def __init__(self, backend):
+        self.backend = backend
+        self.eval_points = read_input()
+    def start(self):
+        self.backend.start()
+        
+class Postprocessor:
+    def __init__(self, interface):
+        self.interface = interface
+        self.eval_points = read_input()
+            
+    def read(self):
+        nrun = self.eval_points.shape[1]
+        cwd = os.getcwd()
+        
+        self.data = np.empty(np.append(self.interface.shape(), nrun))
+        
+        # TODO move this to UQ module
+#        distribution = J(*uq.params.values())
+#        nodes, weights = generate_quadrature(uq.backend.order + 1, distribution, rule='G')
+#        expansion = orth_ttr(uq.backend.order, distribution)
+        
+        for krun in range(nrun):
+            fulldir = path.join(config.run_dir, str(krun))
+            try:
+                os.chdir(fulldir)
+                self.data[:,krun] = self.interface.get_output()
+            finally:
+                os.chdir(cwd)
+               
+    
 def main():
     if len(sys.argv) < 4:
         print_usage()
@@ -176,19 +183,24 @@ def main():
     config.base_dir = os.path.abspath(sys.argv[1])
     sys.path.append(config.base_dir)
     config.template_dir = path.join(config.base_dir, 'template')
-    importlib.import_module('redmod_conf')
+    importlib.import_module('suruq_conf')
     
     config.run_dir = path.join(config.base_dir, 'run')
     
     if(sys.argv[2] == 'uq'):
         if(sys.argv[3] == 'pre'):
-            config.eval_points = uq.get_eval_points()
-            create_run_dir()
-            write_input()
-            if(not isinstance(run.backend, run.PythonFunction)):
-                if not path.exists(config.template_dir):
-                    print("Error: template directory {} doesn't exist.".format(config.template_dir))
-                fill_run_dir()
+            try:
+                mkdir(config.run_dir)
+            except OSError:
+                question = ("Warning: Run directory {} already exists "
+                            "and will be overwritten. Continue? (y/N) ").format(config.run_dir)
+                if (yes):
+                    print(question+'y')
+                else:
+                    answer = input(question)
+                    if (not yes) and (answer == 'y' or answer == 'Y'):
+                        raise Exception("exit()")
+            pre(config.run_dir)
         elif(sys.argv[3] == 'run'):
             read_input()
             start_runs()
