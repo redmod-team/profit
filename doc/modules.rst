@@ -1,4 +1,4 @@
-suruq
+Modules
 =====
 
 .. toctree::
