@@ -1,7 +1,8 @@
 import numpy as np
 from netCDF4 import Dataset
 
-class MosscoInterface:
+class MosscoInterface(Interface):
+    # TODO: make optional
     def shape(self):
         nc = Dataset('sediment1d.nc', 'r')
         ncv = nc.variables
@@ -9,6 +10,8 @@ class MosscoInterface:
         nc.close()
         return ret
     
+    # define in yaml where to find
+    # provide standardized way to read output.txt
     def get_output(self):
         nc = Dataset('sediment1d.nc', 'r')
         ncv = nc.variables
@@ -21,3 +24,6 @@ class MosscoInterface:
         data = np.array([oxy_flux, denit_int])
         return data
 
+read
+uq
+uq.f(x)

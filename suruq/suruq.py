@@ -12,9 +12,7 @@ from shutil import copytree, rmtree, ignore_patterns
 
 import sys
 import numpy as np
-from . import config
 from collections import OrderedDict
-#import config, uq, run
 import importlib
 
 import matplotlib.pyplot as plt
@@ -27,17 +25,20 @@ except:
 from chaospy import (J, generate_quadrature, orth_ttr, fit_quadrature, E, Std,
     descriptives)
 
+from suruq.config import Config
+from suruq.uq.backend import ChaosPy
+
 yes = True # always answer 'y'
 
 class SafeDict(dict):
     def __missing__(self, key):
         return '{' + key + '}'
 
-def copy_template(out_dir):
-    if config.dont_copy:
-        copytree(config.template_dir, out_dir, ignore=ignore_patterns(*config.dont_copy))
+def copy_template(template_dir, out_dir, dont_copy=None):
+    if dont_copy:
+        copytree(template_dir, out_dir, ignore=ignore_patterns(*config.dont_copy))
     else:
-        copytree(config.template_dir, out_dir)
+        copytree(template_dir, out_dir)
     
 def read_input():
     data = np.genfromtxt(os.path.join(config.run_dir, 'input.txt'), names = True)
@@ -79,7 +80,7 @@ def evaluate_postprocessing(distribution,data,expansion):
     print('2nd order sensitivity indices:\n {}'.format(sobol2))
 
 def print_usage():
-    print("Usage: redmod.py <base_dir> <mode>")
+    print("Usage: redmod.py <mode> (base-dir)")
     print("Modes:")
     print("uq pre  ... preprocess for UQ")
     print("uq run  ... run model for UQ")
@@ -87,13 +88,25 @@ def print_usage():
     
     
 class UQ:
-    def __init__(self, backend, template_dir = 'template/', run_dir = 'run/'):
-        self.backend = backend
-        self.params = OrderedDict()
-        self.template_dir = template_dir
-        self.run_dir = run_dir
+    def __init__(self, config):
+        if (config.uq['backend'] == 'ChaosPy'):
+          self.backend = ChaosPy(config.uq['order'])
+          # TODO: extend
+          
         self.Normal = self.backend.Normal
         self.Uniform = self.backend.Uniform
+          
+        self.params = OrderedDict({})
+        params = config.uq['params']
+        for pkey in params:
+          if params[pkey]['dist'] == 'Uniform':
+            self.params[pkey] = self.Uniform(params[pkey]['min'],
+                                             params[pkey]['max'])
+          # TODO: extend
+            
+        self.template_dir = 'template/'
+        self.run_dir = 'run/'
+        self.param_files = None
         
     def write_input(self, run_dir='run/'):
         self.eval_points = self.backend.get_eval_points(self.params)
@@ -103,8 +116,8 @@ class UQ:
     def pre(self):
         self.write_input()
 #        if(not isinstance(run.backend, run.PythonFunction)):
-        if not path.exists(config.template_dir):
-            print("Error: template directory {} doesn't exist.".format(config.template_dir))
+        if not path.exists(self.template_dir):
+            print("Error: template directory {} doesn't exist.".format(self.template_dir))
         self.fill_run_dir()     
     
     def fill_uq(self, krun, content):
@@ -140,7 +153,7 @@ class UQ:
             run_dir_single = path.join(self.run_dir, str(krun))
             if path.exists(run_dir_single):
                 rmtree(run_dir_single)
-            copy_template(run_dir_single)
+            copy_template(self.template_dir, run_dir_single)
             self.fill_template(krun, run_dir_single)
         
 class Runner:
@@ -173,46 +186,47 @@ class Postprocessor:
                 self.data[:,krun] = self.interface.get_output()
             finally:
                 os.chdir(cwd)
-               
+
     
 def main():
-    if len(sys.argv) < 4:
+    print(sys.argv)
+    if len(sys.argv) < 2:
         print_usage()
         return
+      
+    if len(sys.argv) < 3:
+        config_file = os.path.join(os.getcwd(), 'suruq.yaml')
+    else:
+        config_file = os.path.abspath(sys.argv[1])
+        
+    config = Config.load(config_file)
     
-    config.base_dir = os.path.abspath(sys.argv[1])
     sys.path.append(config.base_dir)
-    config.template_dir = path.join(config.base_dir, 'template')
-    importlib.import_module('suruq_conf')
     
-    config.run_dir = path.join(config.base_dir, 'run')
     
-    if(sys.argv[2] == 'uq'):
-        if(sys.argv[3] == 'pre'):
-            try:
-                mkdir(config.run_dir)
-            except OSError:
-                question = ("Warning: Run directory {} already exists "
-                            "and will be overwritten. Continue? (y/N) ").format(config.run_dir)
-                if (yes):
-                    print(question+'y')
-                else:
-                    answer = input(question)
-                    if (not yes) and (answer == 'y' or answer == 'Y'):
-                        raise Exception("exit()")
-            pre(config.run_dir)
-        elif(sys.argv[3] == 'run'):
-            read_input()
-            start_runs()
-        elif(sys.argv[3] == 'post'):
-            distribution,data,approx = postprocess()
-            import pickle
-            with open('approximation.pickle','wb') as pf:
-              pickle.dump((distribution,data,approx),pf,protocol=-1) # remove approx, since this can easily be reproduced
-            evaluate_postprocessing(distribution,data,approx)
-        else:
-            print_usage()
-            return
+    if(sys.argv[1] == 'pre'):
+        try:
+            mkdir(config.run_dir)
+        except OSError:
+            question = ("Warning: Run directory {} already exists "
+                        "and will be overwritten. Continue? (y/N) ").format(config.run_dir)
+            if (yes):
+                print(question+'y')
+            else:
+                answer = input(question)
+                if (not yes) and (answer == 'y' or answer == 'Y'):
+                    raise Exception("exit()")
+        uq = UQ(config)
+        uq.pre()
+    elif(sys.argv[1] == 'run'):
+        read_input()
+        start_runs()
+    elif(sys.argv[1] == 'post'):
+        distribution,data,approx = postprocess()
+        import pickle
+        with open('approximation.pickle','wb') as pf:
+          pickle.dump((distribution,data,approx),pf,protocol=-1) # remove approx, since this can easily be reproduced
+        evaluate_postprocessing(distribution,data,approx)
     else:
         print_usage()
         return

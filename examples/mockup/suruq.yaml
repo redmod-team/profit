@@ -1,0 +1,16 @@
+uq:
+    backend: ChaosPy
+    order: 3
+    sparse: True
+    
+    params:
+        u:
+            dist: Uniform 
+            min: 4.7
+            max: 5.3
+        v:
+            dist: Uniform 
+            min: 0.55
+            max: 0.6
+
+command: 'python mockup.py'
