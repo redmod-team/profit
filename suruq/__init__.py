@@ -1,2 +1,2 @@
-from .suruq import *
+from .main import *
 from .config import *
