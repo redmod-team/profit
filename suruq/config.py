@@ -27,6 +27,7 @@ class Config(yaml.YAMLObject):
     self.base_dir = os.getcwd()
     self.template_dir = path.join(base_dir, 'template')
     self.run_dir = path.join(base_dir, 'run')
+    self.uq = OrderedDict()
     self.__dict__.update(entries)
     
   @classmethod

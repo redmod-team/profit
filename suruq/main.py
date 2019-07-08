@@ -13,7 +13,6 @@ from shutil import copytree, rmtree, ignore_patterns
 import sys
 import numpy as np
 from collections import OrderedDict
-import importlib
 
 import matplotlib.pyplot as plt
 try:
@@ -22,7 +21,7 @@ try:
 except:
   use_tqdm=False
 
-from chaospy import (J, generate_quadrature, orth_ttr, fit_quadrature, E, Std,
+from chaospy import (generate_quadrature, orth_ttr, fit_quadrature, E, Std,
     descriptives)
 
 from suruq.config import Config
@@ -40,8 +39,8 @@ def copy_template(template_dir, out_dir, dont_copy=None):
     else:
         copytree(template_dir, out_dir)
     
-def read_input():
-    data = np.genfromtxt(os.path.join(config.run_dir, 'input.txt'), names = True)
+def read_input(run_dir):
+    data = np.genfromtxt(os.path.join(run_dir, 'input.txt'), names = True)
     return data.view((float, len(data.dtype.names))).T
 
 def evaluate_postprocessing(distribution,data,expansion):
@@ -88,21 +87,23 @@ def print_usage():
     
     
 class UQ:
-    def __init__(self, config):
-        if (config.uq['backend'] == 'ChaosPy'):
-          self.backend = ChaosPy(config.uq['order'])
-          # TODO: extend
-          
-        self.Normal = self.backend.Normal
-        self.Uniform = self.backend.Uniform
-          
-        self.params = OrderedDict({})
-        params = config.uq['params']
-        for pkey in params:
-          if params[pkey]['dist'] == 'Uniform':
-            self.params[pkey] = self.Uniform(params[pkey]['min'],
-                                             params[pkey]['max'])
-          # TODO: extend
+        
+    def __init__(self, config=None):
+        self.params = OrderedDict()
+        
+        if config:
+            if (config.uq['backend'] == 'ChaosPy'):
+              self.backend = ChaosPy(config.uq['order'])
+              # TODO: extend
+              
+            self.Normal = self.backend.Normal
+            self.Uniform = self.backend.Uniform
+              
+            params = config.uq['params']
+            for pkey in params:
+              if params[pkey]['dist'] == 'Uniform':
+                self.params[pkey] = self.Uniform(params[pkey]['min'],
+                                                 params[pkey]['max'])
             
         self.template_dir = 'template/'
         self.run_dir = 'run/'
@@ -219,7 +220,7 @@ def main():
         uq = UQ(config)
         uq.pre()
     elif(sys.argv[1] == 'run'):
-        read_input()
+        read_input(config.run_dir)
         start_runs()
     elif(sys.argv[1] == 'post'):
         distribution,data,approx = postprocess()
