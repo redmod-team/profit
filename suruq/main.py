@@ -88,7 +88,7 @@ def print_usage():
     
 class UQ:
         
-def __init__(self, config=None, yaml=None):
+    def __init__(self, config=None, yaml=None):
         self.params = OrderedDict()
         
         if yaml:
