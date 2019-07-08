@@ -4,6 +4,7 @@ Created: Mon Jul  8 11:48:24 2019
 """
 
 import numpy as np
+import scipy as sp
 from suruq.sur import Surrogate
 
 def kern_sqexp(x0, x1, a): 
@@ -50,17 +51,27 @@ def gp_nll(a, x, y, sig=None):
     nll = nll + 0.5*np.log(Kydet)
     
     return nll
+    
+def gp_optimize(xtrain, ytrain, sigma_meas, a0=1):
+    res_a = sp.optimize.minimize(gp_nll, a0, 
+                                 args = (xtrain, ytrain, sigma_meas),
+                                 method = 'Powell')
+    return res_a.x
 
 class GPSurrogate(Surrogate):
     def __init__(self):
         self.trained = False
         pass
     
-    def train(self, x, y, sig=0):
+    def train(self, x, y, sig=None):
         """Fits a GP surrogate on input points x and model outputs y 
            with std. deviation sigma"""
-        #self.Kinv = fit_gp(np.array([1, 1]), x, y, sig)
-        pass
+           
+        self.hyparms = gp_optimize(x, y, sig)
+        self.Ky = gp_matrix_train(x, self.hyparms, sig)
+        self.Kyinv_y = np.linalg.solve(self.Ky, y)
+        self.xtrain = x
+        self.trained = True
     
     
     def add_training_data(self, x, y, sigma=0):
@@ -73,5 +84,10 @@ class GPSurrogate(Surrogate):
     def predict(self, x):
         if not self.trained:
             raise RuntimeError('Need to train() before predict()')
-        
+            
+        Kstar = np.fromiter(
+            (kern_sqexp(xi, xj, self.hyparms) 
+             for xi in self.xtrain for xj in x), 
+             float).reshape(self.xtrain.shape[0], x.shape[0])
 
+        return Kstar.T.dot(self.Kyinv_y)
