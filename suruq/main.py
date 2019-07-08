@@ -88,12 +88,13 @@ def print_usage():
     
 class UQ:
         
-    def __init__(self, config=None, yaml=None):
+def __init__(self, config=None, yaml=None):
         self.params = OrderedDict()
         
         if yaml:
             print('  load configuration from %s'%yaml)
             config = Config.load(yaml)
+
         if config:
             if (config.uq['backend'] == 'ChaosPy'):
               self.backend = ChaosPy(config.uq['order'])
