@@ -29,10 +29,14 @@ class Config(yaml.YAMLObject):
     self.run_dir = path.join(base_dir, 'run')
     self.uq = OrderedDict()
     self.__dict__.update(entries)
-    
+
+  def write_yaml(self,filename='suruq.yaml'):
+    with open(filename,'w') as file:
+      yaml.dump(self,file)
+
   @classmethod
   def load(cls, filename):
     with open(filename) as f:
       data = ordered_load(f, yaml.SafeLoader)
-    print(yaml.dump(data))
+    #print(yaml.dump(data))
     return cls(**data)
