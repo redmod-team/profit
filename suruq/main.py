@@ -88,9 +88,12 @@ def print_usage():
     
 class UQ:
         
-    def __init__(self, config=None):
+    def __init__(self, config=None, yaml=None):
         self.params = OrderedDict()
         
+        if yaml:
+            print('  load configuration from %s'%yaml)
+            config = Config.load(yaml)
         if config:
             if (config.uq['backend'] == 'ChaosPy'):
               self.backend = ChaosPy(config.uq['order'])
@@ -108,6 +111,30 @@ class UQ:
         self.template_dir = 'template/'
         self.run_dir = 'run/'
         self.param_files = None
+
+    def write_config(self, filename='suruq.yaml'):
+        config = self.get_config()
+        config.write_yaml(filename)
+
+    def get_config(self):
+        config = Config()
+        if isinstance(self.backend,ChaosPy):
+          config.uq['backend'] = 'ChaosPy'
+          config.uq['order'] = self.backend.order
+          config.uq['sparse'] = self.backend.sparse
+       
+        config.uq['params'] = OrderedDict() 
+        for param in self.params:
+          p = self.params[param]
+          if isinstance(p,self.backend.Uniform):
+            config.uq['params'][param]={'dist':'Uniform','min':float(p.range()[0]),'max':float(p.range()[1])}
+          elif isinstance(p,self.backend.Normal):
+            config.uq['params'][param]={'dist':'Normal'}
+
+        config.run_dir=self.run_dir
+        config.template_dir=self.template_dir
+
+        return config
         
     def write_input(self, run_dir='run/'):
         self.eval_points = self.backend.get_eval_points(self.params)
