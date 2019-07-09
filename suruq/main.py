@@ -24,7 +24,7 @@ except:
 from chaospy import (generate_quadrature, orth_ttr, fit_quadrature, E, Std,
     descriptives)
 
-from suruq.config import Config
+from suruq.config import Config,NewConfig
 from suruq.uq.backend import ChaosPy
 
 yes = True # always answer 'y'
@@ -89,51 +89,57 @@ def print_usage():
 class UQ:
         
     def __init__(self, config=None, yaml=None):
-        self.params = OrderedDict()
+        self.params = {}
+        self.backend = None
+        self.param_files = None
         
         if yaml:
             print('  load configuration from %s'%yaml)
-            config = Config.load(yaml)
+            config = NewConfig()
+            config.load(yaml)
 
         if config:
-            if (config.uq['backend'] == 'ChaosPy'):
-              self.backend = ChaosPy(config.uq['order'])
+            if (config['uq']['backend'] == 'ChaosPy'):
+              self.backend = ChaosPy(config['uq']['order'])
               # TODO: extend
               
             self.Normal = self.backend.Normal
             self.Uniform = self.backend.Uniform
               
-            params = config.uq['params']
+            params = config['uq']['params']
             for pkey in params:
               if params[pkey]['dist'] == 'Uniform':
                 self.params[pkey] = self.Uniform(params[pkey]['min'],
                                                  params[pkey]['max'])
+            if 'param_files' in config['uq']:
+              self.param_files = config['uq']['param_files']
             
         self.template_dir = 'template/'
         self.run_dir = 'run/'
-        self.param_files = None
 
     def write_config(self, filename='suruq.yaml'):
         config = self.get_config()
         config.write_yaml(filename)
 
     def get_config(self):
-        config = Config()
+        config = NewConfig()
+        configuq = config['uq']
         if isinstance(self.backend,ChaosPy):
-          config.uq['backend'] = 'ChaosPy'
-          config.uq['order'] = self.backend.order
-          config.uq['sparse'] = self.backend.sparse
+          configuq['backend'] = 'ChaosPy'
+          configuq['order'] = self.backend.order
+          configuq['sparse'] = self.backend.sparse
        
-        config.uq['params'] = OrderedDict() 
+        configuq['params'] = {} 
         for param in self.params:
           p = self.params[param]
           if isinstance(p,self.backend.Uniform):
-            config.uq['params'][param]={'dist':'Uniform','min':float(p.range()[0]),'max':float(p.range()[1])}
+            configuq['params'][param]={'dist':'Uniform','min':float(p.range()[0]),'max':float(p.range()[1])}
           elif isinstance(p,self.backend.Normal):
-            config.uq['params'][param]={'dist':'Normal'}
+            configuq['params'][param]={'dist':'Normal'}
 
-        config.run_dir=self.run_dir
-        config.template_dir=self.template_dir
+        configuq['param_files']=self.param_files
+        config['run_dir']=self.run_dir
+        config['template_dir']=self.template_dir
 
         return config
         
