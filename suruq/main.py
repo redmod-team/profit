@@ -232,29 +232,29 @@ def main():
     if len(sys.argv) < 3:
         config_file = os.path.join(os.getcwd(), 'suruq.yaml')
     else:
-        config_file = os.path.abspath(sys.argv[1])
+        config_file = os.path.abspath(sys.argv[2])
         
-    config = Config.load(config_file)
+    config = NewConfig()
+    config.load(config_file)
     
-    sys.path.append(config.base_dir)
-    
+    sys.path.append(config['base_dir'])
     
     if(sys.argv[1] == 'pre'):
         try:
-            mkdir(config.run_dir)
+            mkdir(config['run_dir'])
         except OSError:
             question = ("Warning: Run directory {} already exists "
-                        "and will be overwritten. Continue? (y/N) ").format(config.run_dir)
+                        "and will be overwritten. Continue? (y/N) ").format(config['run_dir'])
             if (yes):
                 print(question+'y')
             else:
                 answer = input(question)
                 if (not yes) and (answer == 'y' or answer == 'Y'):
                     raise Exception("exit()")
-        uq = UQ(config)
+        uq = UQ(config=config)
         uq.pre()
     elif(sys.argv[1] == 'run'):
-        read_input(config.run_dir)
+        read_input(config['run_dir'])
         start_runs()
     elif(sys.argv[1] == 'post'):
         distribution,data,approx = postprocess()
