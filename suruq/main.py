@@ -192,11 +192,24 @@ class UQ:
             self.fill_template(krun, run_dir_single)
         
 class Runner:
-    def __init__(self, backend):
-        self.backend = backend
-        self.eval_points = read_input()
+    def __init__(self, config):
+        self.eval_points = read_input(config['run_dir'])
+        if config['runner_backend'] == 'slurm':
+          from backend.run.slurm import slurm_backend
+          self.backend = slurm_backend()
+          if 'slurm' in config:
+            self.backend.write_slurm_scripts(num_experiments=123, tasks_per_node=config['slurm']['tasks_per_node'], account=config['slurm']['account'],jobcommand=config['command'])
+          else:
+            print('''cannot write slurm scripts, please provide slurm details:
+  runner_backend: slurm
+  slurm:
+      tasks_per_node: 36
+      account: xy123''')
+        else:
+          self.backend = None
     def start(self):
-        self.backend.start()
+        if self.backend is not None:
+          self.backend.call_run()
         
 class Postprocessor:
     def __init__(self, interface):
@@ -255,7 +268,8 @@ def main():
         uq.pre()
     elif(sys.argv[1] == 'run'):
         read_input(config['run_dir'])
-        start_runs()
+        run = Runner(config)
+        #run.start()
     elif(sys.argv[1] == 'post'):
         distribution,data,approx = postprocess()
         import pickle

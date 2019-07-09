@@ -12,10 +12,9 @@ class slurm_backend():
     os.system('sbatch slurm_uq_job.sh')
 
 
-  def write_slurm_scripts(self, tasks_per_node=36, account='xy0123'):
+  def write_slurm_scripts(self, num_experiments=125, tasks_per_node=36, account='xy0123', jobcommand='./sediment_io'):
 
     # first write script for single node
-    jobcommand='./sediment_io' # to be taken from config
 
     with open('run_uq_job.sh','w') as f:
       f.write('''#!/bin/bash
