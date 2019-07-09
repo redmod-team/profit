@@ -28,6 +28,7 @@ class NewConfig(dict):
     self['template_dir'] = path.join(base_dir, 'template')
     self['run_dir'] = path.join(base_dir, 'run')
     self['command'] = None
+    self['runner_backend'] = None
     self['uq']={}
     self.update(entries)
   
