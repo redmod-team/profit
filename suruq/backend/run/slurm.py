@@ -12,7 +12,20 @@ class slurm_backend():
     os.system('sbatch slurm_uq_job.sh')
 
 
-  def write_slurm_scripts(self, num_experiments=125, tasks_per_node=36, account='xy0123', jobcommand='./sediment_io'):
+  def write_slurm_scripts(self, num_experiments=125, slurm_config={}, jobcommand='./sediment_io'):
+
+    # set slurm data, first set defaults:
+    account = 'xy123'
+    time = '00:10:00'
+    job_name = 'redmod_uq'
+    partition = 'compute'
+    tasks_per_node = 36
+
+    if 'account' in slurm_config: account = slurm_config['account']
+    if 'time' in slurm_config: time = slurm_config['time']
+    if 'tasks_per_node' in slurm_config: tasks_per_node = slurm_config['tasks_per_node']
+    if 'partition' in slurm_config: partition = slurm_config['partition']
+    if 'job_name' in slurm_config: job_name = slurm_config['job_name']
 
     # first write script for single node
 
@@ -49,19 +62,18 @@ wait'''%(jobcommand))
 
       # now write slurm batch script
 
-      num_experiments=125 # todo: get from config
       num_nodes=ceil(num_experiments/tasks_per_node)
 
       with open('slurm_uq_job.sh','w') as f:
         f.write('''#!/bin/bash
-#SBATCH --job-name=redmod_uq
+#SBATCH --job-name=%s
 #SBATCH --comment="RedMod UQ"
-#SBATCH --partition=compute2   # Specify partition name
+#SBATCH --partition=%s   # Specify partition name
 #SBATCH --output=uqjob-%%A_%%a.out
 #SBATCH --error=uqjob-%%A_%%a.err
 #SBATCH --nodes=1
 #SBATCH --array=0-%d
-#SBATCH --time=00:20:00
+#SBATCH --time=%s
 #SBATCH --account=%s
 
 number_of_experiments=%d
@@ -69,7 +81,7 @@ tasks_per_node=%d
 
 
 ./run_job.sh ${SLURM_ARRAY_TASK_ID} ${tasks_per_node} ${number_of_experiments}
-'''%(num_nodes,account,num_experiments,tasks_per_node))
+'''%(job_name,partition,num_nodes,time,account,num_experiments,tasks_per_node))
 
       # now output use string
       print('  run job using:\nsbatch slurm_uq_job.sh')

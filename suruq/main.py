@@ -198,12 +198,14 @@ class Runner:
           from backend.run.slurm import slurm_backend
           self.backend = slurm_backend()
           if 'slurm' in config:
-            self.backend.write_slurm_scripts(num_experiments=123, tasks_per_node=config['slurm']['tasks_per_node'], account=config['slurm']['account'],jobcommand=config['command'])
+            self.backend.write_slurm_scripts(num_experiments=self.eval_points.shape[1], slurm_config=config['slurm'],jobcommand=config['command'])
           else:
             print('''cannot write slurm scripts, please provide slurm details:
   runner_backend: slurm
   slurm:
       tasks_per_node: 36
+      partition: compute
+      time: 00:10:00
       account: xy123''')
         else:
           self.backend = None
