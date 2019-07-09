@@ -20,3 +20,8 @@ class Surrogate(metaclass=ABCMeta):
         """Adds input points x and model outputs y with std. deviation sigma 
            and updates the surrogate"""
         pass
+
+    @abstractmethod
+    def predict(self, x):
+        """Predicts model output y for input x based on surrogate"""
+        pass
