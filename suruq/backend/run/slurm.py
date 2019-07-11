@@ -59,6 +59,7 @@ for num in $(seq $startn $endn) ; do
 done
 
 wait'''%(jobcommand))
+      os.chmod('run_uq_job.sh',509) # make run script executable
 
       # now write slurm batch script
 
