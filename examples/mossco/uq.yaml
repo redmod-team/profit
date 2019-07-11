@@ -1,0 +1,29 @@
+uq:
+    backend: ChaosPy
+    order: 3
+    sparse: False
+    
+    param_files:
+    - fabm_sed.nml
+    - run_sed.nml
+    params:
+        bioturbation:
+            dist: Uniform 
+            min: 0.2
+            max: 2.0
+        rLabile:
+            dist: Uniform 
+            min: 0.005
+            max: 0.05
+        ksNO3denit:
+            dist: Uniform
+            min: 0.5
+            max: 1.0
+
+command: '/gpfs/home/hofmeist/redmod/testcases/sediment1d/sediment_io'
+runner_backend: 'slurm'
+slurm:
+    tasks_per_node: 24
+    account: KST
+    time: 00:20:00
+    partition: pAll
