@@ -89,7 +89,7 @@ def print_usage():
 class UQ:
         
     def __init__(self, config=None, yaml=None):
-        self.params = {}
+        self.params = OrderedDict()
         self.backend = None
         self.param_files = None
         
@@ -129,7 +129,7 @@ class UQ:
           configuq['order'] = self.backend.order
           configuq['sparse'] = self.backend.sparse
        
-        configuq['params'] = {} 
+        configuq['params'] = OrderedDict() 
         for param in self.params:
           p = self.params[param]
           if isinstance(p,self.backend.Uniform):
