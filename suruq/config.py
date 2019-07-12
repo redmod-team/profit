@@ -3,6 +3,29 @@ from os import path, mkdir, walk
 import yaml
 from collections import OrderedDict
 
+# from https://stackoverflow.com/questions/16782112/can-pyyaml-dump-dict-items-in-non-alphabetical-order
+def represent_ordereddict(dumper, data):
+    value = []
+
+    for item_key, item_value in data.items():
+        node_key = dumper.represent_data(item_key)
+        node_value = dumper.represent_data(item_value)
+
+        value.append((node_key, node_value))
+
+    return yaml.nodes.MappingNode(u'tag:yaml.org,2002:map', value)
+
+yaml.add_representer(OrderedDict, represent_ordereddict)
+
+# from https://stackoverflow.com/questions/5121931/in-python-how-can-you-load-yaml-mappings-as-ordereddicts
+_mapping_tag = yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG
+
+def dict_constructor(loader, node):
+    return collections.OrderedDict(loader.construct_pairs(node))
+
+yaml.add_constructor(_mapping_tag, dict_constructor)
+
+
 # from https://stackoverflow.com/questions/5121931/in-python-how-can-you-load-yaml-mappings-as-ordereddicts
 def ordered_load(stream, Loader=yaml.Loader, object_pairs_hook=OrderedDict):
     class OrderedLoader(Loader):
