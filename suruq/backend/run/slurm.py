@@ -81,7 +81,7 @@ number_of_experiments=%d
 tasks_per_node=%d
 
 
-./run_job.sh ${SLURM_ARRAY_TASK_ID} ${tasks_per_node} ${number_of_experiments}
+./run_uq_job.sh ${SLURM_ARRAY_TASK_ID} ${tasks_per_node} ${number_of_experiments}
 '''%(job_name,partition,num_nodes,time,account,num_experiments,tasks_per_node))
 
       # now output use string
