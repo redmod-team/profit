@@ -25,29 +25,20 @@ def dict_constructor(loader, node):
 
 yaml.add_constructor(_mapping_tag, dict_constructor)
 
+# now yaml is configured to handle OrderedDict input and output
 
-# from https://stackoverflow.com/questions/5121931/in-python-how-can-you-load-yaml-mappings-as-ordereddicts
-def ordered_load(stream, Loader=yaml.Loader, object_pairs_hook=OrderedDict):
-    class OrderedLoader(Loader):
-        pass
-    def construct_mapping(loader, node):
-        loader.flatten_mapping(node)
-        return object_pairs_hook(loader.construct_pairs(node))
-    OrderedLoader.add_constructor(
-        yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
-        construct_mapping)
-    return yaml.load(stream, OrderedLoader)
 
-base_dir = os.getcwd()
-
-eval_points = None
-dont_copy = None
-param_files = None
-
-class NewConfig(dict):
+class Config(dict):
+  '''
+  UQ configuration class
+  This class provides a dictionary with possible configuration
+  parameters of the RedMod UQ software, including parameters
+  of variation, UQ-backend, and the SLURM configuration
+  '''
 
   def __init__(self,**entries):
-    self['base_dir'] = os.getcwd()
+    base_dir = os.getcwd()
+    self['base_dir'] = base_dir
     self['template_dir'] = path.join(base_dir, 'template')
     self['run_dir'] = path.join(base_dir, 'run')
     self['command'] = None
@@ -56,12 +47,20 @@ class NewConfig(dict):
     self.update(entries)
   
   def write_yaml(self,filename='suruq.yaml'):
+    '''
+    dump UQ configuration to a yaml file.
+    The default filename is suruq.yaml
+    '''
     dumpdict = dict(self)
     self.remove_nones(dumpdict)
     with open(filename,'w') as file:
       yaml.dump(dumpdict,file,default_flow_style=False)
 
   def load(self,filename='suruq.yaml'):
+    '''
+    load configuration from yaml file.
+    The default filename is suruq.yaml
+    '''
     with open(filename) as f:
       entries = yaml.safe_load(f)
     self.update(entries)
@@ -76,25 +75,3 @@ class NewConfig(dict):
           if config[key] is None:
             del config[key]
 
-
-    
-
-class Config(yaml.YAMLObject):
-  
-  def __init__(self, **entries):
-    self.base_dir = os.getcwd()
-    self.template_dir = path.join(base_dir, 'template')
-    self.run_dir = path.join(base_dir, 'run')
-    self.uq = OrderedDict()
-    self.__dict__.update(entries)
-
-  def write_yaml(self,filename='suruq.yaml'):
-    with open(filename,'w') as file:
-      yaml.dump(self,file)
-
-  @classmethod
-  def load(cls, filename):
-    with open(filename) as f:
-      data = ordered_load(f, yaml.SafeLoader)
-    #print(yaml.dump(data))
-    return cls(**data)
