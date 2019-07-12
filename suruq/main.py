@@ -24,7 +24,7 @@ except:
 from chaospy import (generate_quadrature, orth_ttr, fit_quadrature, E, Std,
     descriptives)
 
-from suruq.config import Config,NewConfig
+from suruq.config import Config
 from suruq.uq.backend import ChaosPy
 
 yes = True # always answer 'y'
@@ -95,7 +95,7 @@ class UQ:
         
         if yaml:
             print('  load configuration from %s'%yaml)
-            config = NewConfig()
+            config = Config()
             config.load(yaml)
 
         if config:
@@ -118,11 +118,15 @@ class UQ:
         self.run_dir = 'run/'
 
     def write_config(self, filename='suruq.yaml'):
+        '''
+        write UQ-configuration to yaml file.
+        The SLURM configuration is so far not dumped yet'
+        '''
         config = self.get_config()
         config.write_yaml(filename)
 
     def get_config(self):
-        config = NewConfig()
+        config = Config()
         configuq = config['uq']
         if isinstance(self.backend,ChaosPy):
           configuq['backend'] = 'ChaosPy'
@@ -144,6 +148,10 @@ class UQ:
         return config
         
     def write_input(self, run_dir='run/'):
+        '''
+        write input.txt with parameter combinations to
+        directory "run_dir"
+        '''
         self.eval_points = self.backend.get_eval_points(self.params)
         np.savetxt(os.path.join(run_dir, 'input.txt'), 
                self.eval_points.T, header=' '.join(self.params.keys()))
