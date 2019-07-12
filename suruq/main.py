@@ -257,7 +257,7 @@ def main():
     else:
         config_file = os.path.abspath(sys.argv[2])
         
-    config = NewConfig()
+    config = Config()
     config.load(config_file)
     
     sys.path.append(config['base_dir'])
