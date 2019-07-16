@@ -128,15 +128,18 @@ class GPSurrogate(Surrogate):
 class GPFlowSurrogate(Surrogate):
 
     def __init__(self):
+        gpflow.reset_default_graph_and_session()
         self.trained = False
         pass
     # TODO
         
     def train(self, x, y, sigma_n=None, sigma_f=1.0):
-        self.m = gpflow.models.GPR(x, y, kern=gpflow.kernels.SquaredExponential(1))
+        self.m = gpflow.models.GPR(x, y, 
+            kern=gpflow.kernels.SquaredExponential(1))
+            #mean_function=gpflow.mean_functions.Linear())
         self.m.kern.lengthscales.assign(np.max(x)-np.min(x))
         self.m.kern.variance.assign((np.max(y)-np.min(y))**2)
-        self.m.likelihood.variance.assign(1e-4*self.m.kern.variance.value)
+        self.m.likelihood.variance.assign(np.var(y))
         print(self.m.as_pandas_table())
         
         # Optimize

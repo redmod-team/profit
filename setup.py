@@ -28,7 +28,7 @@ setup_args = dict(
 packages = find_packages(exclude=["*.tests", "*.tests.*", "tests.*", "tests"])
 # ...
 
-install_requires = ['chaospy']
+install_requires = ['chaospy', 'gpflow']
 
 def setup_package():
     setup(packages=packages,
