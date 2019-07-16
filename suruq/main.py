@@ -14,7 +14,6 @@ import sys
 import numpy as np
 from collections import OrderedDict
 
-import matplotlib.pyplot as plt
 try:
   from tqdm import tqdm
   use_tqdm=True
