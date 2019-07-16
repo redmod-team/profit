@@ -7,6 +7,11 @@ import numpy as np
 import scipy as sp
 from suruq.sur import Surrogate
 
+try:
+    import gpflow
+except:
+    pass
+
 def kern_sqexp(x0, x1, a): 
     """Generic squared exponential kernel"""
     return np.exp(-np.linalg.norm(x1-x0)**2/(2.0*a**2))
@@ -32,14 +37,14 @@ def gp_matrix_train(x, a, sig):
         
     return K + sigmatrix
 
-def gp_nll(a, x, y, sigma=None):
+def gp_nll(a, x, y, sigma_n=None):
     """Compute negative log likelihood of GP"""
     nx = x.shape[0]
     
-    if sigma is None:  # optimize also sigma
+    if sigma_n is None:  # optimize also sigma_n
       Ky = gp_matrix_train(x, a[:-1], a[-1])
     else:
-      Ky = gp_matrix_train(x, a, sigma)
+      Ky = gp_matrix_train(x, a, sigma_n)
    
     try:
         Kyinv_y = np.linalg.solve(Ky, y)
@@ -60,17 +65,17 @@ def gp_nll(a, x, y, sigma=None):
     
     return nll
     
-def gp_optimize(xtrain, ytrain, sigma_meas, a0=1):
+def gp_optimize(xtrain, ytrain, sigma_n, a0=1):
     
     # Avoid values too close to zero
-    if sigma_meas is None:
+    if sigma_n is None:
       bounds = [(1e-6, None), 
                 (1e-6*(np.max(ytrain)-np.min(ytrain)), None)]
     else:
       bounds = [(1e-6, None)]
       
     res_a = sp.optimize.minimize(gp_nll, a0, 
-                                 args = (xtrain, ytrain, sigma_meas),
+                                 args = (xtrain, ytrain, sigma_n),
                                  bounds = bounds, 
                                  options={'ftol': 1e-6})
     return res_a.x
@@ -80,20 +85,23 @@ class GPSurrogate(Surrogate):
         self.trained = False
         pass
     
-    def train(self, x, y, sigma=None):
+    def train(self, x, y, sigma_n=None, sigma_f=1.0):
         """Fits a GP surrogate on input points x and model outputs y 
-           with std. deviation sigma"""
-        if sigma is None:
+           with scale sigma_f and noise sigma_n"""
+        if sigma_n is None:
           a0 = [1, 1e-2*(np.max(y)-np.min(y))]
           print(a0)
-          [self.hyparms, sigma] = gp_optimize(x, y, None, a0)
+          [self.hyparms, sigma_n] = gp_optimize(x, y, None, a0)
         else:
           a0 = 1
-          self.hyparms = gp_optimize(x, y, sigma, a0)
+          self.hyparms = gp_optimize(x, y, sigma_n, a0)
           
-        self.sigma = sigma
-        self.Ky = gp_matrix_train(x, self.hyparms, sigma)
-        self.Kyinv_y = np.linalg.solve(self.Ky, y)
+        self.sigma = sigma_n
+        self.Ky = gp_matrix_train(x, self.hyparms, sigma_n)
+        try:
+            self.Kyinv_y = np.linalg.solve(self.Ky, y)
+        except np.linalg.LinAlgError:
+            self.Kyinv_y = np.linalg.lstsq(self.Ky, y, rcond=1e-15)[0]
         self.xtrain = x
         self.trained = True
     
@@ -115,3 +123,40 @@ class GPSurrogate(Surrogate):
              float).reshape(self.xtrain.shape[0], x.shape[0])
 
         return Kstar.T.dot(self.Kyinv_y)
+
+
+class GPFlowSurrogate(Surrogate):
+
+    def __init__(self):
+        self.trained = False
+        pass
+    # TODO
+        
+    def train(self, x, y, sigma_n=None, sigma_f=1.0):
+        self.m = gpflow.models.GPR(x, y, kern=gpflow.kernels.SquaredExponential(1))
+        self.m.kern.lengthscales.assign(np.max(x)-np.min(x))
+        self.m.kern.variance.assign((np.max(y)-np.min(y))**2)
+        self.m.likelihood.variance.assign(1e-4*self.m.kern.variance.value)
+        print(self.m.as_pandas_table())
+        
+        # Optimize
+        self.m.compile()
+        opt = gpflow.train.ScipyOptimizer()
+        opt.minimize(self.m)
+        print(self.m.as_pandas_table())
+        
+        self.sigma = np.sqrt(self.m.likelihood.variance.value)
+        self.trained = True
+    
+    def add_training_data(self, x, y, sigma=None):
+        """Adds input points x and model outputs y with std. deviation sigma 
+           and updates the inverted covariance matrix for the GP via the 
+           Sherman-Morrison-Woodbury formula"""
+        
+        raise NotImplementedError()
+        
+    def predict(self, x):
+        if not self.trained:
+            raise RuntimeError('Need to train() before predict()')
+            
+        return self.m.predict_y(x)
