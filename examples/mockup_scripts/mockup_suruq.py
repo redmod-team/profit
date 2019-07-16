@@ -4,7 +4,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy as sp
-from suruq.sur.backend.gp import GPSurrogate
+from suruq.sur.backend.gp import GPSurrogate, GPFlowSurrogate
 
 #%% Define some model f(u, v)
 def rosenbrock(x, y, a, b):
@@ -14,10 +14,10 @@ def f(r, u, v):
   
 
 #%% Plot model at [u0, v0]
-    
+nr0 = 100
 u0 = 5
 v0 = 0.575
-r = np.linspace(0,1,100)
+r = np.linspace(0,1,nr0)
 
 plt.figure()
 plt.plot(r, f(r, u0, v0))
@@ -51,26 +51,31 @@ xtrain = np.array([rtrain[kr] for kr in range(nr)
 ytrain = np.array([f(rtrain[kr], uk, vk) for kr in range(nr)
     for vk in uvtrain[kr,:,1] for uk in uvtrain[kr,:,0]])
 ntrain = len(ytrain)
+xtrain = xtrain.reshape([ntrain, 1])
+ytrain = ytrain.reshape([ntrain, 1])
 
 plt.figure()
 plt.plot(uvtrain[:,:,0], uvtrain[:,:,1], 'x')
 plt.show()
 
 #%% Create and train surrogate
-sur = GPSurrogate()
+sur = GPFlowSurrogate()
 sur.train(xtrain, ytrain)
 
 #%% Compute surrogate predictor for test input
-xtest = r
+xtest = r.reshape([nr0, 1])
 ftest = sur.predict(xtest)
 
 # reference for checking only:
 ytest = f(r, u0, v0)
 
 plt.figure()
-plt.errorbar(xtrain, ytrain, sur.sigma*1.96, capsize=2, fmt='.')
+plt.plot(xtrain, ytrain, 'x')
 plt.plot(xtest, ytest)
-plt.plot(xtest, ftest)
+plt.plot(xtest, ftest[0])
+plt.fill_between(xtest[:,0], ftest[0][:,0] - 1.96*np.sqrt(ftest[1][:,0]), 
+                             ftest[0][:,0] + 1.96*np.sqrt(ftest[1][:,0]),
+                 alpha = 0.3)
 plt.xlabel('r')
 plt.ylabel('f(r)')
 plt.show()
