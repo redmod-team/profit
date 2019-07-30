@@ -6,7 +6,7 @@ The scripts are designed such that no changes in simulation code and
 UQ/surrogate backends are necessary, and to minimize interfacing effort by the user.
 
 Current functionality covers uncertainty quantification via PCE with 
-*chaospy* as a backend. Support for surrogate models via Gaussian 
+[chaospy](https://github.com/jonathf/chaospy) as a backend. Support for surrogate models via Gaussian 
 Progress regression is under development.
 
 ## Features
