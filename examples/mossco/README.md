@@ -4,11 +4,11 @@ This configuration runs an uncertainty quantification for a variation of three m
 
 The configuration of the UQ is read in from the configuration yaml uq.yaml
 
+> mkdir template # or copy template from the mossco setups. Parameters to be changed have to appear in curly brackets, e.g. parameter value for "rLabile" has to be "{rLabile}" in the parameter/nml file.
 > python ../../../suruq/suruq/main.py pre uq.yaml
 
 Running the job is prepared by
 
-> mkdir template # or copy template from the mossco setups
 > python ../../../suruq/suruq/main.py run uq.yaml
 > sbatch slurm_uq_job.sh
 
