@@ -1,8 +1,9 @@
 # Name type values
-coeff_d_loss       Normal 0.999    0.0052
-k_light_sm         Normal 27.1     17.0
-k_alg_si           Normal 0.318    0.1 
-k_att_shade        Normal 0.015    0.0087
-frac_si_alg        Normal 0.0817   0.0077
-factor_silica      Normal 1.309    0.086
-k_alg_growth_max   Normal 2.19     0.22
+coeff_d_loss       LogNormal 0.999    0.0052
+k_light_sm         LogNormal 27.1     17.0
+k_alg_si           LogNormal 0.318    0.1 
+k_att_shade        LogNormal 0.015    0.0087
+frac_si_alg        LogNormal 0.0817   0.0077
+factor_silica      LogNormal 1.309    0.086
+k_alg_growth_max   LogNormal 2.19     0.22
+

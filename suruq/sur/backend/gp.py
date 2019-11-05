@@ -89,11 +89,11 @@ class GPSurrogate(Surrogate):
         """Fits a GP surrogate on input points x and model outputs y 
            with scale sigma_f and noise sigma_n"""
         if sigma_n is None:
-          a0 = [1, 1e-2*(np.max(y)-np.min(y))]
+          a0 = [1e-6, 1e-2*(np.max(y)-np.min(y))]
           print(a0)
           [self.hyparms, sigma_n] = gp_optimize(x, y, None, a0)
         else:
-          a0 = 1
+          a0 = 1e-6
           self.hyparms = gp_optimize(x, y, sigma_n, a0)
           
         self.sigma = sigma_n
@@ -133,7 +133,7 @@ class GPFlowSurrogate(Surrogate):
         pass
     # TODO
         
-    def train(self, x, y, sigma_n=None, sigma_f=1.0):
+    def train(self, x, y, sigma_n=None, sigma_f=1e-6):
         self.m = gpflow.models.GPR(x, y, 
             kern=gpflow.kernels.SquaredExponential(1))
             #mean_function=gpflow.mean_functions.Linear())

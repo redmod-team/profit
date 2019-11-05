@@ -3,7 +3,6 @@ Created: Mon Jul  8 11:47:38 2019
 @author: Christopher Albert <albert@alumni.tugraz.at>
 """
 
-
 import numpy as np
 import matplotlib.pyplot as plt
 import os
@@ -73,14 +72,22 @@ plt.show()
 #%%
 sobol1 = descriptives.sensitivity.Sens_m(approx, distribution)
 
+#%%
+plt.figure()
+plt.plot(np.arange(len(F0))-38, sobol1.T)
+plt.legend(params)
+plt.title('First order sensitivity indices (Sobol)')
+plt.xlabel('t')
+plt.ylabel('f(t)')
+
 #%% Surrogate over x
 
 nx = 38
-ns = 20
+ns = 30
 ntrain = nx*ns
 
 samples = distribution.sample(ns)
-y = approx(*samples)[41:]
+y = ((approx(*samples)[41:].T)/dF[41:]).T
 
 
 plt.figure()
@@ -100,16 +107,16 @@ ftest = sur.predict(xtest)
 
 plt.figure()
 plt.plot(xtrain, ytrain, '.', markersize=1)
-plt.plot(np.arange(38), F0[41:], 'k')
+plt.plot(np.arange(38), F0[41:]/dF[41:], 'k')
 plt.plot(xtest, ftest[0], color='tab:blue')
-plt.fill_between(xtest[:,0], ftest[0][:,0] - 1.96*np.sqrt(ftest[1][:,0]), 
-                             ftest[0][:,0] + 1.96*np.sqrt(ftest[1][:,0]),
+plt.fill_between(xtest[:,0], (ftest[0][:,0] - 1.96*np.sqrt(ftest[1][:,0])), 
+                             (ftest[0][:,0] + 1.96*np.sqrt(ftest[1][:,0])),
                  alpha = 0.3)
-plt.plot(np.arange(38), F0[41:]-1.96*dF[41:], 'k--')
-plt.plot(np.arange(38), F0[41:]+1.96*dF[41:], 'k--')
+plt.plot(np.arange(38), F0[41:]/dF[41:]-1.96, 'k--')
+plt.plot(np.arange(38), F0[41:]/dF[41:]+1.96, 'k--')
 plt.xlabel('t')
 plt.ylabel('f(t)')
-plt.ylim(-100,200)
+#plt.ylim(-100,200)
 plt.legend(['samples', 'reference', 'surrogate'])
 plt.show()
 #%%
