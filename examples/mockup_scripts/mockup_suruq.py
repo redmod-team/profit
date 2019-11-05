@@ -25,11 +25,11 @@ y = np.fromiter((f(0.25, uk, vk) for vk in v for uk in u), float)
 Y = y.reshape(U.shape)
 
 #%% Generate training data
-nr = 3
+nr = 10
 nuv = 5
 rtrain = np.linspace(0.3,0.7,nr)
-sig_u = 0.01
-sig_v = 0.001
+sig_u = 0.1
+sig_v = 0.01
 
 uvtrain = np.random.multivariate_normal([u0,v0], np.diag([sig_u, sig_v])**2, 
                                         [nr,nuv])
@@ -63,9 +63,6 @@ plt.show()
 plt.figure()
 plt.contour(U,V,Y)
 plt.colorbar()
-plt.show()
-
-plt.figure()
 plt.plot(uvtrain[:,:,0], uvtrain[:,:,1], 'x')
 plt.show()
 

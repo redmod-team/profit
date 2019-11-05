@@ -25,6 +25,7 @@ from chaospy import (generate_quadrature, orth_ttr, fit_quadrature, E, Std,
 
 from suruq.config import Config
 from suruq.uq.backend import ChaosPy
+from suruq.util import load_txt
 
 yes = True # always answer 'y'
 
@@ -39,7 +40,7 @@ def copy_template(template_dir, out_dir, dont_copy=None):
         copytree(template_dir, out_dir)
     
 def read_input(run_dir):
-    data = np.genfromtxt(os.path.join(run_dir, 'input.txt'), names = True)
+    data = load_txt(os.path.join(run_dir, 'input.txt'))
     return data.view((float, len(data.dtype.names))).T
 
 def evaluate_postprocessing(distribution,data,expansion):

@@ -29,4 +29,5 @@ run/
 draft/BayesSys/
 .coverage
 coverage.xml
+.eggs
 
