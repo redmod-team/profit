@@ -3,13 +3,13 @@
 
 from setuptools import setup, find_packages
 
-NAME    = 'suruq'
+NAME    = 'redmod'
 VERSION = 0.1
 AUTHOR  = 'Christopher Albert'
 EMAIL   = 'albert@alumni.tugraz.at'
-URL     = 'https://github.com/krystophny/redmod'
-DESCR   = 'Toolkit to transparently interface Fortran from Python.'
-KEYWORDS = ['PCE']
+URL     = 'https://github.com/redmod-team/redmod'
+DESCR   = 'Toolkit for reduced complexity models.'
+KEYWORDS = ['PCE', 'UQ']
 LICENSE = 'MIT'
 
 setup_args = dict(
