@@ -4,7 +4,7 @@
 
 This is a collection of tools for systematic parameter studies and
 construction of probabilistic reduced complexity response-surface models
-based on a blackbox simulation code called at different parameters.
+based on a blackbox input-output relation evaluated at different parameters.
 The scripts are designed such that no changes in simulation code and
 UQ/surrogate backends are necessary, and to minimize interfacing effort by the user.
 
