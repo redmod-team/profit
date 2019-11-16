@@ -1,3 +1,5 @@
+<img src="C493E39E-F5FE-4689-B242-448A84803AFA.jpeg" width="100" align="right">
+
 # profit - Probabilistic RespOnse surface FITting
 
 (Or: Parameter space Reduced Order model Fitting with Interactive Tools)
