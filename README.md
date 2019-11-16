@@ -1,4 +1,6 @@
-# profit - Probabilistic Reduced Order model Fitting with Interactive Tools
+# profit - Probabilistic RespOnse surface FITting
+
+(Or: Parameter space Reduced Order model Fitting with Interactive Tools)
 
 This is a collection of tools for systematic parameter studies and
 construction of probabilistic reduced complexity response-surface models
