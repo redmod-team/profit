@@ -1,12 +1,12 @@
-<img src="C493E39E-F5FE-4689-B242-448A84803AFA.jpeg" width="100" align="right">
+<img src="logo.jpg" width="100" align="right">
 
-# profit - Probabilistic RespOnse surface FITting
+# profit - *p*robabilistic *r*esp*o*nse surface *fit*ting
 
-(Or: Parameter space Reduced Order model Fitting with Interactive Tools)
+(or: **p**arameter space **r**educed **o**rder model **f**itting with **i**nteractive **t**ools)
 
 This is a collection of tools for systematic parameter studies and
-construction of probabilistic reduced complexity response-surface models
-based on a blackbox input-output relation evaluated at different parameters.
+construction of probabilistic reduced order response-surface models
+based on a blackbox input-output relation evaluated at selected points in parameter space.
 The scripts are designed such that no changes in simulation code and
 UQ/surrogate backends are necessary, and to minimize interfacing effort by the user.
 

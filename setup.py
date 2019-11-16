@@ -4,7 +4,7 @@
 from setuptools import setup, find_packages
 
 NAME    = 'profit'
-VERSION = 0.1
+VERSION = '0.0.1'
 AUTHOR  = 'Christopher Albert'
 EMAIL   = 'albert@alumni.tugraz.at'
 URL     = 'https://github.com/redmod-team/profit'
@@ -16,7 +16,7 @@ setup_args = dict(
     name                 = NAME,
     version              = VERSION,
     description          = DESCR,
-    long_description     = open('README.md').read(),
+#    long_description     = open('README.md').read(),
     author               = AUTHOR,
     author_email         = EMAIL,
     license              = LICENSE,
