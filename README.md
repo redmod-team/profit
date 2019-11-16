@@ -1,7 +1,7 @@
 # profit - Probabilistic Reduced Order model Fitting with Interactive Tools
 
-This is a collection of tools to explore parameter space and
-construct probabilistic reduced complexity response-surface models
+This is a collection of tools for systematic parameter studies and
+construction of probabilistic reduced complexity response-surface models
 based on a blackbox simulation code called at different parameters.
 The scripts are designed such that no changes in simulation code and
 UQ/surrogate backends are necessary, and to minimize interfacing effort by the user.
