@@ -8,7 +8,7 @@ VERSION = 0.1
 AUTHOR  = 'Christopher Albert'
 EMAIL   = 'albert@alumni.tugraz.at'
 URL     = 'https://github.com/redmod-team/profit'
-DESCR   = 'Probabilistic Reduced Order model Fitting with Interactive Tools'
+DESCR   = 'Probabilistic response surface fitting'
 KEYWORDS = ['PCE', 'UQ']
 LICENSE = 'MIT'
 
