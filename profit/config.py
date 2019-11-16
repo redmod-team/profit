@@ -46,20 +46,20 @@ class Config(dict):
     self['uq']={}
     self.update(entries)
   
-  def write_yaml(self,filename='suruq.yaml'):
+  def write_yaml(self,filename='profit.yaml'):
     '''
     dump UQ configuration to a yaml file.
-    The default filename is suruq.yaml
+    The default filename is profit.yaml
     '''
     dumpdict = dict(self)
     self.remove_nones(dumpdict)
     with open(filename,'w') as file:
       yaml.dump(dumpdict,file,default_flow_style=False)
 
-  def load(self,filename='suruq.yaml'):
+  def load(self,filename='profit.yaml'):
     '''
     load configuration from yaml file.
-    The default filename is suruq.yaml
+    The default filename is profit.yaml
     '''
     with open(filename) as f:
       entries = yaml.safe_load(f)

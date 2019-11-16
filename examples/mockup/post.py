@@ -1,4 +1,4 @@
-import suruq
+import profit
 import numpy as np
 
 class MockupInterface:
@@ -9,6 +9,6 @@ class MockupInterface:
         data = np.loadtxt('mockup.out')
         return data
 
-postproc = suruq.Postprocessor(MockupInterface())
+postproc = profit.Postprocessor(MockupInterface())
 postproc.read()
 print(postproc.data)

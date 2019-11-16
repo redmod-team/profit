@@ -1,0 +1,22 @@
+.tabs-container {
+    width: 100%;
+    background-color: #119DFF;
+}
+.tabs {
+    height: 44px;
+    background-color: #119DFF;
+}
+
+.tab {
+    border-bottom: 1px solid #d6d6d6;
+    padding: 6px;
+    background-color: #119DFF;
+}
+.tab--selected {
+    border-top: 1px solid #d6d6d6;
+    border-bottom: 1px solid #d6d6d6;
+    background-color: #119DFF;
+    color: white;
+    padding: 6px;
+    font-weight: bold;
+}

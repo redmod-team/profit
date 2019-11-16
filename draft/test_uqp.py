@@ -2,7 +2,7 @@
 Created: Tue Mar 26 09:45:46 2019
 @author: Christopher Albert <albert@alumni.tugraz.at>
 """
-from suruq import uq
+from profit import uq
 import numpy as np
 from fffi import fortran_module
 

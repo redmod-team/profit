@@ -2,7 +2,7 @@ from pylab import *
 import chaospy as cp
 import sys,os
 import numpy as np
-import suruq
+import profit 
 import netCDF4
 
 def read_output(fulldir):
@@ -43,7 +43,7 @@ data = get_data(nrun,cdir)
 #rescale oxygen flux
 data[:,0,:] = -data[:,0,:]*86400.
 
-uq = suruq.UQ(yaml='uq.yaml')
+uq = profit.UQ(yaml='uq.yaml')
 distribution = cp.J(*uq.params.values())
 sparse=uq.backend.sparse
 if sparse:

@@ -15,3 +15,4 @@ def f(r, u, v):
 result = f(0.25, {u}, {v})
 print(result)
 np.savetxt('mockup.out', np.array([result]))
+

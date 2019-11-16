@@ -1,6 +1,6 @@
-import suruq
-from suruq.run.backend import LocalCommand
+import profit
+from profit.run.backend import LocalCommand
 
-runner = suruq.Runner(LocalCommand('./template/sediment_io'))
+runner = profit.Runner(LocalCommand('./template/sediment_io'))
 
 runner.start()

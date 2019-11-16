@@ -1,5 +1,5 @@
-import suruq
-from suruq.run.backend import LocalCommand
+import profit 
+from profit.run.backend import LocalCommand
 
-runner = suruq.Runner(LocalCommand('python mockup.py'))
+runner = profit.Runner(LocalCommand('python mockup.py'))
 runner.start()
