@@ -3,12 +3,12 @@
 
 from setuptools import setup, find_packages
 
-NAME    = 'redmod'
+NAME    = 'profit'
 VERSION = 0.1
 AUTHOR  = 'Christopher Albert'
 EMAIL   = 'albert@alumni.tugraz.at'
-URL     = 'https://github.com/redmod-team/redmod'
-DESCR   = 'Toolkit for reduced complexity models.'
+URL     = 'https://github.com/redmod-team/profit'
+DESCR   = 'Probabilistic Reduced Order model Fitting with Interactive Tools'
 KEYWORDS = ['PCE', 'UQ']
 LICENSE = 'MIT'
 

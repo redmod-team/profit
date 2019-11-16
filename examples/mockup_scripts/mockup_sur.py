@@ -4,7 +4,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy as sp
-from suruq.sur.backend.gp import GPSurrogate
+from profit.sur.backend.gp import GPSurrogate
 
 
 #%% Define some model f(u, v)
@@ -54,7 +54,7 @@ plt.ylabel('f(u,v0)')
 plt.show()
 
 #%% Plot likelihood over hyperparameters
-from suruq.sur.backend.gp import gp_nll
+from profit.sur.backend.gp import gp_nll
 
 hypaplot = np.linspace(0.1,2,100)
 nlls = np.fromiter(

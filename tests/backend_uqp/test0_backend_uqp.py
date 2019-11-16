@@ -10,7 +10,7 @@ import numpy as np
 from time import time
 from unittest import TestCase
 from fffi import fortran_module
-from suruq import uq
+from profit import uq
 
 
 class TestBackendUQP(TestCase):

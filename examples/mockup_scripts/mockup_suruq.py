@@ -2,7 +2,7 @@
 # coding: utf-8
 
 import numpy as np
-from suruq.sur.backend.gp import GPFlowSurrogate
+from profit.sur.backend.gp import GPFlowSurrogate
 
 #%% Define some model f(u, v)
 def rosenbrock(x, y, a, b):

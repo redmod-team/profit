@@ -19,7 +19,7 @@ sys.path.insert(0, os.path.abspath('..'))
 
 # -- Project information -----------------------------------------------------
 
-project = 'SurUQ'
+project = 'profit'
 copyright = '2019, The RedMod Team'
 author = 'The RedMod Team'
 
@@ -138,7 +138,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'SurUQ.tex', 'SurUQ Documentation',
+    (master_doc, 'profit.tex', 'profit documentation',
      'The RedMod Team', 'manual'),
 ]
 
@@ -148,7 +148,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'suruq', 'SurUQ Documentation',
+    (master_doc, 'profit', 'profit documentation',
      [author], 1)
 ]
 
@@ -159,8 +159,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'SurUQ', 'SurUQ Documentation',
-     author, 'SurUQ', 'One line description of project.',
+    (master_doc, 'profit', 'profit documentation',
+     author, 'profit', 'One line description of project.',
      'Miscellaneous'),
 ]
 

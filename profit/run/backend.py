@@ -11,7 +11,7 @@ import subprocess
 import numpy as np
 
 try:
-    from suruq import config
+    from profit import config
 except:
     pass
 

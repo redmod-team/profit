@@ -5,7 +5,7 @@ Created: Mon Jul  8 11:48:24 2019
 
 import numpy as np
 import scipy as sp
-from suruq.sur import Surrogate
+from profit.sur import Surrogate
 
 try:
     import gpflow

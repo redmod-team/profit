@@ -23,9 +23,9 @@ except:
 from chaospy import (generate_quadrature, orth_ttr, fit_quadrature, E, Std,
     descriptives)
 
-from suruq.config import Config
-from suruq.uq.backend import ChaosPy
-from suruq.util import load_txt
+from profit.config import Config
+from profit.uq.backend import ChaosPy
+from profit.util import load_txt
 
 yes = True # always answer 'y'
 
@@ -117,7 +117,7 @@ class UQ:
         self.template_dir = 'template/'
         self.run_dir = 'run/'
 
-    def write_config(self, filename='suruq.yaml'):
+    def write_config(self, filename='profit.yaml'):
         '''
         write UQ-configuration to yaml file.
         The SLURM configuration is so far not dumped yet'
@@ -253,7 +253,7 @@ def main():
         return
       
     if len(sys.argv) < 3:
-        config_file = os.path.join(os.getcwd(), 'suruq.yaml')
+        config_file = os.path.join(os.getcwd(), 'profit.yaml')
     else:
         config_file = os.path.abspath(sys.argv[2])
         

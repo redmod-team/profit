@@ -4,12 +4,12 @@ This configuration runs an uncertainty quantification for a variation of more th
 
 The configuration of the UQ is read in from the configuration yaml uq.yaml
 
-> python ../../../suruq/suruq/main.py pre uq.yaml
+> python ../../../profit/profit/main.py pre uq.yaml
 
 Running the job is prepared by
 
 > mkdir template # or copy template from the mossco setups
-> python ../../../suruq/suruq/main.py run uq.yaml
+> python ../../../profit/profit/main.py run uq.yaml
 
 get number of experiments from uq setup and add to submit_chunks.sh
 then submit job based on run-ID and number of chunks (which is a number of contributing nodes)
