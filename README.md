@@ -1,12 +1,12 @@
 <img src="logo.png">
 
-# Probabilistic response surface fitting
+# Probabilistic Reduced Order model FITting
 
-or: **p**arameter space **r**educed **o**rder model **f**itting with **i**nteractive **t**ools
+or: **p**arameter space **r**esp**o**nse **f**itting with **i**nteractive **t**ools
 
-This is a collection of tools for fitting response surfaces of output from 
-black-box simulation codes or experiments over input parameter space and
-construction of reduced order models.
+This is a collection of tools for studying parametric dependencies of 
+black-box simulation codes or experiments and construction of reduced 
+order models over input parameter space.
 The scripts are designed such that no changes in simulation code or
 backends are necessary, and to minimize interfacing effort by the user.
 
