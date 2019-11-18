@@ -1,18 +1,19 @@
-<img src="logo.jpg" width="100" align="right">
+<img src="logo.png">
 
-# profit - *p*robabilistic *r*esp*o*nse surface *fit*ting
+# Probabilistic response surface fitting
 
-(or: **p**arameter space **r**educed **o**rder model **f**itting with **i**nteractive **t**ools)
+or: **p**arameter space **r**educed **o**rder model **f**itting with **i**nteractive **t**ools
 
-This is a collection of tools for systematic parameter studies and
-construction of probabilistic reduced order response-surface models
-based on a blackbox input-output relation evaluated at selected points in parameter space.
-The scripts are designed such that no changes in simulation code and
-UQ/surrogate backends are necessary, and to minimize interfacing effort by the user.
+This is a collection of tools for fitting response surfaces of output from 
+black-box simulation codes or experiments over input parameter space and
+construction of reduced order models.
+The scripts are designed such that no changes in simulation code or
+backends are necessary, and to minimize interfacing effort by the user.
 
-Current functionality covers uncertainty quantification via PCE with 
-[chaospy](https://github.com/jonathf/chaospy) as a backend. Support for surrogate models via Gaussian 
-Progress regression is under development.
+Current functionality covers uncertainty quantification via polynomial chaos expansion 
+with [chaospy](https://github.com/jonathf/chaospy) as a backend. Support for 
+response surface / surrogate models via [GPflow](https://github.com/GPflow/GPflow) 
+is under development.
 
 ## Features
 
