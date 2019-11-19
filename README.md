@@ -1,6 +1,6 @@
 <img src="logo.png">
 
-# Probabilistic Response mOdel Fitting by Interactive Tools
+# Probabilistic Response mOdel Fits via Interactive Tools
 
 or: **p**arameter space **r**educed **o**rder model **fit**ting
 
