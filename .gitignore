@@ -30,4 +30,9 @@ draft/BayesSys/
 .coverage
 coverage.xml
 .eggs
-
+.mypy_cache/
+profit/ui/assets/ace
+.vscode/
+*.pdf
+*.xcf
+*.tar.gz
