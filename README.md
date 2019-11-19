@@ -6,7 +6,7 @@ or: **p**arameter space **r**educed **o**rder model **fit**ting
 
 This is a collection of tools for studying parametric dependencies of 
 black-box simulation codes or experiments and construction of reduced 
-order models over input parameter space.
+order response models over input parameter space.
 The scripts are designed such that no changes in simulation code or
 backends are necessary, and to minimize interfacing effort by the user.
 
