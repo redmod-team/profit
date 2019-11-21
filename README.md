@@ -2,18 +2,27 @@
 
 # Probabilistic response model fitting via interactive tools
 
-or: **p**arameter space **r**educed **o**rder model **fit**ting
-
 This is a collection of tools for studying parametric dependencies of 
 black-box simulation codes or experiments and construction of reduced 
-order response models over input parameter space.
-The scripts are designed such that no changes in simulation code or
-backends are necessary, and to minimize interfacing effort by the user.
+order response models over input parameter space. 
 
-Current functionality covers uncertainty quantification via polynomial chaos expansion 
+`profit` can be fed with a number of data points consisting of different 
+input parameter combinations and the resulting output of the model under 
+investigation. It then fits a response "surface" through the point cloud.
+This probablistic response model allows to predict ("interpolate") the output 
+at yet unexplored parameter combinations including uncertainty estimates. 
+It can also tell you where to put more training points to gain maximum new 
+information (experimental design) and automatically generate and start
+new simulation runs locally or on a cluster. Results can be explored and checked 
+visually in a web frontend.
+
+Telling `profit` how to interact with your existing simulations is easy
+and requires no changes in your existing code. Current functionality covers 
+uncertainty quantification via polynomial chaos expansion 
 with [chaospy](https://github.com/jonathf/chaospy) as a backend. Support for 
-response surface / surrogate models via [GPflow](https://github.com/GPflow/GPflow) 
-is under development.
+response surface / surrogate models via 
+[GPflow](https://github.com/GPflow/GPflow) is under development. 
+The web frontend is based on [plotly/dash](https://github.com/plotly/dash).
 
 ## Features
 
