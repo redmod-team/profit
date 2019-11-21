@@ -1,6 +1,6 @@
-<img src="logo.png">
+<img src="logo.png" width="208.5px">
 
-# Probabilistic Response Online Fit via Interactive Tools
+# Probabilistic response model fit via interactive tools
 
 or: **p**arameter space **r**educed **o**rder model **fit**ting
 
