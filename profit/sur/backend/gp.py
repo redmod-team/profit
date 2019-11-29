@@ -9,6 +9,12 @@ from profit.sur import Surrogate
 
 try:
     import gpflow
+    from gpflow.utilities import print_summary
+except:
+    pass
+
+try:
+    import GPy
 except:
     pass
 
@@ -126,29 +132,28 @@ class GPSurrogate(Surrogate):
 
 
 class GPFlowSurrogate(Surrogate):
-
     def __init__(self):
-        gpflow.reset_default_graph_and_session()
+        # gpflow.reset_default_graph_and_session()
         self.trained = False
         pass
     # TODO
         
     def train(self, x, y, sigma_n=None, sigma_f=1e-6):
-        self.m = gpflow.models.GPR(x, y, 
-            kern=gpflow.kernels.SquaredExponential(1))
+        self.m = gpflow.models.GPR((x, y), 
+            kernel=gpflow.kernels.SquaredExponential())
             #mean_function=gpflow.mean_functions.Linear())
-        self.m.kern.lengthscales.assign(np.max(x)-np.min(x))
-        self.m.kern.variance.assign((np.max(y)-np.min(y))**2)
+        self.m.kernel.lengthscale.assign(np.max(x)-np.min(x))
+        self.m.kernel.variance.assign((np.max(y)-np.min(y))**2)
         self.m.likelihood.variance.assign(np.var(y))
-        print(self.m.as_pandas_table())
+        print_summary(self.m)
         
         # Optimize
-        self.m.compile()
-        opt = gpflow.train.ScipyOptimizer()
-        opt.minimize(self.m)
-        print(self.m.as_pandas_table())
-        
-        self.sigma = np.sqrt(self.m.likelihood.variance.value)
+        opt = gpflow.optimizers.Scipy()
+        opt.minimize(lambda: -self.m.log_marginal_likelihood(), 
+            self.m.trainable_parameters, method = 'Powell')
+        print_summary(self.m)
+
+        self.sigma = np.sqrt(self.m.likelihood.variance.value())
         self.trained = True
     
     def add_training_data(self, x, y, sigma=None):
@@ -163,3 +168,36 @@ class GPFlowSurrogate(Surrogate):
             raise RuntimeError('Need to train() before predict()')
             
         return self.m.predict_y(x)
+
+class GPySurrogate(Surrogate):
+    def __init__(self):
+        # gpflow.reset_default_graph_and_session()
+        self.trained = False
+        pass
+    # TODO
+        
+    def train(self, x, y, sigma_n=None, sigma_f=1e-6):
+        kernel = GPy.kern.RBF(input_dim=x.shape[1], 
+                              variance=1e2*(np.max(y)-np.min(y))**2, 
+                              lengthscale=np.max(x)-np.min(x))
+        self.m = GPy.models.GPRegression(x, y.reshape([y.size,1]), kernel)
+        self.m.Gaussian_noise.variance = 1e-4*(np.max(y)-np.min(y))**2
+        #print(self.m)
+        self.m.optimize(messages=False)
+        #print(self.m)
+
+        self.sigma = np.sqrt(self.m.Gaussian_noise.variance.values)
+        self.trained = True
+    
+    def add_training_data(self, x, y, sigma=None):
+        """Adds input points x and model outputs y with std. deviation sigma 
+           and updates the inverted covariance matrix for the GP via the 
+           Sherman-Morrison-Woodbury formula"""
+        
+        raise NotImplementedError()
+        
+    def predict(self, x):
+        if not self.trained:
+            raise RuntimeError('Need to train() before predict()')
+            
+        return self.m.predict(x)
