@@ -2,7 +2,7 @@
 # coding: utf-8
 
 import numpy as np
-from profit.sur.backend.gp import GPFlowSurrogate
+from profit.sur.backend.gp import GPySurrogate
 
 #%% Define some model f(u, v)
 def rosenbrock(x, y, a, b):
@@ -28,7 +28,7 @@ Y = y.reshape(U.shape)
 nr = 10
 nuv = 5
 rtrain = np.linspace(0.3,0.7,nr)
-sig_u = 0.1
+sig_u = 0.01
 sig_v = 0.01
 
 uvtrain = np.random.multivariate_normal([u0,v0], np.diag([sig_u, sig_v])**2, 
@@ -44,7 +44,7 @@ ytrain = ytrain.reshape([ntrain, 1])
 
 
 #%% Create and train surrogate
-sur = GPFlowSurrogate()
+sur = GPySurrogate()
 sur.train(xtrain, ytrain)
 
 #%% Compute surrogate predictor for test input

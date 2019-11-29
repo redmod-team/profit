@@ -8,10 +8,10 @@ Created on Wed Sep 12 16:36:34 2018
 
 import os
 from os import path, mkdir, walk
-from shutil import copytree, rmtree, ignore_patterns
 
 import sys
 import numpy as np
+import chaospy as cp
 from collections import OrderedDict
 
 try:
@@ -25,20 +25,26 @@ except:
 from profit.config import Config
 from profit.uq.backend import ChaosPy
 from profit.util import load_txt
+from profit.sur.backend import gp
+from inspect import signature
 #from run import Runner
 #from post import Postprocessor, evaluate_postprocessing
 
 yes = True # always answer 'y'
 
-class SafeDict(dict):
-    def __missing__(self, key):
-        return '{' + key + '}'
-
-def copy_template(template_dir, out_dir, dont_copy=None):
-    if dont_copy:
-        copytree(template_dir, out_dir, ignore=ignore_patterns(*config.dont_copy))
+def quasirand(npoint, ndim, kind='Halton'):
+    if kind in ('H', 'Halton'):
+        return cp.create_halton_samples(npoint, ndim)
     else:
-        copytree(template_dir, out_dir)
+        raise NotImplementedError('Only Halton sequences implemented yet')
+
+def fit(u, y):
+    fresp = gp.GPySurrogate()
+    fresp.train(u.T, y, sigma_n=0.1)
+    def predict(*args):
+        return fresp.predict(np.array(args).T)
+
+    return predict
     
 def read_input(run_dir):
     data = load_txt(os.path.join(run_dir, 'input.txt'))
