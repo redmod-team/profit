@@ -39,12 +39,13 @@ def quasirand(npoint, ndim, kind='Halton'):
         raise NotImplementedError('Only Halton sequences implemented yet')
 
 def fit(u, y):
-    fresp = gp.GPySurrogate()
-    fresp.train(u.T, y, sigma_n=0.1)
+    fresp = gp.GPFlowSurrogate()
+    fresp.train(u.T.reshape(y.size, -1), y.reshape(y.size, -1))
     def predict(*args):
         return fresp.predict(np.array(args).T)
 
     return predict
+    #return fresp
     
 def read_input(run_dir):
     data = load_txt(os.path.join(run_dir, 'input.txt'))
