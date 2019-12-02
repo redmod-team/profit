@@ -36,6 +36,7 @@ def fill_run_dir(eval_points, template_dir='template/', run_dir='run/',
         run_dir_single = os.path.join(run_dir, str(krun))
         if os.path.exists(run_dir_single):
             if overwrite:
+                print(run_dir_single)
                 rmtree(run_dir_single)
             else:
                 raise RuntimeError('Run directory not empty: ' + run_dir_single)

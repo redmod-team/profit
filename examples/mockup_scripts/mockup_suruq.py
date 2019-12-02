@@ -2,19 +2,19 @@
 # coding: utf-8
 
 import numpy as np
-from profit.sur.backend.gp import GPySurrogate
+from profit.sur.backend.gp import GPFlowSurrogate
 
 #%% Define some model f(u, v)
 def rosenbrock(x, y, a, b):
     return (a - x)**2 + b * (y - x**2)**2
 def f(r, u, v):
-    return rosenbrock((r - 0.5) + u - 5, 1 + 3 * (v - 0.6), a=1, b=3)/20 
+    return rosenbrock((r - 0.5)*2 + u - 5, 1 + 3 * (v - 0.6), a=1, b=3)/20 
 
 #%% Plot model at [u0, v0]
 nr0 = 100
 u0 = 5
 v0 = 0.575
-r = np.linspace(0,1,nr0)
+r = np.linspace(-0.2,1.2,nr0)
 
 #%% Plot behavior around [u0, v0]
 
@@ -27,7 +27,7 @@ Y = y.reshape(U.shape)
 #%% Generate training data
 nr = 10
 nuv = 5
-rtrain = np.linspace(0.3,0.7,nr)
+rtrain = np.linspace(0.3, 0.7, nr)
 sig_u = 0.01
 sig_v = 0.01
 
@@ -44,7 +44,7 @@ ytrain = ytrain.reshape([ntrain, 1])
 
 
 #%% Create and train surrogate
-sur = GPySurrogate()
+sur = GPFlowSurrogate()
 sur.train(xtrain, ytrain)
 
 #%% Compute surrogate predictor for test input
@@ -76,4 +76,3 @@ plt.fill_between(xtest[:,0], ftest[0][:,0] - 1.96*np.sqrt(ftest[1][:,0]),
 plt.xlabel('r')
 plt.ylabel('f(r)')
 plt.show()
-

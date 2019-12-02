@@ -1,4 +1,6 @@
 import dash
+import dash_table
+import pandas as pd
 import dash_core_components as dcc
 import dash_html_components as html
 
@@ -13,8 +15,7 @@ tab_selected_style = {
     'color': 'white'
 }
 
-with open('app.py', 'r') as f:
-    text = f.read()
+indata = pd.read_csv('input.txt')
 
 app.layout = html.Div(
     [
@@ -25,18 +26,18 @@ app.layout = html.Div(
                     value='tabs',
                     children=[
                         dcc.Tab(
-                            label='Tab1',
+                            label='Tables',
                             selected_style=tab_selected_style,
                             children=[
-                                dcc.Textarea(
-                                    placeholder='Enter a value...',
-                                    value=text,
-                                    style={'width': '100%'}
-                                )  
+                                dash_table.DataTable(
+                                    id='table',
+                                    columns=[{"name": i, "id": i} for i in indata.columns],
+                                    data=indata.to_dict('records'),
+                            )
                             ]
                         ),
                         dcc.Tab(
-                            label='Tab2',
+                            label='Graphs',
                             selected_style=tab_selected_style
                         )
                     ]
