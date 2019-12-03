@@ -7,6 +7,7 @@ Created on Wed Sep 12 16:36:34 2018
 """
 
 import os
+import importlib
 from os import path, mkdir, walk
 
 import sys
@@ -119,17 +120,6 @@ def main():
 
             profit.fill_run_dir(eval_points, template_dir=config['template_dir'], 
                                 run_dir=config['run_dir'], overwrite=True)
-        #try:
-        #    mkdir(config['run_dir'])
-        #except OSError:
-        #    question = ("Warning: Run directory {} already exists "
-        #                "and will be overwritten. Continue? (y/N) ").format(config['run_dir'])
-        #    if (yes):
-        #        print(question+'y')
-        #    else:
-        #        answer = input(question)
-        #        if (not yes) and (answer == 'y' or answer == 'Y'):
-        #            raise Exception("exit()")
         #uq = UQ(config=config)
         #uq.pre()
         
@@ -138,6 +128,20 @@ def main():
         if config['command']:
             run = profit.run.LocalCommand(config['command'])
         run.start()
+
+    elif(sys.argv[1] == 'fit'):
+        spec = importlib.util.spec_from_file_location('interface', 
+            config['interface'])
+        interface = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(interface)
+        data = []
+        for krun in range(config['ntrain']):
+            run_dir_single = os.path.join(config['run_dir'], str(krun))
+            os.chdir(run_dir_single)
+            data.append(interface.get_output())
+        os.chdir(config['run_dir'])
+        np.savetxt('output.txt', data)
+        
     elif(sys.argv[1] == 'post'):
         distribution,data,approx = postprocess()
         import pickle
