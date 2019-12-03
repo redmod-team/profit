@@ -11,7 +11,7 @@ class SafeDict(dict):
 def rec2dict(rec):
     return {name:rec[name] for name in rec.dtype.names}
 
-def write_input(eval_points, run_dir='run/'):
+def write_input(eval_points, run_dir='.'):
     '''
     write input.txt with parameter combinations to
     directory "run_dir"
@@ -25,7 +25,7 @@ def write_input(eval_points, run_dir='run/'):
         util.save_txt(filename, eval_points)
 
 
-def fill_run_dir(eval_points, template_dir='template/', run_dir='run/',
+def fill_run_dir(eval_points, template_dir='template/', run_dir='',
                  overwrite = False):
     nrun = len(eval_points)
     kruns = tqdm(range(nrun))
@@ -36,7 +36,6 @@ def fill_run_dir(eval_points, template_dir='template/', run_dir='run/',
         run_dir_single = os.path.join(run_dir, str(krun))
         if os.path.exists(run_dir_single):
             if overwrite:
-                print(run_dir_single)
                 rmtree(run_dir_single)
             else:
                 raise RuntimeError('Run directory not empty: ' + run_dir_single)

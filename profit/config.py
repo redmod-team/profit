@@ -28,7 +28,7 @@ yaml.add_constructor(_mapping_tag, dict_constructor)
 # now yaml is configured to handle OrderedDict input and output
 
 
-class Config(dict):
+class Config(OrderedDict):
   '''
   UQ configuration class
   This class provides a dictionary with possible configuration
@@ -40,13 +40,13 @@ class Config(dict):
     base_dir = os.getcwd()
     self['base_dir'] = base_dir
     self['template_dir'] = path.join(base_dir, 'template')
-    self['run_dir'] = path.join(base_dir, 'run')
+    self['run_dir'] = path.join(base_dir, '')
     self['command'] = None
     self['runner_backend'] = None
     self['uq']={}
     self.update(entries)
   
-  def write_yaml(self,filename='profit.yaml'):
+  def write_yaml(self, filename='profit.yaml'):
     '''
     dump UQ configuration to a yaml file.
     The default filename is profit.yaml
@@ -56,7 +56,7 @@ class Config(dict):
     with open(filename,'w') as file:
       yaml.dump(dumpdict,file,default_flow_style=False)
 
-  def load(self,filename='profit.yaml'):
+  def load(self, filename='profit.yaml'):
     '''
     load configuration from yaml file.
     The default filename is profit.yaml

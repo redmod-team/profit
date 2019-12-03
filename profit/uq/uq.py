@@ -88,7 +88,7 @@ class UQ:
         config['template_dir']=self.template_dir
 
         return config
-        
+    
     def write_input(self, run_dir='run/'):
         '''
         write input.txt with parameter combinations to
@@ -96,47 +96,4 @@ class UQ:
         '''
         self.eval_points = self.backend.get_eval_points(self.params)
         np.savetxt(os.path.join(run_dir, 'input.txt'), 
-               self.eval_points.T, header=' '.join(self.params.keys()))
-    
-    def pre(self):
-        self.write_input()
-#        if(not isinstance(run.backend, run.PythonFunction)):
-        if not path.exists(self.template_dir):
-            print("Error: template directory {} doesn't exist.".format(self.template_dir))
-        self.fill_run_dir()     
-    
-    def fill_uq(self, krun, content):
-        params_fill = SafeDict()
-        kp = 0
-        for item in self.params:
-            params_fill[item] = self.eval_points[kp, krun]
-            kp = kp+1
-        return content.format_map(params_fill)
-    
-    def fill_template(self,krun, out_dir):
-        for root, dirs, files in walk(out_dir):
-            for filename in files:
-                if not self.param_files or filename in self.param_files:
-                    filepath = path.join(root, filename)
-                    with open(filepath, 'r') as f:
-                        content = f.read()
-                        #content = content.format_map(SafeDict(params))
-                        content = self.fill_uq(krun, content)
-                    with open(filepath, 'w') as f:
-                        f.write(content)
-                    
-    def fill_run_dir(self):
-        nrun = self.eval_points.shape[1]
-    
-        # if present, use progress bar    
-        if use_tqdm:
-          kruns = tqdm(range(nrun))
-        else:
-          kruns = range(nrun)
-    
-        for krun in kruns:
-            run_dir_single = path.join(self.run_dir, str(krun))
-            if path.exists(run_dir_single):
-                rmtree(run_dir_single)
-            copy_template(self.template_dir, run_dir_single)
-            self.fill_template(krun, run_dir_single)
+                self.eval_points.T, header=' '.join(self.params.keys()))

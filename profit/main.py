@@ -22,15 +22,15 @@ except:
     def tqdm(x):
         return x
 
+import profit
 from profit.config import Config
-from profit.uq.backend import ChaosPy
+#from profit.uq.backend import ChaosPy
 from profit.util import load_txt
-from profit.sur.backend import gp
-from inspect import signature
-#from run import Runner
+#from profit.sur.backend import gp
+#from inspect import signature
 #from post import Postprocessor, evaluate_postprocessing
 
-yes = True # always answer 'y'
+yes = False # always answer 'y'
 
 def quasirand(npoint, ndim, kind='Halton'):
     if kind in ('H', 'Halton'):
@@ -46,6 +46,33 @@ def fit(u, y):
 def read_input(run_dir):
     data = load_txt(os.path.join(run_dir, 'input.txt'))
     return data.view((float, len(data.dtype.names))).T
+
+def pre(self):
+    write_input()
+#        if(not isinstance(run.backend, run.PythonFunction)):
+    if not path.exists(self.template_dir):
+        print("Error: template directory {} doesn't exist.".format(self.template_dir))
+    fill_run_dir()     
+
+def fill_uq(self, krun, content):
+    params_fill = SafeDict()
+    kp = 0
+    for item in self.params:
+        params_fill[item] = self.eval_points[kp, krun]
+        kp = kp+1
+    return content.format_map(params_fill)
+
+def fill_template(self,krun, out_dir):
+    for root, dirs, files in walk(out_dir):
+        for filename in files:
+            if not self.param_files or filename in self.param_files:
+                filepath = path.join(root, filename)
+                with open(filepath, 'r') as f:
+                    content = f.read()
+                    #content = content.format_map(SafeDict(params))
+                    content = self.fill_uq(krun, content)
+                with open(filepath, 'w') as f:
+                    f.write(content)
     
 def print_usage():
     print("Usage: profit <mode> (base-dir)")
@@ -71,23 +98,46 @@ def main():
     sys.path.append(config['base_dir'])
     
     if(sys.argv[1] == 'pre'):
+        ndim = len(config['params'])
+        # TODO: add data type int option
+        eval_points = np.core.records.fromarrays(
+            profit.quasirand(config['ntrain'], len(config['params'])), 
+            names = list(config['params'].keys()))
+
         try:
-            mkdir(config['run_dir'])
-        except OSError:
-            question = ("Warning: Run directory {} already exists "
+            profit.fill_run_dir(eval_points, template_dir=config['template_dir'], 
+                                run_dir=config['run_dir'], overwrite=False)
+        except RuntimeError:
+            question = ("Warning: Run directories in {} already exist "
                         "and will be overwritten. Continue? (y/N) ").format(config['run_dir'])
             if (yes):
                 print(question+'y')
             else:
                 answer = input(question)
-                if (not yes) and (answer == 'y' or answer == 'Y'):
-                    raise Exception("exit()")
-        uq = UQ(config=config)
-        uq.pre()
+                if (not yes) and not (answer == 'y' or answer == 'Y'):
+                    exit()
+
+            profit.fill_run_dir(eval_points, template_dir=config['template_dir'], 
+                                run_dir=config['run_dir'], overwrite=True)
+        #try:
+        #    mkdir(config['run_dir'])
+        #except OSError:
+        #    question = ("Warning: Run directory {} already exists "
+        #                "and will be overwritten. Continue? (y/N) ").format(config['run_dir'])
+        #    if (yes):
+        #        print(question+'y')
+        #    else:
+        #        answer = input(question)
+        #        if (not yes) and (answer == 'y' or answer == 'Y'):
+        #            raise Exception("exit()")
+        #uq = UQ(config=config)
+        #uq.pre()
+        
     elif(sys.argv[1] == 'run'):
-        read_input(config['run_dir'])
-        run = Runner(config)
-        #run.start()
+        print(read_input(config['run_dir']))
+        if config['command']:
+            run = profit.run.LocalCommand(config['command'])
+        run.start()
     elif(sys.argv[1] == 'post'):
         distribution,data,approx = postprocess()
         import pickle
