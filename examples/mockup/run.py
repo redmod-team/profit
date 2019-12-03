@@ -1,5 +1,4 @@
-import profit 
-from profit.run.backend import LocalCommand
+import profit
 
-runner = profit.Runner(LocalCommand('python mockup.py'))
+runner = profit.run.LocalCommand('python mockup.py')
 runner.start()
