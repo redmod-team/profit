@@ -5,6 +5,7 @@ Created: Mon Jul  8 11:48:24 2019
 
 import numpy as np
 import scipy as sp
+import matplotlib.pyplot as plt
 from profit.sur import Surrogate
 
 try:
@@ -143,6 +144,10 @@ class GPFlowSurrogate(Surrogate):
     def train(self, x, y, sigma_n=None, sigma_f=1e-6):
         x = x.reshape(y.size, -1)
         y = y.reshape(y.size, -1)
+
+        self.xtrain = x.copy()
+        self.ytrain = y.copy()
+
         self.ndim = x.shape[-1]
         sigma_k = (np.max(y) - np.min(y))**2
 
@@ -151,7 +156,7 @@ class GPFlowSurrogate(Surrogate):
         kern = list()
         
         for k in range(self.ndim):
-            l[k] = (np.max(x[:,k]) - np.min(x[:,k]))/2.0
+            l[k] = 3.0*(np.max(x[:,k]) - np.min(x[:,k]))/y.size
             kern.append(gpflow.kernels.SquaredExponential(
                 lengthscale=l[k], variance=1.0, active_dims=[k]))
             set_trainable(kern[k].variance, False)
@@ -182,7 +187,7 @@ class GPFlowSurrogate(Surrogate):
 
         self.m.likelihood.variance.assign(vary)
 
-        print_summary(self.m)
+        #print_summary(self.m)
             
         # Optimize
         opt = gpflow.optimizers.Scipy()
@@ -195,7 +200,7 @@ class GPFlowSurrogate(Surrogate):
         #         var_list=self.m.trainable_variables)
         #     likelihood = self.m.log_likelihood()
         #     tf.print(f'GPR with Adam: iteration {i + 1} likelihood {likelihood:.04f}')
-        print_summary(self.m)
+        #print_summary(self.m)
 
         self.sigma = np.sqrt(self.m.likelihood.variance.value())
         self.trained = True
@@ -228,7 +233,7 @@ class GPFlowSurrogate(Surrogate):
         #    to_default_float(mu), to_default_float(sig))
         #set_trainable(self.m.kernel.lengthscale, False)
         self.m.likelihood.variance.assign(vary)
-        print_summary(self.m)
+        #print_summary(self.m)
         
         # Optimize
         opt = gpflow.optimizers.Scipy()
@@ -238,7 +243,7 @@ class GPFlowSurrogate(Surrogate):
         #opt = tf.optimizers.Adam()
         #opt.minimize(lambda: -self.m.log_marginal_likelihood(), 
         #    var_list=self.m.trainable_variables)
-        print_summary(self.m)
+        #print_summary(self.m)
 
         self.sigma = np.sqrt(self.m.likelihood.variance.value())
         self.trained = True
@@ -254,7 +259,34 @@ class GPFlowSurrogate(Surrogate):
         if not self.trained:
             raise RuntimeError('Need to train() before predict()')
             
-        return self.m.predict_y(x.reshape(-1, self.ndim))
+        return self.m.predict_y(np.array(x).T.reshape(-1, self.ndim))
+
+    def plot(self):
+        if self.ndim == 1:
+            xmin = np.min(self.xtrain)
+            xmax = np.max(self.xtrain)
+            xrange = xmax-xmin
+            xtest = np.linspace(xmin-0.1*xrange, xmax+0.1*xrange)
+            y, yvar = self.predict(xtest)
+            stdy = np.sqrt(yvar.numpy().flatten())
+            yarr = y.numpy().flatten()
+            plt.fill_between(xtest.flatten(), yarr - 1.96*stdy, yarr + 1.96*stdy, 
+                color='tab:red', alpha=0.3)
+            plt.plot(self.xtrain, self.ytrain, 'kx')
+            plt.plot(xtest, y, color='tab:red')
+        elif self.ndim == 2:
+            # TODO: add content of Albert2019_IPP_Berlin.ipynb
+            raise NotImplementedError()
+            pass 
+        else:
+            raise NotImplementedError('Plotting only implemented for dimension<2')
+
+    def sample(self, x, num_samples=1):
+        return self.m.predict_f_samples(np.array(x).T.reshape(-1, self.ndim), num_samples)
+
+    def __call__(self, x):
+        y, yvar = self.predict(x)
+        return y.numpy()
 
 class GPySurrogate(Surrogate):
     def __init__(self):
