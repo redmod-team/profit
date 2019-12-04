@@ -140,7 +140,11 @@ def main():
             os.chdir(run_dir_single)
             data.append(interface.get_output())
         os.chdir(config['run_dir'])
-        np.savetxt('output.txt', data)
+        np.savetxt('output.txt', data, header='# f')
+
+    elif(sys.argv[1] == 'ui'):
+        import ui.app
+        ui.app.app.run_server(debug=True)
         
     elif(sys.argv[1] == 'post'):
         distribution,data,approx = postprocess()
