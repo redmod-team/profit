@@ -1,7 +1,3 @@
-import matplotlib.pyplot as plt
-from profit import read_input
-from chaospy import generate_quadrature, orth_ttr, fit_quadrature, E, Std, descriptives
-
 class Postprocessor:
     def __init__(self, interface):
         self.interface = interface
@@ -27,6 +23,10 @@ class Postprocessor:
                 os.chdir(cwd)
 
 def evaluate_postprocessing(distribution,data,expansion):
+    import matplotlib.pyplot as plt
+    from profit import read_input
+    from chaospy import generate_quadrature, orth_ttr, fit_quadrature, E, Std, descriptives
+    
     nodes, weights = generate_quadrature(uq.backend.order+1, distribution, rule='G')
     expansion = orth_ttr(uq.backend.order, distribution)
     approx = fit_quadrature(expansion, nodes, weights, np.mean(data[:,0,:], axis=1))

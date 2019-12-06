@@ -40,10 +40,11 @@ class Config(OrderedDict):
     base_dir = os.getcwd()
     self['base_dir'] = base_dir
     self['template_dir'] = path.join(base_dir, 'template')
-    self['run_dir'] = path.join(base_dir, '')
+    self['run_dir'] = path.join(base_dir, 'run')
     self['command'] = None
     self['runner_backend'] = None
     self['uq']={}
+    self['interface'] = 'interface.py'
     self.update(entries)
   
   def write_yaml(self, filename='profit.yaml'):

@@ -11,8 +11,7 @@ import importlib
 from os import path, mkdir, walk
 
 import sys
-import numpy as np
-import chaospy as cp
+# import chaospy as cp
 from collections import OrderedDict
 
 try:
@@ -26,7 +25,6 @@ except:
 import profit
 from profit.config import Config
 #from profit.uq.backend import ChaosPy
-from profit.util import load_txt
 #from profit.sur.backend import gp
 #from inspect import signature
 #from post import Postprocessor, evaluate_postprocessing
@@ -34,8 +32,10 @@ from profit.util import load_txt
 yes = False # always answer 'y'
 
 def quasirand(npoint, ndim, kind='Halton'):
+    from chaospy import create_halton_samples
+    
     if kind in ('H', 'Halton'):
-        return cp.create_halton_samples(npoint, ndim)
+        return create_halton_samples(npoint, ndim)
     else:
         raise NotImplementedError('Only Halton sequences implemented yet')
 
@@ -44,8 +44,9 @@ def fit(u, y):
     fresp.train(u.T.reshape(y.size, -1), y.reshape(y.size, -1))
     return fresp
     
-def read_input(run_dir):
-    data = load_txt(os.path.join(run_dir, 'input.txt'))
+def read_input(base_dir):
+    from profit.util import load_txt
+    data = load_txt(os.path.join(base_dir, 'input.txt'))
     return data.view((float, len(data.dtype.names))).T
 
 def pre(self):
@@ -99,9 +100,10 @@ def main():
     sys.path.append(config['base_dir'])
     
     if(sys.argv[1] == 'pre'):
+        from numpy.core.records import fromarrays
         ndim = len(config['params'])
         # TODO: add data type int option
-        eval_points = np.core.records.fromarrays(
+        eval_points = fromarrays(
             profit.quasirand(config['ntrain'], len(config['params'])), 
             names = list(config['params'].keys()))
 
@@ -124,12 +126,13 @@ def main():
         #uq.pre()
         
     elif(sys.argv[1] == 'run'):
-        print(read_input(config['run_dir']))
+        print(read_input(config['base_dir']))
         if config['command']:
             run = profit.run.LocalCommand(config['command'])
         run.start()
 
     elif(sys.argv[1] == 'fit'):
+        from numpy import savetxt
         spec = importlib.util.spec_from_file_location('interface', 
             config['interface'])
         interface = importlib.util.module_from_spec(spec)
@@ -139,12 +142,12 @@ def main():
             run_dir_single = os.path.join(config['run_dir'], str(krun))
             os.chdir(run_dir_single)
             data.append(interface.get_output())
-        os.chdir(config['run_dir'])
-        np.savetxt('output.txt', data, header='# f')
+        os.chdir(config['base_dir'])
+        savetxt('output.txt', data, header='# f')
 
     elif(sys.argv[1] == 'ui'):
-        import ui.app
-        ui.app.app.run_server(debug=True)
+        from profit.ui import app
+        app.run_server(debug=True)
         
     elif(sys.argv[1] == 'post'):
         distribution,data,approx = postprocess()
