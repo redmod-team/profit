@@ -45,21 +45,21 @@ Examples for different model codes are available under `examples/`:
    
 2. Preprocessing:  
    ```
-   python /path/to/profit/main.py pre
+   profit pre
    ```
    to generate points where model is evaluated, and possibly run directories based on `template`.
    Evaluation points are stored inside `study/input.txt`
   
 3. Running model: 
    ```
-   python /path/to/profit/main.py run
+   profit run
    ```
    to start simulations at all the points. If `run.backend` is of type `PythonFunction`, results
    of model runs are stored in `study/output.txt`. Otherwise output is stored in model code-specific format.
   
 4. Postprocessing: 
    ```
-   python /path/to/profit/main.py post
+   profit post
    ```
    to get postprocessing results.
   
