@@ -2,6 +2,7 @@
 #! /usr/bin/python
 
 from setuptools import setup, find_packages
+import fastentrypoints
 
 NAME    = 'profit'
 VERSION = '0.0.1'
@@ -22,6 +23,9 @@ setup_args = dict(
     license              = LICENSE,
     keywords             = KEYWORDS,
     url                  = URL,
+    entry_points = {
+            'console_scripts': ['profit=profit.main:main'],
+        }
 )
 
 # ...

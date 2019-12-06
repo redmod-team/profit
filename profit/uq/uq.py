@@ -5,11 +5,7 @@ Created on Fri Dec 21 09:27:19 2018
 
 @author: calbert
 """
-import numpy as np
 import os
-
-from chaospy import (generate_quadrature, orth_ttr, fit_quadrature, E, Std,
-    descriptives)
 
 backend = None
 Normal = None
@@ -22,8 +18,9 @@ def get_eval_points():
 
 
 def read_params(filename):
+    from numpy import genfromtxt
     global params
-    data = np.genfromtxt(os.path.join(config.base_dir, filename),
+    data = genfromtxt(os.path.join(config.base_dir, filename),
                          dtype=None, encoding=None)
     for param in data:
         if(param[1] == 'Normal'):
@@ -31,6 +28,8 @@ def read_params(filename):
     
 class UQ:
     def __init__(self, config=None, yaml=None):
+        from chaospy import (generate_quadrature, orth_ttr, fit_quadrature, E, Std,
+            descriptives)
         self.params = OrderedDict()
         self.backend = None
         self.param_files = None
@@ -94,6 +93,7 @@ class UQ:
         write input.txt with parameter combinations to
         directory "run_dir"
         '''
+        from numpy import savetxt
         self.eval_points = self.backend.get_eval_points(self.params)
-        np.savetxt(os.path.join(run_dir, 'input.txt'), 
+        savetxt(os.path.join(run_dir, 'input.txt'), 
                 self.eval_points.T, header=' '.join(self.params.keys()))

@@ -6,7 +6,6 @@ import dash_html_components as html
 from dash.dependencies import Input, Output
 from textwrap import dedent as d
 
-import numpy as np
 import pandas as pd
 
 #df = pd.read_hdf(r'..\examples\algae\MC\mc_out_allyears_sigma1.h5')
@@ -65,6 +64,7 @@ app.layout = html.Div(children=[
 #        return 0
 
 def gen_callback(k):
+    from numpy import array
     def update_figure(*args):        
         defaultdata = {
             'data': [
@@ -90,7 +90,7 @@ def gen_callback(k):
 
         # Other component triggered update
         try:
-            reducedset = np.array(trigger['value']['points'][0]['pointNumbers'])
+            reducedset = array(trigger['value']['points'][0]['pointNumbers'])
         except:
             return defaultdata
         return {

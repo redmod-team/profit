@@ -1,8 +1,6 @@
-import numpy as np
 import os
 from shutil import copytree, rmtree, ignore_patterns
 from profit import util, tqdm
-
 
 class SafeDict(dict):
     def __missing__(self, key):
@@ -11,26 +9,27 @@ class SafeDict(dict):
 def rec2dict(rec):
     return {name:rec[name] for name in rec.dtype.names}
 
-def write_input(eval_points, run_dir='.'):
+def write_input(eval_points, out_dir=''):
     '''
     write input.txt with parameter combinations to
-    directory "run_dir"
+    directory "out_dir"
     '''
-    filename = os.path.join(run_dir, 'input.txt')
+    from numpy import array, savetxt
+    filename = os.path.join(out_dir, 'input.txt')
     if isinstance(eval_points, dict):
-        np.savetxt(filename, 
-                np.array(list(eval_points.values())).T, 
+        savetxt(filename, 
+                array(list(eval_points.values())).T, 
                 header=' '.join(eval_points.keys()))
     else:
         util.save_txt(filename, eval_points)
 
 
-def fill_run_dir(eval_points, template_dir='template/', run_dir='',
+def fill_run_dir(eval_points, template_dir='template/', run_dir='run/',
                  overwrite = False):
     nrun = len(eval_points)
     kruns = tqdm(range(nrun))
 
-    write_input(eval_points = eval_points, run_dir = run_dir)
+    write_input(eval_points)
 
     for krun in kruns:
         run_dir_single = os.path.join(run_dir, str(krun))
