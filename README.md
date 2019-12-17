@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/168945305.svg)](https://zenodo.org/badge/latestdoi/168945305)
+
 <img src="logo.png" width="208.5px">
 
 # Probabilistic response model fitting via interactive tools
