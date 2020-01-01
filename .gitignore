@@ -36,3 +36,12 @@ profit/ui/assets/ace
 *.pdf
 *.xcf
 *.tar.gz
+build/
+stderr.txt
+stdout.txt
+profile.out
+*.egg
+*.png
+*.svg
+input.txt
+output.txt
