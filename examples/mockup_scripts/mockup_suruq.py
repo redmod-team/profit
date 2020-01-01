@@ -3,6 +3,7 @@
 
 import numpy as np
 from profit.sur.backend.gp import GPFlowSurrogate
+from profit.sur.backend.ann import ANNSurrogate
 
 #%% Define some model f(u, v)
 def rosenbrock(x, y, a, b):
@@ -44,7 +45,7 @@ ytrain = ytrain.reshape([ntrain, 1])
 
 
 #%% Create and train surrogate
-sur = GPFlowSurrogate()
+sur = ANNSurrogate()
 sur.train(xtrain, ytrain)
 
 #%% Compute surrogate predictor for test input
