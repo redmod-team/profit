@@ -56,10 +56,10 @@ app.layout = html.Div(
     ])
 
 @app.callback(
-    dash.dependencies.Output("my-graph", "figure"),[]
+    dash.dependencies.Output("my-graph", "figure"),
+    [dash.dependencies.Input("tabs", "value")]
 )
 def update_figure(selected):
-    
     fig = go.Figure(data=[go.Surface(z=z_data.values)])
 
     fig.update_layout(title='Mt Bruno Elevation', autosize=False,
