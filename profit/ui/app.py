@@ -7,7 +7,8 @@ import plotly.graph_objs as go
 
 
 # Read data from a csv
-z_data = pd.read_csv('https://raw.githubusercontent.com/plotly/datasets/master/api_docs/mt_bruno_elevation.csv')
+z_data = pd.read_csv(
+    'https://raw.githubusercontent.com/plotly/datasets/master/api_docs/mt_bruno_elevation.csv')
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
@@ -30,24 +31,25 @@ app.layout = html.Div(
             [
                 dcc.Tabs(
                     id='tabs',
-                    value='tabs',
                     children=[
+                        dcc.Tab(
+                            label='Graphs',
+                            selected_style=tab_selected_style,
+                            children=[html.Div(dcc.Graph(id="graph1"))]
+                        ),
                         dcc.Tab(
                             label='Tables',
                             selected_style=tab_selected_style,
                             children=[
                                 dash_table.DataTable(
                                     id='table',
-                                    columns=[{"name": i, "id": i} for i in data.columns],
+                                    columns=[{"name": i, "id": i}
+                                             for i in data.columns],
                                     data=data.to_dict('records'),
-                            )
+                                    page_size=20,
+                                )
                             ]
                         ),
-                        dcc.Tab(
-                            label='Graphs',
-                            selected_style=tab_selected_style,
-                            children=[html.Div(dcc.Graph(id="my-graph"))]
-                        )
                     ]
                 )
             ]
@@ -55,17 +57,21 @@ app.layout = html.Div(
         html.Div(id='editor')
     ])
 
+
 @app.callback(
-    dash.dependencies.Output("my-graph", "figure"),
+    dash.dependencies.Output("graph1", "figure"),
     [dash.dependencies.Input("tabs", "value")]
 )
 def update_figure(selected):
-    fig = go.Figure(data=[go.Surface(z=z_data.values)])
-
-    fig.update_layout(title='Mt Bruno Elevation', autosize=False,
-                    width=500, height=500,
-                    margin=dict(l=65, r=50, b=65, t=90))
+    fig = go.Figure(data=[
+        # go.Scatter(x=indata.values[:, 0],
+        #           y=outdata.values[:, 0], mode='markers'),
+        go.Scatter3d(x=indata.values[:, 0],
+                     y=indata.values[:, 1],
+                     z=outdata.values[:, 0], mode='markers')
+    ])
     return fig
+
 
 if __name__ == '__main__':
     app.run_server(debug=True)
