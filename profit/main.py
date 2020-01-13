@@ -16,9 +16,10 @@ from collections import OrderedDict
 
 try:
     from tqdm import tqdm
-    use_tqdm=True
+    use_tqdm = True
 except:
-    use_tqdm=False
+    use_tqdm = False
+
     def tqdm(x):
         return x
 
@@ -29,32 +30,38 @@ from profit.config import Config
 #from inspect import signature
 #from post import Postprocessor, evaluate_postprocessing
 
-yes = False # always answer 'y'
+yes = False  # always answer 'y'
+
 
 def quasirand(npoint, ndim, kind='Halton'):
     from chaospy import create_halton_samples
-    
+
     if kind in ('H', 'Halton'):
         return create_halton_samples(npoint, ndim)
     else:
         raise NotImplementedError('Only Halton sequences implemented yet')
 
+
 def fit(u, y):
-    fresp = gp.GPFlowSurrogate()
+    from profit.sur.backend.gp import GPFlowSurrogate
+    fresp = GPFlowSurrogate()
     fresp.train(u.T.reshape(y.size, -1), y.reshape(y.size, -1))
     return fresp
-    
+
+
 def read_input(base_dir):
     from profit.util import load_txt
     data = load_txt(os.path.join(base_dir, 'input.txt'))
     return data.view((float, len(data.dtype.names))).T
+
 
 def pre(self):
     write_input()
 #        if(not isinstance(run.backend, run.PythonFunction)):
     if not path.exists(self.template_dir):
         print("Error: template directory {} doesn't exist.".format(self.template_dir))
-    fill_run_dir()     
+    fill_run_dir()
+
 
 def fill_uq(self, krun, content):
     params_fill = SafeDict()
@@ -64,7 +71,8 @@ def fill_uq(self, krun, content):
         kp = kp+1
     return content.format_map(params_fill)
 
-def fill_template(self,krun, out_dir):
+
+def fill_template(self, krun, out_dir):
     for root, dirs, files in walk(out_dir):
         for filename in files:
             if not self.param_files or filename in self.param_files:
@@ -75,7 +83,8 @@ def fill_template(self,krun, out_dir):
                     content = self.fill_uq(krun, content)
                 with open(filepath, 'w') as f:
                     f.write(content)
-    
+
+
 def print_usage():
     print("Usage: profit <mode> (base-dir)")
     print("Modes:")
@@ -83,32 +92,33 @@ def print_usage():
     print("uq run  ... run model for UQ")
     print("uq post ... postprocess model output for UQ")
 
+
 def main():
     print(sys.argv)
     if len(sys.argv) < 2:
         print_usage()
         return
-      
+
     if len(sys.argv) < 3:
         config_file = os.path.join(os.getcwd(), 'profit.yaml')
     else:
         config_file = os.path.abspath(sys.argv[2])
-        
+
     config = Config()
     config.load(config_file)
-    
+
     sys.path.append(config['base_dir'])
-    
+
     if(sys.argv[1] == 'pre'):
         from numpy.core.records import fromarrays
         ndim = len(config['params'])
         # TODO: add data type int option
         eval_points = fromarrays(
-            profit.quasirand(config['ntrain'], len(config['params'])), 
-            names = list(config['params'].keys()))
+            profit.quasirand(config['ntrain'], len(config['params'])),
+            names=list(config['params'].keys()))
 
         try:
-            profit.fill_run_dir(eval_points, template_dir=config['template_dir'], 
+            profit.fill_run_dir(eval_points, template_dir=config['template_dir'],
                                 run_dir=config['run_dir'], overwrite=False)
         except RuntimeError:
             question = ("Warning: Run directories in {} already exist "
@@ -120,11 +130,11 @@ def main():
                 if (not yes) and not (answer == 'y' or answer == 'Y'):
                     exit()
 
-            profit.fill_run_dir(eval_points, template_dir=config['template_dir'], 
+            profit.fill_run_dir(eval_points, template_dir=config['template_dir'],
                                 run_dir=config['run_dir'], overwrite=True)
         #uq = UQ(config=config)
-        #uq.pre()
-        
+        # uq.pre()
+
     elif(sys.argv[1] == 'run'):
         print(read_input(config['base_dir']))
         if config['command']:
@@ -133,8 +143,8 @@ def main():
 
     elif(sys.argv[1] == 'fit'):
         from numpy import savetxt
-        spec = importlib.util.spec_from_file_location('interface', 
-            config['interface'])
+        spec = importlib.util.spec_from_file_location('interface',
+                                                      config['interface'])
         interface = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(interface)
         data = []
@@ -148,17 +158,18 @@ def main():
     elif(sys.argv[1] == 'ui'):
         from profit.ui import app
         app.run_server(debug=True)
-        
+
     elif(sys.argv[1] == 'post'):
-        distribution,data,approx = postprocess()
+        distribution, data, approx = postprocess()
         import pickle
-        with open('approximation.pickle','wb') as pf:
-          pickle.dump((distribution,data,approx),pf,protocol=-1) # remove approx, since this can easily be reproduced
-        evaluate_postprocessing(distribution,data,approx)
+        with open('approximation.pickle', 'wb') as pf:
+            # remove approx, since this can easily be reproduced
+            pickle.dump((distribution, data, approx), pf, protocol=-1)
+        evaluate_postprocessing(distribution, data, approx)
     else:
         print_usage()
         return
-    
+
 
 if __name__ == '__main__':
     main()
