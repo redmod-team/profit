@@ -9,15 +9,6 @@ __pycache__
 *.mod
 *.egg-info/
 
-# Jupyter notebooks should be exported via
-#   jupyter-nbconvert --to script
-# and the python script output checked in.
-*.ipynb
-
-# Mathematica notebooks should be saved as
-# Wolfram script files (.wl) without images.
-*.nb
-
 _*.c
 *.swp
 *~
