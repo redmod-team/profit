@@ -1,4 +1,6 @@
 .DS_Store
+__epyccel__
+__pyccel__
 __pycache__
 *.pyc
 *.[ao]
