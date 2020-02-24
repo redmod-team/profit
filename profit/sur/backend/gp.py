@@ -21,11 +21,7 @@ try:
 except:
     pass
 
-
-def kern_sqexp(x0, x1, a):
-    """Generic squared exponential kernel"""
-    return np.exp(-np.linalg.norm(x1-x0)**2/(2.0*a**2))
-
+from kernels import kern_sqexp
 
 def gp_matrix(x0, x1, a):
     """Constructs GP covariance matrix between two point tuples x0 and x1"""
