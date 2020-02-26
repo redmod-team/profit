@@ -31,12 +31,10 @@ xtrain = np.array([[uk, vk] for vk in vtrain for uk in utrain])
 ytrain = np.fromiter((f(0.25, uk, vk) for vk in vtrain for uk in utrain), float)
 ntrain = len(ytrain)
 
-sigma_meas = 1e-2*(np.max(ytrain)-np.min(ytrain))  # error bars
-#sigma_meas = None
 
 #%% Create and train surrogate
 sur = GPSurrogate()
-sur.train(xtrain, ytrain, sigma_meas)
+sur.train(xtrain, ytrain)
 
 #%% Compute surrogate predictor for test input
 xtest = np.array([[uk, vtrain[1]] for uk in u])
@@ -51,25 +49,26 @@ plt.plot(xtest[:,0], ytest)
 plt.plot(xtest[:,0], ftest)
 plt.xlabel('u')
 plt.ylabel('f(u,v0)')
-plt.show()
 
 #%% Plot likelihood over hyperparameters
 from profit.sur.backend.gp import gp_nll
 
-hypaplot = np.linspace(0.1,2,100)
+hypaplot = np.empty([100,2])
+hypaplot[:,0] = np.linspace(1.0,4.0,100)
+hypaplot[:,1] = 1.0
 nlls = np.fromiter(
         (gp_nll(hyp, xtrain, ytrain, sur.sigma) for hyp in hypaplot), float)
 plt.figure()
 plt.title('Negative log likelihood in kernel hyperparameters')
-plt.plot(hypaplot, nlls)
-plt.xlabel('u')
+plt.plot(hypaplot[:,0], nlls)
+plt.xlabel('l')
 plt.ylabel('-log p(y|u,v0) + C')
 plt.show()
 
 
 sigplot = np.linspace(1e-2*(np.max(ytrain)-np.min(ytrain)),1e-3,40)
 nlls = np.fromiter(
-        (gp_nll(2.08, xtrain, ytrain, sig) for sig in sigplot), float)
+        (gp_nll([2.08,1.0], xtrain, ytrain, sig) for sig in sigplot), float)
 plt.figure()
 plt.title('Negative log likelihood in kernel hyperparameters')
 plt.plot(sigplot, nlls)
@@ -77,3 +76,6 @@ plt.xlabel('sigma')
 plt.ylabel('-log p(y|u,v0) + C')
 plt.show()
 
+
+
+# %%
