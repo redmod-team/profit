@@ -5,6 +5,7 @@ Created: Mon Jul  8 11:48:24 2019
 
 import numpy as np
 import scipy as sp
+from scipy.linalg import solve_triangular
 import matplotlib.pyplot as plt
 from profit.sur import Surrogate
 
@@ -21,30 +22,32 @@ try:
 except:
     pass
 
-from kernels import kern_sqexp
+from profit.sur.backend.kernels import kern_sqexp, gp_matrix
 
-def gp_matrix(x0, x1, a):
-    """Constructs GP covariance matrix between two point tuples x0 and x1"""
-    return np.fromiter(
-        (kern_sqexp(xi, xj, a) for xj in x1 for xi in x0),
-        float).reshape(x0.shape[0], x1.shape[0])
-
-
-def gp_matrix_train(x, a, sig):
+def gp_matrix_train(x, a, sigma_n):
     """Constructs GP matrix for training"""
     nx = x.shape[0]
 
-    K = gp_matrix(x, x, a)
-    if sig is None:
+    K = np.empty([nx, nx])
+    gp_matrix(x, x, a, K)
+    if sigma_n is None:
         return K
 
-    if isinstance(sig, list):
-        sigmatrix = np.diag(sig**2)
+    if isinstance(sigma_n, np.ndarray):
+        sigmatrix = np.diag(sigma_n**2)
     else:
-        sigmatrix = np.diag(np.ones(nx)*sig**2)
+        sigmatrix = np.diag(np.ones(nx)*sigma_n**2)
 
     return K + sigmatrix
 
+
+def gpsolve(Ky, ft):
+    L = np.linalg.cholesky(Ky)
+    alpha = solve_triangular(
+        L.T, solve_triangular(L, ft, lower=True, check_finite=False), 
+        lower=False, check_finite=False)
+
+    return L, alpha
 
 def gp_nll(a, x, y, sigma_n=None):
     """Compute negative log likelihood of GP"""
@@ -56,15 +59,21 @@ def gp_nll(a, x, y, sigma_n=None):
         Ky = gp_matrix_train(x, a, sigma_n)
 
     try:
-        Kyinv_y = np.linalg.solve(Ky, y)
-    except np.linalg.LinAlgError:
-        Kyinv_y = np.linalg.lstsq(Ky, y, rcond=1e-15)[0]
+        L, alpha = gpsolve(Ky, y)
+    except:
+        raise
+    return 0.5*y.T.dot(alpha) + np.sum(np.log(L.diagonal()))
 
-    [sgn, logKydet] = np.linalg.slogdet(Ky)
+    # try:
+    #     Kyinv_y = np.linalg.solve(Ky, y)
+    # except np.linalg.LinAlgError:
+    #     Kyinv_y = np.linalg.lstsq(Ky, y, rcond=1e-15)[0]
 
-    nll = 0.5*nx*0.79817986835  # n/2 log(2\pi)
-    nll = nll + 0.5*y.T.dot(Kyinv_y)
-    nll = nll + 0.5*logKydet
+    # [sgn, logKydet] = np.linalg.slogdet(Ky)
+
+    # nll = 0.5*nx*0.79817986835  # n/2 log(2\pi)
+    # nll = nll + 0.5*y.T.dot(Kyinv_y)
+    # nll = nll + 0.5*logKydet
 
     # if sigma is None:  # avoid values too close to zero
     #  sig0 = 1e-2*(np.max(y)-np.min(y))
@@ -75,19 +84,20 @@ def gp_nll(a, x, y, sigma_n=None):
     return nll
 
 
-def gp_optimize(xtrain, ytrain, sigma_n, a0=1):
+def gp_optimize(xtrain, ytrain, a0):
 
     # Avoid values too close to zero
-    if sigma_n is None:
-        bounds = [(1e-6, None),
-                  (1e-6*(np.max(ytrain)-np.min(ytrain)), None)]
-    else:
-        bounds = [(1e-6, None)]
+    bounds = [(1e-6, None),
+              (1e-6*(np.max(ytrain)-np.min(ytrain)), None),
+              (1e-6*(np.max(ytrain)-np.min(ytrain)), None)]
 
+    # res_a = sp.optimize.minimize(gp_nll, a0,
+    #                              args=(xtrain, ytrain, None),
+    #                              bounds=bounds,
+    #                              options={'ftol': 1e-8})
     res_a = sp.optimize.minimize(gp_nll, a0,
-                                 args=(xtrain, ytrain, sigma_n),
-                                 bounds=bounds,
-                                 options={'ftol': 1e-6})
+                                  args=(xtrain, ytrain, None),
+                                  bounds=bounds)
     return res_a.x
 
 
@@ -96,19 +106,18 @@ class GPSurrogate(Surrogate):
         self.trained = False
         pass
 
-    def train(self, x, y, sigma_n=None, sigma_f=1.0):
+    def train(self, x, y):
         """Fits a GP surrogate on input points x and model outputs y 
            with scale sigma_f and noise sigma_n"""
-        if sigma_n is None:
-            a0 = [1e-6, 1e-2*(np.max(y)-np.min(y))]
-            print(a0)
-            [self.hyparms, sigma_n] = gp_optimize(x, y, None, a0)
-        else:
-            a0 = 1e-6
-            self.hyparms = gp_optimize(x, y, sigma_n, a0)
+        a0 = np.array(
+            [(np.max(x)-np.min(x))/2.0, 1e-6, 1e-2*(np.max(y)-np.min(y))]
+        )
+        print(a0)
+        [l, sigma_f, sigma_n] = gp_optimize(x, y, a0)
+        self.hyparms = np.array([l, sigma_f])
 
         self.sigma = sigma_n
-        self.Ky = gp_matrix_train(x, self.hyparms, sigma_n)
+        self.Ky = gp_matrix_train(x, a0, sigma_n)
         try:
             self.Kyinv_y = np.linalg.solve(self.Ky, y)
         except np.linalg.LinAlgError:
@@ -127,8 +136,8 @@ class GPSurrogate(Surrogate):
         if not self.trained:
             raise RuntimeError('Need to train() before predict()')
 
-        Kstar = np.fromiter(
-            (kern_sqexp(xi, xj, self.hyparms)
+        Kstar = self.hyparms[1]*np.fromiter(
+            (kern_sqexp(xi, xj, self.hyparms[0])
              for xi in self.xtrain for xj in x),
             float).reshape(self.xtrain.shape[0], x.shape[0])
 
