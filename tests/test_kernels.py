@@ -11,6 +11,10 @@ def test_kern_sqexp():
             k1 = kernels.kern_sqexp(x, x0, h0)
             k1a = kernels.kern_sqexp_multiscale(x, x0, np.array([h0, h0]))
             k2 = np.exp(-0.5*np.sum((x-x0)**2)/h0**2)
+
+            print(k1)
+            print(",,,,")
+            print(k1a)
             assert np.array_equal(k1, k2)
             assert np.array_equal(k1a, k2)
 
