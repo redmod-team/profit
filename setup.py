@@ -32,14 +32,15 @@ setup_args = dict(
 packages = find_packages(exclude=["*.tests", "*.tests.*", "tests.*", "tests"])
 # ...
 
-install_requires = ['chaospy', 'gpflow', 'PyYAML']
+install_requires = ['chaospy', 'gpflow', 'PyYAML', 'pyccel']
 
 
 def setup_package():
     setup(packages=packages,
           include_package_data=True,
           install_requires=install_requires,
-          test_suite='tests',
+          setup_requires=['pytest-runner'],
+          tests_require=['pytest'],
           **setup_args)
 
 

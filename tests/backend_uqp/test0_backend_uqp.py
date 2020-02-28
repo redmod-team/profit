@@ -6,104 +6,85 @@ Compiles CFF for test_arrays
 """
 
 import os
+import pytest
 import numpy as np
 from time import time
-from unittest import TestCase
 from fffi import fortran_module
 from profit import uq
 
 
-class TestBackendUQP(TestCase):
+@pytest.fixture(scope='module')
+def uqp():
+    cwd = os.path.dirname(__file__)
+    os.chdir(cwd)
 
-    @classmethod
-    def setUpClass(cls):
-        cls.origcwd = os.getcwd()
-        cls.cwd = os.path.dirname(__file__)
-        os.chdir(cls.cwd)
+    fort_mod = fortran_module('uqp', 'mod_unqu')
 
-        try:
-            cls.uqp = fortran_module('uqp', 'mod_unqu', path=cls.cwd)
+    fort_mod.fdef("""
+      integer :: np, nall, npar, nt, iflag_run, iflag_mod, iflag_pol  
+    
+      subroutine allocate_params end
+      subroutine init_uq end
+      
+      subroutine set_legendre_borders(kpar, lower, upper)
+        integer, intent(in) :: kpar
+        double precision, intent(in) :: lower, upper
+      end
+    
+      subroutine set_hermite_mean_std(kpar, mean0, std)
+        integer, intent(in) :: kpar
+        double precision, intent(in) :: mean0, std
+      end
+      
+      subroutine pre_uq(axi)
+        double precision, intent(inout) :: axi(:,:)
+      end
+      
+      subroutine run_uq end
+      """)
 
-            cls.uqp.fdef("""
-              integer :: np, nall, npar, nt, iflag_run, iflag_mod, iflag_pol  
-            
-              subroutine allocate_params end
-              subroutine init_uq end
-              
-              subroutine set_legendre_borders(kpar, lower, upper)
-                integer, intent(in) :: kpar
-                double precision, intent(in) :: lower, upper
-              end
-            
-              subroutine set_hermite_mean_std(kpar, mean0, std)
-                integer, intent(in) :: kpar
-                double precision, intent(in) :: mean0, std
-              end
-              
-              subroutine pre_uq(axi)
-                double precision, intent(inout) :: axi(:,:)
-              end
-              
-              subroutine run_uq end
-              """)
-            
-            cls.uqp.compile(verbose=1)
-            cls.uqp.load()
-        
-        except BaseException:
-            os.chdir(cls.origcwd)
-            raise        
-        
+    fort_mod.compile(verbose=1)
+    fort_mod.load()
+    return fort_mod
 
-    @classmethod
-    def tearDownClass(cls):
-        os.chdir(cls.origcwd)
-        
 
-    def test_hermite_points(self):
-        """
-        Test Hermite quadrature points in 2D
-        """
-        
-        print('=== Hermite 2D quadrature points ===')
+def test_hermite_points(uqp):
+    """
+    Test Hermite quadrature points in 2D
+    """
 
-        mean1 = 5.0
-        std1 = 0.1
-        mean2 = 2.0
-        std2 = 0.2
+    print('=== Hermite 2D quadrature points ===')
 
-        uqp = self.uqp
-        
-        t = time()  # UQP timing
-        uqp.npar = 2
-        uqp.allocate_params()
-        uqp.np = 3
-        uqp.nt = 1
-        uqp.iflag_run = 1
-        uqp.iflag_mod = 2
-        uqp.iflag_pol = 2  # 1: Legende, 2: Hermite, 3: Laguerre
-        uqp.set_hermite_mean_std(1, mean1, std1)
-        uqp.set_hermite_mean_std(2, mean2, std2)
-        uqp.init_uq()
-        axi = np.zeros((uqp.nall,uqp.npar), order='F')
-        uqp.pre_uq(axi)
-        print('UQP: {:4.2f} ms'.format(1000*(time() - t)))
-        
-        t = time()  # ChaosPy timing
-        uq.backend = uq.ChaosPy(order = 3, sparse = False)
-        uq.params['u'] = uq.Normal(mean1, std1)
-        uq.params['v'] = uq.Normal(mean2, std2)
-        axi2 = uq.get_eval_points().T
-        print('ChaosPy: {:4.2f} ms'.format(1000*(time() - t)))
-        
-        axis = axi[np.lexsort((axi[:,0], axi[:,1]))]
-        axi2s = axi2[np.lexsort((axi2[:,0], axi2[:,1]))]
-        
-        np.testing.assert_almost_equal(axis, axi2s)
-        print('Success: UQP and ChaosPy results match')
+    mean1 = 5.0
+    std1 = 0.1
+    mean2 = 2.0
+    std2 = 0.2
 
-if __name__ == "__main__":
-    test = TestBackendUQP()
-    test.setUpClass()
-    test.test_hermite_points()
-    test.tearDownClass()
+    t = time()  # UQP timing
+    uqp.npar = 2
+    uqp.allocate_params()
+    uqp.np = 3
+    uqp.nt = 1
+    uqp.iflag_run = 1
+    uqp.iflag_mod = 2
+    uqp.iflag_pol = 2  # 1: Legende, 2: Hermite, 3: Laguerre
+    uqp.set_hermite_mean_std(1, mean1, std1)
+    uqp.set_hermite_mean_std(2, mean2, std2)
+    uqp.init_uq()
+    axi = np.zeros((uqp.nall, uqp.npar), order='F')
+    uqp.pre_uq(axi)
+    print('UQP: {:4.2f} ms'.format(1000*(time() - t)))
+
+    t = time()  # ChaosPy timing
+    uqu = uq.UQ()
+    uqu.backend = uq.backend.ChaosPy(order=3, sparse=False)
+    uqu.params['u'] = uqu.backend.Normal(mean1, std1)
+    uqu.params['v'] = uqu.backend.Normal(mean2, std2)
+    axi2 = uqu.get_eval_points().T
+    print('ChaosPy: {:4.2f} ms'.format(1000*(time() - t)))
+
+    axis = axi[np.lexsort((axi[:, 0], axi[:, 1]))]
+    axi2s = axi2[np.lexsort((axi2[:, 0], axi2[:, 1]))]
+
+    assert np.allclose(axis, axi2s)
+    print('Success: UQP and ChaosPy results match')

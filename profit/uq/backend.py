@@ -6,10 +6,6 @@ Created on Fri Dec 21 09:27:19 2018
 @author: calbert
 """
 
-backend = None
-Normal = None
-Uniform = None
-
 class ChaosPy:
     import chaospy as cp
 
