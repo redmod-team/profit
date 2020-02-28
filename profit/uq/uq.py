@@ -6,16 +6,7 @@ Created on Fri Dec 21 09:27:19 2018
 @author: calbert
 """
 import os
-
-backend = None
-Normal = None
-Uniform = None
-
-
-def get_eval_points():
-    """Returns N evaluation points in P parameters as array of shape (P,N)"""
-    return backend.get_eval_points()
-
+from collections import OrderedDict
 
 def read_params(filename):
     from numpy import genfromtxt
@@ -97,3 +88,8 @@ class UQ:
         self.eval_points = self.backend.get_eval_points(self.params)
         savetxt(os.path.join(run_dir, 'input.txt'), 
                 self.eval_points.T, header=' '.join(self.params.keys()))
+
+
+    def get_eval_points(self):
+        """Returns N evaluation points in P parameters as array of shape (P,N)"""
+        return self.backend.get_eval_points(self.params)
