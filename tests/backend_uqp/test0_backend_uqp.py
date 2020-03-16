@@ -1,8 +1,6 @@
 """
 Created: 2019-04-01
 @author: Christopher Albert <albert@alumni.tugraz.at>
-
-Compiles CFF for test_arrays
 """
 
 import os
