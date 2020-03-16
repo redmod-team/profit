@@ -4,7 +4,7 @@ Created: Tue Mar 26 09:45:46 2019
 """
 from profit import uq
 import numpy as np
-from fffi import fortran_module
+from fffi import FortranModule
 
 from time import time
 
@@ -13,7 +13,7 @@ std1 = 0.1
 mean2 = 2.0
 std2 = 0.2
 
-uqp = fortran_module('uqp', 'mod_unqu')
+uqp = FortranModule('uqp', 'mod_unqu')
 
 uqp.fdef("""
   integer :: nporder, nall, npar, nt, iflag_run, iflag_mod, iflag_pol

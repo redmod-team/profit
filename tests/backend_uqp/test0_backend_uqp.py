@@ -7,7 +7,7 @@ import os
 import pytest
 import numpy as np
 from time import time
-from fffi import fortran_module
+from fffi import FortranModule
 from profit import uq
 
 
@@ -16,7 +16,7 @@ def uqp():
     cwd = os.path.dirname(__file__)
     os.chdir(cwd)
 
-    fort_mod = fortran_module('uqp', 'mod_unqu')
+    fort_mod = FortranModule('uqp', 'mod_unqu')
 
     fort_mod.fdef("""
       integer :: np, nall, npar, nt, iflag_run, iflag_mod, iflag_pol  
