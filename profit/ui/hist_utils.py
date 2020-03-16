@@ -2,7 +2,7 @@ import plotly.graph_objects as go
 import numpy as np
 
 
-def dens_hist(a, edges, outside=(False, False)):
+def dens_hist(a, edges, outside):
     count, edges = np.histogram(a, edges)
     if outside[0]:
         count = np.append(len(a[a < edges[0]]), count)
@@ -12,34 +12,7 @@ def dens_hist(a, edges, outside=(False, False)):
     density = count*100/len(a)
     return density, edges
 
-
-def fig_hist(da, bins, title, condi=None, outside=(False, True),
-             colors=('#8ecbad', '#b3ffd9')):
-    density, edges = dens_hist(da, bins, outside)
-
-    if condi is None:
-        fig = go.Figure(data=go.Bar(
-            y=edges, x=density, orientation='h',
-            marker=dict(color='black', line=dict(color='white', width=1))))
-    else:
-        density2, edges2 = dens_hist(da[condi], bins, outside)
-
-        bar1 = go.Bar(
-            y=edges2, x=density2, orientation='h',
-            marker=dict(color='black', line=dict(color='black'))
-        )
-        bar2 = go.Bar(
-            y=edges, x=density, orientation='h',
-            marker=dict(
-                color='rgba(0,0,0,0)',
-                line=dict(color='white', width=1)
-            )
-        )
-        fig = go.Figure(data=[bar1, bar2])
-
-        density = density2
-        edges = edges2
-
+def format_hist(fig, bins, edges, density, title, outside, colors):
     fig.update_yaxes(autorange='reversed')
     fig.update_layout(
         title=dict(text='<b>{}</b>'.format(title),
@@ -110,6 +83,42 @@ def fig_hist(da, bins, title, condi=None, outside=(False, True),
                                 font=dict(size=24),
                                 showarrow=False, align='right'))
     fig.update_layout(annotations=annotations)
+
+def draw_hist(edges, density):
+    fig = go.Figure(data=go.Bar(
+            y=edges, x=density, orientation='h',
+            marker=dict(color='black', line=dict(color='white', width=1))))
+
+    return fig
+
+
+def fig_hist(da, bins, title, condi=None, outside=(False, True),
+             colors=('#8ecbad', '#b3ffd9')):
+    density, edges = dens_hist(da, bins, outside)
+
+    if condi is None:
+        fig = draw_hist(edges, density)
+    else:
+        density2, edges2 = dens_hist(da[condi], bins, outside)
+
+        bar1 = go.Bar(
+            y=edges2, x=density2, orientation='h',
+            marker=dict(color='black', line=dict(color='black'))
+        )
+        bar2 = go.Bar(
+            y=edges, x=density, orientation='h',
+            marker=dict(
+                color='rgba(0,0,0,0)',
+                line=dict(color='white', width=1)
+            )
+        )
+        fig = go.Figure(data=[bar1, bar2])
+
+        density = density2
+        edges = edges2
+    
+    format_hist(fig, bins, edges, density, title, outside, colors)
+
     return fig
 
 
