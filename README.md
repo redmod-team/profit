@@ -2,7 +2,7 @@
 
 <img src="logo.png" width="208.5px">
 
-# Probabilistic response model fitting via interactive tools
+## Probabilistic reduced order model fitting with interactive tools
 
 This is a collection of tools for studying parametric dependencies of 
 black-box simulation codes or experiments and construction of reduced 
