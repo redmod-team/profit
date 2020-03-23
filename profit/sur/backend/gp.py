@@ -52,7 +52,6 @@ def gpsolve(Ky, ft):
 
 def gp_nll(a, x, y, sigma_n=None):
     """Compute negative log likelihood of GP"""
-    nx = x.shape[0]
 
     if sigma_n is None:  # optimize also sigma_n
         Ky = gp_matrix_train(x, a[:-1], a[-1])
@@ -63,8 +62,10 @@ def gp_nll(a, x, y, sigma_n=None):
         L, alpha = gpsolve(Ky, y)
     except:
         raise
+
     return 0.5*y.T.dot(alpha) + np.sum(np.log(L.diagonal()))
 
+    # nx = x.shape[0]
     # try:
     #     Kyinv_y = np.linalg.solve(Ky, y)
     # except np.linalg.LinAlgError:
@@ -80,9 +81,45 @@ def gp_nll(a, x, y, sigma_n=None):
     #  sig0 = 1e-2*(np.max(y)-np.min(y))
     #  nll = nll + 0.5*np.log(np.abs(a[-1]/sig0))
 
-    print(a, nll)
+    # print(a, nll)
 
-    return nll
+    # return nll
+
+
+def gp_nll_gen(a, x, y, phi_bas, sigma_n=None):
+    """
+    a ... hyperparameters
+    x ... training points
+    y ... measured values at training points
+    phi_bas ... list of basis functions
+    sigma_n ... noise covariance
+    """
+    
+    if sigma_n is None:  # optimize also sigma_n
+        Ky = gp_matrix_train(x, a[:-1], a[-1])
+    else:
+        Ky = gp_matrix_train(x, a, sigma_n)
+
+    try:
+        L, alpha = gpsolve(Ky, y)
+    except:
+        raise
+
+    nll_base = 0.5*y.T.dot(alpha) + np.sum(np.log(L.diagonal())) 
+
+    nbas = len(phi_bas)
+    H = np.empty([len(phi_bas), len(x)]) 
+    for kbas in range(nbas):
+        H[kbas, :] = phi_bas[kbas](x)
+
+    w = solve_triangular(L, H.T, lower = True, check_finite = False)
+    A = w.T.dot(w)
+
+    # TODO: avoid inverting A, but use AL and solve_triangular like for inverting Ky
+    Ainv = np.linalg.inv(A)
+    M = H.T.dot(Ainv.dot(H))
+    AL = np.linalg.cholesky(A)
+    return nll_base - 0.5*alpha.T.dot(M.dot(alpha)) + np.sum(np.log(AL.diagonal()))
 
 
 def gp_optimize(xtrain, ytrain, a0):
