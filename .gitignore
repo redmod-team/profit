@@ -5,6 +5,7 @@ __pycache__
 *.pyc
 *.[ao]
 *.so
+*.dll
 *.pickle
 .ipynb_checkpoints/
 *.hdf5
@@ -38,3 +39,4 @@ profile.out
 *.svg
 input.txt
 output.txt
+tests/backend_uqp/libuqp.dll
