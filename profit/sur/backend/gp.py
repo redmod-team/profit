@@ -5,6 +5,7 @@ Created: Mon Jul  8 11:48:24 2019
 
 import numpy as np
 import scipy as sp
+from scipy.optimize import minimize
 from scipy.linalg import solve_triangular
 import matplotlib.pyplot as plt
 from profit.sur import Surrogate
@@ -95,7 +96,7 @@ def gp_optimize(xtrain, ytrain, a0):
     #                              args=(xtrain, ytrain, None),
     #                              bounds=bounds,
     #                              options={'ftol': 1e-8})
-    res_a = sp.optimize.minimize(gp_nll, a0,
+    res_a = minimize(gp_nll, a0,
                                   args=(xtrain, ytrain, None),
                                   bounds=bounds)
     return res_a.x
