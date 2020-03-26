@@ -41,11 +41,11 @@ from GitHub via Git and pulled regularily.
 ### Dependencies
 * PyYAML
 * ChaosPy
-* GPFlow 2.0 from https://github.com/GPflow/GPflow
-* pyccel from https://github.com/pyccel/pyccel
+* GPFlow 2.0
+* pyccel
 
 Some dependencies should be installed automatically when using `pip`, 
-however GPflow 2.0 and pyccel should be installed from GitHub.
+however GPflow 2.0 should be installed from GitHub at https://github.com/GPflow/GPflow.
 
 ### Installation from Git
 To install proFit in-place use
