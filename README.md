@@ -8,7 +8,7 @@ This is a collection of tools for studying parametric dependencies of
 black-box simulation codes or experiments and construction of reduced 
 order response models over input parameter space. 
 
-`profit` can be fed with a number of data points consisting of different 
+proFit can be fed with a number of data points consisting of different 
 input parameter combinations and the resulting output of the model under 
 investigation. It then fits a response "surface" through the point cloud.
 This probablistic response model allows to predict ("interpolate") the output 
@@ -18,7 +18,7 @@ information (experimental design) and automatically generate and start
 new simulation runs locally or on a cluster. Results can be explored and checked 
 visually in a web frontend.
 
-Telling `profit` how to interact with your existing simulations is easy
+Telling proFit how to interact with your existing simulations is easy
 and requires no changes in your existing code. Current functionality covers 
 uncertainty quantification via polynomial chaos expansion 
 with [chaospy](https://github.com/jonathf/chaospy) as a backend. Support for 
@@ -32,6 +32,29 @@ The web frontend is based on [plotly/dash](https://github.com/plotly/dash).
 * Template replacement and automatic generation of run directories
 * Starting parallel runs locally or on the cluster (SLURM)
 * Collection of result output and postprocessing with UQ
+
+## Installation
+
+Currently the code is under heavy development so it should be cloned 
+from GitHub via Git and pulled regularily. 
+
+### Dependencies
+* PyYAML
+* ChaosPy
+* GPFlow 2.0 from https://github.com/GPflow/GPflow
+* pyccel from https://github.com/pyccel/pyccel
+
+Some dependencies should be installed automatically when using `pip`, 
+however GPflow 2.0 and pyccel should be installed from GitHub.
+
+### Installation from Git
+To install proFit in-place use
+
+```bash
+git clone https://github.com/redmod-team/profit.git
+cd profit
+pip install -e . --user
+```
 
 ## HowTo
 
