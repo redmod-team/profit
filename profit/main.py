@@ -111,11 +111,10 @@ def main():
 
     if(sys.argv[1] == 'pre'):
         from numpy.core.records import fromarrays
-        ndim = len(config['params'])
         # TODO: add data type int option
         eval_points = fromarrays(
-            profit.quasirand(config['ntrain'], len(config['params'])),
-            names=list(config['params'].keys()))
+            profit.quasirand(config['ntrain'], len(config['input'])),
+            names=list(config['input'].keys()))
 
         try:
             profit.fill_run_dir(eval_points, template_dir=config['template_dir'],
@@ -142,21 +141,22 @@ def main():
         run.start()
 
     elif(sys.argv[1] == 'collect'):
-        from numpy import array
+        from numpy import array, empty, nan, savetxt
         from .util import save_txt
         spec = importlib.util.spec_from_file_location('interface',
                                                       config['interface'])
         interface = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(interface)
-        data = []
+        data = empty((config['ntrain'], len(config['output'])))
         for krun in range(config['ntrain']):
             run_dir_single = os.path.join(config['run_dir'], str(krun))
             os.chdir(run_dir_single)
-            data.append((krun, interface.get_output()))
+            try:
+                data[krun,:] = interface.get_output()
+            except:
+                data[krun,:] = nan
         os.chdir(config['base_dir'])
-        print(data)
-        data = array(data, dtype=[('id', 'i4'), ('f', 'f8')])
-        save_txt('output.txt', data, fmt='%9d %.18e')
+        savetxt('output.txt', data, header=' '.join(config['output']))
 
     elif(sys.argv[1] == 'fit'):
         pass
