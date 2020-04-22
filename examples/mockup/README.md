@@ -34,3 +34,8 @@ Results from run folders are collected with
 profit collect
 ```
 yielding a file `output.txt` with the entries from `run` directories.
+
+We can view these results in the browser via
+```
+profit ui
+```
