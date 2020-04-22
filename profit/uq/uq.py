@@ -49,7 +49,7 @@ class UQ:
         self.template_dir = 'template/'
         self.run_dir = 'run/'
 
-    def write_config(self, filename='profit.yaml'):
+    def write_config(self, filename='profit.yml'):
         '''
         write UQ-configuration to yaml file.
         The SLURM configuration is so far not dumped yet'

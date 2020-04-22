@@ -88,9 +88,9 @@ def fill_template(self, krun, out_dir):
 def print_usage():
     print("Usage: profit <mode> (base-dir)")
     print("Modes:")
-    print("uq pre  ... preprocess for UQ")
-    print("uq run  ... run model for UQ")
-    print("uq post ... postprocess model output for UQ")
+    print("pre  ... prepare simulation runs based on templates")
+    print("run  ... start simulation runs")
+    print("post ... postprocess simulation output")
 
 
 def main():
@@ -100,7 +100,7 @@ def main():
         return
 
     if len(sys.argv) < 3:
-        config_file = os.path.join(os.getcwd(), 'profit.yaml')
+        config_file = os.path.join(os.getcwd(), 'profit.yml')
     else:
         config_file = os.path.abspath(sys.argv[2])
 
@@ -141,8 +141,9 @@ def main():
             run = profit.run.LocalCommand(config['command'])
         run.start()
 
-    elif(sys.argv[1] == 'fit'):
-        from numpy import savetxt
+    elif(sys.argv[1] == 'collect'):
+        from numpy import array
+        from .util import save_txt
         spec = importlib.util.spec_from_file_location('interface',
                                                       config['interface'])
         interface = importlib.util.module_from_spec(spec)
@@ -151,9 +152,14 @@ def main():
         for krun in range(config['ntrain']):
             run_dir_single = os.path.join(config['run_dir'], str(krun))
             os.chdir(run_dir_single)
-            data.append(interface.get_output())
+            data.append((krun, interface.get_output()))
         os.chdir(config['base_dir'])
-        savetxt('output.txt', data, header='# f')
+        print(data)
+        data = array(data, dtype=[('id', 'i4'), ('f', 'f8')])
+        save_txt('output.txt', data, fmt='%9d %.18e')
+
+    elif(sys.argv[1] == 'fit'):
+        pass
 
     elif(sys.argv[1] == 'ui'):
         from profit.ui import app

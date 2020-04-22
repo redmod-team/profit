@@ -19,7 +19,7 @@ doc/_build/
 akoef0001.dat
 sobol0001.dat
 trafi.dat
-run/
+examples/*/*/run
 draft/BayesSys/
 .coverage
 coverage.xml

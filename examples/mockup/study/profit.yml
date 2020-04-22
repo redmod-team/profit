@@ -1,0 +1,7 @@
+ntrain: 30
+params:
+    u:
+        dist: Uniform(4.7, 5.3)
+    v:
+        dist: Uniform(0.55, 0.6)
+command: '../mockup.py'

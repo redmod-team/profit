@@ -65,7 +65,7 @@ Examples for different model codes are available under `examples/`:
 * `idealiron`: More complex model called by console command based on template directory.
 * `algae`: Generation of evaluation points only (`input.txt`) without model run.
 
-1. Create a directory `study` containing `profit.yaml` for your run.
+1. Create a directory `study` containing `profit.yml` for your run.
    If your code is based on text configuration files for each run, copy the according directory to `template` and replace values of parameters to be varied within UQ/surrogate models by placeholders `{param}`.
    
 2. Preprocessing:  
@@ -90,7 +90,7 @@ Examples for different model codes are available under `examples/`:
   
 ## User-supplied files
 
-* `profit.yaml`
+* `profit.yml`
   * Add parameters and their distributions via `params`
   * Set `run.backend` to a class available inside `redmod.run`
   
