@@ -163,7 +163,7 @@ def main():
 
     elif(sys.argv[1] == 'ui'):
         from profit.ui import app
-        app.run_server(debug=True)
+        app.app.run_server(debug=True)
 
     elif(sys.argv[1] == 'post'):
         distribution, data, approx = postprocess()
