@@ -65,7 +65,7 @@ Examples for different model codes are available under `examples/`:
 * `idealiron`: More complex model called by console command based on template directory.
 * `algae`: Generation of evaluation points only (`input.txt`) without model run.
 
-1. Create a directory `study` containing `profit.yml` for your run.
+1. Create and enter a directory `study` containing `profit.yml` for your run.
    If your code is based on text configuration files for each run, copy the according directory to `template` and replace values of parameters to be varied within UQ/surrogate models by placeholders `{param}`.
    
 2. Preprocessing:  
@@ -73,28 +73,37 @@ Examples for different model codes are available under `examples/`:
    profit pre
    ```
    to generate points where model is evaluated, and possibly run directories based on `template`.
-   Evaluation points are stored inside `study/input.txt`
+   Evaluation points are stored inside `input.txt`
   
 3. Running model: 
    ```
    profit run
    ```
    to start simulations at all the points. If `run.backend` is of type `PythonFunction`, results
-   of model runs are stored in `study/output.txt`. Otherwise output is stored in model code-specific format.
+   of model runs are stored in `output.txt` already here. Otherwise output is stored in model code-specific format.
   
-4. Postprocessing: 
+4. Collect results: 
    ```
-   profit post
+   profit collect
    ```
-   to get postprocessing results.
+   to collect output from the runs into `output.txt`.
+   
+
+5. Explore data graphically: 
+   ```
+   profit ui
+   ```
+   starts a Dash-based browser UI
+
+Fitting and UQ routines are currently being refactored and available via the Python API.
   
 ## User-supplied files
 
 * `profit.yml`
-  * Add parameters and their distributions via `params`
-  * Set `run.backend` to a class available inside `redmod.run`
+  * Add parameters and their distributions via `input`
+  * Specify names of outputs in `output`
+  * Set `run.backend` to a class available inside `profit.run`
   
 * `interface.py`
-  * `shape()` should return shape of the model output as a list of integers.
-  * `get_output()` should return model output as a numpy array of shape `interface.shape()`.
+  * `get_output()` should return model output as a numpy array in the order and shape specified in `profit.yml`.
     The current path is the respective run directory. Can be skipped if `run.backend` is of type `PythonFunction`.
