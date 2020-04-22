@@ -7,6 +7,7 @@ Created on Fri Dec 21 09:27:19 2018
 """
 
 import os
+import sys
 import subprocess
 import multiprocessing as mp
 
@@ -42,8 +43,8 @@ class PythonFunction:
             output = [] # TODO: make this more efficient with preallocation based on shape
             for krun in kruns:
                 res = self.function(config.eval_points[:, krun])
-                output.append(res)
-            savetxt('run/output.txt', array(output))
+                output.append([krun, res])
+            savetxt('output.txt', array(output))
         finally:
             os.chdir(cwd)
         
@@ -58,8 +59,8 @@ def spawn(args):
                       stderr=open(os.path.join(fulldir,'stderr.txt'),'w'))
 
 class LocalCommand:
-    def __init__(self, command, ntask=1, run_dir='run/'):
-        self.command = command
+    def __init__(self, command, ntask=1, run_dir='run', base_dir='.'):
+        self.command = os.path.abspath(os.path.join(base_dir, command))
         self.ntask = ntask
         self.run_dir = run_dir
     
@@ -71,7 +72,10 @@ class LocalCommand:
         for subdir in subdirs:
             fulldir = os.path.join(self.run_dir, subdir)
             if os.path.isdir(fulldir):
-                args.append((self.command.split(), fulldir))
+                cmd = self.command.split()
+                if cmd[0].endswith('.py'):
+                    cmd.insert(0, sys.executable)
+                args.append((cmd, fulldir))
         p.map(spawn, args)
 
 class Slurm:

@@ -7,9 +7,12 @@ def load_txt(filename):
     from numpy import genfromtxt
     return genfromtxt(filename, names = True)
     
-def save_txt(filename, data):
+def save_txt(filename, data, fmt=None):
     from numpy import savetxt
-    savetxt(filename, data, header=' '.join(data.dtype.names))
+    if fmt:
+        savetxt(filename, data, header=' '.join(data.dtype.names), fmt=fmt)
+    else:
+        savetxt(filename, data, header=' '.join(data.dtype.names))
     
 def save_hdf(filename, data):
     from h5py import File

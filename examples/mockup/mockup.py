@@ -12,7 +12,8 @@ def rosenbrock(x, y, a, b):
 def f(r, u, v):
     return rosenbrock((r - 0.5) + u - 5, 1 + 3 * (v - 0.6), a=1, b=3)
 
-result = f(0.25, {u}, {v})
+params = np.loadtxt('mockup.in')
+result = f(0.25, params[0], params[1])
 print(result)
 np.savetxt('mockup.out', np.array([result]))
 
