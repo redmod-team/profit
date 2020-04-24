@@ -42,10 +42,10 @@ def quasirand(npoint, ndim, kind='Halton'):
         raise NotImplementedError('Only Halton sequences implemented yet')
 
 
-def fit(u, y):
+def fit(x, y):
     from profit.sur.backend.gp import GPFlowSurrogate
     fresp = GPFlowSurrogate()
-    fresp.train(u.T.reshape(y.size, -1), y.reshape(y.size, -1))
+    fresp.train(x, y)
     return fresp
 
 

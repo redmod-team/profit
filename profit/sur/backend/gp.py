@@ -190,108 +190,52 @@ class GPFlowSurrogate(Surrogate):
     # TODO
 
     def train(self, x, y, sigma_n=None, sigma_f=1e-6):
-        x = x.reshape(y.size, -1)
-        y = y.reshape(y.size, -1)
+        if(y.size) < 2:
+            raise RuntimeError('y.size must be at least 2')
 
-        self.xtrain = x.copy()
-        self.ytrain = y.copy()
+        notnan = np.logical_not(np.isnan(y))
+        y = y[notnan]
+        x = x[notnan]
 
-        self.ndim = x.shape[-1]
-        sigma_k = (np.max(y) - np.min(y))**2
+        self.ymean = np.mean(y)
+        self.yvar = np.var(y)
+        self.yscale = np.sqrt(self.yvar)
+
+        self.xtrain = x.reshape(y.size, -1)
+        self.ytrain = (y.reshape(y.size, -1) - self.ymean)/self.yscale
+
+        self.xtrain = self.xtrain.astype(np.float64)
+        self.ytrain = self.ytrain.astype(np.float64)
+
+        self.ndim = self.xtrain.shape[-1]
 
         l = np.empty(self.ndim)
-        vary = np.var(y)
+        
         kern = list()
 
         for k in range(self.ndim):
-            l[k] = 3.0*(np.max(x[:, k]) - np.min(x[:, k]))/y.size
+            l[k] = 3.0*(np.max(self.xtrain[:, k]) - np.min(self.xtrain[:, k]))/y.size
             kern.append(gpflow.kernels.SquaredExponential(
-                lengthscale=l[k], variance=1.0, active_dims=[k]))
-            set_trainable(kern[k].variance, False)
+                lengthscales=l[k], variance=1.0, active_dims=[k]))
+            if k == 0:
+                # Guess a bit more broadly
+                kern[k].variance.assign(3.0)
+            else:
+                # Need only one y scale
+                set_trainable(kern[k].variance, False)
 
-        sig1 = gpflow.kernels.Constant()
-        sign = gpflow.kernels.Constant()
-        term1 = gpflow.kernels.Product([sig1, gpflow.kernels.Sum(kern)])
-        termn = gpflow.kernels.Product([sign] + kern)
-        term1.kernels[0].variance.assign(sigma_k)
-        termn.kernels[0].variance.assign(sigma_k)
+        kerns = gpflow.kernels.Product(kern)
 
-        kerns = termn
+        self.m = gpflow.models.GPR((self.xtrain, self.ytrain), kernel=kerns)
 
-        # if(self.ndim == 1):
-        #    kerns = gpflow.kernels.Sum([term1])
-        # else:
-        #    kerns = gpflow.kernels.Sum([term1] + [termn])
-
-        if(self.ndim == 1):
-            self.m = gpflow.models.GPR((x, y),
-                                       kernel=kerns,
-                                       mean_function=gpflow.mean_functions.Linear())
-        else:
-            self.m = gpflow.models.GPR((x, y),
-                                       kernel=kerns,
-                                       mean_function=gpflow.mean_functions.Constant())
-            # TODO: check possible bug in GPFlow why Linear mean doesn't work
-
-        self.m.likelihood.variance.assign(vary)
-
-        # print_summary(self.m)
+        self.m.likelihood.variance.assign(1e-2) # Guess little noise
 
         # Optimize
+        def objective_closure():
+            return -self.m.log_marginal_likelihood()
+ 
         opt = gpflow.optimizers.Scipy()
-        opt.minimize(self.m.neg_log_marginal_likelihood,
-                     self.m.trainable_variables)
-        # opt = gpflow.optimizers.
-        # opt = tf.optimizers.Adam(0.1)
-        # for i in range(100):
-        #     opt.minimize(self.m.neg_log_marginal_likelihood,
-        #         var_list=self.m.trainable_variables)
-        #     likelihood = self.m.log_likelihood()
-        #     tf.print(f'GPR with Adam: iteration {i + 1} likelihood {likelihood:.04f}')
-        # print_summary(self.m)
-
-        self.sigma = np.sqrt(self.m.likelihood.variance.value())
-        self.trained = True
-
-    def train_single(self, x, y, sigma_n=None, sigma_f=1e-6):
-        x = x.reshape(y.size, -1)
-        y = y.reshape(y.size, -1)
-        self.ndim = x.shape[-1]
-        if x.shape[-1] > 1:
-            lengthscale = (np.max(np.max(x, -1) - np.min(x, -1)))/2.0
-        else:
-            lengthscale = (np.max(x) - np.min(x))/2.0
-        print(lengthscale)
-        self.m = gpflow.models.GPR((x, y),
-                                   kernel=gpflow.kernels.SquaredExponential(),
-                                   mean_function=gpflow.mean_functions.Linear())
-        self.m.kernel.lengthscale.assign(lengthscale)
-        vary = np.var(y)
-        # self.m.kernel.variance.assign(1e2*vary)
-        self.m.kernel.variance.assign((np.max(y) - np.min(y))**2)
-        #set_trainable(self.m.kernel.variance, False)
-        # self.m.kernel.lengthscale.prior = tfp.distributions.Uniform(
-        #    to_default_float(lengthscale/y.size), to_default_float(lengthscale))
-
-        mea = lengthscale/2.0
-        vari = lengthscale/2.0
-        mu = np.log(mea**2/np.sqrt(vari+mea**2))
-        sig = np.sqrt(np.log(1.0 + vari/mea**2))
-        # self.m.kernel.lengthscale.prior = tfp.distributions.LogNormal(
-        #    to_default_float(mu), to_default_float(sig))
-        #set_trainable(self.m.kernel.lengthscale, False)
-        self.m.likelihood.variance.assign(vary)
-        # print_summary(self.m)
-
-        # Optimize
-        opt = gpflow.optimizers.Scipy()
-        opt.minimize(lambda: -self.m.log_marginal_likelihood(),
-                     self.m.trainable_variables)
-        # opt = gpflow.optimizers.
-        #opt = tf.optimizers.Adam()
-        # opt.minimize(lambda: -self.m.log_marginal_likelihood(),
-        #    var_list=self.m.trainable_variables)
-        # print_summary(self.m)
+        opt.minimize(objective_closure, self.m.trainable_variables)
 
         self.sigma = np.sqrt(self.m.likelihood.variance.value())
         self.trained = True
@@ -308,7 +252,7 @@ class GPFlowSurrogate(Surrogate):
             raise RuntimeError('Need to train() before predict()')
 
         y, sig_y = self.m.predict_y(np.array(x).T.reshape(-1, self.ndim))
-        return y.numpy(), sig_y.numpy()
+        return self.ymean + y.numpy()*self.yscale, sig_y.numpy()*self.yvar
 
     def plot(self):
         if self.ndim == 1:
@@ -335,49 +279,5 @@ class GPFlowSurrogate(Surrogate):
         return self.m.predict_f_samples(np.array(x).T.reshape(-1, self.ndim), num_samples)
 
     def __call__(self, x):
-        y, yvar = self.predict(x)
-        return y.numpy()
-
-
-class GPySurrogate(Surrogate):
-    def __init__(self):
-        # gpflow.reset_default_graph_and_session()
-        self.trained = False
-        pass
-    # TODO
-
-    def train(self, x, y, sigma_n=None, sigma_f=1e-6):
-        print(x.shape)
-        if x.shape[1] > 1:
-            lengthscale = np.max(np.max(x, 1)-np.min(x, 1))
-        else:
-            lengthscale = np.max(x)-np.min(x)
-        kernel = GPy.kern.RBF(input_dim=x.shape[1],
-                              variance=1e2*(np.max(y)-np.min(y))**2,
-                              lengthscale=lengthscale)
-
-        mf = GPy.mappings.Linear(x.shape[1], 1)
-
-        self.m = GPy.models.GPRegression(x, y.reshape([y.size, 1]), kernel,
-                                         mean_function=mf)
-        #self.m.Gaussian_noise.variance = 1e-4*(np.max(y)-np.min(y))**2
-        self.m.Gaussian_noise.variance = np.var(y)
-        print(self.m)
-        self.m.optimize(messages=True)
-        print(self.m)
-
-        self.sigma = np.sqrt(self.m.Gaussian_noise.variance.values)
-        self.trained = True
-
-    def add_training_data(self, x, y, sigma=None):
-        """Adds input points x and model outputs y with std. deviation sigma 
-           and updates the inverted covariance matrix for the GP via the 
-           Sherman-Morrison-Woodbury formula"""
-
-        raise NotImplementedError()
-
-    def predict(self, x):
-        if not self.trained:
-            raise RuntimeError('Need to train() before predict()')
-
-        return self.m.predict(x)
+        y, _ = self.predict(x)
+        return y
