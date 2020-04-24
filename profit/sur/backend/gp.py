@@ -255,7 +255,7 @@ class GPFlowSurrogate(Surrogate):
 
         if len(x.shape) == 1:
             x = x.reshape(-1, 1)
-        y, sig_y = self.m.predict_y(x)
+        y, sig_y = self.m.predict_f(x)
         return self.ymean + y.numpy()*self.yscale, sig_y.numpy()*self.yvar
 
     def plot(self):
