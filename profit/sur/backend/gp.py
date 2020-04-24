@@ -194,15 +194,16 @@ class GPFlowSurrogate(Surrogate):
             raise RuntimeError('y.size must be at least 2')
 
         notnan = np.logical_not(np.isnan(y))
+        x = x.reshape(y.size, -1)[notnan]
         y = y[notnan]
-        x = x[notnan]
 
         self.ymean = np.mean(y)
         self.yvar = np.var(y)
         self.yscale = np.sqrt(self.yvar)
 
         self.xtrain = x.reshape(y.size, -1)
-        self.ytrain = (y.reshape(y.size, -1) - self.ymean)/self.yscale
+        self.ytrain = (y.reshape(y.size, 1) - self.ymean)/self.yscale
+        print(self.xtrain.shape)
 
         self.xtrain = self.xtrain.astype(np.float64)
         self.ytrain = self.ytrain.astype(np.float64)
@@ -214,7 +215,8 @@ class GPFlowSurrogate(Surrogate):
         kern = list()
 
         for k in range(self.ndim):
-            l[k] = 3.0*(np.max(self.xtrain[:, k]) - np.min(self.xtrain[:, k]))/y.size
+            # TODO: guess this in a finer fashion via FFT in all directions
+            l[k] = 0.3*(np.max(self.xtrain[:, k]) - np.min(self.xtrain[:, k]))
             kern.append(gpflow.kernels.SquaredExponential(
                 lengthscales=l[k], variance=1.0, active_dims=[k]))
             if k == 0:
@@ -251,7 +253,9 @@ class GPFlowSurrogate(Surrogate):
         if not self.trained:
             raise RuntimeError('Need to train() before predict()')
 
-        y, sig_y = self.m.predict_y(np.array(x).T.reshape(-1, self.ndim))
+        if len(x.shape) == 1:
+            x = x.reshape(-1, 1)
+        y, sig_y = self.m.predict_y(x)
         return self.ymean + y.numpy()*self.yscale, sig_y.numpy()*self.yvar
 
     def plot(self):
