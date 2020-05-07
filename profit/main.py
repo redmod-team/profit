@@ -25,21 +25,13 @@ except:
 
 import profit
 from profit.config import Config
+from profit.util import get_eval_points
 #from profit.uq.backend import ChaosPy
 #from profit.sur.backend import gp
 #from inspect import signature
 #from post import Postprocessor, evaluate_postprocessing
 
 yes = False  # always answer 'y'
-
-
-def quasirand(npoint, ndim, kind='Halton'):
-    from chaospy import create_halton_samples
-
-    if kind in ('H', 'Halton'):
-        return create_halton_samples(npoint, ndim)
-    else:
-        raise NotImplementedError('Only Halton sequences implemented yet')
 
 
 def fit(x, y):
@@ -100,7 +92,7 @@ def main():
         return
 
     if len(sys.argv) < 3:
-        config_file = os.path.join(os.getcwd(), 'profit.yml')
+        config_file = os.path.join(os.getcwd(), 'profit.yaml')
     else:
         config_file = os.path.abspath(sys.argv[2])
 
@@ -110,11 +102,7 @@ def main():
     sys.path.append(config['base_dir'])
 
     if(sys.argv[1] == 'pre'):
-        from numpy.core.records import fromarrays
-        # TODO: add data type int option
-        eval_points = fromarrays(
-            profit.quasirand(config['ntrain'], len(config['input'])),
-            names=list(config['input'].keys()))
+        eval_points = get_eval_points(config)
 
         try:
             profit.fill_run_dir(eval_points, template_dir=config['template_dir'],
@@ -131,14 +119,14 @@ def main():
 
             profit.fill_run_dir(eval_points, template_dir=config['template_dir'],
                                 run_dir=config['run_dir'], overwrite=True)
-        #uq = UQ(config=config)
-        # uq.pre()
 
     elif(sys.argv[1] == 'run'):
         print(read_input(config['base_dir']))
-        if config['command']:
-            run = profit.run.LocalCommand(config['command'])
-        run.start()
+        if config['run']:
+            run = profit.run.LocalCommand(config['run'])
+            run.start()
+        else:
+            raise RuntimeError('No "run" entry in profit.yaml')
 
     elif(sys.argv[1] == 'collect'):
         from numpy import array, empty, nan, savetxt

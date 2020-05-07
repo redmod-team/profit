@@ -65,7 +65,7 @@ Examples for different model codes are available under `examples/`:
 * `idealiron`: More complex model called by console command based on template directory.
 * `algae`: Generation of evaluation points only (`input.txt`) without model run.
 
-1. Create and enter a directory `study` containing `profit.yml` for your run.
+1. Create and enter a directory `study` containing `profit.yaml` for your run.
    If your code is based on text configuration files for each run, copy the according directory to `template` and replace values of parameters to be varied within UQ/surrogate models by placeholders `{param}`.
    
 2. Preprocessing:  
@@ -99,11 +99,11 @@ Fitting and UQ routines are currently being refactored and available via the Pyt
   
 ## User-supplied files
 
-* `profit.yml`
+* `profit.yaml`
   * Add parameters and their distributions via `input`
   * Specify names of outputs in `output`
   * Set `run.backend` to a class available inside `profit.run`
   
 * `interface.py`
-  * `get_output()` should return model output as a numpy array in the order and shape specified in `profit.yml`.
+  * `get_output()` should return model output as a numpy array in the order and shape specified in `profit.yaml`.
     The current path is the respective run directory. Can be skipped if `run.backend` is of type `PythonFunction`.

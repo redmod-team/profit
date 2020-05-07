@@ -85,7 +85,7 @@ class Slurm:
           from backend.run.slurm import slurm_backend
           self.backend = slurm_backend()
           if 'slurm' in config:
-            self.backend.write_slurm_scripts(num_experiments=self.eval_points.shape[1], slurm_config=config['slurm'],jobcommand=config['command'])
+            self.backend.write_slurm_scripts(num_experiments=self.eval_points.shape[1], slurm_config=config['slurm'],jobcommand=config['run'])
           else:
             print('''cannot write slurm scripts, please provide slurm details:
   runner_backend: slurm
@@ -102,6 +102,6 @@ class Slurm:
 
 class Runner:
     def __init__(self, config):
-        if config['command']:
-            print(config['command'])
-            return(LocalCommand(config['command']))
+        if config['run']:
+            print(config['run'])
+            return(LocalCommand(config['run']))

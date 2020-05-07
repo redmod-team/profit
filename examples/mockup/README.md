@@ -16,7 +16,7 @@ The input is read from an input file `mockup.in`. After computation, the output 
 
 ## Parameter study via console scripts
 We want to do a parameter study by varying `u` and `v`. First we enter the `study` directory and
-edit the file `profit.yml`. Then we generate run directories with
+edit the file `profit.yaml`. Then we generate run directories with
 ```
 profit pre
 ```
