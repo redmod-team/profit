@@ -21,7 +21,7 @@ yaml.add_representer(OrderedDict, represent_ordereddict)
 _mapping_tag = yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG
 
 def dict_constructor(loader, node):
-    return collections.OrderedDict(loader.construct_pairs(node))
+    return OrderedDict(loader.construct_pairs(node))
 
 yaml.add_constructor(_mapping_tag, dict_constructor)
 
@@ -47,20 +47,20 @@ class Config(OrderedDict):
     self['interface'] = 'interface.py'
     self.update(entries)
   
-  def write_yaml(self, filename='profit.yml'):
+  def write_yaml(self, filename='profit.yaml'):
     '''
     dump UQ configuration to a yaml file.
-    The default filename is profit.yml
+    The default filename is profit.yaml
     '''
     dumpdict = dict(self)
     self.remove_nones(dumpdict)
     with open(filename,'w') as file:
       yaml.dump(dumpdict,file,default_flow_style=False)
 
-  def load(self, filename='profit.yml'):
+  def load(self, filename='profit.yaml'):
     '''
     load configuration from yaml file.
-    The default filename is profit.yml
+    The default filename is profit.yaml
     '''
     with open(filename) as f:
       entries = yaml.safe_load(f)
