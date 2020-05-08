@@ -60,7 +60,9 @@ def spawn(args):
 
 class LocalCommand:
     def __init__(self, command, ntask=1, run_dir='run', base_dir='.'):
-        self.command = os.path.abspath(os.path.join(base_dir, command))
+        # self.command = os.path.abspath(os.path.join(base_dir, command))
+        # TODO: support relative paths consistently
+        self.command = command
         self.ntask = ntask
         self.run_dir = run_dir
     

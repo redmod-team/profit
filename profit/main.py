@@ -82,7 +82,7 @@ def print_usage():
     print("Modes:")
     print("pre  ... prepare simulation runs based on templates")
     print("run  ... start simulation runs")
-    print("post ... postprocess simulation output")
+    print("collect ... collect simulation output")
 
 
 def main():
