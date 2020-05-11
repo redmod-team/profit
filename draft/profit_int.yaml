@@ -1,0 +1,13 @@
+ntrain: 30
+variables:
+  Nm: 
+    kind: LogUniform(16, 256)
+    dtype: int
+  Np: 
+    kind: LogUniform(2, 32)
+    dtype: int
+  Nq: 
+    kind: LogUniform(2, 32)
+    dtype: int
+run: 
+    ../main_GP.py
