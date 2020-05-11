@@ -265,11 +265,11 @@ class GPFlowSurrogate(Surrogate):
             xrange = xmax-xmin
             xtest = np.linspace(xmin-0.1*xrange, xmax+0.1*xrange)
             y, yvar = self.predict(xtest)
-            stdy = np.sqrt(yvar.numpy().flatten())
-            yarr = y.numpy().flatten()
+            stdy = np.sqrt(yvar.flatten())
+            yarr = y.flatten()
             plt.fill_between(xtest.flatten(), yarr - 1.96*stdy, yarr + 1.96*stdy,
                              color='tab:red', alpha=0.3)
-            plt.plot(self.xtrain, self.ytrain, 'kx')
+            plt.plot(self.xtrain, self.ymean + self.ytrain*self.yscale, 'kx')
             plt.plot(xtest, y, color='tab:red')
         elif self.ndim == 2:
             # TODO: add content of Albert2019_IPP_Berlin.ipynb
@@ -280,7 +280,7 @@ class GPFlowSurrogate(Surrogate):
                 'Plotting only implemented for dimension<2')
 
     def sample(self, x, num_samples=1):
-        return self.m.predict_f_samples(np.array(x).T.reshape(-1, self.ndim), num_samples)
+        return self.ymean + self.yscale*self.m.predict_f_samples(np.array(x).T.reshape(-1, self.ndim), num_samples)
 
     def __call__(self, x):
         y, _ = self.predict(x)

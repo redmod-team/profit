@@ -45,6 +45,7 @@ class Config(OrderedDict):
     self['runner_backend'] = None
     self['uq']={}
     self['interface'] = 'interface.py'
+    self['output'] = {} 
     self.update(entries)
   
   def write_yaml(self, filename='profit.yaml'):
@@ -65,6 +66,13 @@ class Config(OrderedDict):
     with open(filename) as f:
       entries = yaml.safe_load(f)
     self.update(entries)
+
+    for k, v in self['variables'].items():
+      if isinstance(v, str):
+        self['variables'][k] = {'kind': v}
+
+      if self['variables'][k]['kind'] == 'Output':
+        self['output'][k] = self['variables'][k]
   
   def remove_nones(self,config=None):
       if config==None: config=self.__dict__
@@ -75,4 +83,3 @@ class Config(OrderedDict):
         else:
           if config[key] is None:
             del config[key]
-
