@@ -1,5 +1,5 @@
 from numpy import cos, linspace
-from matplotlib.pyplot import plot
+from matplotlib.pyplot import plot, show
 import profit
 
 # Original model
@@ -18,3 +18,5 @@ y, yvar = fresp.predict(xtest) # prediction and variance
 # Plot reference and response model fit
 plot(xtest, f(xtest), color='k')
 fresp.plot()
+show()
+
