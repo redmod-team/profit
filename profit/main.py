@@ -147,19 +147,23 @@ def main():
         savetxt('output.txt', data, header=' '.join(config['output']))
 
     elif(sys.argv[1] == 'fit'):
-        pass
+        from numpy import loadtxt
+        from h5py import File
+        x = loadtxt('input.txt')
+        y = loadtxt('output.txt')
+        fresp = fit(x, y)
+        with File('profit.hdf5', 'w') as h5f:
+            h5f['xtrain'] = fresp.xtrain
+            h5f['ytrain'] = fresp.ytrain
+            h5f['yscale'] = fresp.yscale
+            h5f['ndim'] = fresp.ndim
+            h5f['variables'] = [
+                v.numpy() for v in fresp.m.variables]
 
     elif(sys.argv[1] == 'ui'):
         from profit.ui import app
         app.app.run_server(debug=True)
 
-    elif(sys.argv[1] == 'post'):
-        distribution, data, approx = postprocess()
-        import pickle
-        with open('approximation.pickle', 'wb') as pf:
-            # remove approx, since this can easily be reproduced
-            pickle.dump((distribution, data, approx), pf, protocol=-1)
-        evaluate_postprocessing(distribution, data, approx)
     else:
         print_usage()
         return
