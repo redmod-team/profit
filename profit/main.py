@@ -138,12 +138,14 @@ def main():
         data = empty((config['ntrain'], len(config['output'])))
         for krun in range(config['ntrain']):
             run_dir_single = os.path.join(config['run_dir'], str(krun))
-            os.chdir(run_dir_single)
+            print(run_dir_single)
             try:
+                os.chdir(run_dir_single)
                 data[krun,:] = interface.get_output()
             except:
                 data[krun,:] = nan
-        os.chdir(config['base_dir'])
+            finally:
+                os.chdir(config['base_dir'])
         savetxt('output.txt', data, header=' '.join(config['output']))
 
     elif(sys.argv[1] == 'fit'):
