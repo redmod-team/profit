@@ -32,10 +32,10 @@ def hdf2txt(txtfile, hdffile):
     save_txt(txtfile, load_hdf(hdffile))
 
 def quasirand(npoint, ndim, kind='Halton'):
-    from chaospy import create_halton_samples
+    from .halton import halton
 
     if kind in ('H', 'Halton'):
-        return create_halton_samples(npoint, ndim).T
+        return halton(npoint, ndim).T
     else:
         raise NotImplementedError("Only kind='Halton' currently implemented")
 
