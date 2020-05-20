@@ -1,36 +1,36 @@
-suruq package
-=============
+profit package
+==============
 
 Subpackages
 -----------
 
 .. toctree::
 
-    suruq.uq
+    profit.uq
 
 Submodules
 ----------
 
-suruq.config module
+profit.config module
 -------------------
 
-.. automodule:: suruq.config
+.. automodule:: profit.config
     :members:
     :undoc-members:
     :show-inheritance:
 
-suruq.run module
+profit.run module
 ----------------
 
-.. automodule:: suruq.run
+.. automodule:: profit.run
     :members:
     :undoc-members:
     :show-inheritance:
 
-suruq.suruq module
+profit.suruq module
 ------------------
 
-.. automodule:: suruq.suruq
+.. automodule:: profit.suruq
     :members:
     :undoc-members:
     :show-inheritance:
@@ -39,7 +39,7 @@ suruq.suruq module
 Module contents
 ---------------
 
-.. automodule:: suruq
+.. automodule:: profit
     :members:
     :undoc-members:
     :show-inheritance:

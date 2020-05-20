@@ -1,21 +1,21 @@
-suruq.uq package
+profit.uq package
 ================
 
 Submodules
 ----------
 
-suruq.uq.backend module
+profit.uq.backend module
 -----------------------
 
-.. automodule:: suruq.uq.backend
+.. automodule:: profit.uq.backend
     :members:
     :undoc-members:
     :show-inheritance:
 
-suruq.uq.uq module
+profit.uq.uq module
 ------------------
 
-.. automodule:: suruq.uq.uq
+.. automodule:: profit.uq.uq
     :members:
     :undoc-members:
     :show-inheritance:
@@ -24,7 +24,7 @@ suruq.uq.uq module
 Module contents
 ---------------
 
-.. automodule:: suruq.uq
+.. automodule:: profit.uq
     :members:
     :undoc-members:
     :show-inheritance:
