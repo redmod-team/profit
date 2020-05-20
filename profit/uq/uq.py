@@ -7,6 +7,7 @@ Created on Fri Dec 21 09:27:19 2018
 """
 import os
 from collections import OrderedDict
+from profit.config import Config
 
 def read_params(filename):
     from numpy import genfromtxt
@@ -27,8 +28,7 @@ class UQ:
         
         if yaml:
             print('  load configuration from %s'%yaml)
-            config = Config()
-            config.load(yaml)
+            config = Config.from_file(yaml)
 
         if config:
             if (config['uq']['backend'] == 'ChaosPy'):

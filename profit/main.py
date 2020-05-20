@@ -96,8 +96,7 @@ def main():
     else:
         config_file = os.path.abspath(sys.argv[2])
 
-    config = Config()
-    config.load(config_file)
+    config = Config.from_file(config_file)
 
     sys.path.append(config['base_dir'])
 
@@ -123,7 +122,7 @@ def main():
     elif(sys.argv[1] == 'run'):
         print(read_input(config['base_dir']))
         if config['run']:
-            run = profit.run.LocalCommand(config['run'])
+            run = profit.run.LocalCommand(config['run']['cmd'], config['run']['ntask'])
             run.start()
         else:
             raise RuntimeError('No "run" entry in profit.yaml')

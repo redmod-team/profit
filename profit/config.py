@@ -36,7 +36,7 @@ class Config(OrderedDict):
   of variation, UQ-backend, and the SLURM configuration
   '''
 
-  def __init__(self,**entries):
+  def __init__(self, **entries):
     base_dir = os.getcwd()
     self['base_dir'] = base_dir
     self['template_dir'] = path.join(base_dir, 'template')
@@ -54,31 +54,50 @@ class Config(OrderedDict):
     The default filename is profit.yaml
     '''
     dumpdict = dict(self)
-    self.remove_nones(dumpdict)
+    self._remove_nones(dumpdict)
     with open(filename,'w') as file:
       yaml.dump(dumpdict,file,default_flow_style=False)
 
-  def load(self, filename='profit.yaml'):
+  @classmethod
+  def from_file(cls, filename='profit.yaml'):
     '''
     load configuration from yaml file.
     The default filename is profit.yaml
     '''
+
+    self = cls()
+
     with open(filename) as f:
       entries = yaml.safe_load(f)
     self.update(entries)
 
+    # Variable configuration
+    # Shorthand to put kind directly into variables
     for k, v in self['variables'].items():
       if isinstance(v, str):
         self['variables'][k] = {'kind': v}
 
       if self['variables'][k]['kind'] == 'Output':
         self['output'][k] = self['variables'][k]
+
+    # Run configuration    
+    run = self['run']
+    if run:
+      # Shorthand to put cmd direcly into run
+      if isinstance(run, str):
+        self['run'] = {'cmd': run}
+
+      # Default to single-thread
+      if not 'ntask' in self['run']:
+        self['run']['ntask'] = 1  
+
+    return self
   
-  def remove_nones(self,config=None):
+  def _remove_nones(self,config=None):
       if config==None: config=self.__dict__
       for key in list(config):
         if type(config[key]) is dict:
-          self.remove_nones(config[key])
+          self._remove_nones(config[key])
         #elif (type(config[key]) is not list) and (config[key] is None):
         else:
           if config[key] is None:
