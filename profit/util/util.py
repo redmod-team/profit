@@ -35,7 +35,7 @@ def quasirand(npoint, ndim, kind='Halton'):
     from .halton import halton
 
     if kind in ('H', 'Halton'):
-        return halton(npoint, ndim).T
+        return halton(ndim, npoint)
     else:
         raise NotImplementedError("Only kind='Halton' currently implemented")
 
