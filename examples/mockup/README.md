@@ -36,9 +36,9 @@ profit collect
 yielding a file `output.txt` with the entries from `run` directories.
 
 To fit results:
-...
+```
 profit fit
-...
+```
 In addition, it generates a file 'profit.hdf5 where the data is stored.
 
 We can view these results in the browser via
