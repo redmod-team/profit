@@ -32,7 +32,7 @@ def fill_run_dir(eval_points, template_dir='template/', run_dir='run/',
     write_input(eval_points)
 
     for krun in kruns:
-        run_dir_single = os.path.join(run_dir, str(krun))
+        run_dir_single = os.path.join(run_dir, str(krun).zfill(3))
         if os.path.exists(run_dir_single):
             if overwrite:
                 rmtree(run_dir_single)
