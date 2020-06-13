@@ -15,7 +15,7 @@ class Postprocessor:
 #        expansion = orth_ttr(uq.backend.order, distribution)
         
         for krun in range(nrun):
-            fulldir = path.join(config.run_dir, str(krun))
+            fulldir = path.join(config.run_dir, str(krun).zfill(3)) #.zfill(3) is an option that forces krun to have 3 digits
             try:
                 os.chdir(fulldir)
                 self.data[:,krun] = self.interface.get_output()
