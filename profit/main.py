@@ -136,7 +136,7 @@ def main():
         spec.loader.exec_module(interface)
         data = empty((config['ntrain'], len(config['output'])))
         for krun in range(config['ntrain']):
-            run_dir_single = os.path.join(config['run_dir'], str(krun))
+            run_dir_single = os.path.join(config['run_dir'], str(krun).zfill(3))
             print(run_dir_single)
             try:
                 os.chdir(run_dir_single)
