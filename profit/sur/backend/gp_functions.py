@@ -43,29 +43,33 @@ def build_K(x, x0, hyp, K):
 def nll_chol(hyp, x, y, build_K=build_K):
     K = np.empty((len(x), len(x)))
     build_K(x, x, hyp[:-1], K)
-    Ky = K + hyp[-1]*np.diag(np.ones(len(x)))
+    Ky = K + np.abs(hyp[-1])*np.diag(np.ones(len(x)))
     L = np.linalg.cholesky(Ky)
     alpha = solve_cholesky(L, y)
     ret = 0.5*y.T.dot(alpha) + np.sum(np.log(L.diagonal()))
-    print(hyp, ret)
+    #print(hyp, ret)
     return ret
 
 
 def nll(hyp, x, y, neig=8, build_K=build_K):
     K = np.empty((len(x), len(x)))
-    build_K(x, x, hyp[:-1], K)
+    build_K(x, x, np.abs(hyp[:-1]), K)
     Ky = K + np.abs(hyp[-1])*np.diag(np.ones(len(x)))
-    w, Q = eigsh(Ky, neig, tol=max(1e-6*hyp[-1], 1e-15))
-    while np.abs(w[-1]-hyp[-1])/hyp[-1] > 1e-6:
+    w, Q = eigsh(Ky, neig, tol=max(1e-6*np.abs(hyp[-1]), 1e-15))
+    while np.abs(w[0]-hyp[-1])/hyp[-1] > 1e-6 and neig < len(x):
         if neig > 0.05*len(x):  # TODO: get more stringent criterion
-            return nll_chol(hyp, x, y, build_K)
-        neig = 2*neig
+            try: 
+                return nll_chol(hyp, x, y, build_K)
+                
+            except:
+                print('Warning! Fallback to eig solver!')
+        neig =  2*neig
         w, Q = eigsh(Ky, neig, tol=max(1e-6*hyp[-1], 1e-15))
 
     alpha = Q.dot(np.diag(1.0/w).dot(Q.T.dot(y)))
 
-    ret = 0.5*y.T.dot(alpha) + 0.5*(np.sum(np.log(w)) + (len(x)-neig)*np.log(hyp[-1]))
-    print(hyp, ret)
+    ret = 0.5*y.T.dot(alpha) + 0.5*(np.sum(np.log(w)) + (len(x)-neig)*np.log(np.abs(hyp[-1])))
+    #print(hyp, ret)
     return ret
 
 
