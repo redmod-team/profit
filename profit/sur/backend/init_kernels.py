@@ -18,6 +18,7 @@ kern = {}
 kern['sqexp'] = exp(-r**2/2)
 kern['matern32'] = (1 + sqrt(3)*r)*exp(-sqrt(3)*r)
 kern['matern52'] = (1 + sqrt(5)*r + 5*r/3)*exp(-sqrt(5)*r)
+kern['wend4'] = (1 - r)**4*(1 + 4*r)
 
 dkern = {}
 for k, v in kern.items():
