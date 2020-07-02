@@ -29,7 +29,7 @@ def invert_cholesky(L):
 
 def invert(K, neig, tol):
     w, Q = eigsh(K, neig, tol=tol)
-    while np.abs(w[-1]-tol) > tol:
+    while np.abs(w[0]-tol) > tol:
         if neig > 0.05*K.shape[0]:  # TODO: get more stringent criterion
             return invert_cholesky(np.linalg.cholesky(K))
         neig = 2*neig
@@ -84,7 +84,7 @@ def predict_f(hyp, x, y, xtest, neig=8):
     return Ef, varf
 
 
-def predict_dfdx(hyp, x, y, xtest, neig=8):
+def predict_dfdx(hyp, x, y, xtest, neig=8, dkdxa=dkdxa, dkdxadxb=dkdxadxb):
     Ktest = np.fromfunction(lambda i, j: dkdxa(xtest[i,0], x[j,0], hyp[0]), (len(xtest), len(x)), dtype=int)
     Ktest2 = np.fromfunction(lambda i, j: dkdxadxb(xtest[i,0], xtest[i,0], hyp[0]), (len(xtest), len(xtest)), dtype=int)
     K = sklearn.metrics.pairwise.rbf_kernel(x, x, 0.5/hyp[0]**2)

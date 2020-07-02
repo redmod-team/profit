@@ -42,3 +42,4 @@ output.txt
 tests/backend_uqp/libuqp.dll
 examples/mockup/mockup.out
 .vs/
+kernels.f90
