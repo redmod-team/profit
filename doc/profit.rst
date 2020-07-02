@@ -12,7 +12,7 @@ Submodules
 ----------
 
 profit.config module
--------------------
+--------------------
 
 .. automodule:: profit.config
     :members:
@@ -20,17 +20,9 @@ profit.config module
     :show-inheritance:
 
 profit.run module
-----------------
+-----------------
 
 .. automodule:: profit.run
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-profit.suruq module
-------------------
-
-.. automodule:: profit.suruq
     :members:
     :undoc-members:
     :show-inheritance:
