@@ -11,6 +11,9 @@ Welcome to proFit's documentation!
    :caption: Contents:
 
    modules
+   codegen
+
+
 
 Running
 -------
