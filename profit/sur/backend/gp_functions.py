@@ -19,15 +19,19 @@ def dkdxadxb(xa, xb, l):
 # compute log-likelihood according to RW, p.19
 def solve_cholesky(L, b):
     return solve_triangular(
-        L.T, solve_triangular(L, b, lower=True, check_finite=False), 
+        L.T, solve_triangular(L, b, lower=True, check_finite=False),
         lower=False, check_finite=False)
 
 def invert_cholesky(L):
+    """Inverts a positive-definite matrix A based on a given Cholesky decomposition
+       A = L^T*L. Arguments: L"""
     return solve_triangular(
-        L.T, solve_triangular(L, np.eye(L.shape[0]), lower=True, check_finite=False), 
+        L.T, solve_triangular(L, np.eye(L.shape[0]), lower=True, check_finite=False),
         lower=False, check_finite=False)
 
 def invert(K, neig, tol):
+    """Inverts a positive-definite matrix A using either an eigendecomposition or
+       a Cholesky decomposition, depending on the rapidness of decay of eigenvalues"""
     w, Q = eigsh(K, neig, tol=tol)
     while np.abs(w[0]-tol) > tol:
         if neig > 0.05*K.shape[0]:  # TODO: get more stringent criterion
@@ -58,9 +62,9 @@ def nll(hyp, x, y, neig=8, build_K=build_K):
     w, Q = eigsh(Ky, neig, tol=max(1e-6*np.abs(hyp[-1]), 1e-15))
     while np.abs(w[0]-hyp[-1])/hyp[-1] > 1e-6 and neig < len(x):
         if neig > 0.05*len(x):  # TODO: get more stringent criterion
-            try: 
+            try:
                 return nll_chol(hyp, x, y, build_K)
-                
+
             except:
                 print('Warning! Fallback to eig solver!')
         neig =  2*neig
