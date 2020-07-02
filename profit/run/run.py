@@ -25,19 +25,19 @@ except:
 class PythonFunction:
     def __init__(self, function):
         self.function = function
-    
+
     def start(self):
         from numpy import array, savetxt
         nrun = config.eval_points.shape[1]
-        
-        # if present, use progress bar    
+
+        # if present, use progress bar
         if use_tqdm:
             kruns = tqdm(range(nrun))
         else:
             kruns = range(nrun)
-          
+
         cwd = os.getcwd()
-    
+
         try:
             os.chdir(config.base_dir)
             output = [] # TODO: make this more efficient with preallocation based on shape
@@ -47,14 +47,14 @@ class PythonFunction:
             savetxt('output.txt', array(output))
         finally:
             os.chdir(cwd)
-        
+
 
 def spawn(args):
     cmd = args[0]
     fulldir = args[1]
     print(fulldir)
     print(cmd)
-    return cmd, subprocess.call(cmd, cwd=fulldir, 
+    return cmd, subprocess.call(cmd, cwd=fulldir,
                       stdout=open(os.path.join(fulldir,'stdout.txt'),'w'),
                       stderr=open(os.path.join(fulldir,'stderr.txt'),'w'))
 
@@ -65,7 +65,7 @@ class LocalCommand:
         self.command = command
         self.ntask = ntask
         self.run_dir = run_dir
-    
+
     def start(self):
         p = mp.Pool(self.ntask)
         subdirs = sorted(os.listdir(self.run_dir))

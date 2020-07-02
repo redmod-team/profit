@@ -45,9 +45,9 @@ class Config(OrderedDict):
     self['runner_backend'] = None
     self['uq']={}
     self['interface'] = 'interface.py'
-    self['output'] = {} 
+    self['output'] = {}
     self.update(entries)
-  
+
   def write_yaml(self, filename='profit.yaml'):
     '''
     dump UQ configuration to a yaml file.
@@ -80,7 +80,7 @@ class Config(OrderedDict):
       if self['variables'][k]['kind'] == 'Output':
         self['output'][k] = self['variables'][k]
 
-    # Run configuration    
+    # Run configuration
     run = self['run']
     if run:
       # Shorthand to put cmd direcly into run
@@ -89,10 +89,10 @@ class Config(OrderedDict):
 
       # Default to single-thread
       if not 'ntask' in self['run']:
-        self['run']['ntask'] = 1  
+        self['run']['ntask'] = 1
 
     return self
-  
+
   def _remove_nones(self,config=None):
       if config==None: config=self.__dict__
       for key in list(config):
