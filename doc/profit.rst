@@ -7,6 +7,10 @@ Subpackages
 .. toctree::
 
     profit.uq
+    profit.run
+    profit.sur
+    profit.ui
+    profit.util
 
 Submodules
 ----------
