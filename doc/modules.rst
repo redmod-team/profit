@@ -1,5 +1,5 @@
-Modules
-=====
+profit
+======
 
 .. toctree::
    :maxdepth: 4
