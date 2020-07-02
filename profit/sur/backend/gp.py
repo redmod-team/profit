@@ -23,7 +23,15 @@ try:
 except:
     pass
 
-from profit.sur.backend.kernels import kern_sqexp, gp_matrix
+from profit.sur.backend.kernels import kern_sqexp
+
+def gp_matrix(x0, x1, a, K):
+    """Constructs GP covariance matrix between two point tuples x0 and x1"""
+    n0 = len(x0)
+    n1 = len(x1)
+    for k0 in range(n0):
+        for k1 in range(n1):
+            K[k0, k1] = a[1]*kern_sqexp(x0[k0, :], x1[k1, :], a[0])
 
 def gp_matrix_train(x, a, sigma_n):
     """Constructs GP matrix for training"""
@@ -45,7 +53,7 @@ def gp_matrix_train(x, a, sigma_n):
 def gpsolve(Ky, ft):
     L = np.linalg.cholesky(Ky)
     alpha = solve_triangular(
-        L.T, solve_triangular(L, ft, lower=True, check_finite=False), 
+        L.T, solve_triangular(L, ft, lower=True, check_finite=False),
         lower=False, check_finite=False)
 
     return L, alpha
@@ -94,7 +102,7 @@ def gp_nll_gen(a, x, y, phi_bas, sigma_n=None):
     phi_bas ... list of basis functions
     sigma_n ... noise covariance
     """
-    
+
     if sigma_n is None:  # optimize also sigma_n
         Ky = gp_matrix_train(x, a[:-1], a[-1])
     else:
@@ -105,10 +113,10 @@ def gp_nll_gen(a, x, y, phi_bas, sigma_n=None):
     except:
         raise
 
-    nll_base = 0.5*y.T.dot(alpha) + np.sum(np.log(L.diagonal())) 
+    nll_base = 0.5*y.T.dot(alpha) + np.sum(np.log(L.diagonal()))
 
     nbas = len(phi_bas)
-    H = np.empty([len(phi_bas), len(x)]) 
+    H = np.empty([len(phi_bas), len(x)])
     for kbas in range(nbas):
         H[kbas, :] = phi_bas[kbas](x)
 
@@ -145,7 +153,7 @@ class GPSurrogate(Surrogate):
         pass
 
     def train(self, x, y):
-        """Fits a GP surrogate on input points x and model outputs y 
+        """Fits a GP surrogate on input points x and model outputs y
            with scale sigma_f and noise sigma_n"""
         a0 = np.array(
             [(np.max(x)-np.min(x))/2.0, 1e-6, 1e-2*(np.max(y)-np.min(y))]
@@ -164,8 +172,8 @@ class GPSurrogate(Surrogate):
         self.trained = True
 
     def add_training_data(self, x, y, sigma=None):
-        """Adds input points x and model outputs y with std. deviation sigma 
-           and updates the inverted covariance matrix for the GP via the 
+        """Adds input points x and model outputs y with std. deviation sigma
+           and updates the inverted covariance matrix for the GP via the
            Sherman-Morrison-Woodbury formula"""
 
         raise NotImplementedError()
@@ -211,7 +219,7 @@ class GPFlowSurrogate(Surrogate):
         self.ndim = self.xtrain.shape[-1]
 
         l = np.empty(self.ndim)
-        
+
         kern = list()
 
         for k in range(self.ndim):
@@ -235,7 +243,7 @@ class GPFlowSurrogate(Surrogate):
         # Optimize
         def objective_closure():
             return -self.m.log_marginal_likelihood()
- 
+
         opt = gpflow.optimizers.Scipy()
         opt.minimize(objective_closure, self.m.trainable_variables)
 
@@ -243,8 +251,8 @@ class GPFlowSurrogate(Surrogate):
         self.trained = True
 
     def add_training_data(self, x, y, sigma=None):
-        """Adds input points x and model outputs y with std. deviation sigma 
-           and updates the inverted covariance matrix for the GP via the 
+        """Adds input points x and model outputs y with std. deviation sigma
+           and updates the inverted covariance matrix for the GP via the
            Sherman-Morrison-Woodbury formula"""
 
         raise NotImplementedError()
