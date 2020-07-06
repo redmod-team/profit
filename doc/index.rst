@@ -13,6 +13,7 @@ Welcome to proFit's documentation!
    modules
    kernels
    codegen
+   troubleshooting
 
 
 
