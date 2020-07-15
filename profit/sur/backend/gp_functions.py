@@ -41,7 +41,7 @@ def invert(K, neig, tol):
     return Q.dot(np.diag(1.0/w).dot(Q.T))
 
 def build_K(x, x0, hyp, K):
-    K = sklearn.metrics.pairwise.rbf_kernel(x, x, 0.5/hyp[0]**2)
+    K[:,:] = sklearn.metrics.pairwise.rbf_kernel(x, x0, 0.5/hyp[0]**2)
 
 # negative log-posterior
 def nll_chol(hyp, x, y, build_K=build_K):
