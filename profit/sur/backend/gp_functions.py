@@ -29,9 +29,11 @@ def invert_cholesky(L):
         L.T, solve_triangular(L, np.eye(L.shape[0]), lower=True, check_finite=False),
         lower=False, check_finite=False)
 
-def invert(K, neig, tol):
+def invert(K, neig=8, tol=1e-10):
     """Inverts a positive-definite matrix A using either an eigendecomposition or
        a Cholesky decomposition, depending on the rapidness of decay of eigenvalues"""
+    if (neig <= 0):
+        return invert_cholesky(np.linalg.cholesky(K))
     w, Q = eigsh(K, neig, tol=tol)
     while np.abs(w[0]-tol) > tol:
         if neig > 0.05*K.shape[0]:  # TODO: get more stringent criterion
@@ -51,14 +53,15 @@ def nll_chol(hyp, x, y, build_K=build_K):
     L = np.linalg.cholesky(Ky)
     alpha = solve_cholesky(L, y)
     ret = 0.5*y.T.dot(alpha) + np.sum(np.log(L.diagonal()))
-    #print(hyp, ret)
-    return ret
+    return ret.item()
 
 
 def nll(hyp, x, y, neig=8, build_K=build_K):
     K = np.empty((len(x), len(x)))
     build_K(x, x, np.abs(hyp[:-1]), K)
     Ky = K + np.abs(hyp[-1])*np.diag(np.ones(len(x)))
+    if (neig <= 0):
+        return nll_chol(hyp, x, y, build_K)
     w, Q = eigsh(Ky, neig, tol=max(1e-6*np.abs(hyp[-1]), 1e-15))
     while np.abs(w[0]-hyp[-1])/hyp[-1] > 1e-6 and neig < len(x):
         if neig > 0.05*len(x):  # TODO: get more stringent criterion
@@ -73,8 +76,7 @@ def nll(hyp, x, y, neig=8, build_K=build_K):
     alpha = Q.dot(np.diag(1.0/w).dot(Q.T.dot(y)))
 
     ret = 0.5*y.T.dot(alpha) + 0.5*(np.sum(np.log(w)) + (len(x)-neig)*np.log(np.abs(hyp[-1])))
-    #print(hyp, ret)
-    return ret
+    return ret.item()
 
 
 def predict_f(hyp, x, y, xtest, neig=8):
