@@ -16,6 +16,8 @@ def dkdxb(xa, xb, l):
 def dkdxadxb(xa, xb, l):
     return (1.0/l**2 - (xa-xb)**2/l**4)*np.exp(-(xa-xb)**2 / (2.0*l**2))
 
+
+
 # compute log-likelihood according to RW, p.19
 def solve_cholesky(L, b):
     return solve_triangular(
