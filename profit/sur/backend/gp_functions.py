@@ -58,12 +58,16 @@ def nll_chol(hyp, x, y, build_K=build_K):
     return ret.item()
 
 
-def nll(hyp, x, y, neig=8, build_K=build_K):
+def nll(hyp, x, y, neig=8, build_K=build_K):  # Negative Log Likelihood
+    print("\n\nl ", hyp[0])
+    print("sigm_noise2 ", hyp[-1])
     K = np.empty((len(x), len(x)))
     build_K(x, x, np.abs(hyp[:-1]), K)
-    Ky = K + np.abs(hyp[-1])*np.diag(np.ones(len(x)))
-    if (neig <= 0):
+    Ky = K + np.abs(hyp[-1]) * np.diag(np.ones(len(x)))
+
+    if neig <= 0 :
         return nll_chol(hyp, x, y, build_K)
+
     w, Q = eigsh(Ky, neig, tol=max(1e-6*np.abs(hyp[-1]), 1e-15))
     while np.abs(w[0]-hyp[-1])/hyp[-1] > 1e-6 and neig < len(x):
         if neig > 0.05*len(x):  # TODO: get more stringent criterion
@@ -76,8 +80,16 @@ def nll(hyp, x, y, neig=8, build_K=build_K):
         w, Q = eigsh(Ky, neig, tol=max(1e-6*hyp[-1], 1e-15))
 
     alpha = Q.dot(np.diag(1.0/w).dot(Q.T.dot(y)))
+    print("l ", hyp[0])
+    print("sigm_noise2 ", hyp[-1])
+    print("\n\nalpha", alpha)
+    print("w ", w)
+    print("log w ", np.log(w))
+    print("sum log w ", np.sum(np.log(w)))
+    print("hyp-1 ", np.abs(hyp[-1]))
 
     ret = 0.5*y.T.dot(alpha) + 0.5*(np.sum(np.log(w)) + (len(x)-neig)*np.log(np.abs(hyp[-1])))
+    
     return ret.item()
 
 
