@@ -8,7 +8,7 @@ import scipy as sp
 from scipy.optimize import minimize
 from scipy.linalg import solve_triangular
 import matplotlib.pyplot as plt
-from profit.sur import Surrogate
+from profit.profit.sur import Surrogate
 
 try:
     import tensorflow as tf
@@ -23,7 +23,7 @@ try:
 except:
     pass
 
-from profit.sur.backend.kernels import kern_sqexp
+from profit.profit.sur.backend.kernels import kern_sqexp
 
 def gp_matrix(x0, x1, a, K):
     """Constructs GP covariance matrix between two point tuples x0 and x1"""
