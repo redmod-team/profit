@@ -24,8 +24,8 @@ except:
         return x
 
 import profit
-from profit.config import Config
-from profit.util import get_eval_points
+from profit.profit.config import Config
+from profit.profit.util import get_eval_points
 #from profit.uq.backend import ChaosPy
 #from profit.sur.backend import gp
 #from inspect import signature
