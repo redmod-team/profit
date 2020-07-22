@@ -11,7 +11,9 @@ Welcome to proFit's documentation!
    :caption: Contents:
 
    modules
+   kernels
    codegen
+   troubleshooting
 
 
 

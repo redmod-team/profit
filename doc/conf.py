@@ -43,12 +43,22 @@ extensions = [
     'sphinx.ext.doctest',
     'sphinx.ext.todo',
     'sphinx.ext.coverage',
+    'sphinx_math_dollar',
     'sphinx.ext.mathjax',
     'sphinx.ext.ifconfig',
     'sphinx.ext.viewcode',
     'sphinx.ext.githubpages',
     'recommonmark'
 ]
+
+# Custom variables
+def setup(app):
+    app.add_config_value('recommonmark_config', {
+        'enable_auto_doc_ref': True,
+        'enable_math': True,
+        'enable_inline_math': True,
+        'enable_eval_rst': True
+        }, True)
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
