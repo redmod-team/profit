@@ -4,8 +4,11 @@ import matplotlib.pyplot as plt
 from profit.sur.backend.gp_functions import invert, nll, predict_f, predict_dfdx
 from profit.sur.backend.kernels import kern_sqexp
 from profit.util.halton import halton
+from mpl_toolkits import mplot3d
 
-def f(x): return x*np.cos(10*x)
+
+def f(x):
+    return x*np.cos(10*x)
 
 def f_(x):
 
@@ -19,15 +22,30 @@ def build_K(xa, xb, hyp, K):
         for j in np.arange(len(xb)):
             K[i, j] = kern_sqexp(xa[i], xb[j], hyp[0])
 
-def df(xtrain):
-    dfmean, dvarf = predict_dfdx(hyp, xtrain.reshape(-1, 1), ytrain.reshape(-1, 1), xtest.reshape(-1, 1), neig=8) # derivative of predictive mean
-    print("gradient = ", dfmean.reshape(1,-1))
-    return np.array(dfmean.reshape(1, -1))
+def nll_transform(log10hyp):
+    hyp = 10**log10hyp
+    return nll(hyp, xtrain, ytrain, 0).flatten()[0]
+
+# Prior to cut out range
+def cutoff(x, xmin, xmax, slope=1e3):
+    if x < xmin:
+        return slope*(x - xmin)**2
+    if x > xmax:
+        return slope*(x - xmax)**2
+
+    return 0.0
+
+def nlprior(log10hyp):
+    return cutoff(log10hyp[0], -2, 1) + cutoff(log10hyp[-1], -8, 0)
+
+def nlp_transform(log10hyp):
+    hyp = 10**log10hyp
+    return nll(hyp, xtrain, ytrain) + nlprior(log10hyp)
 
 
 noise_train = 0.0
 
-ntrain = 3
+ntrain = 10
 xtrain = halton(1, ntrain)
 ftrain = f(xtrain)
 ytrain = ftrain + noise_train*(np.random.rand(ntrain, 1) - 0.5)
@@ -51,21 +69,68 @@ build_K(xtest, xtest, hyp, Kss)
 
 fmean = Ks.T.dot(Kyinv.dot(ytrain)) # predictive mean
 
+#####################################
 
-print("\n\n\n\tout = \n", scipy.optimize.minimize(nll, np.array([0.3, 1e-4]),
-                                        args=(xtrain, ytrain , 0),
-                                        method='L-BFGS-B',
-                                        tol=1e-10))
+# x = np.linspace(-10, 1, 100)
+# plt.figure()
+# plt.plot(x, [cutoff(xi, -6, 0) for xi in x])
+# plt.show()
+
+########### PLOT 3D CURVE ###########
+
+res = scipy.optimize.minimize(nlp_transform, np.array([-1, -6]), method='BFGS')
+
+nl = 50
+ns2 = 40
+
+log10l = np.linspace(res.x[0]-2, res.x[0]+2, nl)
+log10s2 = np.linspace(res.x[1]-2, res.x[1]+2, ns2)
+[Ll, Ls2] = np.meshgrid(log10l, log10s2)
+
+nlls = np.array(
+    [nll([10**ll, 10**ls2], xtrain, ytrain, 0) for ls2 in log10s2 for ll in log10l]
+    ).reshape([ns2, nl])
 
 
-Ef, varf = predict_f(hyp, xtrain.reshape(-1, 1),
-                     ytrain.reshape(-1, 1), xtest.reshape(-1, 1), neig=8)
+fig = plt.figure()
+plt.title('NLL')
+ax = plt.axes(projection='3d')
+ax.contour3D(Ls2, Ll, nlls, 50, cmap='autumn')
+ax.set_xlabel('log10 l^2')
+ax.set_ylabel('log10 sig_n^2')
+ax.set_zlabel('nll');
 
-# posterior Estimation and variance
+plt.show()
 
-varf = np.diag(varf)
+# # Do some cut for visualization
+# maxval = 2.0
+# nlls[nlls>maxval] = maxval
 
-# we keep only the diag because the variance is on it, the other terms are covariance
+# plt.figure()
+# plt.title('NLL')
+# plt.contour(Ll, Ls2, nlls, levels=30)
+# plt.plot(res.x[0], res.x[1], 'rx')
+# plt.xlabel('log10 l^2')
+# plt.ylabel('log10 sig_n^2')
+# plt.colorbar()
+# plt.legend(['optimum'])
+# plt.show()
+
+########################################
+
+hess_inv = res.hess_inv
+
+print("hess_inv = ", hess_inv)
+print(res)
+
+# Ef, varf = predict_f(hyp, xtrain.reshape(-1, 1),
+#                      ytrain.reshape(-1, 1), xtest.reshape(-1, 1), neig=8)
+#
+# # posterior Estimation and variance
+#
+# varf = np.diag(varf)
+#
+# # we keep only the diag because the variance is on it, the other terms are covariance
 # print("\n\nvarf size ", varf.shape)
 # print("fmean size ", fmean.shape)
 #

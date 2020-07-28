@@ -55,7 +55,11 @@ def nll_chol(hyp, x, y, build_K=build_K):
     L = np.linalg.cholesky(Ky)
     alpha = solve_cholesky(L, y)
     ret = 0.5*y.T.dot(alpha) + np.sum(np.log(L.diagonal()))
+
     return ret.item()
+
+
+
 
 
 def nll(hyp, x, y, neig=8, build_K=build_K):  # Negative Log Likelihood
@@ -88,9 +92,9 @@ def nll(hyp, x, y, neig=8, build_K=build_K):  # Negative Log Likelihood
     # print("sum log w ", np.sum(np.log(w)))
     # print("hyp-1 ", np.abs(hyp[-1]))
 
-    ret = 0.5*y.T.dot(alpha) + 0.5*(np.sum(np.log(w)) + (len(x)-neig)*np.log(np.abs(hyp[-1])))
-    
+    ret = 0.5*y.T.dot(alpha) + 0.5*(np.sum(np.log(w)) + (len(x)-neig)*np.log(np.abs(hyp[-1]))) 
     return ret.item()
+
 
 
 def predict_f(hyp, x, y, xtest, neig=8):
