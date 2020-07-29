@@ -2,9 +2,11 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="659f311f-49db-47aa-b3d3-2b0cb9f58ab0" name="Default Changelist" comment="">
+      <change afterPath="$PROJECT_DIR$/doc/draft_loop.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/profit/sur/backend/draft.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/doc/gp_custom_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/doc/gp_custom_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/doc/gp_custom.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/doc/gp_custom.ipynb" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/profit/sur/backend/gp_functions.py" beforeDir="false" afterPath="$PROJECT_DIR$/profit/sur/backend/gp_functions.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -15,11 +17,20 @@
   </component>
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
+      <file pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/doc/gp_custom.ipynb">
+          <provider selected="true" editor-type-id="ipnb-editor">
+            <state>
+              <selected id="28" />
+            </state>
+          </provider>
+        </entry>
+      </file>
       <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/doc/gp_custom_test.py">
+        <entry file="file://$PROJECT_DIR$/profit/sur/backend/gp_functions.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="-1">
-              <caret line="106" column="28" lean-forward="true" selection-start-line="106" selection-start-column="28" selection-end-line="106" selection-end-column="28" />
+            <state relative-caret-position="1483">
+              <caret line="216" lean-forward="true" selection-start-line="216" selection-end-line="216" />
               <folding>
                 <element signature="e#0#18#0" expanded="true" />
               </folding>
@@ -28,58 +39,10 @@
         </entry>
       </file>
       <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/profit/sur/backend/gp.py">
+        <entry file="file://$PROJECT_DIR$/profit/sur/backend/draft.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="591">
-              <caret line="269" column="26" selection-start-line="269" selection-start-column="26" selection-end-line="269" selection-end-column="26" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/examples/fit/example_fit.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="195">
-              <caret line="15" column="17" selection-start-line="15" selection-start-column="17" selection-end-line="15" selection-end-column="17" />
-              <folding>
-                <element signature="e#0#31#0" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/profit/sur/backend/init_kernels.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="240">
-              <caret line="18" column="37" selection-start-line="18" selection-start-column="37" selection-end-line="18" selection-end-column="37" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/doc/troubleshooting.rst">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="540">
-              <caret line="36" selection-start-line="36" selection-end-line="36" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/profit/util/halton.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="30">
-              <caret line="2" column="43" selection-start-line="2" selection-start-column="28" selection-end-line="2" selection-end-column="43" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/profit/sur/backend/gp_functions.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="75">
-              <caret line="59" column="4" selection-start-line="59" selection-start-column="4" selection-end-line="59" selection-end-column="4" />
+            <state relative-caret-position="436">
+              <caret line="108" column="14" lean-forward="true" selection-start-line="108" selection-start-column="14" selection-end-line="108" selection-end-column="14" />
               <folding>
                 <element signature="e#0#18#0" expanded="true" />
               </folding>
@@ -104,14 +67,18 @@
       <list>
         <option value="$PROJECT_DIR$/doc/_static/gp_custom.py" />
         <option value="$PROJECT_DIR$/doc/troubleshooting.rst" />
-        <option value="$PROJECT_DIR$/profit/sur/backend/gp_functions.py" />
         <option value="$PROJECT_DIR$/doc/gp_custom_test.py" />
+        <option value="$PROJECT_DIR$/profit/sur/backend/gp_functions.py" />
+        <option value="$PROJECT_DIR$/doc/draft.py" />
+        <option value="$PROJECT_DIR$/profit/sur/backend/draft.py" />
+        <option value="$PROJECT_DIR$/doc/gp_custom.ipynb" />
       </list>
     </option>
   </component>
-  <component name="ProjectFrameBounds" fullScreen="true">
+  <component name="ProjectFrameBounds">
+    <option name="y" value="23" />
     <option name="width" value="1440" />
-    <option name="height" value="900" />
+    <option name="height" value="877" />
   </component>
   <component name="ProjectView">
     <navigator proportions="" version="1">
@@ -133,18 +100,7 @@
             <path>
               <item name="profit" type="b2602c69:ProjectViewProjectNode" />
               <item name="profit" type="462c0819:PsiDirectoryNode" />
-              <item name="draft" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="profit" type="b2602c69:ProjectViewProjectNode" />
               <item name="profit" type="462c0819:PsiDirectoryNode" />
-              <item name="profit" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="profit" type="b2602c69:ProjectViewProjectNode" />
-              <item name="profit" type="462c0819:PsiDirectoryNode" />
-              <item name="profit" type="462c0819:PsiDirectoryNode" />
-              <item name="backend" type="462c0819:PsiDirectoryNode" />
             </path>
             <path>
               <item name="profit" type="b2602c69:ProjectViewProjectNode" />
@@ -158,23 +114,6 @@
               <item name="profit" type="462c0819:PsiDirectoryNode" />
               <item name="sur" type="462c0819:PsiDirectoryNode" />
               <item name="backend" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="profit" type="b2602c69:ProjectViewProjectNode" />
-              <item name="profit" type="462c0819:PsiDirectoryNode" />
-              <item name="profit" type="462c0819:PsiDirectoryNode" />
-              <item name="ui" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="profit" type="b2602c69:ProjectViewProjectNode" />
-              <item name="profit" type="462c0819:PsiDirectoryNode" />
-              <item name="tests" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="profit" type="b2602c69:ProjectViewProjectNode" />
-              <item name="profit" type="462c0819:PsiDirectoryNode" />
-              <item name="tests" type="462c0819:PsiDirectoryNode" />
-              <item name="sur" type="462c0819:PsiDirectoryNode" />
             </path>
           </expand>
           <select />
@@ -200,7 +139,66 @@
       </list>
     </option>
   </component>
-  <component name="RunManager">
+  <component name="RunManager" selected="Python.draft (1)">
+    <configuration name="profit" type="JupiterNotebook" factoryName="Jupyter Notebook">
+      <module name="profit" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="additionalOptions" value="" />
+      <option name="ipnbHost" value="127.0.0.1" />
+      <option name="ipnbPort" value="8888" />
+      <method v="2" />
+    </configuration>
+    <configuration name="draft (1)" type="PythonConfigurationType" factoryName="Python" temporary="true">
+      <module name="profit" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/profit/sur/backend" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/profit/sur/backend/draft.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="draft" type="PythonConfigurationType" factoryName="Python" temporary="true">
+      <module name="profit" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/doc" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/doc/draft_loop.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
     <configuration name="gp_custom_test" type="PythonConfigurationType" factoryName="Python" temporary="true">
       <module name="profit" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -222,8 +220,32 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
+    <configuration name="gp_functions" type="PythonConfigurationType" factoryName="Python" temporary="true">
+      <module name="profit" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/profit/sur/backend" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/profit/sur/backend/gp_functions.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Python.draft (1)" />
+        <item itemvalue="Python.draft" />
+        <item itemvalue="Python.gp_functions" />
         <item itemvalue="Python.gp_custom_test" />
       </list>
     </recent_temporary>
@@ -232,22 +254,22 @@
     <configuration />
   </component>
   <component name="ToolWindowManager">
-    <frame x="0" y="0" width="1440" height="900" extended-state="0" />
+    <frame x="0" y="23" width="1440" height="877" extended-state="0" />
     <editor active="true" />
     <layout>
-      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.33826637" />
+      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.33756167" />
       <window_info id="Structure" order="1" weight="0.25" />
       <window_info anchor="bottom" id="Message" order="0" />
       <window_info anchor="bottom" id="Find" order="1" />
-      <window_info anchor="bottom" id="Run" order="2" weight="0.22144522" />
+      <window_info active="true" anchor="bottom" id="Run" order="2" visible="true" weight="0.27675277" />
       <window_info anchor="bottom" id="Debug" order="3" weight="0.4" />
       <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
       <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
       <window_info anchor="bottom" id="TODO" order="6" />
-      <window_info anchor="bottom" id="Version Control" order="7" weight="0.32867134" />
+      <window_info anchor="bottom" id="Version Control" order="7" weight="0.32841328" />
       <window_info anchor="bottom" id="Educational.CheckDetails" order="8" />
-      <window_info anchor="bottom" id="Terminal" order="9" weight="0.32867134" />
-      <window_info anchor="bottom" id="Python Console" order="10" weight="0.32867134" />
+      <window_info anchor="bottom" id="Terminal" order="9" weight="0.32841328" />
+      <window_info anchor="bottom" id="Python Console" order="10" weight="0.26445264" />
       <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
       <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
@@ -266,6 +288,23 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="411">
           <caret line="41" lean-forward="true" selection-start-line="41" selection-end-line="41" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/doc/gp_custom_test.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="1500">
+          <caret line="106" column="28" selection-start-line="106" selection-start-column="28" selection-end-line="106" selection-end-column="28" />
+          <folding>
+            <element signature="e#0#18#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/profit/sur/backend/gp.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="3960">
+          <caret line="269" column="26" selection-start-line="269" selection-start-column="26" selection-end-line="269" selection-end-column="26" />
         </state>
       </provider>
     </entry>
@@ -300,17 +339,41 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/profit/sur/backend/gp.py">
+    <entry file="file://$PROJECT_DIR$/doc/Log_14.png" />
+    <entry file="file://$PROJECT_DIR$/doc/Wld_11.png" />
+    <entry file="file://$PROJECT_DIR$/doc/Wld_2.png" />
+    <entry file="file://$PROJECT_DIR$/doc/Log_16.png" />
+    <entry file="file://$PROJECT_DIR$/doc/Log_10.png" />
+    <entry file="file://$PROJECT_DIR$/doc/Log_8.png" />
+    <entry file="file://$PROJECT_DIR$/doc/Log_5.png" />
+    <entry file="file://$PROJECT_DIR$/doc/Log_6.png" />
+    <entry file="file://$PROJECT_DIR$/doc/Log_13.png" />
+    <entry file="file://$PROJECT_DIR$/doc/Log_15.png" />
+    <entry file="file://$PROJECT_DIR$/doc/Log_19.png" />
+    <entry file="file://$PROJECT_DIR$/doc/Wld_14.png" />
+    <entry file="file://$PROJECT_DIR$/doc/Wld_12.png" />
+    <entry file="file://$PROJECT_DIR$/doc/Wld_10.png" />
+    <entry file="file://$PROJECT_DIR$/doc/Wld_8.png" />
+    <entry file="file://$PROJECT_DIR$/doc/Wld_4.png" />
+    <entry file="file://$PROJECT_DIR$/doc/Wld_1.png" />
+    <entry file="file://$PROJECT_DIR$/doc/Wld_3.png" />
+    <entry file="file://$PROJECT_DIR$/doc/Wld_7.png" />
+    <entry file="file://$PROJECT_DIR$/doc/Wld_6.png" />
+    <entry file="file://$PROJECT_DIR$/doc/Wld_5.png" />
+    <entry file="file://$PROJECT_DIR$/doc/draft_loop.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="591">
-          <caret line="269" column="26" selection-start-line="269" selection-start-column="26" selection-end-line="269" selection-end-column="26" />
+        <state relative-caret-position="360">
+          <caret line="24" column="15" lean-forward="true" selection-start-line="24" selection-start-column="15" selection-end-line="24" selection-end-column="15" />
+          <folding>
+            <element signature="e#0#18#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/doc/gp_custom_test.py">
+    <entry file="file://$PROJECT_DIR$/profit/sur/backend/draft.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-1">
-          <caret line="106" column="28" lean-forward="true" selection-start-line="106" selection-start-column="28" selection-end-line="106" selection-end-column="28" />
+        <state relative-caret-position="436">
+          <caret line="108" column="14" lean-forward="true" selection-start-line="108" selection-start-column="14" selection-end-line="108" selection-end-column="14" />
           <folding>
             <element signature="e#0#18#0" expanded="true" />
           </folding>
@@ -319,11 +382,18 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/profit/sur/backend/gp_functions.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="75">
-          <caret line="59" column="4" selection-start-line="59" selection-start-column="4" selection-end-line="59" selection-end-column="4" />
+        <state relative-caret-position="1483">
+          <caret line="216" lean-forward="true" selection-start-line="216" selection-end-line="216" />
           <folding>
             <element signature="e#0#18#0" expanded="true" />
           </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/doc/gp_custom.ipynb">
+      <provider selected="true" editor-type-id="ipnb-editor">
+        <state>
+          <selected id="28" />
         </state>
       </provider>
     </entry>
