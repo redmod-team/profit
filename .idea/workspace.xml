@@ -2,11 +2,11 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="659f311f-49db-47aa-b3d3-2b0cb9f58ab0" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/doc/draft_loop.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/profit/sur/backend/draft.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/doc/draft_loop.py" beforeDir="false" afterPath="$PROJECT_DIR$/doc/draft_loop.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/doc/gp_custom.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/doc/gp_custom.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/profit/sur/backend/draft.py" beforeDir="false" afterPath="$PROJECT_DIR$/profit/sur/backend/Active_BBQ.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/profit/sur/backend/gp_functions.py" beforeDir="false" afterPath="$PROJECT_DIR$/profit/sur/backend/gp_functions.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -17,11 +17,11 @@
   </component>
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file pinned="false" current-in-tab="true">
+      <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/doc/gp_custom.ipynb">
           <provider selected="true" editor-type-id="ipnb-editor">
             <state>
-              <selected id="28" />
+              <selected id="33" />
             </state>
           </provider>
         </entry>
@@ -29,8 +29,20 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/profit/sur/backend/gp_functions.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="1483">
-              <caret line="216" lean-forward="true" selection-start-line="216" selection-end-line="216" />
+            <state relative-caret-position="975">
+              <caret line="70" column="38" selection-start-line="70" selection-start-column="38" selection-end-line="70" selection-end-column="38" />
+              <folding>
+                <element signature="e#0#18#0" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/profit/sur/backend/Active_BBQ.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="525">
+              <caret line="50" column="45" selection-start-line="50" selection-start-column="45" selection-end-line="50" selection-end-column="45" />
               <folding>
                 <element signature="e#0#18#0" expanded="true" />
               </folding>
@@ -39,10 +51,9 @@
         </entry>
       </file>
       <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/profit/sur/backend/draft.py">
+        <entry file="file://$PROJECT_DIR$/profit/sur/backend/ann.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="436">
-              <caret line="108" column="14" lean-forward="true" selection-start-line="108" selection-start-column="14" selection-end-line="108" selection-end-column="14" />
+            <state>
               <folding>
                 <element signature="e#0#18#0" expanded="true" />
               </folding>
@@ -51,6 +62,13 @@
         </entry>
       </file>
     </leaf>
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Python Script" />
+      </list>
+    </option>
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -61,10 +79,13 @@
         <option value="$PROJECT_DIR$/doc/_static/gp_custom.py" />
         <option value="$PROJECT_DIR$/doc/troubleshooting.rst" />
         <option value="$PROJECT_DIR$/doc/gp_custom_test.py" />
-        <option value="$PROJECT_DIR$/profit/sur/backend/gp_functions.py" />
         <option value="$PROJECT_DIR$/doc/draft.py" />
-        <option value="$PROJECT_DIR$/profit/sur/backend/draft.py" />
+        <option value="$PROJECT_DIR$/../../Progra/Python_Objet/PvP/Main.py" />
+        <option value="$PROJECT_DIR$/doc/draft_loop.py" />
+        <option value="$PROJECT_DIR$/profit/sur/backend/gp_functions.py" />
         <option value="$PROJECT_DIR$/doc/gp_custom.ipynb" />
+        <option value="$PROJECT_DIR$/profit/sur/backend/Active_wihtout_MV.py" />
+        <option value="$PROJECT_DIR$/profit/sur/backend/draft.py" />
       </list>
     </option>
   </component>
@@ -78,6 +99,7 @@
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
+      <pane id="Course" />
       <pane id="ProjectPane">
         <subPane>
           <expand>
@@ -112,11 +134,11 @@
           <select />
         </subPane>
       </pane>
-      <pane id="Course" />
     </panes>
   </component>
   <component name="PropertiesComponent">
     <property name="last_opened_file_path" value="$USER_HOME$" />
+    <property name="restartRequiresConfirmation" value="false" />
     <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
   </component>
   <component name="RunDashboard">
@@ -149,6 +171,27 @@
       <option name="ipnbPort" value="8888" />
       <method v="2" />
     </configuration>
+    <configuration name="Active_wihtout_MV" type="PythonConfigurationType" factoryName="Python" temporary="true">
+      <module name="profit" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/profit/sur/backend" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/profit/sur/backend/Active_wihtout_MV.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
     <configuration name="draft (1)" type="PythonConfigurationType" factoryName="Python" temporary="true">
       <module name="profit" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -161,7 +204,7 @@
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/profit/sur/backend/draft.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/profit/sur/backend/Active_BBQ.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -203,9 +246,13 @@
       <option name="IS_MODULE_SDK" value="false" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="additionalOptions" value="" />
-      <option name="ipnbHost" value="127.0.0.1" />
-      <option name="ipnbPort" value="8888" />
+      <option name="SCRIPT_NAME" value="" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
     <configuration name="gp_functions" type="PythonConfigurationType" factoryName="Python" temporary="true">
@@ -233,6 +280,7 @@
       <list>
         <item itemvalue="Python.draft (1)" />
         <item itemvalue="Python.draft" />
+        <item itemvalue="Python.Active_wihtout_MV" />
         <item itemvalue="Python.gp_functions" />
         <item itemvalue="Python.gp_custom_test" />
       </list>
@@ -243,13 +291,12 @@
   </component>
   <component name="ToolWindowManager">
     <frame x="0" y="23" width="1440" height="877" extended-state="0" />
-    <editor active="true" />
     <layout>
-      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.33756167" />
+      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.33756167" />
       <window_info id="Structure" order="1" weight="0.25" />
       <window_info anchor="bottom" id="Message" order="0" />
       <window_info anchor="bottom" id="Find" order="1" />
-      <window_info active="true" anchor="bottom" id="Run" order="2" visible="true" weight="0.27675277" />
+      <window_info anchor="bottom" id="Run" order="2" weight="0.2201722" />
       <window_info anchor="bottom" id="Debug" order="3" weight="0.4" />
       <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
       <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
@@ -257,11 +304,29 @@
       <window_info anchor="bottom" id="Version Control" order="7" weight="0.32841328" />
       <window_info anchor="bottom" id="Educational.CheckDetails" order="8" />
       <window_info anchor="bottom" id="Terminal" order="9" weight="0.32841328" />
-      <window_info anchor="bottom" id="Python Console" order="10" weight="0.26445264" />
+      <window_info anchor="bottom" id="Python Console" order="10" weight="0.036900368" />
       <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
       <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
     </layout>
+    <layout-to-restore>
+      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.33756167" />
+      <window_info id="Structure" order="1" weight="0.25" />
+      <window_info anchor="bottom" id="Message" order="0" />
+      <window_info anchor="bottom" id="Find" order="1" />
+      <window_info active="true" anchor="bottom" id="Run" order="2" visible="true" weight="0.036900368" />
+      <window_info anchor="bottom" id="Debug" order="3" weight="0.4" />
+      <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
+      <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
+      <window_info anchor="bottom" id="TODO" order="6" />
+      <window_info anchor="bottom" id="Version Control" order="7" weight="0.32841328" />
+      <window_info anchor="bottom" id="Educational.CheckDetails" order="8" />
+      <window_info anchor="bottom" id="Terminal" order="9" weight="0.32841328" />
+      <window_info anchor="bottom" id="Python Console" order="10" weight="0.036900368" />
+      <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
+      <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
+      <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
+    </layout-to-restore>
   </component>
   <component name="editorHistoryManager">
     <entry file="file://$PROJECT_DIR$/doc/_static/gp_custom.py" />
@@ -328,40 +393,94 @@
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/doc/Log_14.png" />
-    <entry file="file://$PROJECT_DIR$/doc/Wld_11.png" />
     <entry file="file://$PROJECT_DIR$/doc/Wld_2.png" />
-    <entry file="file://$PROJECT_DIR$/doc/Log_16.png" />
     <entry file="file://$PROJECT_DIR$/doc/Log_10.png" />
-    <entry file="file://$PROJECT_DIR$/doc/Log_8.png" />
     <entry file="file://$PROJECT_DIR$/doc/Log_5.png" />
     <entry file="file://$PROJECT_DIR$/doc/Log_6.png" />
-    <entry file="file://$PROJECT_DIR$/doc/Log_13.png" />
     <entry file="file://$PROJECT_DIR$/doc/Log_15.png" />
     <entry file="file://$PROJECT_DIR$/doc/Log_19.png" />
     <entry file="file://$PROJECT_DIR$/doc/Wld_14.png" />
     <entry file="file://$PROJECT_DIR$/doc/Wld_12.png" />
-    <entry file="file://$PROJECT_DIR$/doc/Wld_10.png" />
-    <entry file="file://$PROJECT_DIR$/doc/Wld_8.png" />
     <entry file="file://$PROJECT_DIR$/doc/Wld_4.png" />
     <entry file="file://$PROJECT_DIR$/doc/Wld_1.png" />
-    <entry file="file://$PROJECT_DIR$/doc/Wld_3.png" />
-    <entry file="file://$PROJECT_DIR$/doc/Wld_7.png" />
     <entry file="file://$PROJECT_DIR$/doc/Wld_6.png" />
-    <entry file="file://$PROJECT_DIR$/doc/Wld_5.png" />
-    <entry file="file://$PROJECT_DIR$/doc/draft_loop.py">
+    <entry file="file://$PROJECT_DIR$/../../Progra/Python/bottle/main.py">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../../Progra/Python_Objet/Castle/main.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="360">
-          <caret line="24" column="15" lean-forward="true" selection-start-line="24" selection-start-column="15" selection-end-line="24" selection-end-column="15" />
+        <state relative-caret-position="45">
+          <caret line="3" column="28" lean-forward="true" selection-start-line="3" selection-start-column="28" selection-end-line="3" selection-end-column="28" />
           <folding>
-            <element signature="e#0#18#0" expanded="true" />
+            <element signature="e#0#33#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/profit/sur/backend/draft.py">
+    <entry file="file://$PROJECT_DIR$/../../Progra/Python_Objet/PvP/Main.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="436">
-          <caret line="108" column="14" lean-forward="true" selection-start-line="108" selection-start-column="14" selection-end-line="108" selection-end-column="14" />
+        <state relative-caret-position="630">
+          <caret line="42" lean-forward="true" selection-start-line="42" selection-end-line="42" />
+          <folding>
+            <element signature="e#22#35#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../../Progra/Python_Objet/Castle/classes/Building.py">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/profit/sur/backend/Active Gaussian Process with 10 observation(s).png" />
+    <entry file="file://$PROJECT_DIR$/doc/Log_4.png">
+      <provider selected="true" editor-type-id="images" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/doc/Log_2.png">
+      <provider selected="true" editor-type-id="images" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/doc/Log_7.png">
+      <provider selected="true" editor-type-id="images" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/doc/Log_8.png">
+      <provider selected="true" editor-type-id="images" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/doc/Wld_13.png">
+      <provider selected="true" editor-type-id="images" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/doc/Wld_11.png">
+      <provider selected="true" editor-type-id="images" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/doc/Wld_10.png">
+      <provider selected="true" editor-type-id="images" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/doc/Wld_8.png">
+      <provider selected="true" editor-type-id="images" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/doc/Wld_7.png">
+      <provider selected="true" editor-type-id="images" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/doc/Wld_5.png">
+      <provider selected="true" editor-type-id="images" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/doc/Wld_3.png">
+      <provider selected="true" editor-type-id="images" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/doc/Log_13.png">
+      <provider selected="true" editor-type-id="images" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/doc/Log_16.png">
+      <provider selected="true" editor-type-id="images" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/doc/gp_custom.ipynb">
+      <provider selected="true" editor-type-id="ipnb-editor">
+        <state>
+          <selected id="0" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/doc/draft_loop.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="1365">
+          <caret line="98" column="5" selection-start-line="98" selection-start-column="5" selection-end-line="98" selection-end-column="5" />
           <folding>
             <element signature="e#0#18#0" expanded="true" />
           </folding>
@@ -370,18 +489,40 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/profit/sur/backend/gp_functions.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1483">
-          <caret line="216" lean-forward="true" selection-start-line="216" selection-end-line="216" />
+        <state relative-caret-position="975">
+          <caret line="70" column="38" selection-start-line="70" selection-start-column="38" selection-end-line="70" selection-end-column="38" />
           <folding>
             <element signature="e#0#18#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/doc/gp_custom.ipynb">
-      <provider selected="true" editor-type-id="ipnb-editor">
+    <entry file="file://$PROJECT_DIR$/profit/sur/backend/Active_wihtout_MV.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="1605">
+          <caret line="112" column="14" selection-start-line="112" selection-start-column="14" selection-end-line="112" selection-end-column="14" />
+          <folding>
+            <element signature="e#0#18#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/profit/sur/backend/ann.py">
+      <provider selected="true" editor-type-id="text-editor">
         <state>
-          <selected id="28" />
+          <folding>
+            <element signature="e#0#18#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/profit/sur/backend/Active_BBQ.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="525">
+          <caret line="50" column="45" selection-start-line="50" selection-start-column="45" selection-end-line="50" selection-end-column="45" />
+          <folding>
+            <element signature="e#0#18#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>

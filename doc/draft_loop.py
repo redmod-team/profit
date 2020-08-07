@@ -83,14 +83,20 @@ for i in range(1,20):
     plt.plot(xtest, fmean, 'r--')
     axes = plt.gca()
     axes.set_ylim([-2, 2])
-    plt.title('Gaussian Process with '+ str(ntrain) + ' observation(s)')
-    plt.legend(('training', 'reference', 'prediction'))
+    plt.title('[Log] Gaussian Process with '+ str(ntrain) + ' observation(s)')
+
 
 
 
     plt.fill_between(xtest, # x
                      (fmean.flatten() + 2 * np.sqrt(marginal_variance.flatten())), # y1
-                     (fmean.flatten() - 2 * np.sqrt(marginal_variance.flatten()))) # y2
+                     (fmean.flatten() - 2 * np.sqrt(marginal_variance.flatten())),facecolor='blue', alpha=0.5) # y2
+
+    plt.fill_between(xtest, # x
+                     (fmean.flatten() + 2 * np.sqrt(varf.flatten())), # y1
+                     (fmean.flatten() - 2 * np.sqrt(varf.flatten())),facecolor='yellow', alpha=0.5) # y2
+    plt.legend(('training', 'reference', 'prediction', 'marginal variance', 'posterior variance'))
+    #plt.show()
     plt.savefig('Log_' + str(ntrain))
 
     ##############################
@@ -116,14 +122,20 @@ for i in range(1,20):
     plt.plot(xtest, fmean, 'r--')
     axes = plt.gca()
     axes.set_ylim([-2, 2])
-    plt.title('Gaussian Process with '+ str(ntrain) + ' observation(s)')
-    plt.legend(('training', 'reference', 'prediction'))
+    plt.title('[Wld] Gaussian Process with '+ str(ntrain) + ' observation(s)')
+
 
 
 
     plt.fill_between(xtest, # x
                      (fmean.flatten() + 2 * np.sqrt(wld_marginal_variance.flatten())), # y1
-                     (fmean.flatten() - 2 * np.sqrt(wld_marginal_variance.flatten()))) # y2
+                     (fmean.flatten() - 2 * np.sqrt(wld_marginal_variance.flatten())),facecolor='blue', alpha=0.5) # y2
+
+    plt.fill_between(xtest, # x
+                     (fmean.flatten() + 2 * np.sqrt(varf.flatten())), # y1
+                     (fmean.flatten() - 2 * np.sqrt(varf.flatten())),facecolor='yellow', alpha=0.5) # y2
+    plt.legend(('training', 'reference', 'prediction', 'marginal variance', 'posterior variance'))
+    #plt.show()
 
     plt.savefig('Wld_' + str(ntrain))
 

@@ -3,6 +3,7 @@ import sklearn.metrics
 from scipy.linalg import solve_triangular
 from scipy.sparse.linalg import eigsh
 import time
+import matplotlib.pyplot as plt
 
 def k(xa, xb, l):
     return np.exp(-(xa-xb)**2 / (2.0*l**2))
@@ -122,7 +123,7 @@ def predict_dfdx(hyp, x, y, xtest, neig=8, dkdxa=dkdxa, dkdxadxb=dkdxadxb):
 
 def dk_logdl(xa, xb, l): # derivative of the kernel w.r.t log lengthscale
     dk_dl = ((xa - xb)**2.0 * np.exp(-(xa-xb)**2.0/(2 * l**2))) / l**3
-    dk_logdl = dk_dl * np.log(10) * 10**log_l # from log lengthscale to lengthscale
+    dk_logdl = dk_dl * np.log(10) * 10**(np.log10(l)) # from log lengthscale to lengthscale
     return dk_logdl
 
 
@@ -204,6 +205,7 @@ def get_marginal_variance(hess_inv, new_hyp, ntrain, ntest, xtrain, xtest, Kyinv
         dmT_dot_sigma[i] = dm_transpose[i].dot(sigma_m)
         dmT_dot_sigma_dot_dm[i] = dmT_dot_sigma[i].dot(dm[i])
 
+    #print("dmT_dot_sigma_dot_dm = ", dmT_dot_sigma_dot_dm)
     V_tild = V.reshape((ntest,1)) + dmT_dot_sigma_dot_dm # Osborne et al. (2012) Active learning eq.19
 
     if plot_result == True:
@@ -280,3 +282,17 @@ def wld_get_marginal_variance(wld_hess_inv, wld_hyp, ntrain, ntest, xtrain, xtes
         print("\n\n\tMarginal variance\n\n", wld_V_tild )
 
     return wld_V_tild
+
+def plot_searching_phase(scores, xtest, next_candidate, ntrain):
+    max = np.linspace(0, scores[next_candidate], 3)
+    #plt.figure()
+    plt.subplot(2,1,2)
+    plot_line = np.linspace(xtest[next_candidate], xtest[next_candidate],3)
+    plt.plot(xtest, scores, 'b')
+    plt.plot(plot_line, max, 'r')
+    plt.title('Iteration ' + str(ntrain + 1) + ' : searching phase')
+    plt.xlabel('xtest')
+    plt.ylabel('score')
+    plt.savefig('Active Gaussian Process with '+ str(ntrain) + ' observation(s)')
+    plt.show()
+
