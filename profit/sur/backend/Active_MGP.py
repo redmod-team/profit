@@ -28,10 +28,10 @@ def prior(hyp):
 
 noise_train = 0.01
 
-total_train = 30
+total_train = 15
 dimension = 1
-hyp = [0.1, 1e-4]
-ntest = 300
+hyp = [0.5, 1e-2]
+ntest = 100
 xtest = np.linspace(0, 1, ntest)
 start_point = ntest/2 # because it's always better to begin at the center
 next_candidate = start_point
@@ -39,6 +39,7 @@ next_candidate = start_point
 ftest = f(xtest)
 list_of_observation = []
 
+n_candidate = 20 # = ntest
 
 for ntrain in range(1, total_train + 1):
 
@@ -85,15 +86,15 @@ for ntrain in range(1, total_train + 1):
     ######################### PLOT ########################
 
     #plt.subplot(2,1,1)
-    plt.figure()
     plt.plot(xtrain, ytrain, 'kx')
     plt.plot(xtest, ftest, 'm-')
     plt.plot(xtest, fmean, 'r--')
     axes = plt.gca()
     axes.set_ylim([-1.5, 1])
-    plt.title('Gaussian Process with '+ str(ntrain) + ' observation(s) hyp = [0.1 1e-4]')
+    plt.title('Gaussian Process with '+ str(ntrain) + ' observation(s) hyp = [0.1, 1e-4]')
     plt.legend(('training', 'reference', 'prediction'))
-
+    if ntrain == 10:
+        plt.savefig('Active Gaussian Process with '+ str(ntrain) + ' observation(s)')
 
 
 
@@ -101,23 +102,21 @@ for ntrain in range(1, total_train + 1):
                      (fmean.flatten() + 2 * np.sqrt(np.abs(varf).flatten())), # y1
                      (fmean.flatten() - 2 * np.sqrt(np.abs(varf).flatten())), facecolor='blue', alpha=0.4) # y2
 
-    # plt.fill_between(xtest, # x
-    #                  (fmean.flatten() + 2 * np.sqrt(marginal_variance.flatten())), # y1
-    #                  (fmean.flatten() - 2 * np.sqrt(marginal_variance.flatten())), facecolor='yellow', alpha=0.4) # y2
+    plt.fill_between(xtest, # x
+                     (fmean.flatten() + 2 * np.sqrt(marginal_variance.flatten())), # y1
+                     (fmean.flatten() - 2 * np.sqrt(marginal_variance.flatten())), facecolor='yellow', alpha=0.4) # y2
 
 
-    plt.legend(('training', 'reference', 'prediction', 'Posterior Variance', 'Marginal Variance'))
-    plt.savefig('Varf_active_'+ str(ntrain))
     #plt.show()
     ################ FIND NEXT POINT ################
 
 
-    scores = 0*marginal_variance + varf
+    scores = marginal_variance + varf
     print(np.c_[marginal_variance, varf, scores])
     next_candidate = np.argmax(scores)
 
     #plot_searching_phase(scores, xtest, next_candidate, ntrain)
-    #plt.show()
+    plt.show()
 
 
 
