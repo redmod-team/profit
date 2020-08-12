@@ -131,7 +131,7 @@ def dkdl(xa, xb, l): # derivative of the kernel w.r.t lengthscale
     dk_dl = ((xa - xb)**2.0 * np.exp(-(xa-xb)**2.0/(2 * l**2))) / l**3
     return dk_dl
 
-def get_marginal_variance(hess_inv, new_hyp, ntrain, ntest, xtrain, xtest, Kyinv, ytrain, varf, plot_result = False):
+def get_marginal_variance_BBQ(hess_inv, new_hyp, ntrain, ntest, xtrain, xtest, Kyinv, ytrain, varf, plot_result = False):
 
     tic = time.time()
     # Step 1 : invert the res.hess_inv to get H_tilde
@@ -182,6 +182,8 @@ def get_marginal_variance(hess_inv, new_hyp, ntrain, ntest, xtrain, xtest, Kyinv
 
     dalpha_ds = -Kyinv.dot(np.eye(ntrain)).dot(Kyinv).dot(ytrain) # Compute the alpha's derivative w.r.t. sigma noise
                                                                   # square
+    #print("dl ", dalpha_dl)
+    #print("\nds ", dalpha_ds)
 
     dm = np.empty((ntest,len(new_hyp), 1))
 
@@ -213,6 +215,95 @@ def get_marginal_variance(hess_inv, new_hyp, ntrain, ntest, xtrain, xtest, Kyinv
         print("\n\n\tMarginal variance\n\n", V_tild )
 
     return V_tild
+
+def get_marginal_variance_MGP(hess_inv, new_hyp, ntrain, ntest, xtrain, xtest, Kyinv, ytrain, varf, plot_result = False):
+
+    # Step 1 : invert the res.hess_inv to get H_tilde
+    H_tilde = invert(hess_inv)
+    # Step 2 Get H
+    H = np.zeros((len(H_tilde), len(H_tilde)))
+    for i in np.arange(len(H_tilde)):
+        for j in np.arange(len(H_tilde)):
+            H[i,j] = (1/np.log(10)**2) * H_tilde[i,j]/(new_hyp[i]*new_hyp[j])
+    # Step 3 get Sigma
+    H_inv = invert(H)
+    sigma_m = H_inv
+
+
+    ######################### Build needed Kernel Matrix #########################
+
+    # Kernel K(train, train) of shape (ntrain, ntrain)
+    K = np.empty((ntrain, ntrain))
+    for i in np.arange(len(xtrain)):
+        for j in np.arange(len(xtrain)):
+            K[i, j] = k(xtrain[i], xtrain[j], new_hyp[0])
+
+    # Kernel K_star(test, train) of shape (ntest, ntrain)
+    # note that K_star(test, train) = K_star.T(train, test)
+    K_star = np.empty((ntest, ntrain))
+    for i in np.arange(len(xtest)):
+        for j in np.arange(len(xtrain)):
+            K_star[i, j] = k(xtest[i], xtrain[j], new_hyp[0])
+
+
+    # Derivative of kernel K
+    K_prime = np.empty((ntrain, ntrain))
+    for i in np.arange(len(xtrain)):
+        for j in np.arange(len(xtrain)):
+            K_prime[i, j] = dkdl(xtrain[i], xtrain[j], new_hyp[0])
+
+    # Derivative of kernel K_star
+    K_star_prime = np.empty((ntest, ntrain))
+    for i in np.arange(len(xtest)):
+        for j in np.arange(len(xtrain)):
+            K_star_prime[i, j] = dkdl(xtest[i], xtrain[j], new_hyp[0])
+
+    K_2star_prime = np.empty((ntest, ntest))
+    for i in np.arange(len(xtest)):
+        for j in np.arange(len(xtest)):
+            K_2star_prime[i, j] = dkdl(xtest[i], xtest[j], new_hyp[0])
+    ############################################################################
+
+
+
+    dKyinv_dl = -Kyinv.dot(K_prime).dot(Kyinv) # Compute the Kyinv's derivative w.r.t. lengthscale
+
+    dKyinv_ds = -Kyinv.dot(np.eye(ntrain)).dot(Kyinv) # Compute the Kyinv's derivative w.r.t. sigma noise
+                                                                  # square
+
+
+    term1 = K_star_prime.dot(Kyinv).dot(K_star.T)
+
+    # dm = np.empty((ntest,len(new_hyp), 1))
+    #
+    # for nb_hyp in range(len(new_hyp)):
+    #     if nb_hyp == 0 :
+    #         dm[:,nb_hyp,:] = np.dot(K_star_prime, alpha) -\
+    #                          np.dot(K_star, dalpha_dl)
+    #     else :
+    #         dm[:,nb_hyp,:] = np.dot(K_star, dalpha_ds)
+    #
+    #
+    #
+    # V = varf # set V as the result of the predict_f diagonal
+    #
+    # dm_transpose = np.empty((ntest, 1, len(new_hyp)))
+    # dmT_dot_sigma = np.empty((ntest, 1, len(new_hyp)))
+    # dmT_dot_sigma_dot_dm = np.empty((ntest, 1))
+    #
+    # for i in range(ntest):
+    #     dm_transpose[i] = dm[i].T
+    #     dmT_dot_sigma[i] = dm_transpose[i].dot(sigma_m)
+    #     dmT_dot_sigma_dot_dm[i] = dmT_dot_sigma[i].dot(dm[i])
+    #
+    # #print("dmT_dot_sigma_dot_dm = ", dmT_dot_sigma_dot_dm)
+    # V_tild = V.reshape((ntest,1)) + dmT_dot_sigma_dot_dm # Osborne et al. (2012) Active learning eq.19
+    #
+    # if plot_result == True:
+    #     print("\nThe marginal Variance has a shape of ", V_tild.shape)
+    #     print("\n\n\tMarginal variance\n\n", V_tild )
+    #
+    # return V_tild
 
 
 def wld_get_marginal_variance(wld_hess_inv, wld_hyp, ntrain, ntest, xtrain, xtest, Kyinv, ytrain, varf, plot_result = False):
