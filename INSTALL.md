@@ -13,10 +13,14 @@ f2py -c kernels.f90 -m kernels
 Donwload [chocolatey](https://chocolatey.org/install):
 
 1. On the windows powershell executed with admin rights, type each of the following commands: 
-```Get-ExecutionPolicy```
+```
+Get-ExecutionPolicy
+```
 
 if it returns 'Restricted' type the command: 
-```Set-ExecutionPolicy AllSigned```
+```
+Set-ExecutionPolicy AllSigned
+```
 
 To continue the installation run:
 ```
