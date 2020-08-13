@@ -90,23 +90,10 @@ def main():
     if len(sys.argv) < 2:
         print_usage()
         return
-
-    # ce paragraphe vient d'être rajouté:
-#    currentPath=os.getcwd()
-#    currentDirectory=os.path.basename(currentPath)
-#    if currentDirectory=='mockup':
-#        config_file=os.path.join(currentPath,'study')
-#    elif currentDirectory=='study':
-#        config_file=currentPath
-#    else:
-#        return('Error: please enter the file mockup')
-
-    if len(sys.argv) < 3: #entrain de modifier iciiiiiiiiiiiiiiiiiiiiiiiiii
+    if len(sys.argv) < 3:
         config_file = os.path.join(os.getcwd(), 'profit.yaml')
-        #config_file = os.path.join(config_file, 'profit.yaml') #rajouté
     else:
         config_file = os.path.abspath(sys.argv[2])
-        #config_file = os.path.join(config_file,sys.argv[2]) #rajouté
 
     config = Config.from_file(config_file)
 
