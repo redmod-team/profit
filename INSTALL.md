@@ -14,8 +14,10 @@ Donwload [chocolatey](https://chocolatey.org/install):
 
 1. On the windows powershell executed with admin rights, type each of the following commands: 
 ```Get-ExecutionPolicy```
+
 if it returns 'Restricted' type the command: 
 ```Set-ExecutionPolicy AllSigned```
+
 To continue the installation run:
 ```
 Get-ExecutionPolicy
