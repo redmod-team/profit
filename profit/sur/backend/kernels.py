@@ -3,7 +3,7 @@ from pyccel.decorators import types, python
 
 
 @types('real[:]', 'real[:]', 'real')
-def kern_sqexp(x0, x1, h):
+def kern_sqexp(x0, x1, h): #h: length scale
     """Squared exponential kernel"""
     ret = np.real(np.exp(-0.5*np.sum(((x1 - x0)/h)**2)))
     if ret<1e-16:

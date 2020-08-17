@@ -24,8 +24,8 @@ except:
         return x
 
 import profit
-from profit.config import Config
-from profit.util import get_eval_points
+from profit.profit.config import Config
+from profit.profit.util import get_eval_points
 #from profit.uq.backend import ChaosPy
 #from profit.sur.backend import gp
 #from inspect import signature
@@ -86,11 +86,10 @@ def print_usage():
 
 
 def main():
-    print(sys.argv)
+    print(sys.argv) #sys.argv is an array whose values are the entered series of command (ex: sys.argv=['profit','run'])
     if len(sys.argv) < 2:
         print_usage()
         return
-
     if len(sys.argv) < 3:
         config_file = os.path.join(os.getcwd(), 'profit.yaml')
     else:
@@ -149,11 +148,11 @@ def main():
 
     elif(sys.argv[1] == 'fit'):
         from numpy import loadtxt
-        from h5py import File
+        from h5py import File #h5py lets you store huge amounts of numerical data, and easily manipulate that data from NumPy.
         x = loadtxt('input.txt')
         y = loadtxt('output.txt')
         fresp = fit(x, y)
-        with File('profit.hdf5', 'w') as h5f:
+        with File('profit.hdf5', 'w') as h5f: #creates a file under the name of 'profit.hdf5' having the h5f format with the following information:
             h5f['xtrain'] = fresp.xtrain
             h5f['ytrain'] = fresp.ytrain
             h5f['yscale'] = fresp.yscale
