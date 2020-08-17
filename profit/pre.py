@@ -1,6 +1,6 @@
 import os
 from shutil import copytree, rmtree, ignore_patterns
-from profit import util, tqdm
+from profit.profit import util, tqdm
 
 class SafeDict(dict):
     def __missing__(self, key):
@@ -17,8 +17,8 @@ def write_input(eval_points, out_dir=''):
     from numpy import array, savetxt
     filename = os.path.join(out_dir, 'input.txt')
     if isinstance(eval_points, dict):
-        savetxt(filename, 
-                array(list(eval_points.values())).T, 
+        savetxt(filename,
+                array(list(eval_points.values())).T,
                 header=' '.join(eval_points.keys()))
     else:
         util.save_txt(filename, eval_points)
