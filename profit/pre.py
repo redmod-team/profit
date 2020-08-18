@@ -1,6 +1,6 @@
 import os
 from shutil import copytree, rmtree, ignore_patterns
-from profit.profit import util, tqdm
+from profit import util, tqdm
 
 class SafeDict(dict):
     def __missing__(self, key):

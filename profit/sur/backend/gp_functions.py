@@ -29,15 +29,21 @@ def invert_cholesky(L):
         L.T, solve_triangular(L, np.eye(L.shape[0]), lower=True, check_finite=False),
         lower=False, check_finite=False)
 
-def invert(K, neig=8, tol=1e-10):
+def invert(K, neig=0, tol=1e-10):
     """Inverts a positive-definite matrix A using either an eigendecomposition or
        a Cholesky decomposition, depending on the rapidness of decay of eigenvalues"""
-    if (neig <= 0):
-        return invert_cholesky(np.linalg.cholesky(K))
+    if (neig <= 0 or neig > 0.05*K.shape[0]):
+        try:
+            return invert_cholesky(np.linalg.cholesky(K))
+        except:
+            print('Warning! Fallback to eig solver!')
     w, Q = eigsh(K, neig, tol=tol)
     while np.abs(w[0]-tol) > tol:
         if neig > 0.05*K.shape[0]:  # TODO: get more stringent criterion
-            return invert_cholesky(np.linalg.cholesky(K))
+            try:
+                return invert_cholesky(np.linalg.cholesky(K))
+            except:
+                print('Warning! Fallback to eig solver!')
         neig = 2*neig
         w, Q = eigsh(K, neig, tol=tol)
     return Q.dot(np.diag(1.0/w).dot(Q.T))
@@ -56,18 +62,20 @@ def nll_chol(hyp, x, y, build_K=build_K):
     return ret.item()
 
 
-def nll(hyp, x, y, neig=8, build_K=build_K):
+def nll(hyp, x, y, neig=0, build_K=build_K):
     K = np.empty((len(x), len(x)))
     build_K(x, x, np.abs(hyp[:-1]), K)
     Ky = K + np.abs(hyp[-1])*np.diag(np.ones(len(x)))
-    if (neig <= 0):
-        return nll_chol(hyp, x, y, build_K)
+    if (neig <= 0 or neig > 0.05*len(x)):
+        try:
+            return nll_chol(hyp, x, y, build_K)
+        except:
+            print('Warning! Fallback to eig solver!')
     w, Q = eigsh(Ky, neig, tol=max(1e-6*np.abs(hyp[-1]), 1e-15))
     while np.abs(w[0]-hyp[-1])/hyp[-1] > 1e-6 and neig < len(x):
         if neig > 0.05*len(x):  # TODO: get more stringent criterion
             try:
                 return nll_chol(hyp, x, y, build_K)
-
             except:
                 print('Warning! Fallback to eig solver!')
         neig =  2*neig
@@ -79,7 +87,7 @@ def nll(hyp, x, y, neig=8, build_K=build_K):
     return ret.item()
 
 
-def predict_f(hyp, x, y, xtest, neig=8):
+def predict_f(hyp, x, y, xtest, neig=0):
     Ktest = sklearn.metrics.pairwise.rbf_kernel(xtest, x, 0.5/hyp[0]**2)
     Ktest2 = sklearn.metrics.pairwise.rbf_kernel(xtest, xtest, 0.5/hyp[0]**2)
     K = sklearn.metrics.pairwise.rbf_kernel(x, x, 0.5/hyp[0]**2)
