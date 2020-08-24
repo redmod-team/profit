@@ -1,0 +1,655 @@
+(* Content-type: application/vnd.wolfram.mathematica *)
+
+(*** Wolfram Notebook File ***)
+(* http://www.wolfram.com/nb *)
+
+(* CreatedBy='Mathematica 12.1' *)
+
+(*CacheID: 234*)
+(* Internal cache information:
+NotebookFileLineBreakTest
+NotebookFileLineBreakTest
+NotebookDataPosition[       158,          7]
+NotebookDataLength[     20947,        647]
+NotebookOptionsPosition[     18897,        602]
+NotebookOutlinePosition[     19344,        620]
+CellTagsIndexPosition[     19301,        617]
+WindowFrame->Normal*)
+
+(* Beginning of Notebook Content *)
+Notebook[{
+Cell[BoxData[""], "Input",
+ CellChangeTimes->{{3.807257778550069*^9, 
+  3.807257805751273*^9}},ExpressionUUID->"98b6f1a9-5957-480c-a98f-\
+0c58de7a8afe"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"$Assumptions", "=", 
+  RowBox[{"{", 
+   RowBox[{
+    RowBox[{"Element", "[", 
+     RowBox[{"n", ",", "PositiveIntegers"}], "]"}], ",", 
+    RowBox[{"n", "\[GreaterEqual]", "1"}], ",", 
+    RowBox[{"n", "\[LessEqual]", "N"}], ",", 
+    RowBox[{"Element", "[", 
+     RowBox[{"k", ",", "PositiveIntegers"}], "]"}]}], "}"}]}]], "Input",
+ CellChangeTimes->{{3.8072582794579153`*^9, 3.807258298953597*^9}},
+ CellLabel->"In[27]:=",ExpressionUUID->"a7b0ab4f-3145-449d-ad92-22beee645c35"],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{
+   RowBox[{
+    RowBox[{"n", "\[Element]", 
+     TemplateBox[{},
+      "Integers"]}], "&&", 
+    RowBox[{"n", ">", "0"}]}], ",", 
+   RowBox[{"n", "\[GreaterEqual]", "1"}], ",", 
+   RowBox[{"n", "\[LessEqual]", "N"}], ",", 
+   RowBox[{
+    RowBox[{"k", "\[Element]", 
+     TemplateBox[{},
+      "Integers"]}], "&&", 
+    RowBox[{"k", ">", "0"}]}]}], "}"}]], "Output",
+ CellChangeTimes->{3.807258299611086*^9},
+ CellLabel->"Out[27]=",ExpressionUUID->"5ee505bd-36b0-4be9-909f-c781f1d62396"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"r", "=", 
+  RowBox[{"Sqrt", "[", 
+   RowBox[{"Sum", "[", 
+    RowBox[{
+     RowBox[{
+      RowBox[{"(", 
+       RowBox[{
+        RowBox[{"x", "[", "k", "]"}], "-", 
+        RowBox[{"y", "[", "k", "]"}]}], ")"}], "^", "2"}], ",", 
+     RowBox[{"{", 
+      RowBox[{"k", ",", "1", ",", "N"}], "}"}]}], "]"}], "]"}]}]], "Input",
+ CellChangeTimes->{{3.807258241658732*^9, 3.807258265411892*^9}},
+ CellLabel->"In[28]:=",ExpressionUUID->"c647ada4-8253-4842-8163-b86cf201c0c9"],
+
+Cell[BoxData[
+ SqrtBox[
+  RowBox[{
+   UnderoverscriptBox["\[Sum]", 
+    RowBox[{"k", "=", "1"}], "N"], 
+   SuperscriptBox[
+    RowBox[{"(", 
+     RowBox[{
+      RowBox[{"x", "[", "k", "]"}], "-", 
+      RowBox[{"y", "[", "k", "]"}]}], ")"}], "2"]}]]], "Output",
+ CellChangeTimes->{{3.807258271899364*^9, 3.8072583010715218`*^9}},
+ CellLabel->"Out[28]=",ExpressionUUID->"c1042be5-73fd-45bb-88b0-8703c5d9ebdb"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"D", "[", 
+   RowBox[{
+    RowBox[{"Cos", "[", "r", "]"}], ",", 
+    RowBox[{"x", "[", "n", "]"}]}], "]"}], "//", "Simplify"}]], "Input",
+ CellChangeTimes->{{3.8072577703074837`*^9, 3.8072577703106337`*^9}, {
+  3.8072578079312077`*^9, 3.8072579194109364`*^9}, {3.807257956344947*^9, 
+  3.8072579768462687`*^9}, {3.8072580894533463`*^9, 3.807258137226565*^9}, {
+  3.8072581855730333`*^9, 3.807258194017679*^9}, {3.807258255709485*^9, 
+  3.807258308399226*^9}},
+ CellLabel->"In[29]:=",ExpressionUUID->"46b0e65a-ba81-4adc-82f7-68d82ad8b967"],
+
+Cell[BoxData[
+ RowBox[{"-", 
+  FractionBox[
+   RowBox[{
+    RowBox[{"Sin", "[", 
+     SqrtBox[
+      RowBox[{
+       UnderoverscriptBox["\[Sum]", 
+        RowBox[{"k", "=", "1"}], "N"], 
+       SuperscriptBox[
+        RowBox[{"(", 
+         RowBox[{
+          RowBox[{"x", "[", "k", "]"}], "-", 
+          RowBox[{"y", "[", "k", "]"}]}], ")"}], "2"]}]], "]"}], " ", 
+    RowBox[{
+     UnderoverscriptBox["\[Sum]", 
+      RowBox[{"k", "=", "1"}], "N"], 
+     RowBox[{"(", 
+      RowBox[{
+       RowBox[{"2", " ", 
+        TemplateBox[{
+          RowBox[{"k", ",", "n"}]},
+         "KroneckerDeltaSeq"], " ", 
+        RowBox[{"x", "[", "k", "]"}]}], "-", 
+       RowBox[{"2", " ", 
+        TemplateBox[{
+          RowBox[{"k", ",", "n"}]},
+         "KroneckerDeltaSeq"], " ", 
+        RowBox[{"y", "[", "k", "]"}]}]}], ")"}]}]}], 
+   RowBox[{"2", " ", 
+    SqrtBox[
+     RowBox[{
+      UnderoverscriptBox["\[Sum]", 
+       RowBox[{"k", "=", "1"}], "N"], 
+      SuperscriptBox[
+       RowBox[{"(", 
+        RowBox[{
+         RowBox[{"x", "[", "k", "]"}], "-", 
+         RowBox[{"y", "[", "k", "]"}]}], ")"}], "2"]}]]}]]}]], "Output",
+ CellChangeTimes->{
+  3.80725777194319*^9, {3.807257822031177*^9, 3.807257851887532*^9}, {
+   3.8072578822401133`*^9, 3.807257977396727*^9}, {3.807258097469599*^9, 
+   3.807258138925763*^9}, 3.807258206327671*^9, {3.807258269230649*^9, 
+   3.807258274221072*^9}, 3.807258309987773*^9},
+ CellLabel->"Out[29]=",ExpressionUUID->"afe7ace8-8bfb-4509-aad8-501511d028f6"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"D", "[", 
+   RowBox[{
+    RowBox[{"Cos", "[", "r", "]"}], ",", 
+    RowBox[{"y", "[", "n", "]"}]}], "]"}], "//", "Simplify"}]], "Input",
+ CellChangeTimes->{{3.807258224605654*^9, 3.807258224714374*^9}, {
+  3.807258312780116*^9, 3.807258314247204*^9}},
+ CellLabel->"In[30]:=",ExpressionUUID->"184eb312-bf6f-4063-97ec-c938a71e21cb"],
+
+Cell[BoxData[
+ RowBox[{"-", 
+  FractionBox[
+   RowBox[{
+    RowBox[{"Sin", "[", 
+     SqrtBox[
+      RowBox[{
+       UnderoverscriptBox["\[Sum]", 
+        RowBox[{"k", "=", "1"}], "N"], 
+       SuperscriptBox[
+        RowBox[{"(", 
+         RowBox[{
+          RowBox[{"x", "[", "k", "]"}], "-", 
+          RowBox[{"y", "[", "k", "]"}]}], ")"}], "2"]}]], "]"}], " ", 
+    RowBox[{
+     UnderoverscriptBox["\[Sum]", 
+      RowBox[{"k", "=", "1"}], "N"], 
+     RowBox[{"(", 
+      RowBox[{
+       RowBox[{
+        RowBox[{"-", "2"}], " ", 
+        TemplateBox[{
+          RowBox[{"k", ",", "n"}]},
+         "KroneckerDeltaSeq"], " ", 
+        RowBox[{"x", "[", "k", "]"}]}], "+", 
+       RowBox[{"2", " ", 
+        TemplateBox[{
+          RowBox[{"k", ",", "n"}]},
+         "KroneckerDeltaSeq"], " ", 
+        RowBox[{"y", "[", "k", "]"}]}]}], ")"}]}]}], 
+   RowBox[{"2", " ", 
+    SqrtBox[
+     RowBox[{
+      UnderoverscriptBox["\[Sum]", 
+       RowBox[{"k", "=", "1"}], "N"], 
+      SuperscriptBox[
+       RowBox[{"(", 
+        RowBox[{
+         RowBox[{"x", "[", "k", "]"}], "-", 
+         RowBox[{"y", "[", "k", "]"}]}], ")"}], "2"]}]]}]]}]], "Output",
+ CellChangeTimes->{{3.807258223985668*^9, 3.8072582263855953`*^9}, 
+   3.8072583159117537`*^9},
+ CellLabel->"Out[30]=",ExpressionUUID->"ae6cd876-a4ff-435b-9963-f6c224c9efc8"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"D", "[", 
+   RowBox[{
+    RowBox[{"Cos", "[", "r", "]"}], ",", 
+    RowBox[{"x", "[", "n", "]"}], ",", 
+    RowBox[{"x", "[", "n", "]"}]}], "]"}], "//", "Simplify"}]], "Input",
+ CellChangeTimes->{3.8072583229205647`*^9},
+ CellLabel->"In[31]:=",ExpressionUUID->"a0b6d864-3d12-4134-ae8c-d4c782eccb4e"],
+
+Cell[BoxData[
+ RowBox[{"-", 
+  RowBox[{"(", 
+   RowBox[{
+    RowBox[{"(", 
+     RowBox[{
+      RowBox[{"4", " ", 
+       RowBox[{"Sin", "[", 
+        SqrtBox[
+         RowBox[{
+          UnderoverscriptBox["\[Sum]", 
+           RowBox[{"k", "=", "1"}], "N"], 
+          SuperscriptBox[
+           RowBox[{"(", 
+            RowBox[{
+             RowBox[{"x", "[", "k", "]"}], "-", 
+             RowBox[{"y", "[", "k", "]"}]}], ")"}], "2"]}]], "]"}], " ", 
+       RowBox[{
+        UnderoverscriptBox["\[Sum]", 
+         RowBox[{"k", "=", "1"}], "N"], 
+        SuperscriptBox[
+         RowBox[{"(", 
+          RowBox[{
+           RowBox[{"x", "[", "k", "]"}], "-", 
+           RowBox[{"y", "[", "k", "]"}]}], ")"}], "2"]}]}], "-", 
+      RowBox[{
+       RowBox[{"Sin", "[", 
+        SqrtBox[
+         RowBox[{
+          UnderoverscriptBox["\[Sum]", 
+           RowBox[{"k", "=", "1"}], "N"], 
+          SuperscriptBox[
+           RowBox[{"(", 
+            RowBox[{
+             RowBox[{"x", "[", "k", "]"}], "-", 
+             RowBox[{"y", "[", "k", "]"}]}], ")"}], "2"]}]], "]"}], " ", 
+       SuperscriptBox[
+        RowBox[{"(", 
+         RowBox[{
+          UnderoverscriptBox["\[Sum]", 
+           RowBox[{"k", "=", "1"}], "N"], 
+          RowBox[{"(", 
+           RowBox[{
+            RowBox[{"2", " ", 
+             TemplateBox[{
+               RowBox[{"k", ",", "n"}]},
+              "KroneckerDeltaSeq"], " ", 
+             RowBox[{"x", "[", "k", "]"}]}], "-", 
+            RowBox[{"2", " ", 
+             TemplateBox[{
+               RowBox[{"k", ",", "n"}]},
+              "KroneckerDeltaSeq"], " ", 
+             RowBox[{"y", "[", "k", "]"}]}]}], ")"}]}], ")"}], "2"]}], "+", 
+      RowBox[{
+       RowBox[{"Cos", "[", 
+        SqrtBox[
+         RowBox[{
+          UnderoverscriptBox["\[Sum]", 
+           RowBox[{"k", "=", "1"}], "N"], 
+          SuperscriptBox[
+           RowBox[{"(", 
+            RowBox[{
+             RowBox[{"x", "[", "k", "]"}], "-", 
+             RowBox[{"y", "[", "k", "]"}]}], ")"}], "2"]}]], "]"}], " ", 
+       SqrtBox[
+        RowBox[{
+         UnderoverscriptBox["\[Sum]", 
+          RowBox[{"k", "=", "1"}], "N"], 
+         SuperscriptBox[
+          RowBox[{"(", 
+           RowBox[{
+            RowBox[{"x", "[", "k", "]"}], "-", 
+            RowBox[{"y", "[", "k", "]"}]}], ")"}], "2"]}]], " ", 
+       SuperscriptBox[
+        RowBox[{"(", 
+         RowBox[{
+          UnderoverscriptBox["\[Sum]", 
+           RowBox[{"k", "=", "1"}], "N"], 
+          RowBox[{"(", 
+           RowBox[{
+            RowBox[{"2", " ", 
+             TemplateBox[{
+               RowBox[{"k", ",", "n"}]},
+              "KroneckerDeltaSeq"], " ", 
+             RowBox[{"x", "[", "k", "]"}]}], "-", 
+            RowBox[{"2", " ", 
+             TemplateBox[{
+               RowBox[{"k", ",", "n"}]},
+              "KroneckerDeltaSeq"], " ", 
+             RowBox[{"y", "[", "k", "]"}]}]}], ")"}]}], ")"}], "2"]}]}], 
+     ")"}], "/", 
+    RowBox[{"(", 
+     RowBox[{"4", " ", 
+      SuperscriptBox[
+       RowBox[{"(", 
+        RowBox[{
+         UnderoverscriptBox["\[Sum]", 
+          RowBox[{"k", "=", "1"}], "N"], 
+         SuperscriptBox[
+          RowBox[{"(", 
+           RowBox[{
+            RowBox[{"x", "[", "k", "]"}], "-", 
+            RowBox[{"y", "[", "k", "]"}]}], ")"}], "2"]}], ")"}], 
+       RowBox[{"3", "/", "2"}]]}], ")"}]}], ")"}]}]], "Output",
+ CellChangeTimes->{3.8072583513377542`*^9},
+ CellLabel->"Out[31]=",ExpressionUUID->"d1707235-a28d-44d8-9654-fb872057b82c"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"D", "[", 
+   RowBox[{
+    RowBox[{"Cos", "[", "r", "]"}], ",", 
+    RowBox[{"x", "[", "n", "]"}], ",", 
+    RowBox[{"y", "[", "n", "]"}]}], "]"}], "//", "Simplify"}]], "Input",
+ CellChangeTimes->{{3.8072583229205647`*^9, 3.80725833050176*^9}},
+ CellLabel->"In[32]:=",ExpressionUUID->"a49aa857-118c-4a97-8459-9e4d1b14c686"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(", 
+   RowBox[{
+    RowBox[{"4", " ", 
+     RowBox[{"Sin", "[", 
+      SqrtBox[
+       RowBox[{
+        UnderoverscriptBox["\[Sum]", 
+         RowBox[{"k", "=", "1"}], "N"], 
+        SuperscriptBox[
+         RowBox[{"(", 
+          RowBox[{
+           RowBox[{"x", "[", "k", "]"}], "-", 
+           RowBox[{"y", "[", "k", "]"}]}], ")"}], "2"]}]], "]"}], " ", 
+     RowBox[{
+      UnderoverscriptBox["\[Sum]", 
+       RowBox[{"k", "=", "1"}], "N"], 
+      SuperscriptBox[
+       RowBox[{"(", 
+        RowBox[{
+         RowBox[{"x", "[", "k", "]"}], "-", 
+         RowBox[{"y", "[", "k", "]"}]}], ")"}], "2"]}]}], "+", 
+    RowBox[{
+     RowBox[{"Sin", "[", 
+      SqrtBox[
+       RowBox[{
+        UnderoverscriptBox["\[Sum]", 
+         RowBox[{"k", "=", "1"}], "N"], 
+        SuperscriptBox[
+         RowBox[{"(", 
+          RowBox[{
+           RowBox[{"x", "[", "k", "]"}], "-", 
+           RowBox[{"y", "[", "k", "]"}]}], ")"}], "2"]}]], "]"}], " ", 
+     RowBox[{"(", 
+      RowBox[{
+       UnderoverscriptBox["\[Sum]", 
+        RowBox[{"k", "=", "1"}], "N"], 
+       RowBox[{"(", 
+        RowBox[{
+         RowBox[{"2", " ", 
+          TemplateBox[{
+            RowBox[{"k", ",", "n"}]},
+           "KroneckerDeltaSeq"], " ", 
+          RowBox[{"x", "[", "k", "]"}]}], "-", 
+         RowBox[{"2", " ", 
+          TemplateBox[{
+            RowBox[{"k", ",", "n"}]},
+           "KroneckerDeltaSeq"], " ", 
+          RowBox[{"y", "[", "k", "]"}]}]}], ")"}]}], ")"}], " ", 
+     RowBox[{
+      UnderoverscriptBox["\[Sum]", 
+       RowBox[{"k", "=", "1"}], "N"], 
+      RowBox[{"(", 
+       RowBox[{
+        RowBox[{
+         RowBox[{"-", "2"}], " ", 
+         TemplateBox[{
+           RowBox[{"k", ",", "n"}]},
+          "KroneckerDeltaSeq"], " ", 
+         RowBox[{"x", "[", "k", "]"}]}], "+", 
+        RowBox[{"2", " ", 
+         TemplateBox[{
+           RowBox[{"k", ",", "n"}]},
+          "KroneckerDeltaSeq"], " ", 
+         RowBox[{"y", "[", "k", "]"}]}]}], ")"}]}]}], "-", 
+    RowBox[{
+     RowBox[{"Cos", "[", 
+      SqrtBox[
+       RowBox[{
+        UnderoverscriptBox["\[Sum]", 
+         RowBox[{"k", "=", "1"}], "N"], 
+        SuperscriptBox[
+         RowBox[{"(", 
+          RowBox[{
+           RowBox[{"x", "[", "k", "]"}], "-", 
+           RowBox[{"y", "[", "k", "]"}]}], ")"}], "2"]}]], "]"}], " ", 
+     SqrtBox[
+      RowBox[{
+       UnderoverscriptBox["\[Sum]", 
+        RowBox[{"k", "=", "1"}], "N"], 
+       SuperscriptBox[
+        RowBox[{"(", 
+         RowBox[{
+          RowBox[{"x", "[", "k", "]"}], "-", 
+          RowBox[{"y", "[", "k", "]"}]}], ")"}], "2"]}]], " ", 
+     RowBox[{"(", 
+      RowBox[{
+       UnderoverscriptBox["\[Sum]", 
+        RowBox[{"k", "=", "1"}], "N"], 
+       RowBox[{"(", 
+        RowBox[{
+         RowBox[{"2", " ", 
+          TemplateBox[{
+            RowBox[{"k", ",", "n"}]},
+           "KroneckerDeltaSeq"], " ", 
+          RowBox[{"x", "[", "k", "]"}]}], "-", 
+         RowBox[{"2", " ", 
+          TemplateBox[{
+            RowBox[{"k", ",", "n"}]},
+           "KroneckerDeltaSeq"], " ", 
+          RowBox[{"y", "[", "k", "]"}]}]}], ")"}]}], ")"}], " ", 
+     RowBox[{
+      UnderoverscriptBox["\[Sum]", 
+       RowBox[{"k", "=", "1"}], "N"], 
+      RowBox[{"(", 
+       RowBox[{
+        RowBox[{
+         RowBox[{"-", "2"}], " ", 
+         TemplateBox[{
+           RowBox[{"k", ",", "n"}]},
+          "KroneckerDeltaSeq"], " ", 
+         RowBox[{"x", "[", "k", "]"}]}], "+", 
+        RowBox[{"2", " ", 
+         TemplateBox[{
+           RowBox[{"k", ",", "n"}]},
+          "KroneckerDeltaSeq"], " ", 
+         RowBox[{"y", "[", "k", "]"}]}]}], ")"}]}]}]}], ")"}], "/", 
+  RowBox[{"(", 
+   RowBox[{"4", " ", 
+    SuperscriptBox[
+     RowBox[{"(", 
+      RowBox[{
+       UnderoverscriptBox["\[Sum]", 
+        RowBox[{"k", "=", "1"}], "N"], 
+       SuperscriptBox[
+        RowBox[{"(", 
+         RowBox[{
+          RowBox[{"x", "[", "k", "]"}], "-", 
+          RowBox[{"y", "[", "k", "]"}]}], ")"}], "2"]}], ")"}], 
+     RowBox[{"3", "/", "2"}]]}], ")"}]}]], "Output",
+ CellChangeTimes->{3.807258379800387*^9},
+ CellLabel->"Out[32]=",ExpressionUUID->"c2907250-1411-44c7-b833-9596f1345fda"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"D", "[", 
+   RowBox[{
+    RowBox[{"Cos", "[", "r", "]"}], ",", 
+    RowBox[{"y", "[", "n", "]"}], ",", 
+    RowBox[{"y", "[", "n", "]"}]}], "]"}], "//", "Simplify"}]], "Input",
+ CellChangeTimes->{{3.8072583229205647`*^9, 3.807258335293503*^9}},
+ CellLabel->"In[33]:=",ExpressionUUID->"046c55d2-ce80-42a6-a2ce-0b26311b6914"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"-", 
+   FractionBox["1", 
+    RowBox[{"4", " ", 
+     SuperscriptBox[
+      RowBox[{"(", 
+       RowBox[{
+        UnderoverscriptBox["\[Sum]", 
+         RowBox[{"k", "=", "1"}], "N"], 
+        SuperscriptBox[
+         RowBox[{"(", 
+          RowBox[{
+           RowBox[{"x", "[", "k", "]"}], "-", 
+           RowBox[{"y", "[", "k", "]"}]}], ")"}], "2"]}], ")"}], 
+      RowBox[{"3", "/", "2"}]]}]]}], 
+  RowBox[{"(", 
+   RowBox[{
+    RowBox[{"4", " ", 
+     RowBox[{"Sin", "[", 
+      SqrtBox[
+       RowBox[{
+        UnderoverscriptBox["\[Sum]", 
+         RowBox[{"k", "=", "1"}], "N"], 
+        SuperscriptBox[
+         RowBox[{"(", 
+          RowBox[{
+           RowBox[{"x", "[", "k", "]"}], "-", 
+           RowBox[{"y", "[", "k", "]"}]}], ")"}], "2"]}]], "]"}], " ", 
+     RowBox[{
+      UnderoverscriptBox["\[Sum]", 
+       RowBox[{"k", "=", "1"}], "N"], 
+      SuperscriptBox[
+       RowBox[{"(", 
+        RowBox[{
+         RowBox[{"x", "[", "k", "]"}], "-", 
+         RowBox[{"y", "[", "k", "]"}]}], ")"}], "2"]}]}], "-", 
+    RowBox[{
+     RowBox[{"Sin", "[", 
+      SqrtBox[
+       RowBox[{
+        UnderoverscriptBox["\[Sum]", 
+         RowBox[{"k", "=", "1"}], "N"], 
+        SuperscriptBox[
+         RowBox[{"(", 
+          RowBox[{
+           RowBox[{"x", "[", "k", "]"}], "-", 
+           RowBox[{"y", "[", "k", "]"}]}], ")"}], "2"]}]], "]"}], " ", 
+     SuperscriptBox[
+      RowBox[{"(", 
+       RowBox[{
+        UnderoverscriptBox["\[Sum]", 
+         RowBox[{"k", "=", "1"}], "N"], 
+        RowBox[{"(", 
+         RowBox[{
+          RowBox[{
+           RowBox[{"-", "2"}], " ", 
+           TemplateBox[{
+             RowBox[{"k", ",", "n"}]},
+            "KroneckerDeltaSeq"], " ", 
+           RowBox[{"x", "[", "k", "]"}]}], "+", 
+          RowBox[{"2", " ", 
+           TemplateBox[{
+             RowBox[{"k", ",", "n"}]},
+            "KroneckerDeltaSeq"], " ", 
+           RowBox[{"y", "[", "k", "]"}]}]}], ")"}]}], ")"}], "2"]}], "+", 
+    RowBox[{
+     RowBox[{"Cos", "[", 
+      SqrtBox[
+       RowBox[{
+        UnderoverscriptBox["\[Sum]", 
+         RowBox[{"k", "=", "1"}], "N"], 
+        SuperscriptBox[
+         RowBox[{"(", 
+          RowBox[{
+           RowBox[{"x", "[", "k", "]"}], "-", 
+           RowBox[{"y", "[", "k", "]"}]}], ")"}], "2"]}]], "]"}], " ", 
+     SqrtBox[
+      RowBox[{
+       UnderoverscriptBox["\[Sum]", 
+        RowBox[{"k", "=", "1"}], "N"], 
+       SuperscriptBox[
+        RowBox[{"(", 
+         RowBox[{
+          RowBox[{"x", "[", "k", "]"}], "-", 
+          RowBox[{"y", "[", "k", "]"}]}], ")"}], "2"]}]], " ", 
+     SuperscriptBox[
+      RowBox[{"(", 
+       RowBox[{
+        UnderoverscriptBox["\[Sum]", 
+         RowBox[{"k", "=", "1"}], "N"], 
+        RowBox[{"(", 
+         RowBox[{
+          RowBox[{
+           RowBox[{"-", "2"}], " ", 
+           TemplateBox[{
+             RowBox[{"k", ",", "n"}]},
+            "KroneckerDeltaSeq"], " ", 
+           RowBox[{"x", "[", "k", "]"}]}], "+", 
+          RowBox[{"2", " ", 
+           TemplateBox[{
+             RowBox[{"k", ",", "n"}]},
+            "KroneckerDeltaSeq"], " ", 
+           RowBox[{"y", "[", "k", "]"}]}]}], ")"}]}], ")"}], "2"]}]}], 
+   ")"}]}]], "Output",
+ CellChangeTimes->{3.807258407726367*^9},
+ CellLabel->"Out[33]=",ExpressionUUID->"38e3b13d-bc95-4fb9-8492-b21d14280cc9"]
+}, Open  ]],
+
+Cell[BoxData[" "], "Input",
+ CellChangeTimes->{
+  3.8072584410080223`*^9},ExpressionUUID->"846985f5-e6d2-4084-bcfd-\
+d4eb10841d15"]
+},
+WindowSize->{1029, 851},
+WindowMargins->{{4, Automatic}, {0, Automatic}},
+PrintingCopies->1,
+PrintingPageRange->{1, Automatic},
+FrontEndVersion->"12.1 for Mac OS X x86 (64-bit) (March 18, 2020)",
+StyleDefinitions->"Default.nb",
+ExpressionUUID->"bb2dffb2-5ebe-4778-8e2c-f67b1a670992"
+]
+(* End of Notebook Content *)
+
+(* Internal cache information *)
+(*CellTagsOutline
+CellTagsIndex->{}
+*)
+(*CellTagsIndex
+CellTagsIndex->{}
+*)
+(*NotebookFileOutline
+Notebook[{
+Cell[558, 20, 152, 3, 30, "Input",ExpressionUUID->"98b6f1a9-5957-480c-a98f-0c58de7a8afe"],
+Cell[CellGroupData[{
+Cell[735, 27, 503, 11, 30, "Input",ExpressionUUID->"a7b0ab4f-3145-449d-ad92-22beee645c35"],
+Cell[1241, 40, 527, 16, 34, "Output",ExpressionUUID->"5ee505bd-36b0-4be9-909f-c781f1d62396"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[1805, 61, 493, 13, 30, "Input",ExpressionUUID->"c647ada4-8253-4842-8163-b86cf201c0c9"],
+Cell[2301, 76, 408, 11, 66, "Output",ExpressionUUID->"c1042be5-73fd-45bb-88b0-8703c5d9ebdb"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[2746, 92, 572, 11, 30, "Input",ExpressionUUID->"46b0e65a-ba81-4adc-82f7-68d82ad8b967"],
+Cell[3321, 105, 1495, 44, 68, "Output",ExpressionUUID->"afe7ace8-8bfb-4509-aad8-501511d028f6"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[4853, 154, 365, 8, 30, "Input",ExpressionUUID->"184eb312-bf6f-4063-97ec-c938a71e21cb"],
+Cell[5221, 164, 1329, 42, 68, "Output",ExpressionUUID->"ae6cd876-a4ff-435b-9963-f6c224c9efc8"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[6587, 211, 334, 8, 30, "Input",ExpressionUUID->"a0b6d864-3d12-4134-ae8c-d4c782eccb4e"],
+Cell[6924, 221, 3506, 105, 124, "Output",ExpressionUUID->"d1707235-a28d-44d8-9654-fb872057b82c"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[10467, 331, 357, 8, 30, "Input",ExpressionUUID->"a49aa857-118c-4a97-8459-9e4d1b14c686"],
+Cell[10827, 341, 4182, 132, 182, "Output",ExpressionUUID->"c2907250-1411-44c7-b833-9596f1345fda"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[15046, 478, 358, 8, 30, "Input",ExpressionUUID->"046c55d2-ce80-42a6-a2ce-0b26311b6914"],
+Cell[15407, 488, 3340, 106, 172, "Output",ExpressionUUID->"38e3b13d-bc95-4fb9-8492-b21d14280cc9"]
+}, Open  ]],
+Cell[18762, 597, 131, 3, 30, "Input",ExpressionUUID->"846985f5-e6d2-4084-bcfd-d4eb10841d15"]
+}
+]
+*)
+
