@@ -7,9 +7,9 @@ Created on Wed Aug 19 03:47:54 2020
 import numpy as np
 import GPy
 from GPy.kern.src.stationary import Stationary
-from .expsin import ExpSin
+from expsin import ExpSin
 import pytest
-import func
+import func_expsin
 import matplotlib.pyplot as plt
 
 def test_kern_Cosine():
