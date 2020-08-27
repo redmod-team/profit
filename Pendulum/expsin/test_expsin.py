@@ -12,7 +12,7 @@ import pytest
 import func_expsin
 import matplotlib.pyplot as plt
 
-def test_kern_Cosine():
+def test_kern_ExpSin():
 
     # Training points for 1D:
     x0train = np.linspace(-5,5,100).reshape(-1,1)
@@ -182,4 +182,4 @@ def test_kern_Cosine():
     
     
 
-test_kern_Cosine()
+test_kern_ExpSin()
