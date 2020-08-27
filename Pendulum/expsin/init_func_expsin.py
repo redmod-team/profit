@@ -19,7 +19,11 @@ kern_sqexp_sin = exp(-sin(x)**2/(2*l**2))
 kern_x = kern_sqexp_sin.subs(x, xa-xb).subs(l, lx)
 kern_y = kern_sqexp_sin.subs(x, ya-yb).subs(l, ly)
 
-kern = (kern_x).simplify()
+## 1D kernel :
+#kern = (kern_x).simplify()
+
+# 2D kernel :
+kern = (kern_x*kern_y).simplify()
 
 
 dkdxa = diff(kern, xa).simplify()
