@@ -25,7 +25,7 @@ class Sinus_prod(Stationary):
         &k \in \mathcal{M}_{n,n}
 
     """
-    def __init__(self, input_dim, variance=1., lengthscale=None, ARD=False, active_dims=None, name='Cosine_prod'):
+    def __init__(self, input_dim, variance=1., lengthscale=None, ARD=False, active_dims=None, name='Sinus_prod'):
         super(Sinus_prod, self).__init__(input_dim, variance, lengthscale, ARD, active_dims, name)
 
     def K_of_r(self, dist):
