@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Sat Jun 20 15:53:32 2020
+
+@author: Katharina Rath
+"""
 import numpy as np
 from scipy.optimize import fmin, minimize, newton
 from func import (bluenoise, integrate_pendulum, nlp, nlpreg, buildK, build_K, plot_pendulum,
@@ -10,15 +16,19 @@ from init import xtrain, ytrain, ztrain, q, p, P, t, ztrain1,ztrain2
 from sklearn.metrics import mean_squared_error 
 import cma
 from GPy import *
+from todo_derivatives_gpy import ProdExtended
+from expsin_gpy import ExpSin
 
 #%%
 #Definition of the parameters:
 
 # Lengthscale:
 l = [4.801629659374284, 4.801629659374284]
+# l = [1,1]
+# 2.0816681711721685e-17
 
 # sigma_noise:
-sig_n_opt = [2.8294119107878543e-4]
+sig_n_opt = [12.8294119107878543e-4]
 
 #%%
 #Build K(x,x):
@@ -28,9 +38,16 @@ K = np.empty((2*len(xtrain), 2*len(xtrain)))
 buildK(xtrain, ytrain, xtrain, ytrain, l, K)
 plt.figure(1)
 plt.imshow(K)
+# print(dkdxa(kern,xtrain,ytrain))
 
 # GPy:
-sq_kern = kern.RBF(2,variance=sig**2,lengthscale=l[0]) # the kernel function
+k1 = ExpSin(1,active_dims=0,variance=sig**2,lengthscale=l[0])
+k2 = kern.RBF(1,active_dims=1,variance=sig**2,lengthscale=l[1])
+sq_kern = ProdExtended((k1,k2))
+# k0_K = sq_kern.K(xtrain,xtrain)
+# dk0 = sq_kern.dK_dX(xtrain, xtrain, 1)
+# dk0_2 = sq_kern.dK2,variance=sig**2,lengthscale=l[0]_dXdX2(xtrain, xtrain, 1, 0)
+# sq_kern = kern.RBF(2) # the kernel function
 
 x1= np.array([xtrain,ytrain]).T
 
@@ -63,11 +80,15 @@ plt.imshow(Kyinv5)
 print('Comparaison of Kyinv and Kyinv5: ',np.max(np.abs(Kyinv-Kyinv5)), '\n')
 
 #%%
-# Build the model (GPy):
-m = models.GPRegression( x1 , np.array([ztrain1,ztrain2]).T , sq_kern,noise_var = sig_n_opt[0]**2 )
+# sq_kern1 = kern.RBF(1,variance=sig**2,lengthscale=l[0])
+# sq_kern2 = kern.DiffKern(sq_kern1,0)
 
+# gauss_likelihood = likelihoods.Gaussian(variance=2.8294119107878543e-4**2)
+# Build the model (GPy):
+# m = models.GPRegression( x1 , np.array([ztrain1,ztrain2]).T , sq_kern, noise_var = sig_n_opt[0]**2 )
+# m = models.MultioutputGP(X_list=[xtrain.reshape((-1,1)), ytrain.reshape((-1,1))], Y_list=[ztrain1.reshape((-1,1)), ztrain2.reshape((-1,1))], kernel_list=[sq_kern2, sq_kern2], likelihood_list = [gauss_likelihood,gauss_likelihood])
 # Display the model:
-print(m)
+# print(m)
 
 #%%
 #check how well interpolation is done
@@ -129,11 +150,13 @@ print('Comparaison of Kstar and Kstar5: ',np.max(np.abs(Kstar-Kstar5)), '\n')
 
 # Custom:
 Ef = Kstar.dot(Kyinv.dot(ztrain))
+Ef5 = Kstar5.dot(Kyinv5.dot(ztrain))
 
 # GPy
 # mean and variance matrix star :
-Ef5, varf5 = m.predict(np.array([xtest.flatten(),Ptest.flatten()]).T , full_cov=True)
-Ef5 = Ef5.flatten()
+# Ef5, varf5 = m.predict(np.array([xtest.flatten(),Ptest.flatten()]).T, full_cov=False)
+# Ef5, varf5 = m.predict([xtest.flatten().reshape((-1,1)),Ptest.flatten().reshape((-1,1))], full_cov=False)
+# Ef5 = Ef5.flatten()
 
 # Comparaison
 print('Comparaison of Ef and Ef5: ',np.max(np.abs(Ef-Ef5)), '\n')
