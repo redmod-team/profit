@@ -16,7 +16,7 @@ from init import xtrain, ytrain, ztrain, q, p, P, t, ztrain1,ztrain2
 from sklearn.metrics import mean_squared_error 
 import cma
 from GPy import *
-from todo_derivatives_gpy import ProdExtended
+from prod_extended import ProdExtended
 from expsin_gpy import ExpSin
 
 #%%
