@@ -58,8 +58,8 @@ class ProdExtended(GPy.kern.Prod):
                 if (k==dimX):
                     K_all[k,:,:] = diffpart1.dK_dX(X,X2,dimX)
                 elif (k==dimX2):
-                    K_all[k,:,:] = diffpart2.dK_dX(X,X2,dimX2)
+                    K_all[k,:,:] = diffpart2.dK_dX2(X,X2,dimX2)
                 else:
                     K_all[k,:,:] = All[k].K(X,X2)
-        return ((dimX==dimX2)+(dimX!=dimX2)*(-1.))*np.prod(K_all,0)
+        return np.prod(K_all,0)
 
