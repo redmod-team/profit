@@ -8,22 +8,22 @@ import scipy as sp
 from scipy.optimize import minimize
 from scipy.linalg import solve_triangular
 import matplotlib.pyplot as plt
-from profit.profit.sur import Surrogate
+from profit.sur import Surrogate
 
-try:
-    import tensorflow as tf
-    import tensorflow_probability as tfp
-    import gpflow
-    from gpflow.utilities import print_summary, set_trainable, to_default_float
-except:
-    pass
+# try:
+#     import tensorflow as tf
+#     import tensorflow_probability as tfp
+#     import gpflow
+#     from gpflow.utilities import print_summary, set_trainable, to_default_float
+# except:
+#     pass
 
 try:
     import GPy
 except:
     pass
 
-from profit.profit.sur.backend.kernels import kern_sqexp
+from profit.sur.backend.kernels import kern_sqexp
 
 def gp_matrix(x0, x1, a, K):
     """Constructs GP covariance matrix between two point tuples x0 and x1"""
@@ -189,6 +189,32 @@ class GPSurrogate(Surrogate):
 
         return Kstar.T.dot(self.Kyinv_y)
 
+class GPySurrogate(Surrogate):
+    def __init__(self):
+        # gpflow.reset_default_graph_and_session()
+        self.trained = False
+        pass
+    # TODO
+
+    def train(self, x, y, sigma_n=None, sigma_f=1e-6):
+        self.xtrain = x
+        self.ytrain = y
+        self.ndim = self.xtrain.shape[-1]
+        self.kern = GPy.kern.RBF(input_dim=self.ndim)
+        self.m = GPy.models.GPRegression(x, y, self.kern)
+        self.m.optimize()
+        self.trained = True
+
+    def add_training_data(self, x, y, sigma=None):
+        """Adds input points x and model outputs y with std. deviation sigma
+           and updates the inverted covariance matrix for the GP via the
+           Sherman-Morrison-Woodbury formula"""
+
+        raise NotImplementedError()
+
+    def predict(self, x):
+        return self.m.predict(x)
+
 
 class GPFlowSurrogate(Surrogate):
     def __init__(self):
@@ -247,7 +273,7 @@ class GPFlowSurrogate(Surrogate):
         opt = gpflow.optimizers.Scipy()
         opt.minimize(objective_closure, self.m.trainable_variables)
 
-        self.sigma = np.sqrt(self.m.likelihood.variance.value())
+        self.sigma = np.sqrt(self.m.likelihood.variance.numpy())
         self.trained = True
 
     def add_training_data(self, x, y, sigma=None):

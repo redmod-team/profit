@@ -35,8 +35,8 @@ yes = False  # always answer 'y'
 
 
 def fit(x, y):
-    from profit.sur.backend.gp import GPFlowSurrogate
-    fresp = GPFlowSurrogate()
+    from profit.sur.backend.gp import GPySurrogate
+    fresp = GPySurrogate()
     fresp.train(x, y)
     return fresp
 
