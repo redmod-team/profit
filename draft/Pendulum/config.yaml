@@ -1,0 +1,13 @@
+Nm: 400 #mapping time
+N: 20 #training points 
+sig: 1.0 #sigma_f for GP
+sig_n: 0.001 #sigma noise
+U0: 1.0 # potential for H
+nm: 200 # how often the map is applied
+dtsymp: 0.001 # integration step
+#interval for training data
+qmin: 0.0
+qmax: 6.283185307179586
+pmin: -2.5
+pmax: 2.5
+
