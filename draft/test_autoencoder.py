@@ -5,8 +5,11 @@ import pandas as pd
 import tensorflow as tf
 from tensorflow import keras
 
+# data = pd.read_table(
+#     r'C:\Users\chral\Dropbox\ipp\paper_algae\mc_out.dat', sep='\s+')
 data = pd.read_table(
-    'C:\\Users\chral\\Dropbox\\ipp\\paper_algae\\mc_out.dat', sep='\s+')
+    '/home/calbert/Dropbox/ipp/paper_algae/mc_out.dat', sep='\s+')
+
 names = {
     'mu_0': 'k_alg_growth_max',
     'f_si': 'frac_si_alg_1',
