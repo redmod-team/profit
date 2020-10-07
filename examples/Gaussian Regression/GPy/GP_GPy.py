@@ -1,3 +1,11 @@
+import GPy
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns; sns.set()
+import scipy
+import time
+from IPython.display import display
+
 # Fixing the dimensions of the figure
 plt.rcParams[ ’ figure.figsize ’] = [12 , 7]
 # Definition of the dimension
