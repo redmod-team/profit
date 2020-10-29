@@ -25,6 +25,7 @@ plt.plot(y_all)
 plt.ylabel('Close values')
 plt.title('S&P500 Close Values')
 plt.show()
+plt.figure()
 plt.hist(y_all, bins=30)
 
 
@@ -35,7 +36,7 @@ a = np.zeros(504)
 a2 = np.zeros(504)
 a3 = np.zeros(504)
 y_all = spy['Close'].values
-b = np.linspace(0,2,21504)
+b = np.linspace(0,2,504)
 
 for i in x:
     nm = i
@@ -63,26 +64,26 @@ for i in x:
     a2[i]=y_all[nm]-e2[nm]
     a3[i]=y_all[nm]-e3[nm]
 
-plt.figure(1)
+plt.figure()
 plt.plot(b[5:i],a[5:i])
 plt.title('Matern32')
 
-plt.figure(2)
+plt.figure()
 plt.plot(b[5:i],a2[5:i])
 plt.title('Matern52')
 
-plt.figure(3)
+plt.figure()
 plt.plot(b[26:i],a3[26:i])
 plt.title('Brownian Motion')
 
-plt.figure(4)
+plt.figure()
 plt.hist(a[5:i])
 plt.title('Matern32')
 
-plt.figure(5)
+plt.figure()
 plt.hist(a2[5:i])
 plt.title('Matern52')
 
-plt.figure(6)
+plt.figure()
 plt.hist(a3[26:i])
 plt.title('Brownian Motion')
