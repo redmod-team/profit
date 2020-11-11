@@ -23,11 +23,15 @@ try:
 except:
     pass
 
-from gpfunc import gpfunc
+from profit.sur.backend.gpfunc import gpfunc
 
 def gp_matrix(x0, x1, a, K):
     """Constructs GP covariance matrix between two point tuples x0 and x1"""
-    gpfunc.build_k_sqexp(x0, x1, a, K)
+    n0 = len(x0)
+    n1 = len(x1)
+    for k0 in range(n0):
+        for k1 in range(n1):
+            K[k0, k1] = a[1]*gpfunc.kern_sqexp(x0[k0, :], x1[k1, :], a)
 
 def gp_matrix_train(x, a, sigma_n):
     """Constructs GP matrix for training"""
@@ -151,6 +155,14 @@ class GPSurrogate(Surrogate):
     def train(self, x, y):
         """Fits a GP surrogate on input points x and model outputs y
            with scale sigma_f and noise sigma_n"""
+
+        self.xtrain = x
+        self.ytrain = y
+        self.ymean = np.mean(y)
+        self.yvar = np.var(y)
+        self.yscale = np.sqrt(self.yvar)
+        self.ndim = self.xtrain.shape[-1]
+
         a0 = np.array(
             [(np.max(x)-np.min(x))/2.0, 1e-6, 1e-2*(np.max(y)-np.min(y))]
         )
@@ -164,7 +176,6 @@ class GPSurrogate(Surrogate):
             self.Kyinv_y = np.linalg.solve(self.Ky, y)
         except np.linalg.LinAlgError:
             self.Kyinv_y = np.linalg.lstsq(self.Ky, y, rcond=1e-15)[0]
-        self.xtrain = x
         self.trained = True
 
     def add_training_data(self, x, y, sigma=None):
@@ -194,10 +205,13 @@ class GPySurrogate(Surrogate):
 
     def train(self, x, y, sigma_n=None, sigma_f=1e-6):
         self.xtrain = x
-        self.ytrain = y
+        self.ytrain = y.reshape(-1, 1)
+        self.ymean = np.mean(y)
+        self.yvar = np.var(y)
+        self.yscale = np.sqrt(self.yvar)
         self.ndim = self.xtrain.shape[-1]
         self.kern = GPy.kern.RBF(input_dim=self.ndim)
-        self.m = GPy.models.GPRegression(x, y, self.kern)
+        self.m = GPy.models.GPRegression(self.xtrain, self.ytrain, self.kern)
         self.m.optimize()
         self.trained = True
 

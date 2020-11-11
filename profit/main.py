@@ -35,8 +35,8 @@ yes = False  # always answer 'y'
 
 
 def fit(x, y):
-    from profit.sur.backend.gpytorch import GPyTorchSurrogate
-    fresp = GPyTorchSurrogate()
+    from profit.sur.backend.gp import GPySurrogate
+    fresp = GPySurrogate()
     fresp.train(x, y)
     return fresp
 
@@ -157,8 +157,8 @@ def main():
             h5f['ytrain'] = fresp.ytrain
             h5f['yscale'] = fresp.yscale
             h5f['ndim'] = fresp.ndim
-            h5f['variables'] = [
-                v.numpy() for v in fresp.m.variables]
+            #h5f['variables'] = [
+            #    v.numpy() for v in fresp.m.variables]
 
     elif(sys.argv[1] == 'ui'):
         from profit.ui import app
