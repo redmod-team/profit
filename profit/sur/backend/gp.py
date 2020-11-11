@@ -23,15 +23,11 @@ try:
 except:
     pass
 
-from profit.sur.backend.kernels import kern_sqexp
+from gpfunc import gpfunc
 
 def gp_matrix(x0, x1, a, K):
     """Constructs GP covariance matrix between two point tuples x0 and x1"""
-    n0 = len(x0)
-    n1 = len(x1)
-    for k0 in range(n0):
-        for k1 in range(n1):
-            K[k0, k1] = a[1]*kern_sqexp(x0[k0, :], x1[k1, :], a[0])
+    gpfunc.build_k_sqexp(x0, x1, a, K)
 
 def gp_matrix_train(x, a, sigma_n):
     """Constructs GP matrix for training"""
