@@ -17,7 +17,7 @@ subroutine build_K(xa, xb, hyp, K, kern)
 
   do kb = 1, size(xb)
     do ka = 1, size(xa)
-      K(ka, kb) = hyp(nhyp)*kern(xa(:, ka), xb(:, kb), hyp)
+      K(ka, kb) = hyp(nhyp)*kern(xa(:, ka) - xb(:, kb), hyp(:size(xa, 1)))
     end do
   end do
 
