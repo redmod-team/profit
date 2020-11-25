@@ -31,14 +31,13 @@ for k, v in dkern.items():
 funlist = []
 for k in kern:
     funlist = funlist + [
-        ('kern_{}'.format(k), kern[k].subs(r, abs(ra-rb)/l)),
-        ('dkern_{}'.format(k), dkern[k].subs(r, abs(ra-rb)/l)),
-        ('d2kern_{}'.format(k), d2kern[k].subs(r, abs(ra-rb)/l))
+        ('kern_{}'.format(k), kern[k]),
+        ('dkern_{}'.format(k), dkern[k]),
+        ('d2kern_{}'.format(k), d2kern[k])
     ]
 
-seq = (ra, rb, l)
 [(name, code), (h_name, header)] = codegen(
-    funlist, 'F95', 'kernels', argument_sequence=seq, header=False, empty=False) 
+    funlist, 'F95', 'kernels_base', header=False, empty=False)
 
 with open(name, 'w') as f:
     f.write(code)

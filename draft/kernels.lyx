@@ -1,0 +1,133 @@
+#LyX 2.3 created this file. For more info see http://www.lyx.org/
+\lyxformat 544
+\begin_document
+\begin_header
+\save_transient_properties true
+\origin unavailable
+\textclass article
+\use_default_options true
+\maintain_unincluded_children false
+\language english
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman "default" "default"
+\font_sans "default" "default"
+\font_typewriter "default" "default"
+\font_math "auto" "auto"
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100 100
+\font_tt_scale 100 100
+\use_microtype false
+\use_dash_ligatures true
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize default
+\use_hyperref false
+\papersize default
+\use_geometry false
+\use_package amsmath 1
+\use_package amssymb 1
+\use_package cancel 1
+\use_package esint 1
+\use_package mathdots 1
+\use_package mathtools 1
+\use_package mhchem 1
+\use_package stackrel 1
+\use_package stmaryrd 1
+\use_package undertilde 1
+\cite_engine basic
+\cite_engine_type default
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\justification true
+\use_refstyle 1
+\use_minted 0
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation default
+\is_math_indent 0
+\math_numbering_side default
+\quotes_style english
+\dynamic_quotes 0
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Standard
+The original idea was to support arbitrary combinations of kernels in a
+ product kernel.
+ The problem is that this is either slow in a dynamic language or hard to
+ realize and still not extremely fast in a compiled language.
+ The easiest solution would be an array of function pointers in C.
+ Even there, the function call overhead would be significant without inlining.
+ So to capture 90% of use cases, the default is to support at first
+\end_layout
+
+\begin_layout Itemize
+RBF kernels
+\end_layout
+
+\begin_layout Itemize
+Product kernels with the same kernel in all dimensions
+\end_layout
+
+\begin_layout Standard
+Say we have a product kernel
+\begin_inset Formula 
+\begin{equation}
+k=k_{1}(x_{1}/l_{1})k(x_{2}/l_{2})\dots
+\end{equation}
+
+\end_inset
+
+Then
+\begin_inset Formula 
+\begin{equation}
+\frac{\partial k}{\partial x_{i}}=\frac{1}{l_{i}}k_{1}k_{2}\dots k_{i}^{\prime}\dots
+\end{equation}
+
+\end_inset
+
+and
+\begin_inset Formula 
+\begin{equation}
+\frac{\partial k}{\partial l_{i}}=-\frac{x_{i}}{l_{i}^{\,2}}k_{1}k_{2}\dots k_{i}^{\prime}\dots
+\end{equation}
+
+\end_inset
+
+If there's only a single length scale, we have
+\begin_inset Formula 
+\begin{equation}
+\frac{\partial k}{\partial l}=-\frac{1}{l^{2}}\left(x_{1}k_{1}^{\,\prime}k_{2}\dots+x_{2}k_{1}k_{2}^{\,\prime}\dots+\dots\right)
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\end_body
+\end_document
