@@ -1,3 +1,14 @@
-all: kernels.f90 kernels_base.f90
-	gfortran -c kernels.f90 kernels_base.f90
-	# python3 -m numpy.f2py -c -m gpfunc gpfunc.f90
+FC = gfortran
+SOURCES = gpfunc.f90 kernels.f90 kernels_base.f90
+OBJECTS = $(patsubst %.f90, %.o, $(SOURCES))
+
+all: $(OBJECTS)
+
+%.o: %.f90
+	$(FC) -c $< -o $@
+
+gpfunc.pyf: $(SOURCES)
+	f2py $^
+
+clean:
+	rm -f *.x *.so *.o *.mod
