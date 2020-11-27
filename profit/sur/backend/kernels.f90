@@ -4,7 +4,8 @@ implicit none
 contains
 
 function kern_prod(k, x, l) result(y)
-  real(8), external :: k        ! Base kernel
+  external :: k        ! Base kernel
+  real(8) :: k
   real(8), intent(in)  :: x(:)  ! Input argument
   real(8), intent(in)  :: l(:)  ! Length scales
   real(8) :: y
@@ -16,8 +17,10 @@ function kern_prod(k, x, l) result(y)
 end function
 
 function dkern_prod(k, dk, j, x, l) result(y)
-  real(8), external :: k        ! Base kernel
-  real(8), external :: dk       ! Derivative of base kernel
+  external :: k        ! Base kernel
+  real(8) :: k
+  external :: dk        ! Base kernel
+  real(8) :: dk       ! Derivative of base kernel
   integer, intent(in) :: j      ! Direction to differentiate
   real(8), intent(in)  :: x(:)  ! Input argument
   real(8), intent(in)  :: l(:)  ! Length scales

@@ -24,42 +24,46 @@ subroutine build_K(xa, xb, hyp, K, kern)
 end subroutine build_K
 
 
-subroutine build_K_sqexp(np, ndim, xa, xb, l, K)
+subroutine build_K_sqexp(np, ndim, xa, xb, K)
   integer, intent(in)    :: np, ndim
   real(8), intent(in)    :: xa(np, ndim)
   real(8), intent(in)    :: xb(np, ndim)
-  real(8), intent(in)    :: l(ndim)       ! Length scales
   real(8), intent(inout) :: K(np, np)     ! Result matrix
 
   real(8) :: xdiff(np, ndim)
   integer :: ka, kb
 
   do kb = 1, np
-    xdiff = (xa(:, :) - xb(kb, :)) / (2.0d0*l)
     do ka = 1, np
-      K(ka, kb) = exp(-sum(xdiff(ka, :)**2))
+      xdiff(ka, :) = xa(ka, :) - xb(kb, :)
+    end do
+    do ka = 1, np
+      K(ka, kb) = exp(-sum(xdiff(ka, :)**2/2d0))
     end do
   end do
 end subroutine build_K_sqexp
 
 
-subroutine build_dKdl_sqexp(np, ndim, xa, xb, l, K)
+subroutine build_ldKdl_sqexp(np, ndim, xa, xb, dim, dKdl)
+  ! Returns matrix of l_d*dk/dl_d for dimension d
   integer, intent(in)    :: np, ndim
   real(8), intent(in)    :: xa(np, ndim)
   real(8), intent(in)    :: xb(np, ndim)
-  real(8), intent(in)    :: l(ndim)       ! Length scales
-  real(8), intent(inout) :: K(np, np)     ! Result matrix
+  integer, intent(in)    :: dim            ! Dimension towards to differentiate
+  real(8), intent(inout) :: dKdl(np, np)   ! Derivative matrix
 
   real(8) :: xdiff(np, ndim)
   integer :: ka, kb
 
   do kb = 1, np
-    xdiff = (xa(:, :) - xb(kb, :)) / (2.0d0*l)
     do ka = 1, np
-      K(ka, kb) = exp(-sum(xdiff(ka, :)**2))
+      xdiff(ka, :) = xa(ka, :) - xb(kb, :)
+    end do
+    do ka = 1, np
+      dKdl(ka, kb) = -xdiff(ka, dim)*exp(-sum(xdiff(ka, :)**2/2d0))
     end do
   end do
-end subroutine build_dKdl_sqexp
+end subroutine build_ldKdl_sqexp
 
 
 end module gpfunc
