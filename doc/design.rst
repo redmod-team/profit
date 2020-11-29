@@ -58,6 +58,29 @@ matrices. These are again suited for direct solution and storage. However,
 the inverse covariance matrix is not sparse, so not much is gained for
 construction of surrogates.
 
+Example on data oriented optimization
+-------------------------------------
+
+The code for this is found in `profit/sur/backend/bench_inline.f90`.
+
+Three variants of assembling a kernel matrix were tested on n=1024 points
+and tested on an i7 4770K CPU (Haswell, 16 FLOPS DP per cycle in AVX register):
+
+1) Explicitly writing the kernel in a double loop  (18 ms)
+2) Calling a kernel function for each element in the loop (115 ms)
+3) Calling a vectorized kernel function for each row of the matrix (18 ms)
+
+Variant 2 is much slower and can be made a bit faster (40 ms) by directly
+acting on the vector difference between points. Still it is at least 2 times
+less efficient than the fully inlined version 1. Variant 3 has the same
+performance as putting the innermost loop in the row-wise kernel permits
+cache and SIMD optimization.
+
+On a quad-core CPU, case 1 and 3 can be brought down to 5-10 ms by combining
+OpenMP PARALLEL and SIMD statements. Variant 2 still remains at 30-35 ms.
+Here, case 1 can be about 20% faster than 3 due to better optimization of
+parallel loops.
+
 
 Thoughts on GPUs (end of 2020)
 ------------------------------
