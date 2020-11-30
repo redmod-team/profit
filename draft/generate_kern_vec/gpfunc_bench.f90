@@ -22,9 +22,9 @@ subroutine build_K(nd, nxa, nxb, xa, xb, K, kern, l, sig2f, sig2n, periodic)
         !$omp simd
         do kd = 1, nd
             if (periodic(kd)) then
-                xanorm(kd, :) = (xa(kd, :) - xb(kd, :))/l(kd)
-            else
                 xanorm(kd, :) = sin(xa(kd, :) - xb(kd, :))/l(kd)
+            else
+                xanorm(kd, :) = (xa(kd, :) - xb(kd, :))/l(kd)
             endif
         end do
     else
@@ -43,6 +43,21 @@ subroutine build_K(nd, nxa, nxb, xa, xb, K, kern, l, sig2f, sig2n, periodic)
     !$omp end parallel do
 
 end subroutine build_K
+
+
+! TODO: Build dK/dl(kd)
+! use dkern/kern as below
+!
+! TODO: Build K derivative observarion
+! for sqexp Kxx = (1 - x)*K or something like this
+! could give instead of dkern(x) better f=dkern(x)/kern(x)
+! f : dkern = f*kern  (auto-differentiation and pullback similar)
+! very cheap for sqexp (and periodic)
+!
+! build_L
+!   loop over dimension and evaluate dkern d2kern
+!
+! build dL/dl(kd)
 
 
 subroutine kern_sqexp(nd, nx, xa, xb, out)
