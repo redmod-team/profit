@@ -43,3 +43,6 @@ tests/backend_uqp/libuqp.dll
 examples/mockup/mockup.out
 .vs/
 kernels_base.f90
+*.x
+*.pyf
+*.plist

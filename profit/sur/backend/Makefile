@@ -7,9 +7,6 @@ OBJECTS = $(patsubst %.f90, %.o, $(SOURCES))
 all: gpfunc.pyf $(OBJECTS)
 	f2py -m gpfunc -c $^ -DF2PY_REPORT_ON_ARRAY_COPY=1
 
-bench_inline.x: $(OBJECTS) bench_inline.f90
-	$(FC) $(FFLAGS) $(OBJECTS) bench_inline.f90 -o bench_inline.x
-
 %.o: %.f90
 	$(FC) $(FFLAGS) -c $< -o $@
 

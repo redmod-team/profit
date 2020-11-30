@@ -235,3 +235,22 @@ subroutine build_K_prod(np, ndim, xa, xb, K, kerns)
     !$omp end parallel do
 
 end subroutine build_K_prod
+
+
+subroutine kern_sqexp_vec2(nd, nx, x0, x1, out)
+implicit none
+INTEGER*4, intent(in) :: nd
+INTEGER*4, intent(in) :: nx
+REAL*8, intent(in), dimension(1:nd, 1:nx) :: x0
+REAL*8, intent(in), dimension(1:nd, 1:nx) :: x1
+REAL*8, intent(out), dimension(1:nd, 1:nx) :: out
+INTEGER*4 :: kd
+INTEGER*4 :: kx
+do kx = 1, nx
+   do kd = 1, nd
+      out(kd, kx) = exp(-0.5d0*(-x0(kd, kx) + x1(kd, kx))**2)
+   end do
+end do
+end subroutine
+
+end module gpfunc

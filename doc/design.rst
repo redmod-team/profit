@@ -17,6 +17,20 @@ Other guidlines (see book "a philosophy of software design" by J. Ousterhout):
 * Deep interfaces: Don't write routines if it takes more effort to call them
   than to spell out their content.
 
+
+Conclusion on design of GP Regression
+-------------------------------------
+
+These points summarize a design balancing performance and flexibility
+as found in the detailed study below.
+
+1) There is only one kernel allowed for all dimensions
+2) Inputs (periodic, shift/scale) and outputs (shift/scale) can be transformed
+3) Ordering is "array of points" as in most Machine Learning libraries
+   (in contrast to storing a contiguous array for individual coordinates)
+4) Building the covariance matrix is parallelized over cores in the outer loop
+5) Kernel functions yield covariance matrix rows and are SIMD-parallel
+
 Gaussian Process Regression
 ---------------------------
 
@@ -61,7 +75,7 @@ construction of surrogates.
 Example on data oriented optimization
 -------------------------------------
 
-The code for this is found in `profit/sur/backend/bench_inline.f90`.
+The code for this is found in `draft/bench_gpfunc`.
 
 Three variants of assembling a kernel matrix were tested on n=1024 points
 and tested on an i7 4770K CPU (Haswell, 16 FLOPS DP per cycle in AVX register):
@@ -80,6 +94,13 @@ On a quad-core CPU, case 1 and 3 can be brought down to 5-10 ms by combining
 OpenMP PARALLEL and SIMD statements. Variant 2 still remains at 30-35 ms.
 Here, case 1 can be about 20% faster than 3 due to better optimization of
 parallel loops.
+
+Array or struct or struct of arrays
+-----------------------------------
+
+Some practical tests have shown that array of structs vs struct of arrays
+is mostly negligible, so we stick to the usual convention of using
+struct of arrays.
 
 
 Thoughts on GPUs (end of 2020)
