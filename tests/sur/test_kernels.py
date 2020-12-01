@@ -2,6 +2,7 @@ import pytest
 import numpy as np
 import time
 from profit.sur.backend.gpfunc import gpfunc
+from profit.sur.backend.gp_functions import build_K
 
 
 def test_kern_sqexp():
@@ -15,6 +16,31 @@ def test_kern_sqexp():
 
     assert np.array_equal(k1, k2)
 
+
+def test_build_K():
+    na = 3
+    nb = 2
+    xa = np.array([[0.0, 0.0], [0.0, 0.5], [-0.5, 0.1]])
+    xb = np.array([[0.0, 0.0], [1.4, 1.0]])
+    l = np.array([4.0, 5.0])
+
+    K1 = np.empty((na, nb), order='F')
+    gpfunc.build_k_sqexp(xa.T, xb.T, l, K1)
+
+    xdiff2 = np.empty((na, nb))
+    for ka, xai in enumerate(xa):
+        for kb, xbi in enumerate(xb):
+            xdiff2[ka, kb] = np.sum(((xai - xbi)/l)**2)
+
+    K2 = np.exp(-0.5*xdiff2)
+    K3 = np.empty((na, nb), order='F')
+    build_K(xa, xb, l, K3)
+
+    assert np.array_equal(K1, K2)
+    assert np.array_equal(K1, K3)
+
+
+# TODO: test nll_chol
 
 # TODO: port to gpfunc
 # def test_kern_wendland4():

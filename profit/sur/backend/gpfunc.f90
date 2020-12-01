@@ -3,39 +3,23 @@ implicit none
 
 contains
 
-subroutine xdiff2_L2(nd, na, xa, xb, l, xdiff2)
+subroutine nu_L2(nd, na, xa, xb, l, nu)
   integer, intent(in)    :: nd, na             ! Dimension and number of points
   real(8), intent(in)    :: xa(nd, na), xb(nd) ! Points
   real(8), intent(in)    :: l(nd)              ! Length scales
-  real(8), intent(out)   :: xdiff2(na)         ! Output: squared distance
+  real(8), intent(out)   :: nu(na)         ! Output: squared distance
 
   integer :: ka
 
   !$omp simd
   do ka = 1, na
-    xdiff2(ka) = sum(((xa(:, ka) - xb)/l)**2)
+    nu(ka) = sum(((xa(:, ka) - xb)/l)**2)/2d0
   end do
-end subroutine xdiff2_L2
+end subroutine nu_L2
 
 
-subroutine d_xdiff2_L2_dx(nd, na, xa, xb, l, out)
-  ! Gradient w.r.t. x of xdiff2_L2
-  integer, intent(in)    :: nd, na             ! Dimension and number of points
-  real(8), intent(in)    :: xa(nd, na), xb(nd) ! Points
-  real(8), intent(in)    :: l(nd)              ! Length scales
-  real(8), intent(out)   :: out(nd, na)        ! Output
-
-  integer :: ka
-
-  !$omp simd
-  do ka = 1, na
-    out(:, ka) = 2d0*(xa(:, ka) - xb)/l**2
-  end do
-end subroutine d_xdiff2_L2_dx
-
-
-subroutine d_xdiff2_L2_dl(nd, na, xa, xb, l, out)
-  ! Gradient w.r.t. l of xdiff2_L2
+subroutine d_nu_L2_dx(nd, na, xa, xb, l, out)
+  ! Gradient w.r.t. x of nu_L2
   integer, intent(in)    :: nd, na             ! Dimension and number of points
   real(8), intent(in)    :: xa(nd, na), xb(nd) ! Points
   real(8), intent(in)    :: l(nd)              ! Length scales
@@ -45,17 +29,81 @@ subroutine d_xdiff2_L2_dl(nd, na, xa, xb, l, out)
 
   !$omp simd
   do ka = 1, na
-    out(:, ka) = -2d0*(xa(:, ka) - xb)**2/l**3
+    out(:, ka) = (xa(:, ka) - xb)/l**2
   end do
-end subroutine d_xdiff2_L2_dl
+end subroutine d_nu_L2_dx
 
 
-subroutine kern_sqexp(nx, xdiff2, out)
+subroutine d_nu_L2_dl(nd, na, xa, xb, l, out)
+  ! Gradient w.r.t. l of nu_L2
+  integer, intent(in)    :: nd, na             ! Dimension and number of points
+  real(8), intent(in)    :: xa(nd, na), xb(nd) ! Points
+  real(8), intent(in)    :: l(nd)              ! Length scales
+  real(8), intent(out)   :: out(nd, na)        ! Output
+
+  integer :: ka
+
+  !$omp simd
+  do ka = 1, na
+    out(:, ka) = -(xa(:, ka) - xb)**2/l**3
+  end do
+end subroutine d_nu_L2_dl
+
+
+subroutine d2_nu_L2_dx2(nd, na, xa, xb, l, out)
+  ! Gradient w.r.t. l of nu_L2
+  integer, intent(in)    :: nd, na             ! Dimension and number of points
+  real(8), intent(in)    :: xa(nd, na), xb(nd) ! Points
+  real(8), intent(in)    :: l(nd)              ! Length scales
+  real(8), intent(out)   :: out(nd, na)        ! Output
+
+  integer :: ka
+
+  !$omp simd
+  do ka = 1, na
+    out(:, ka) = 1d0/l
+  end do
+end subroutine d2_nu_L2_dx2
+
+
+subroutine d2_nu_L2_dxdl(nd, na, xa, xb, l, out)
+  ! Gradient w.r.t. l of nu_L2
+  integer, intent(in)    :: nd, na             ! Dimension and number of points
+  real(8), intent(in)    :: xa(nd, na), xb(nd) ! Points
+  real(8), intent(in)    :: l(nd)              ! Length scales
+  real(8), intent(out)   :: out(nd, na)        ! Output
+
+  integer :: ka
+
+  !$omp simd
+  do ka = 1, na
+    out(:, ka) = -2d0*(xa(:, ka) - xb)/l**3
+  end do
+end subroutine d2_nu_L2_dxdl
+
+
+subroutine d2_nu_L2_dl2(nd, na, xa, xb, l, out)
+  ! Gradient w.r.t. l of nu_L2
+  integer, intent(in)    :: nd, na             ! Dimension and number of points
+  real(8), intent(in)    :: xa(nd, na), xb(nd) ! Points
+  real(8), intent(in)    :: l(nd)              ! Length scales
+  real(8), intent(out)   :: out(nd, na)        ! Output
+
+  integer :: ka
+
+  !$omp simd
+  do ka = 1, na
+    out(:, ka) = 3d0*(xa(:, ka) - xb)**2/l**4
+  end do
+end subroutine d2_nu_L2_dl2
+
+
+subroutine kern_sqexp(nx, nu, out)
   integer, intent(in) :: nx
-  real(8), intent(in) :: xdiff2(nx)
+  real(8), intent(in) :: nu(nx)
   real(8), intent(out) :: out(nx)
 
-  out = exp(-0.5d0*xdiff2)
+  out = exp(-nu)
 end subroutine kern_sqexp
 
 
@@ -65,19 +113,30 @@ subroutine build_K(nd, nxa, nxb, xa, xb, l, K, kern)
   real(8), intent(in)    :: xa(nd, nxa), xb(nd, nxb) ! Points
   real(8), intent(in)    :: l(nd)         ! Length scales
   real(8), intent(inout) :: K(nxa, nxb)   ! Output: kernel matrix
-  external :: kern  ! Kernel function `kern(nx, xdiff2, out)`
+  external :: kern  ! Kernel function `kern(nx, nu, out)`
 
   integer :: kb
-  real(8) :: xdiff2(nxa)
+  real(8) :: nu(nxa)
 
-  !$omp parallel do private(xdiff2)
+  !$omp parallel do private(nu)
   do kb = 1, nxb
-    call xdiff2_L2(nd, nxa, xa, xb(:, kb), l, xdiff2)
-    call kern(nxa, xdiff2, K(:, kb))
+    call nu_L2(nd, nxa, xa, xb(:, kb), l, nu)
+    call kern(nxa, nu, K(:, kb))
   end do
   !$omp end parallel do
 
 end subroutine build_K
 
+
+subroutine build_K_sqexp(nd, nxa, nxb, xa, xb, l, K)
+  ! Build a kernel matrix using a function `kern` to construct columns/rows
+  integer, intent(in)    :: nd, nxa, nxb  ! Dimension and number of points
+  real(8), intent(in)    :: xa(nd, nxa), xb(nd, nxb) ! Points
+  real(8), intent(in)    :: l(nd)         ! Length scales
+  real(8), intent(inout) :: K(nxa, nxb)   ! Output: kernel matrix
+
+  call build_K(nd, nxa, nxb, xa, xb, l, K, kern_sqexp)
+
+end subroutine build_K_sqexp
 
 end module gpfunc

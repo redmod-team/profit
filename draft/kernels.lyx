@@ -141,17 +141,33 @@ RBF kernel
 For an RBF kernel the above formulas simplify to
 \begin_inset Formula 
 \begin{equation}
-k=k(r^{2}(\boldsymbol{x},\boldsymbol{l}))=k\circ r^{2}(\boldsymbol{x},\boldsymbol{l}).
+k=k(\nu(\boldsymbol{x},\boldsymbol{l}))=k\circ\nu(\boldsymbol{x},\boldsymbol{l}).
 \end{equation}
 
 \end_inset
 
-Usually
+The 
+\begin_inset Formula $L2$
+\end_inset
+
+ norm is often used for 
+\begin_inset Formula $\nu$
+\end_inset
+
+,
 \begin_inset Formula 
 \begin{align}
-r^{2}(\boldsymbol{x},\boldsymbol{l}) & =\sum_{i}\frac{x_{i}^{\,2}}{l_{i}^{\,2}},\\
-\frac{\partial}{\partial x_{i}}r^{2}(\boldsymbol{x},\boldsymbol{l}) & =\frac{2x_{i}}{l_{i}^{\,2}},\quad\frac{\partial}{\partial x_{i}\partial x_{j}}r^{2}(\boldsymbol{x},\boldsymbol{l})=\frac{2}{l_{i}^{\,2}}\\
-\frac{\partial}{\partial l_{i}}r^{2}(\boldsymbol{x},\boldsymbol{l}) & =-\frac{2x_{i}^{\,2}}{l_{i}^{\,3}}
+\nu(\boldsymbol{x},\boldsymbol{l}) & =\frac{1}{2}\sum_{i}\frac{x_{i}^{\,2}}{l_{i}^{\,2}},\\
+\frac{\partial\nu}{\partial x_{i}} & =\frac{x_{i}}{l_{i}^{\,2}},\\
+\frac{\partial\nu}{\partial l_{i}} & =-\frac{x_{i}^{\,2}}{l_{i}^{\,3}},
+\end{align}
+
+\end_inset
+
+and only diagonal terms
+\begin_inset Formula 
+\begin{align}
+\frac{\partial\nu}{\partial x_{i}\partial x_{i}}=\frac{1}{l_{i}^{\,2}}, & \quad\frac{\partial\nu}{\partial x_{i}\partial l_{i}}=-2\frac{x_{i}}{l_{i}^{\,3}},\quad\frac{\partial\nu}{\partial l_{i}\partial l_{i}}=3\frac{x_{i}^{\,2}}{l_{i}^{\,4}}.
 \end{align}
 
 \end_inset
@@ -167,7 +183,7 @@ manual autodifferentiation
  we obtain
 \begin_inset Formula 
 \begin{equation}
-\frac{\partial k}{\partial x_{i}}=\frac{\partial k}{\partial r^{2}}\frac{\partial r^{2}}{\partial x_{i}}=\frac{2x_{i}}{l_{i}^{\,2}}\frac{\partial k}{\partial r^{2}}.
+\frac{\partial k}{\partial x_{i}}=\frac{\partial k}{\partial\nu}\frac{\partial\nu}{\partial x_{i}}=\frac{x_{i}}{l_{i}^{\,2}}\frac{\partial k}{\partial\nu}.
 \end{equation}
 
 \end_inset
@@ -175,8 +191,44 @@ manual autodifferentiation
 
 \begin_inset Formula 
 \begin{equation}
-\frac{\partial k}{\partial l_{i}}=\frac{\partial k}{\partial r^{2}}\frac{\partial r^{2}}{\partial l_{i}}=-\frac{2x_{i}^{\,2}}{l_{i}^{\,3}}\frac{\partial k}{\partial r^{2}}.
+\frac{\partial k}{\partial l_{i}}=\frac{\partial k}{\partial\nu}\frac{\partial\nu}{\partial l_{i}}=-\frac{x_{i}^{\,2}}{l_{i}^{\,3}}\frac{\partial k}{\partial\nu}.
 \end{equation}
+
+\end_inset
+
+
+\begin_inset Formula 
+\begin{equation}
+\frac{\partial k}{\partial x_{i}l_{j}}=\frac{\partial}{\partial x_{i}}\left(\frac{\partial k}{\partial\nu}\frac{\partial\nu}{\partial l_{j}}\right)=\frac{\partial\nu}{\partial x_{i}}\frac{\partial^{2}k}{\partial\nu^{2}}\frac{\partial\nu}{\partial l_{j}}+\frac{\partial\nu}{\partial x_{i}}\frac{\partial k}{\partial\nu}\frac{\partial^{2}\nu}{\partial x_{i}\partial l_{j}}.
+\end{equation}
+
+\end_inset
+
+For a squared-exponential kernel we have
+\begin_inset Formula 
+\begin{align}
+k & =e^{-\nu},\\
+\frac{\partial k}{\partial\nu} & =-k,\\
+\frac{\partial k^{2}}{\partial\nu^{2}} & =k.
+\end{align}
+
+\end_inset
+
+If some directions are periodic, we set
+\begin_inset Formula 
+\begin{align}
+\nu(\boldsymbol{x},\boldsymbol{l}) & =\frac{1}{2}\sum_{i\in\bar{P}}\frac{x_{i}^{\,2}}{l_{i}^{\,2}}+\frac{1}{2}\sum_{j\in P}\frac{\sin(x_{j})^{2}}{l_{j}^{\,2}}.\\
+\frac{\partial\nu}{\partial x_{j}} & =\frac{\sin(x_{j})\cos(x_{j})}{l_{j}^{\,2}},\\
+\frac{\partial\nu}{\partial l_{j}} & =-\frac{\sin(x_{j})^{2}}{l_{j}^{\,3}}
+\end{align}
+
+\end_inset
+
+Amongst periodic directions
+\begin_inset Formula 
+\begin{align}
+\frac{\partial\nu}{\partial x_{j}\partial x_{j}}=\frac{\cos(2x_{j})}{l_{j}^{\,2}}, & \quad\frac{\partial\nu}{\partial x_{i}\partial l_{i}}=,\quad\frac{\partial\nu}{\partial l_{i}\partial l_{i}}=3\frac{\sin(x_{j})^{2}}{l_{i}^{\,4}}.
+\end{align}
 
 \end_inset
 

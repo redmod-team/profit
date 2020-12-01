@@ -4,7 +4,7 @@ from scipy.linalg import solve_triangular
 from scipy.sparse.linalg import eigsh
 import time
 import matplotlib.pyplot as plt
-import gpfunc
+from profit.sur.backend.gpfunc import gpfunc
 
 def k(xa, xb, l):
     return np.exp(-(xa-xb)**2 / (2.0*l**2))
@@ -53,19 +53,37 @@ def invert(K, neig=0, tol=1e-10):
         w, Q = eigsh(K, neig, tol=tol)
     return Q.dot(np.diag(1.0/w).dot(Q.T))
 
-def build_K(x, x0, hyp, K):
-    K[:,:] = sklearn.metrics.pairwise.rbf_kernel(x, x0, 0.5/hyp[0]**2)
+
+def build_K(x, x0, l, K):
+    gpfunc.build_k_sqexp(x.T, x0.T, l, K)
+
 
 # negative log-posterior
-def nll_chol(hyp, x, y, build_K=build_K):
-    K = np.zeros((len(x), len(x)))
-    build_K(x, x, hyp[:-1], K)
-    Ky = K + np.abs(hyp[-1])*np.diag(np.ones(len(x)))
+def nll_chol(hyp, x, y, build_K=build_K, jac=False):
+    nd = len(hyp) - 2
+    nx = len(x)
+    K = np.zeros((nx, nx))
+    build_K(x, x, hyp[:-2], K)
+    Ky = hyp[-2]*K + hyp[-1]*np.diag(np.ones(nx))
     L = np.linalg.cholesky(Ky)
     alpha = solve_cholesky(L, y)
-    ret = 0.5*y.T.dot(alpha) + np.sum(np.log(L.diagonal()))
+    nll = 0.5*y.T.dot(alpha) + np.sum(np.log(L.diagonal()))
 
-    return ret.item()
+    if not jac:
+        return nll.item()
+
+    Kyinv = invert_cholesky(L, b)
+    KyinvaaT = np.outer(alpha, alpha) - Kyinv
+
+    dnll = np.empty(nd)
+    dKydli = np.empty(nx, nx)
+    for i in np.arange(nd):
+        for ka in np.arange(nx):
+            for kb in np.arange(nx):
+                dKydli[ka, kb] = (x[i, ka] - x[i, kb])**2/hyp[i]**3*K[ka, kb]
+        dnll[i] = np.sum(inner1d(KyinvaaT, dKydli.T))
+
+    return nll.item(), dnll
 
 
 def nll(hyp, x, y, neig=0, build_K=build_K):
