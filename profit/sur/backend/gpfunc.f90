@@ -1,237 +1,83 @@
 module gpfunc
 implicit none
 
-type Kernel
-    procedure(abstract_kern), pointer, nopass :: kern
-end type Kernel
-
-type Kernel1D
-    procedure(kern_1d), pointer, nopass :: kern
-end type Kernel1D
-
-type CompositeKernel
-    type(Kernel1D), allocatable :: kernels(:)
-end type CompositeKernel
-
-abstract interface
-    subroutine abstract_kern(np, ndim, xa, xb, out)
-        integer, intent(in) :: np, ndim
-        real(8), intent(in) :: xa(np,ndim), xb(ndim)
-        real(8), intent(out) :: out(np)
-    end subroutine abstract_kern
-
-    subroutine kern_1d(np, xa, xb, out)
-        integer, intent(in) :: np
-        real(8), intent(in) :: xa(np), xb
-        real(8), intent(out) :: out(np)
-    end subroutine kern_1d
-end interface
-
 contains
 
-! Build kernel matrix
-subroutine build_K(np, ndim, xa, xb, K, kern)
-  integer, intent(in)    :: np, ndim
-  real(8), intent(in)    :: xa(np, ndim), xb(np, ndim) ! Points and hyperparams
-  real(8), intent(inout) :: K(np, np)  ! Result matrix
-  external :: kern  ! Kernel function
-  real(8) :: kern   ! Have to split these in two lines for f2py
-
-  integer :: ka, kb
-
-  !$omp parallel do
-  do kb = 1, size(xb, 1)
-    do ka = 1, size(xa, 1)
-      K(ka, kb) = kern(ndim, xa(ka, :), xb(kb, :))
-    end do
-  end do
-
-end subroutine build_K
-
-
-subroutine build_K_sqexp(np, ndim, xa, xb, K)
-  integer, intent(in)    :: np, ndim
-  real(8), intent(in)    :: xa(np, ndim)
-  real(8), intent(in)    :: xb(np, ndim)
-  real(8), intent(inout) :: K(np, np)     ! Result matrix
-
-  integer :: ka, kb
-
-  !$omp parallel do
-  do kb = 1, np
-    !$omd simd
-    do ka = 1, np
-      K(ka, kb) = exp(-sum((xa(ka, :) - xb(kb, :))**2/2d0))
-    end do
-  end do
-  !$omp end parallel do
-end subroutine build_K_sqexp
-
-
-subroutine build_K_sqexp_T(np, ndim, xa, xb, K)
-  integer, intent(in)    :: np, ndim
-  real(8), intent(in)    :: xa(ndim, np)
-  real(8), intent(in)    :: xb(ndim, np)
-  real(8), intent(inout) :: K(np, np)     ! Result matrix
-
-  integer :: ka, kb
-
-  !$omp parallel do
-  do kb = 1, np
-    !$omd simd
-    do ka = 1, np
-      K(ka, kb) = exp(-sum((xa(:, ka) - xb(:, kb))**2/2d0))
-    end do
-  end do
-  !$omp end parallel do
-end subroutine build_K_sqexp_T
-
-
-subroutine build_ldKdl_sqexp(np, ndim, xa, xb, dim, dKdl)
-  ! Returns matrix of l_d*dk/dl_d for dimension d
-  integer, intent(in)    :: np, ndim
-  real(8), intent(in)    :: xa(np, ndim)
-  real(8), intent(in)    :: xb(np, ndim)
-  integer, intent(in)    :: dim            ! Dimension towards to differentiate
-  real(8), intent(inout) :: dKdl(np, np)   ! Derivative matrix
-
-  real(8) :: xdiff(np, ndim)
-  integer :: ka, kb
-
-  do kb = 1, np
-    do ka = 1, np
-      dKdl(ka, kb) = -xdiff(ka, dim)*exp(-sum((xa(ka, :) - xb(kb, :))**2/2d0))
-    end do
-  end do
-end subroutine build_ldKdl_sqexp
-
-
-pure function kern_sqexp_elem(ndim, xa, xb)
-    integer, intent(in) :: ndim
-    real(8), intent(in) :: xa(ndim), xb(ndim)
-    real(8) :: kern_sqexp_elem
-
-    kern_sqexp_elem = exp(-sum((xa - xb)**2/2d0))
-
-end function kern_sqexp_elem
-
-
-subroutine kern_sqexp_vec(np, ndim, xa, xb, out)
-    integer, intent(in) :: np, ndim
-    real(8), intent(in) :: xa(np,ndim), xb(ndim)
-    real(8), intent(out) :: out(np)
-
-    integer :: ka
-
-    !$omp simd
-    do ka = 1, np
-        out(ka) = exp(-sum((xa(ka, :) - xb)**2/2d0))
-    end do
-
-end subroutine kern_sqexp_vec
-
-
-subroutine kern_sqexp_vec_T(np, ndim, xa, xb, out)
-  integer, intent(in) :: np, ndim
-  real(8), intent(in) :: xa(ndim, np), xb(ndim)
-  real(8), intent(out) :: out(np)
+subroutine xdiff2_L2(nd, na, xa, xb, l, xdiff2)
+  integer, intent(in)    :: nd, na             ! Dimension and number of points
+  real(8), intent(in)    :: xa(nd, na), xb(nd) ! Points
+  real(8), intent(in)    :: l(nd)              ! Length scales
+  real(8), intent(out)   :: xdiff2(na)         ! Output: squared distance
 
   integer :: ka
 
   !$omp simd
-  do ka = 1, np
-      out(ka) = exp(-sum((xa(:, ka) - xb)**2/2d0))
+  do ka = 1, na
+    xdiff2(ka) = sum(((xa(:, ka) - xb)/l)**2)
   end do
-
-end subroutine kern_sqexp_vec_T
-
-
-! Build kernel matrix
-subroutine build_K_vec(np, ndim, xa, xb, K, kern)
-    integer, intent(in)    :: np, ndim
-    real(8), intent(in)    :: xa(np, ndim), xb(np, ndim) ! Points and hyperparams
-    real(8), intent(inout) :: K(np, np)  ! Result matrix
-    external :: kern  ! Kernel function
-
-    integer :: kb
-
-    !$omp parallel do
-    do kb = 1, np
-        call kern(np, ndim, xa, xb(kb, :), K(:, kb))
-    end do
-    !$omp end parallel do
-
-  end subroutine build_K_vec
+end subroutine xdiff2_L2
 
 
-! Build kernel matrix
-subroutine build_K_vec_T(np, ndim, xa, xb, K, kern)
-    integer, intent(in)    :: np, ndim
-    real(8), intent(in)    :: xa(ndim, np), xb(ndim, np) ! Points and hyperparams
-    real(8), intent(inout) :: K(np, np)  ! Result matrix
-    external :: kern  ! Kernel function
+subroutine d_xdiff2_L2_dx(nd, na, xa, xb, l, out)
+  ! Gradient w.r.t. x of xdiff2_L2
+  integer, intent(in)    :: nd, na             ! Dimension and number of points
+  real(8), intent(in)    :: xa(nd, na), xb(nd) ! Points
+  real(8), intent(in)    :: l(nd)              ! Length scales
+  real(8), intent(out)   :: out(nd, na)        ! Output
 
-    integer :: kb
+  integer :: ka
 
-    !$omp parallel do
-    do kb = 1, np
-        call kern(np, ndim, xa, xb(:, kb), K(:, kb))
-    end do
-    !$omp end parallel do
-
-end subroutine build_K_vec_T
+  !$omp simd
+  do ka = 1, na
+    out(:, ka) = 2d0*(xa(:, ka) - xb)/l**2
+  end do
+end subroutine d_xdiff2_L2_dx
 
 
-!-------------------------------------------------------------------------------
-! Row-wise kernel with derived type and function pointer
-subroutine build_K_der(np, ndim, xa, xb, K, kern)
-    integer, intent(in)    :: np, ndim
-    real(8), intent(in)    :: xa(np, ndim), xb(np, ndim) ! Points and hyperparams
-    real(8), intent(inout) :: K(np, np)  ! Result matrix
-    type(Kernel) :: kern  ! Kernel function container
+subroutine d_xdiff2_L2_dl(nd, na, xa, xb, l, out)
+  ! Gradient w.r.t. l of xdiff2_L2
+  integer, intent(in)    :: nd, na             ! Dimension and number of points
+  real(8), intent(in)    :: xa(nd, na), xb(nd) ! Points
+  real(8), intent(in)    :: l(nd)              ! Length scales
+  real(8), intent(out)   :: out(nd, na)        ! Output
 
-    integer :: kb
+  integer :: ka
 
-    !$omp parallel do
-    do kb = 1, np
-        call kern%kern(np, ndim, xa, xb(kb, :), K(:, kb))
-    end do
-    !$omp end parallel do
-
-end subroutine build_K_der
+  !$omp simd
+  do ka = 1, na
+    out(:, ka) = -2d0*(xa(:, ka) - xb)**2/l**3
+  end do
+end subroutine d_xdiff2_L2_dl
 
 
+subroutine kern_sqexp(nx, xdiff2, out)
+  integer, intent(in) :: nx
+  real(8), intent(in) :: xdiff2(nx)
+  real(8), intent(out) :: out(nx)
 
-subroutine kern_sqexp_1D(np, xa, xb, out)
-    integer, intent(in) :: np
-    real(8), intent(in) :: xa(np), xb
-    real(8), intent(out) :: out(np)
-
-    out = exp(-(xa - xb)**2/2d0)
-
-end subroutine kern_sqexp_1D
+  out = exp(-0.5d0*xdiff2)
+end subroutine kern_sqexp
 
 
-!-------------------------------------------------------------------------------
-! Column-wise kernel with derived type and function pointer
-subroutine build_K_prod(np, ndim, xa, xb, K, kerns)
-    integer, intent(in)    :: np, ndim
-    real(8), intent(in)    :: xa(np, ndim), xb(np, ndim) ! Points and hyperparams
-    real(8), intent(inout) :: K(np, np)  ! Result matrix
-    type(CompositeKernel) :: kerns  ! Kernel function container
+subroutine build_K(nd, nxa, nxb, xa, xb, l, K, kern)
+  ! Build a kernel matrix using a function `kern` to construct columns/rows
+  integer, intent(in)    :: nd, nxa, nxb  ! Dimension and number of points
+  real(8), intent(in)    :: xa(nd, nxa), xb(nd, nxb) ! Points
+  real(8), intent(in)    :: l(nd)         ! Length scales
+  real(8), intent(inout) :: K(nxa, nxb)   ! Output: kernel matrix
+  external :: kern  ! Kernel function `kern(nx, xdiff2, out)`
 
-    real(8) :: col(np)
-    integer :: kb, kd
+  integer :: kb
+  real(8) :: xdiff2(nxa)
 
-    K = 1d0
+  !$omp parallel do private(xdiff2)
+  do kb = 1, nxb
+    call xdiff2_L2(nd, nxa, xa, xb(:, kb), l, xdiff2)
+    call kern(nxa, xdiff2, K(:, kb))
+  end do
+  !$omp end parallel do
 
-    !$omp parallel do private(col)
-    do kd = 1, ndim
-        do kb = 1, np
-            call kerns%kernels(kd)%kern(np, xa(:, kd), xb(kb, kd), col)
-            K(:, kb) = K(:, kb)*col
-        end do
-    end do
-    !$omp end parallel do
+end subroutine build_K
 
-end subroutine build_K_prod
+
+end module gpfunc

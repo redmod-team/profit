@@ -33,7 +33,7 @@ K = 0d0
 call system_clock(count, count_rate, count_max)
 tic = count*1d3/count_rate
 
-call build_K(nd, nx, nx, x, x, K, kern_sqexp, l, 1d0, 1d-12)
+call build_K(nd, nx, nx, x, x, l, K, kern_sqexp)
 
 call system_clock(count, count_rate, count_max)
 toc = count*1d3/count_rate
@@ -41,6 +41,10 @@ print *, 'Time build_K_vec:', toc - tic, 'ms'
 print *, K(5,5), K(nx,nx-5)
 print *, ''
 
+! Nugget regularization
+do kx = 1, nx
+    K(kx, kx) = K(kx, kx) + 1d-10
+end do
 
 call system_clock(count, count_rate, count_max)
 tic = count*1d3/count_rate

@@ -1,7 +1,7 @@
 FC = gfortran
 FFLAGS = -Wall -march=native -O3 -fopenmp -g -fbacktrace
 PYTHON = python3
-SOURCES = gpfunc.f90 kernels.f90 kernels_base.f90
+SOURCES = gpfunc.f90  # kernels.f90 kernels_base.f90
 OBJECTS = $(patsubst %.f90, %.o, $(SOURCES))
 
 all: gpfunc.pyf $(OBJECTS)

@@ -4,6 +4,7 @@ from scipy.linalg import solve_triangular
 from scipy.sparse.linalg import eigsh
 import time
 import matplotlib.pyplot as plt
+import gpfunc
 
 def k(xa, xb, l):
     return np.exp(-(xa-xb)**2 / (2.0*l**2))
@@ -386,4 +387,3 @@ def plot_searching_phase(scores, xtest, next_candidate, ntrain):
     plt.ylabel('score')
     plt.savefig('Active Gaussian Process with '+ str(ntrain) + ' observation(s)')
     plt.show()
-

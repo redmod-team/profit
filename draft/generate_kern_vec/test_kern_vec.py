@@ -37,9 +37,11 @@ kern = exp(-x**2/2)
 dkern = diff(kern, x).simplify()
 d2kern = diff(dkern, x).simplify()
 
-expr = sympy.fcode(kern).replace('x', 'x')
 
-code = template.format(name='sqexp', expr=expr.strip())
 
-with open('kernels_base.f90', 'w') as fout:
-    fout.write(code)
+# expr = sympy.fcode(kern).replace('x', 'x')
+
+# code = template.format(name='sqexp', expr=expr.strip())
+
+# with open('kernels_base.f90', 'w') as fout:
+#     fout.write(code)
