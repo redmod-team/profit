@@ -7,7 +7,7 @@ subroutine nu_L2(nd, na, xa, xb, l, nu)
   integer, intent(in)    :: nd, na             ! Dimension and number of points
   real(8), intent(in)    :: xa(nd, na), xb(nd) ! Points
   real(8), intent(in)    :: l(nd)              ! Length scales
-  real(8), intent(out)   :: nu(na)         ! Output: squared distance
+  real(8), intent(out)   :: nu(na)             ! Output: 1/2*|x|^2
 
   integer :: ka
 

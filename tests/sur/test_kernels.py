@@ -2,10 +2,11 @@ import pytest
 import numpy as np
 import time
 from profit.sur.backend.gpfunc import gpfunc
-from profit.sur.backend.gp_functions import build_K
+from profit.sur.backend.gp_functions import build_K, nll_chol
 
 
 def test_kern_sqexp():
+    '''Fortran sqexp kernel gives correct result'''
     xdiff2 = np.linspace(0, 2, 128)
     tic = time.time()
     k1 = gpfunc.kern_sqexp(xdiff2)
@@ -18,6 +19,7 @@ def test_kern_sqexp():
 
 
 def test_build_K():
+    '''Matrix K is built correctly in Fortran build_K'''
     na = 3
     nb = 2
     xa = np.array([[0.0, 0.0], [0.0, 0.5], [-0.5, 0.1]])
@@ -38,6 +40,47 @@ def test_build_K():
 
     assert np.array_equal(K1, K2)
     assert np.array_equal(K1, K3)
+
+
+def test_grad_nll():
+    '''Gradient of nll matches finite difference approximation'''
+    na = 3
+    nb = 2
+    xa = np.array([[0.0, 0.0], [0.0, 0.5], [-0.5, 0.1]])
+    ya = np.sin(xa[:,0]) + np.cos(xa[:,1])
+    xb = np.array([[0.0, 0.0], [1.4, 1.0]])
+    l = np.array([4.0, 5.0])
+    hyp = np.hstack([l, [1.0, 0.1]])
+
+    K = np.empty((na, na), order='F')
+    build_K(xa, xa, l, K)
+
+    flik = nll_chol(hyp, xa, ya, K, jac=False)
+    flik2, dflik = nll_chol(hyp, xa, ya, K, jac=True)
+
+    # Testing length scales
+    dl = 1e-6
+    lm0 = l + [-0.5*dl, 0]
+    flikm0 = nll_chol(np.hstack([lm0, [1.0, 0.1]]), xa, ya, K, jac=False)
+    lp0 = l + [0.5*dl, 0]
+    flikp0 = nll_chol(np.hstack([lp0, [1.0, 0.1]]), xa, ya, K, jac=False)
+    l0m = l + [0, -0.5*dl]
+    flik0m = nll_chol(np.hstack([l0m, [1.0, 0.1]]), xa, ya, K, jac=False)
+    l0p = l + [0, 0.5*dl]
+    flik0p = nll_chol(np.hstack([l0p, [1.0, 0.1]]), xa, ya, K, jac=False)
+
+    dflik_num = np.array([flikp0-flikm0, flik0p-flik0m])/dl
+    assert(np.allclose(dflik[:-2], dflik_num, rtol=1e-8, atol=1e-9))
+
+    # Testing sig2f and sig2n
+    ds2 = 1e-6
+    flikm0 = nll_chol(np.hstack([l, [1.0-0.5*ds2, 0.1]]), xa, ya, K, jac=False)
+    flikp0 = nll_chol(np.hstack([l, [1.0+0.5*ds2, 0.1]]), xa, ya, K, jac=False)
+    flik0m = nll_chol(np.hstack([l, [1.0, 0.1-0.5*ds2]]), xa, ya, K, jac=False)
+    flik0p = nll_chol(np.hstack([l, [1.0, 0.1+0.5*ds2]]), xa, ya, K, jac=False)
+
+    dflik_num = np.array([flikp0-flikm0, flik0p-flik0m])/ds2
+    assert(np.allclose(dflik[-2:], dflik_num, rtol=1e-8, atol=1e-9))
 
 
 # TODO: test nll_chol

@@ -112,3 +112,15 @@ CPU: Vector extensions support 8-32 FLOPS per clock cycle, i.e.
 Modern GPUs offer up to 30 TFLOPs single-precision but only 500 GFLOPs
 double-precision performance in commodity devices. Testing GPyTorch in
 parallel to a CPU implementation will give an idea on the performance.
+
+Management of data
+------------------
+
+Traditionally, high-performance routines (BLAS/LAPACK) in Fortran require
+the user to allocate data structures and supply them to the routine, which
+reads and writes them. In more recent software this is often hidden from
+the user. Here we take the traditional approach at least to the mid level
+of the API and hide data only where appropriate. For example, the kernel
+matrix is supplied explicitly as an intent(inout) parameter to routines.
+Keeping only a single copy of this matrix is necessary due to memory
+constraints.

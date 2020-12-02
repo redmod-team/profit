@@ -59,10 +59,9 @@ def build_K(x, x0, l, K):
 
 
 # negative log-posterior
-def nll_chol(hyp, x, y, build_K=build_K, jac=False):
+def nll_chol(hyp, x, y, K, build_K=build_K, jac=False):
     nd = len(hyp) - 2
     nx = len(x)
-    K = np.zeros((nx, nx))
     build_K(x, x, hyp[:-2], K)
     Ky = hyp[-2]*K + hyp[-1]*np.diag(np.ones(nx))
     L = np.linalg.cholesky(Ky)
@@ -72,16 +71,20 @@ def nll_chol(hyp, x, y, build_K=build_K, jac=False):
     if not jac:
         return nll.item()
 
-    Kyinv = invert_cholesky(L, b)
-    KyinvaaT = np.outer(alpha, alpha) - Kyinv
+    Kyinv = invert_cholesky(L)
+    KyinvaaT =  Kyinv - np.outer(alpha, alpha)
 
-    dnll = np.empty(nd)
-    dKydli = np.empty(nx, nx)
+    dnll = np.empty(len(hyp))
+    dKy = np.empty((nx, nx))  # for storing derivatives of Ky
     for i in np.arange(nd):
         for ka in np.arange(nx):
-            for kb in np.arange(nx):
-                dKydli[ka, kb] = (x[i, ka] - x[i, kb])**2/hyp[i]**3*K[ka, kb]
-        dnll[i] = np.sum(inner1d(KyinvaaT, dKydli.T))
+            dKy[ka, :] = (x[ka, i] - x[:, i])**2/hyp[i]**3*K[ka, :]
+        dnll[i] = 0.5*np.einsum('jk,kj', KyinvaaT, dKy)
+
+    # Derivatives w.r.t. sig2f and sig2n
+    dnll[-2] = 0.5*np.einsum('jk,kj', KyinvaaT, K)
+    # TODO: Optimize next line
+    dnll[-1] = 0.5*np.einsum('jk,kj', KyinvaaT, np.diag(np.ones(nx)))
 
     return nll.item(), dnll
 
