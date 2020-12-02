@@ -39,7 +39,7 @@ def primes_from_2_to(n):
     :return: primes in 2 <= p < n.
     :rtype: list
     """
-    sieve = np.ones(n // 3 + (n % 6 == 2), dtype=np.bool)
+    sieve = np.ones(n // 3 + (n % 6 == 2), dtype=bool)
     for i in range(1, int(n ** 0.5) // 3 + 1):
         if sieve[i]:
             k = 3 * i + 1 | 1

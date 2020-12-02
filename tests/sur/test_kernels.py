@@ -1,15 +1,17 @@
 import pytest
 import numpy as np
+import matplotlib.pyplot as plt
 import time
 from profit.sur.backend.gpfunc import gpfunc
-from profit.sur.backend.gp_functions import build_K, nll_chol
+from profit.sur.backend.gp_functions import build_K, nll_chol, solve_cholesky
+from profit.util.halton import halton
 
 
 def test_kern_sqexp():
     '''Fortran sqexp kernel gives correct result'''
     xdiff2 = np.linspace(0, 2, 128)
     tic = time.time()
-    k1 = gpfunc.kern_sqexp(xdiff2)
+    k1 = gpfunc.kern_sqexp(0.5*xdiff2)
     print(tic - time.time())
     tic = time.time()
     k2 = np.exp(-0.5*xdiff2)
@@ -81,6 +83,34 @@ def test_grad_nll():
 
     dflik_num = np.array([flikp0-flikm0, flik0p-flik0m])/ds2
     assert(np.allclose(dflik[-2:], dflik_num, rtol=1e-8, atol=1e-9))
+
+
+def test_fit_manual():
+    ntrain = 128
+    xtrain = halton(2, ntrain)
+    K = np.empty((ntrain, ntrain), order='F')
+    l = [0.5, 0.5]
+    sig2f = 1.0
+    sig2n = 1e-8
+    hyp = np.hstack([l, [sig2f, sig2n]])
+
+    ytrain = np.sin(2*xtrain[:,0]) + np.cos(3*xtrain[:,1])
+    build_K(xtrain, xtrain, l, K)
+    Ky = hyp[-2]*K + hyp[-1]*np.diag(np.ones(ntrain))
+    L = np.linalg.cholesky(Ky)
+    alpha = solve_cholesky(L, ytrain)
+
+    n1test = 20
+    n2test = 20
+    ntest = n1test*n2test
+    Xtest = np.mgrid[0:1:1j*n1test, 0:1:1j*n2test]
+    xtest = Xtest.reshape([2,ntest]).T
+
+    KstarT = np.zeros((ntest, ntrain), order='F')
+    build_K(xtest, xtrain, l, KstarT)
+    ymean = KstarT.dot(alpha)
+    yref = np.sin(2*xtest[:,0]) + np.cos(3*xtest[:,1])
+    assert(np.allclose(ymean, yref, rtol=1e-3, atol=1e-3))
 
 
 # TODO: test nll_chol
