@@ -1,6 +1,6 @@
 FC = gfortran
-#FFLAGS = -Wall -march=native -O2 -g -fbacktrace # -ffast-math -fopenmp
-FFLAGS = -Wall -O0 -mno-avx -mno-avx2 -fno-fast-math -g -fbacktrace
+FFLAGS = -Wall -march=native -O3 -fopenmp -ffast-math -g -fbacktrace # -ffast-math -fopenmp
+#FFLAGS = -Wall -O0 -mno-avx -mno-avx2 -fno-fast-math -g -fbacktrace
 SOURCES = gpfunc_bench.f90 bench_inline.f90
 OBJECTS = $(patsubst %.f90, %.o, $(SOURCES))
 

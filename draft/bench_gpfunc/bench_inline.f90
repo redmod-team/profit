@@ -159,7 +159,7 @@ call system_clock(count, count_rate, count_max)
 tic = count*1d3/count_rate
 
 allocate(prod_kern%kernels(ndim))
-prod_kern%kernels(1)%kern => kern_sqexp_1D
+prod_kern%kernels(1)%kern => kern_one_1D
 do kk = 2, ndim
     prod_kern%kernels(kk)%kern => kern_sqexp_1D
 end do
