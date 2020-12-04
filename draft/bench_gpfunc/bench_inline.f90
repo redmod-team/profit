@@ -1,7 +1,8 @@
 program bench_inline
 use gpfunc, only: build_K, build_K_sqexp, build_K_vec, kern_sqexp_vec, &
     kern_sqexp_elem, build_K_sqexp_T, build_K_vec_T, kern_sqexp_vec_T, &
-    build_K_der, Kernel, CompositeKernel, kern_sqexp_1D, build_K_prod
+    build_K_der, Kernel, CompositeKernel, kern_sqexp_1D, build_K_prod, &
+    build_K_interface, SqExpGP, kern_one_1D
 implicit none
 
 integer, parameter :: np = 1024
@@ -15,6 +16,7 @@ real(8) :: tic, toc
 
 type(Kernel) :: kern_holder
 type(CompositeKernel) :: prod_kern
+type(SqExpGP) :: sqexp_gp
 
 integer(8) :: kk
 
@@ -41,6 +43,35 @@ call build_K(np, ndim, x, x, K, kern_sqexp_elem)
 call system_clock(count, count_rate, count_max)
 toc = count*1d3/count_rate
 print *, 'Time build_K:', toc - tic, 'ms'
+print *, K(5,5), K(np,np-5)
+print *, ''
+
+!-------------------------------------------------------------------------------
+! Element-wise kernel with interface
+K = 0d0
+call system_clock(count, count_rate, count_max)
+tic = count*1d3/count_rate
+
+call build_K_interface(np, ndim, xT, xT, K, kern_sqexp_elem)
+
+call system_clock(count, count_rate, count_max)
+toc = count*1d3/count_rate
+print *, 'Time build_K_interface:', toc - tic, 'ms'
+print *, K(5,5), K(np,np-5)
+print *, ''
+
+
+!-------------------------------------------------------------------------------
+! Element-wise kernel with polymorphism
+K = 0d0
+call system_clock(count, count_rate, count_max)
+tic = count*1d3/count_rate
+
+call sqexp_gp%build_K_poly(np, ndim, xT, xT, K)
+
+call system_clock(count, count_rate, count_max)
+toc = count*1d3/count_rate
+print *, 'Time build_K_poly:', toc - tic, 'ms'
 print *, K(5,5), K(np,np-5)
 print *, ''
 
@@ -128,7 +159,8 @@ call system_clock(count, count_rate, count_max)
 tic = count*1d3/count_rate
 
 allocate(prod_kern%kernels(ndim))
-do kk = 1, ndim
+prod_kern%kernels(1)%kern => kern_sqexp_1D
+do kk = 2, ndim
     prod_kern%kernels(kk)%kern => kern_sqexp_1D
 end do
 

@@ -1,6 +1,17 @@
 module gpfunc
 implicit none
 
+type, abstract :: GP
+  contains
+  procedure(kern_elem), deferred, nopass :: kern
+  procedure :: build_K_poly
+end type GP
+
+type, extends(GP) :: SqExpGP
+  contains
+  procedure, nopass :: kern => kern_sqexp_elem
+end type SqExpGP
+
 type Kernel
     procedure(abstract_kern), pointer, nopass :: kern
 end type Kernel
@@ -14,6 +25,12 @@ type CompositeKernel
 end type CompositeKernel
 
 abstract interface
+    pure function kern_elem(ndim, xa, xb)
+      integer, intent(in) :: ndim
+      real(8), intent(in) :: xa(ndim), xb(ndim)
+      real(8) :: kern_elem
+    end function kern_elem
+
     subroutine abstract_kern(np, ndim, xa, xb, out)
         integer, intent(in) :: np, ndim
         real(8), intent(in) :: xa(np,ndim), xb(ndim)
@@ -25,14 +42,33 @@ abstract interface
         real(8), intent(in) :: xa(np), xb
         real(8), intent(out) :: out(np)
     end subroutine kern_1d
+
 end interface
 
 contains
 
+! Build kernel matrix polymorphism
+subroutine build_K_poly(this, np, ndim, xa, xb, K)
+  class(GP) :: this
+  integer, intent(in)    :: np, ndim
+  real(8), intent(in)    :: xa(ndim, np), xb(ndim, np) ! Points and hyperparams
+  real(8), intent(inout) :: K(np, np)  ! Result matrix
+
+  integer :: ka, kb
+
+  !$omp parallel do
+  do kb = 1, size(xb, 2)
+    do ka = 1, size(xa, 2)
+      K(ka, kb) = this%kern(ndim, xa(:, ka), xb(:, kb))
+    end do
+  end do
+
+end subroutine build_K_poly
+
 ! Build kernel matrix
 subroutine build_K(np, ndim, xa, xb, K, kern)
   integer, intent(in)    :: np, ndim
-  real(8), intent(in)    :: xa(np, ndim), xb(np, ndim) ! Points and hyperparams
+  real(8), intent(in)    :: xa(ndim, np), xb(ndim, np) ! Points and hyperparams
   real(8), intent(inout) :: K(np, np)  ! Result matrix
   external :: kern  ! Kernel function
   real(8) :: kern   ! Have to split these in two lines for f2py
@@ -40,9 +76,9 @@ subroutine build_K(np, ndim, xa, xb, K, kern)
   integer :: ka, kb
 
   !$omp parallel do
-  do kb = 1, size(xb, 1)
-    do ka = 1, size(xa, 1)
-      K(ka, kb) = kern(ndim, xa(ka, :), xb(kb, :))
+  do kb = 1, size(xb, 2)
+    do ka = 1, size(xa, 2)
+      K(ka, kb) = kern(ndim, xa(:, ka), xb(:, kb))
     end do
   end do
 
@@ -212,6 +248,16 @@ subroutine kern_sqexp_1D(np, xa, xb, out)
 end subroutine kern_sqexp_1D
 
 
+subroutine kern_one_1D(np, xa, xb, out)
+  integer, intent(in) :: np
+  real(8), intent(in) :: xa(np), xb
+  real(8), intent(out) :: out(np)
+
+  out = 1d0
+
+end subroutine kern_one_1D
+
+
 !-------------------------------------------------------------------------------
 ! Column-wise kernel with derived type and function pointer
 subroutine build_K_prod(np, ndim, xa, xb, K, kerns)
@@ -252,5 +298,31 @@ do kx = 1, nx
    end do
 end do
 end subroutine
+
+
+! Build kernel matrix
+subroutine build_K_interface(np, ndim, xa, xb, K, kern)
+  integer, intent(in)    :: np, ndim
+  real(8), intent(in)    :: xa(ndim, np), xb(ndim, np) ! Points and hyperparams
+  real(8), intent(inout) :: K(np, np)  ! Result matrix
+
+  interface
+    pure function kern(ndim, xa, xb)
+      integer, intent(in) :: ndim
+      real(8), intent(in) :: xa(ndim), xb(ndim)
+      real(8) :: kern
+    end function kern
+  end interface
+
+  integer :: ka, kb
+
+  !$omp parallel do
+  do kb = 1, size(xb, 2)
+    do ka = 1, size(xa, 2)
+      K(ka, kb) = kern(ndim, xa(:, ka), xb(:, kb))
+    end do
+  end do
+
+end subroutine build_K_interface
 
 end module gpfunc

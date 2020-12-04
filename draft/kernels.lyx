@@ -141,7 +141,7 @@ RBF kernel
 For an RBF kernel the above formulas simplify to
 \begin_inset Formula 
 \begin{equation}
-k=k(\nu(\boldsymbol{x},\boldsymbol{l}))=k\circ\nu(\boldsymbol{x},\boldsymbol{l}).
+\bar{k}(\boldsymbol{x},\boldsymbol{l})=k(\nu(\boldsymbol{x},\boldsymbol{l}))=k\circ\nu(\boldsymbol{x},\boldsymbol{l}).
 \end{equation}
 
 \end_inset
