@@ -124,3 +124,11 @@ of the API and hide data only where appropriate. For example, the kernel
 matrix is supplied explicitly as an intent(inout) parameter to routines.
 Keeping only a single copy of this matrix is necessary due to memory
 constraints.
+
+Kernels in Fortran
+------------------
+
+Kernels in Python/NumPy, are about factor 1-3 slower than a native
+implementation in Fortran (draft/fortran_vs_numpy). A short try in Julia
+yielded problems with temporary array allocations which make it much slower
+than either in this implementation.

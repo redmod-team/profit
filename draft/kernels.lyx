@@ -101,7 +101,7 @@ Product kernels with the same kernel in all dimensions
 Say we have a product kernel
 \begin_inset Formula 
 \begin{equation}
-k=k_{1}(x_{1}/l_{1})k(x_{2}/l_{2})\dots
+k=k_{1}(x_{1}\lambda_{1})k(x_{2}\lambda_{2})\dots
 \end{equation}
 
 \end_inset
@@ -109,7 +109,7 @@ k=k_{1}(x_{1}/l_{1})k(x_{2}/l_{2})\dots
 Then
 \begin_inset Formula 
 \begin{equation}
-\frac{\partial k}{\partial x_{i}}=\frac{1}{l_{i}}k_{1}k_{2}\dots k_{i}^{\prime}\dots=\frac{1}{l_{i}}k\frac{k_{i}^{\prime}}{k_{i}}
+\frac{\partial k}{\partial x_{i}}=\lambda_{i}k_{1}k_{2}\dots k_{i}^{\prime}\dots=\lambda_{i}k\frac{k_{i}^{\prime}}{k_{i}}
 \end{equation}
 
 \end_inset
@@ -117,7 +117,7 @@ Then
 and
 \begin_inset Formula 
 \begin{equation}
-\frac{\partial k}{\partial l_{i}}=-\frac{x_{i}}{l_{i}^{\,2}}k_{1}k_{2}\dots k_{i}^{\prime}\dots=-\frac{x_{i}}{l_{i}^{\,2}}k\frac{k_{i}^{\prime}}{k_{i}}
+\frac{\partial k}{\partial\lambda_{i}}=x_{i}k_{1}k_{2}\dots k_{i}^{\prime}\dots=x_{i}k\frac{k_{i}^{\prime}}{k_{i}}
 \end{equation}
 
 \end_inset
@@ -125,7 +125,7 @@ and
 If there's only a single length scale, we have
 \begin_inset Formula 
 \begin{equation}
-\frac{\partial k}{\partial l}=-\frac{1}{l^{2}}\left(x_{1}k_{1}^{\,\prime}k_{2}\dots+x_{2}k_{1}k_{2}^{\,\prime}\dots+\dots\right)=-\frac{1}{l^{2}}k\sum\frac{x_{i}}{k_{i}}k_{i}^{\prime}
+\frac{\partial k}{\partial l}=\left(x_{1}k_{1}^{\,\prime}k_{2}\dots+x_{2}k_{1}k_{2}^{\,\prime}\dots+\dots\right)=k\sum\frac{x_{i}}{k_{i}}k_{i}^{\prime}
 \end{equation}
 
 \end_inset
@@ -157,9 +157,9 @@ The
 ,
 \begin_inset Formula 
 \begin{align}
-\nu(\boldsymbol{x},\boldsymbol{l}) & =\frac{1}{2}\sum_{i}\frac{x_{i}^{\,2}}{l_{i}^{\,2}},\\
-\frac{\partial\nu}{\partial x_{i}} & =\frac{x_{i}}{l_{i}^{\,2}},\\
-\frac{\partial\nu}{\partial l_{i}} & =-\frac{x_{i}^{\,2}}{l_{i}^{\,3}},
+\nu(\boldsymbol{x},\boldsymbol{l}) & =\frac{1}{2}\sum_{i}h_{i}x_{i}^{\,2},\\
+\frac{\partial\nu}{\partial x_{i}} & =x_{i}h_{i},\\
+\frac{\partial\nu}{\partial h_{i}} & =x_{i}^{\,2},
 \end{align}
 
 \end_inset
@@ -167,7 +167,7 @@ The
 and only diagonal terms
 \begin_inset Formula 
 \begin{align}
-\frac{\partial\nu}{\partial x_{i}\partial x_{i}}=\frac{1}{l_{i}^{\,2}}, & \quad\frac{\partial\nu}{\partial x_{i}\partial l_{i}}=-2\frac{x_{i}}{l_{i}^{\,3}},\quad\frac{\partial\nu}{\partial l_{i}\partial l_{i}}=3\frac{x_{i}^{\,2}}{l_{i}^{\,4}}.
+\frac{\partial\nu}{\partial x_{i}\partial x_{i}}=h_{i}, & \quad\frac{\partial\nu}{\partial x_{i}\partial\lambda_{i}}=2x_{i},\quad\frac{\partial\nu}{\partial h_{i}\partial h_{i}}=0.
 \end{align}
 
 \end_inset
@@ -175,7 +175,7 @@ and only diagonal terms
 
 \begin_inset Formula 
 \begin{equation}
-\frac{\partial\nu}{\partial x_{i}\partial x_{i}\partial l_{i}}=-\frac{2}{l_{i}^{\,3}}.
+\frac{\partial\nu}{\partial x_{i}\partial x_{i}\partial h_{i}}=0.
 \end{equation}
 
 \end_inset
@@ -183,9 +183,9 @@ and only diagonal terms
 If some directions are periodic, we set
 \begin_inset Formula 
 \begin{align}
-\nu(\boldsymbol{x},\boldsymbol{l}) & =\frac{1}{2}\sum_{i\in\bar{P}}\frac{x_{i}^{\,2}}{l_{i}^{\,2}}+\frac{1}{2}\sum_{j\in P}\frac{\sin(x_{j})^{2}}{l_{j}^{\,2}}.\\
-\frac{\partial\nu}{\partial x_{j}} & =\frac{\sin(x_{j})\cos(x_{j})}{l_{j}^{\,2}},\\
-\frac{\partial\nu}{\partial l_{j}} & =-\frac{\sin(x_{j})^{2}}{l_{j}^{\,3}}
+\nu(\boldsymbol{x},\boldsymbol{l}) & =\frac{1}{2}\sum_{i\in\bar{P}}h_{i}x_{i}^{\,2}+\frac{1}{2}\sum_{j\in P}h_{j}\sin(x_{j})^{2}.\\
+\frac{\partial\nu}{\partial x_{j}} & =h_{j}\sin(x_{j})\cos(x_{j}),\\
+\frac{\partial\nu}{\partial h_{j}} & =\sin(x_{j})^{2}
 \end{align}
 
 \end_inset
@@ -193,7 +193,7 @@ If some directions are periodic, we set
 Amongst periodic directions
 \begin_inset Formula 
 \begin{align}
-\frac{\partial\nu}{\partial x_{j}\partial x_{j}}=\frac{\cos(2x_{j})}{l_{j}^{\,2}}, & \quad\frac{\partial\nu}{\partial x_{j}\partial l_{j}}=-2\frac{\sin(x_{j})\cos(x_{j})}{l_{j}^{\,3}},\quad\frac{\partial\nu}{\partial l_{j}\partial l_{j}}=3\frac{\sin(x_{j})^{2}}{l_{j}^{\,4}}.
+\frac{\partial\nu}{\partial x_{j}\partial x_{j}}=\lambda_{j}\cos(2x_{j}), & \quad\frac{\partial\nu}{\partial x_{j}\partial h_{j}}=\sin(x_{j})\cos(x_{j}),\quad\frac{\partial\nu}{\partial h_{j}\partial h_{j}}=0.
 \end{align}
 
 \end_inset
@@ -209,7 +209,7 @@ manual autodifferentiation
  we obtain
 \begin_inset Formula 
 \begin{equation}
-\frac{\partial k}{\partial x_{i}}=\frac{\partial k}{\partial\nu}\frac{\partial\nu}{\partial x_{i}}=\frac{x_{i}}{l_{i}^{\,2}}\frac{\partial k}{\partial\nu}.
+\frac{\partial k}{\partial x_{i}}=\frac{\partial k}{\partial\nu}\frac{\partial\nu}{\partial x_{i}}=x_{i}\lambda_{i}\frac{\partial k}{\partial\nu}.
 \end{equation}
 
 \end_inset
@@ -217,7 +217,7 @@ manual autodifferentiation
 
 \begin_inset Formula 
 \begin{equation}
-\frac{\partial k}{\partial l_{i}}=\frac{\partial k}{\partial\nu}\frac{\partial\nu}{\partial l_{i}}=-\frac{x_{i}^{\,2}}{l_{i}^{\,3}}\frac{\partial k}{\partial\nu}.
+\frac{\partial k}{\partial\lambda_{i}}=\frac{\partial k}{\partial\nu}\frac{\partial\nu}{\partial l_{i}}=x_{i}^{\,2}\frac{\partial k}{\partial\nu}.
 \end{equation}
 
 \end_inset
@@ -225,7 +225,7 @@ manual autodifferentiation
 
 \begin_inset Formula 
 \begin{equation}
-\frac{\partial^{2}k}{\partial x_{i}l_{j}}=\frac{\partial}{\partial x_{i}}\left(\frac{\partial k}{\partial\nu}\frac{\partial\nu}{\partial l_{j}}\right)=\frac{\partial\nu}{\partial x_{i}}\frac{\partial^{2}k}{\partial\nu^{2}}\frac{\partial\nu}{\partial l_{j}}+\frac{\partial\nu}{\partial x_{i}}\frac{\partial k}{\partial\nu}\frac{\partial^{2}\nu}{\partial x_{i}\partial l_{j}}.
+\frac{\partial^{2}k}{\partial x_{i}\lambda_{j}}=\frac{\partial}{\partial x_{i}}\left(\frac{\partial k}{\partial\nu}\frac{\partial\nu}{\partial\lambda_{j}}\right)=\frac{\partial\nu}{\partial x_{i}}\frac{\partial^{2}k}{\partial\nu^{2}}\frac{\partial\nu}{\partial l_{j}}+\frac{\partial\nu}{\partial x_{i}}\frac{\partial k}{\partial\nu}\frac{\partial^{2}\nu}{\partial x_{i}\partial\lambda_{j}}.
 \end{equation}
 
 \end_inset
@@ -243,7 +243,7 @@ We use these as entries of a matrix-valued kernel for observation and prediction
  Derivatives over length scales are
 \begin_inset Formula 
 \begin{align}
-\frac{\partial^{3}k}{\partial l_{m}\partial x_{i}\partial x_{j}} & =\frac{\partial^{3}\nu}{\partial l_{m}\partial x_{i}\partial x_{j}}\frac{\partial k}{\partial\nu}+\frac{\partial^{2}\nu}{\partial x_{i}\partial x_{j}}\frac{\partial\nu}{\partial l_{m}}\frac{\partial^{2}k}{\partial\nu^{2}}+\frac{\partial^{2}\nu}{\partial l_{m}\partial x_{i}}\frac{\partial\nu}{\partial x_{j}}\frac{\partial^{2}k}{\partial\nu^{2}}+\frac{\partial\nu}{\partial x_{i}}\frac{\partial^{2}\nu}{\partial l_{m}\partial x_{j}}\frac{\partial^{2}k}{\partial\nu^{2}}+\frac{\partial\nu}{\partial l_{m}}\frac{\partial^{3}k}{\partial\nu^{3}}
+\frac{\partial^{3}k}{\partial h_{m}\partial x_{i}\partial x_{j}} & =\frac{\partial^{3}\nu}{\partial h_{m}\partial x_{i}\partial x_{j}}\frac{\partial k}{\partial\nu}+\frac{\partial^{2}\nu}{\partial x_{i}\partial x_{j}}\frac{\partial\nu}{\partial h_{m}}\frac{\partial^{2}k}{\partial\nu^{2}}+\frac{\partial^{2}\nu}{\partial h_{m}\partial x_{i}}\frac{\partial\nu}{\partial x_{j}}\frac{\partial^{2}k}{\partial\nu^{2}}+\frac{\partial\nu}{\partial x_{i}}\frac{\partial^{2}\nu}{\partial h_{m}\partial x_{j}}\frac{\partial^{2}k}{\partial\nu^{2}}+\frac{\partial\nu}{\partial h_{m}}\frac{\partial^{3}k}{\partial\nu^{3}}
 \end{align}
 
 \end_inset
@@ -268,7 +268,7 @@ So with the
  norm:
 \begin_inset Formula 
 \begin{equation}
-\frac{\partial k}{\partial x_{i}\partial x_{j}}=\frac{1}{l_{i}^{\,2}}\delta_{ij}+\frac{x_{i}}{l_{i}^{\,2}}\frac{x_{j}}{l_{j}^{\,2}}k.
+\frac{\partial k}{\partial x_{i}\partial x_{j}}=\lambda_{i}^{\,2}\delta_{ij}+\lambda_{i}^{\,2}x_{i}\lambda_{j}^{\,2}x_{j}k.
 \end{equation}
 
 \end_inset
@@ -280,7 +280,7 @@ With the periodic
  norm:
 \begin_inset Formula 
 \begin{equation}
-\frac{\partial k}{\partial x_{i}\partial x_{j}}=\frac{\cos(2x_{i})}{l_{i}^{\,2}}\delta_{ij}+\frac{\sin(x_{i})\cos(x_{i})}{l_{i}^{\,2}}\frac{\sin(x_{j})\cos(x_{j})}{l_{j}^{\,2}}k.
+\frac{\partial k}{\partial x_{i}\partial x_{j}}=\lambda_{i}^{\,2}\cos(2x_{i})\delta_{ij}+\lambda_{i}^{\,2}\sin(x_{i})\cos(x_{i})\sin(x_{j})\cos(x_{j})k.
 \end{equation}
 
 \end_inset
@@ -292,7 +292,7 @@ And for a mixed norm with
  being a non-periodic direction,
 \begin_inset Formula 
 \begin{equation}
-\frac{\partial k}{\partial x_{i}\partial x_{j}}=\frac{1}{l_{i}^{\,2}}\delta_{ij}+\frac{1}{l_{i}^{\,2}}\frac{\sin(x_{j})\cos(x_{j})}{l_{j}^{\,2}}k.
+\frac{\partial k}{\partial x_{i}\partial x_{j}}=\lambda_{i}^{\,2}\delta_{ij}+\lambda_{i}^{\,2}x_{i}\lambda_{j}^{\,2}\sin(x_{j})\cos(x_{j})k.
 \end{equation}
 
 \end_inset
@@ -304,7 +304,7 @@ or with
  being a periodic direction
 \begin_inset Formula 
 \begin{equation}
-\frac{\partial k}{\partial x_{i}\partial x_{j}}=\frac{\cos(2x_{i})}{l_{i}^{\,2}}\delta_{ij}+\frac{\sin(x_{j})\cos(x_{j})}{l_{i}^{\,2}}\frac{1}{l_{j}^{\,2}}k.
+\frac{\partial k}{\partial x_{i}\partial x_{j}}=\lambda_{i}^{\,2}\cos(2x_{i})\delta_{ij}+\lambda_{i}^{\,2}\sin(x_{j})\cos(x_{j})\lambda_{j}^{\,2}\sin(x_{j})\cos(x_{j})k.
 \end{equation}
 
 \end_inset
