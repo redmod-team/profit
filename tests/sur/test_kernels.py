@@ -29,7 +29,7 @@ def test_build_K():
     l = np.array([4.0, 5.0])
 
     K1 = np.empty((na, nb), order='F')
-    gpfunc.build_k_sqexp(xa.T, xb.T, l, K1)
+    gpfunc.build_k_sqexp(xa.T, xb.T, 1.0/l**2, K1)
 
     xdiff2 = np.empty((na, nb))
     for ka, xai in enumerate(xa):
@@ -89,7 +89,7 @@ def test_fit_manual():
     ntrain = 128
     xtrain = halton(2, ntrain)
     K = np.empty((ntrain, ntrain), order='F')
-    l = [0.5, 0.5]
+    l = np.array([0.5, 0.5])
     sig2f = 1.0
     sig2n = 1e-8
     hyp = np.hstack([l, [sig2f, sig2n]])

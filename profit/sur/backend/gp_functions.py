@@ -55,7 +55,7 @@ def invert(K, neig=0, tol=1e-10):
 
 
 def build_K(x, x0, l, K):
-    gpfunc.build_k_sqexp(x.T, x0.T, l, K)
+    gpfunc.build_k_sqexp(x.T, x0.T, 1.0/l**2, K)
 
 
 # negative log-posterior
