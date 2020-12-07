@@ -131,4 +131,7 @@ Kernels in Fortran
 Kernels in Python/NumPy, are about factor 1-3 slower than a native
 implementation in Fortran (draft/fortran_vs_numpy). A short try in Julia
 yielded problems with temporary array allocations which make it much slower
-than either in this implementation.
+than either in this implementation. The problem there is that Julia creates
+array copies per default, even over the contiguous axis. This is prevented
+by adding the `@views` macro in front of a function call taking array
+slices `x[:, i]`.

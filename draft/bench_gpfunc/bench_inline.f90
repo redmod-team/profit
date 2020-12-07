@@ -5,8 +5,8 @@ use gpfunc, only: build_K, build_K_sqexp, build_K_vec, kern_sqexp_vec, &
     build_K_interface, SqExpGP, kern_one_1D
 implicit none
 
-integer, parameter :: np = 1024
-integer, parameter :: ndim = 10
+integer, parameter :: np = 4096
+integer, parameter :: ndim = 4
 
 real(8), allocatable :: x(:, :), xT(:,:)
 real(8), allocatable :: K(:, :)
