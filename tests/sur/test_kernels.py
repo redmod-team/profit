@@ -38,7 +38,7 @@ def test_build_K():
 
     K2 = np.exp(-0.5*xdiff2)
     K3 = np.empty((na, nb), order='F')
-    build_K(xa, xb, l, K3)
+    build_K(xa, xb, 1.0/l**2, K3)
 
     assert np.array_equal(K1, K2)
     assert np.array_equal(K1, K3)
@@ -93,10 +93,10 @@ def test_fit_manual():
     l = np.array([0.5, 0.5])
     sig2f = 1.0
     sig2n = 1e-8
-    hyp = np.hstack([l, [sig2f, sig2n]])
+    hyp = np.hstack([1.0/l**2, [sig2f, sig2n]])
 
     ytrain = np.sin(2*xtrain[:,0]) + np.cos(3*xtrain[:,1])
-    build_K(xtrain, xtrain, l, K)
+    build_K(xtrain, xtrain, 1.0/l**2, K)
     Ky = hyp[-2]*K + hyp[-1]*np.diag(np.ones(ntrain))
     L = np.linalg.cholesky(Ky)
     alpha = solve_cholesky(L, ytrain)
@@ -108,7 +108,7 @@ def test_fit_manual():
     xtest = Xtest.reshape([2,ntest]).T
 
     KstarT = np.zeros((ntest, ntrain), order='F')
-    build_K(xtest, xtrain, l, KstarT)
+    build_K(xtest, xtrain, 1.0/l**2, KstarT)
     ymean = KstarT.dot(alpha)
     yref = np.sin(2*xtest[:,0]) + np.cos(3*xtest[:,1])
     assert(np.allclose(ymean, yref, rtol=1e-3, atol=1e-3))
