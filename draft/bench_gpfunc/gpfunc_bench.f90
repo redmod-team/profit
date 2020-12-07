@@ -97,7 +97,7 @@ subroutine build_K_sqexp(np, ndim, xa, xb, K)
   do kb = 1, np
     !$omd simd
     do ka = 1, np
-      K(ka, kb) = exp(-sum((xa(ka, :) - xb(kb, :))**2/2d0))
+      K(ka, kb) = exp(-0.5d0*sum((xa(ka, :) - xb(kb, :))**2))
     end do
   end do
   !$omp end parallel do
@@ -147,7 +147,7 @@ pure function kern_sqexp_elem(ndim, xa, xb)
     real(8), intent(in) :: xa(ndim), xb(ndim)
     real(8) :: kern_sqexp_elem
 
-    kern_sqexp_elem = exp(-sum((xa - xb)**2/2d0))
+    kern_sqexp_elem = exp(-0.5d0*sum((xa - xb)**2))
 
 end function kern_sqexp_elem
 

@@ -3,17 +3,17 @@ implicit none
 
 contains
 
-subroutine nu_L2(nd, na, xa, xb, l2inv, nu)
+subroutine nu_L2(nd, na, xa, xb, th, nu)
   integer, intent(in)    :: nd, na             ! Dimension and number of points
   real(8), intent(in)    :: xa(nd, na), xb(nd) ! Points
-  real(8), intent(in)    :: l2inv(nd)          ! Inverse length scales squared
+  real(8), intent(in)    :: th(nd)             ! Inverse length scales squared
   real(8), intent(out)   :: nu(na)             ! Output: 1/2*|x|^2
 
   integer :: ka
 
   !$omp simd
   do ka = 1, na
-    nu(ka) = sum(l2inv*((xa(:, ka) - xb))**2)/2d0
+    nu(ka) = sum(th*(xa(:, ka) - xb)**2)
   end do
 end subroutine nu_L2
 
@@ -55,7 +55,7 @@ subroutine kern_sqexp(nx, nu, out)
   real(8), intent(in) :: nu(nx)
   real(8), intent(out) :: out(nx)
 
-  out = exp(-nu)
+  out = exp(-0.5d0*nu)
 end subroutine kern_sqexp
 
 
@@ -81,14 +81,44 @@ end subroutine build_K
 
 
 subroutine build_K_sqexp(nd, nxa, nxb, xa, xb, l2inv, K)
-  ! Build a kernel matrix using a function `kern` to construct columns/rows
+  ! Build a kernel matrix for square exp. kernel
   integer, intent(in)    :: nd, nxa, nxb  ! Dimension and number of points
   real(8), intent(in)    :: xa(nd, nxa), xb(nd, nxb) ! Points
   real(8), intent(in)    :: l2inv(nd)     ! Inverse length scales squared
   real(8), intent(inout) :: K(nxa, nxb)   ! Output: kernel matrix
+  external :: kern  ! Kernel function `kern(nx, nu, out)`
 
-  call build_K(nd, nxa, nxb, xa, xb, l2inv, K, kern_sqexp)
+  integer :: kb
+  real(8) :: nu(nxa)
+
+  !$omp parallel do private(nu)
+  do kb = 1, nxb
+    call nu_L2(nd, nxa, xa, xb(:, kb), l2inv, nu)
+    call kern_sqexp(nxa, nu, K(:, kb))
+  end do
+  !$omp end parallel do
 
 end subroutine build_K_sqexp
+
+
+subroutine build_dK_sqexp(nd, nxa, nxb, xa, xb, l2inv, K)
+  ! Build a kernel matrix for square exp. kernel
+  integer, intent(in)    :: nd, nxa, nxb  ! Dimension and number of points
+  real(8), intent(in)    :: xa(nd, nxa), xb(nd, nxb) ! Points
+  real(8), intent(in)    :: l2inv(nd)     ! Inverse length scales squared
+  real(8), intent(inout) :: K(nxa, nxb)   ! Output: kernel matrix
+  external :: kern  ! Kernel function `kern(nx, nu, out)`
+
+  integer :: kb
+  real(8) :: nu(nxa)
+
+  !$omp parallel do private(nu)
+  do kb = 1, nxb
+    call nu_L2(nd, nxa, xa, xb(:, kb), l2inv, nu)
+    call kern_sqexp(nxa, nu, K(:, kb))
+  end do
+  !$omp end parallel do
+
+end subroutine build_dK_sqexp
 
 end module gpfunc

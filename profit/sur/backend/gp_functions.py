@@ -54,8 +54,8 @@ def invert(K, neig=0, tol=1e-10):
     return Q.dot(np.diag(1.0/w).dot(Q.T))
 
 
-def build_K(x, x0, l, K):
-    gpfunc.build_k_sqexp(x.T, x0.T, 1.0/l**2, K)
+def build_K(x, x0, th, K):
+    gpfunc.build_k_sqexp(x.T, x0.T, th, K)
 
 
 # negative log-posterior
@@ -78,7 +78,7 @@ def nll_chol(hyp, x, y, K, build_K=build_K, jac=False):
     dKy = np.empty((nx, nx))  # for storing derivatives of Ky
     for i in np.arange(nd):
         for ka in np.arange(nx):
-            dKy[ka, :] = (x[ka, i] - x[:, i])**2/hyp[i]**3*K[ka, :]
+            dKy[ka, :] = -0.5*(x[ka, i] - x[:, i])**2*K[ka, :]
         dnll[i] = 0.5*np.einsum('jk,kj', KyinvaaT, dKy)
 
     # Derivatives w.r.t. sig2f and sig2n

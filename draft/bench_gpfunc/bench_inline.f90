@@ -6,7 +6,7 @@ use gpfunc, only: build_K, build_K_sqexp, build_K_vec, kern_sqexp_vec, &
 implicit none
 
 integer, parameter :: np = 4096
-integer, parameter :: ndim = 4
+integer, parameter :: ndim = 3
 
 real(8), allocatable :: x(:, :), xT(:,:)
 real(8), allocatable :: K(:, :)
@@ -38,7 +38,21 @@ K = 0d0
 call system_clock(count, count_rate, count_max)
 tic = count*1d3/count_rate
 
-call build_K(np, ndim, x, x, K, kern_sqexp_elem)
+call build_K(np, ndim, xT, xT, K, kern_sqexp_elem)
+
+call system_clock(count, count_rate, count_max)
+toc = count*1d3/count_rate
+print *, 'Time build_K:', toc - tic, 'ms'
+print *, K(5,5), K(np,np-5)
+print *, ''
+
+!-------------------------------------------------------------------------------
+! Element-wise kernel
+K = 0d0
+call system_clock(count, count_rate, count_max)
+tic = count*1d3/count_rate
+
+call build_K(np, ndim, xT, xT, K, kern_sqexp_elem)
 
 call system_clock(count, count_rate, count_max)
 toc = count*1d3/count_rate
