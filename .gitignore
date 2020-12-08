@@ -46,3 +46,5 @@ kernels_base.f90
 *.x
 *.pyf
 *.plist
+a.out
+*.S
