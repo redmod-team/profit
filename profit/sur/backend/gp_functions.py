@@ -66,7 +66,6 @@ def build_dKdth(dim, x, x0, th, K, dK):
 
 # negative log-posterior
 def nll_chol(hyp, x, y, K, dK=None, build_K=build_K):
-    print(hyp)
     nd = len(hyp) - 2
     nx = len(x)
     build_K(x, x, hyp[:-2], K)
@@ -87,8 +86,8 @@ def nll_chol(hyp, x, y, K, dK=None, build_K=build_K):
         dnll[i] = 0.5*np.einsum('jk,kj', KyinvaaT, dK)
 
     # Derivatives w.r.t. sig2f and sig2n
+    # TODO: optimize
     dnll[-2] = 0.5*np.einsum('jk,kj', KyinvaaT, K + hyp[-1]*np.diag(np.ones(nx)))
-    # TODO: Optimize next line
     dnll[-1] = 0.5*hyp[-2]*np.einsum('jk,kj', KyinvaaT, np.diag(np.ones(nx)))
 
     return nll.item(), dnll
