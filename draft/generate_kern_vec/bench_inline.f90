@@ -2,7 +2,7 @@ program bench_inline
 use gpfunc, only: build_K, kern_sqexp
 implicit none
 
-integer, parameter :: nx = 1024
+integer, parameter :: nx = 4096
 integer, parameter :: nd = 4
 
 real(8), allocatable :: x(:, :), y(:), l(:)
@@ -49,9 +49,18 @@ end do
 call system_clock(count, count_rate, count_max)
 tic = count*1d3/count_rate
 
+! This doesn't touch anything above diagonal
+print *, K(1,1:3)
+print *, K(2,1:3)
+print *, K(3,1:3)
 call dpotrf('L', nx, K, nx, info)
+print *, '------------------'
+print *, K(1,1:3)
+print *, K(2,1:3)
+print *, K(3,1:3)
 
 call system_clock(count, count_rate, count_max)
+
 toc = count*1d3/count_rate
 print *, 'Result Cholesky:', info
 print *, 'Time Cholesky:', toc - tic, 'ms'

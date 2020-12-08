@@ -44,6 +44,38 @@ def test_build_K():
     assert np.array_equal(K1, K3)
 
 
+def test_build_dKdth():
+    '''Matrix derivatives dKdth is built correctly in Fortran'''
+    na = 3
+    nb = 2
+    xa = np.array([[0.0, 0.0], [0.0, 0.5], [-0.5, 0.1]])
+    xb = np.array([[0.0, 0.0], [1.4, 1.0]])
+    l = np.array([4.0, 5.0])
+    th = 1.0/l**2
+
+    K = np.empty((na, nb), order='F')
+    dK = np.empty((na, nb), order='F')
+    gpfunc.build_k_sqexp(xa.T, xb.T, th, K)
+    gpfunc.build_dkdth_sqexp(1, xa.T, xb.T, K, dK)
+
+    dth = np.array([1e-6, 0.0])
+    Kp = np.empty((na, nb), order='F')
+    gpfunc.build_k_sqexp(xa.T, xb.T, th + 0.5*dth, Kp)
+    Km = np.empty((na, nb), order='F')
+    gpfunc.build_k_sqexp(xa.T, xb.T, th - 0.5*dth, Km)
+    dKnum = (Kp - Km)/dth[0]
+    assert(np.allclose(dK, dKnum, rtol=1e-8, atol=1e-9))
+
+    gpfunc.build_dkdth_sqexp(2, xa.T, xb.T, K, dK)
+    dth = np.array([0.0, 1e-6])
+    Kp = np.empty((na, nb), order='F')
+    gpfunc.build_k_sqexp(xa.T, xb.T, th + 0.5*dth, Kp)
+    Km = np.empty((na, nb), order='F')
+    gpfunc.build_k_sqexp(xa.T, xb.T, th - 0.5*dth, Km)
+    dKnum = (Kp - Km)/dth[1]
+    assert(np.allclose(dK, dKnum, rtol=1e-8, atol=1e-9))
+
+
 def test_grad_nll():
     '''Gradient of nll matches finite difference approximation'''
     na = 3

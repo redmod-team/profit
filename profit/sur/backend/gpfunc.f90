@@ -3,7 +3,7 @@ implicit none
 
 contains
 
-subroutine nu_L2(nd, na, xa, xb, th, nu)
+pure subroutine nu_L2(nd, na, xa, xb, th, nu)
   integer, intent(in)    :: nd, na             ! Dimension and number of points
   real(8), intent(in)    :: xa(nd, na), xb(nd) ! Points
   real(8), intent(in)    :: th(nd)             ! Inverse length scales squared
@@ -50,7 +50,7 @@ subroutine d2_nu_L2_dx2(nd, na, xa, xb, l2inv, out)
 end subroutine d2_nu_L2_dx2
 
 
-subroutine kern_sqexp(nx, nu, out)
+pure subroutine kern_sqexp(nx, nu, out)
   integer, intent(in) :: nx
   real(8), intent(in) :: nu(nx)
   real(8), intent(out) :: out(nx)
@@ -72,8 +72,11 @@ subroutine build_K(nd, nxa, nxb, xa, xb, l2inv, K, kern)
 
   !$omp parallel do private(nu)
   do kb = 1, nxb
-    call nu_L2(nd, nxa, xa, xb(:, kb), l2inv, nu)
-    call kern(nxa, nu, K(:, kb))
+    ! Variant which constructs only lower diagonal
+    !call nu_L2(nd, nxa-kb+1, xa(:, kb:), xb(:, kb), l2inv, nu)
+    !call kern(nxa-kb+1, nu(:kb), K(kb:, kb))
+     call nu_L2(nd, nxa, xa, xb(:, kb), l2inv, nu)
+     call kern(nxa, nu, K(:, kb))
   end do
   !$omp end parallel do
 
@@ -101,24 +104,23 @@ subroutine build_K_sqexp(nd, nxa, nxb, xa, xb, l2inv, K)
 end subroutine build_K_sqexp
 
 
-subroutine build_dK_sqexp(nd, nxa, nxb, xa, xb, l2inv, K)
+subroutine build_dKdth_sqexp(nd, nxa, nxb, kd, xa, xb, K, dK)
   ! Build a kernel matrix for square exp. kernel
   integer, intent(in)    :: nd, nxa, nxb  ! Dimension and number of points
+  integer, intent(in)    :: kd  ! Dimension towards to differentiate
   real(8), intent(in)    :: xa(nd, nxa), xb(nd, nxb) ! Points
-  real(8), intent(in)    :: l2inv(nd)     ! Inverse length scales squared
-  real(8), intent(inout) :: K(nxa, nxb)   ! Output: kernel matrix
+  real(8), intent(inout) :: K(nxa, nxb)   ! Input/Output: kernel matrix
+  real(8), intent(inout) :: dK(nxa, nxb)  ! Output: derivative of kernel matrix
   external :: kern  ! Kernel function `kern(nx, nu, out)`
 
   integer :: kb
-  real(8) :: nu(nxa)
 
-  !$omp parallel do private(nu)
+  !$omp parallel do
   do kb = 1, nxb
-    call nu_L2(nd, nxa, xa, xb(:, kb), l2inv, nu)
-    call kern_sqexp(nxa, nu, K(:, kb))
+    dK(:, kb) = -0.5d0*(xb(kd, kb) - xa(kd, :))**2*K(:, kb)
   end do
   !$omp end parallel do
 
-end subroutine build_dK_sqexp
+end subroutine build_dKdth_sqexp
 
 end module gpfunc
