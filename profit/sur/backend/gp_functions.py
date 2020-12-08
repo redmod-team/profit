@@ -58,6 +58,10 @@ def build_K(x, x0, th, K):
     gpfunc.build_k_sqexp(x.T, x0.T, th, K)
 
 
+def build_dKdth(dim, x, x0, th, K, dK):
+    gpfunc.build_dkdth_sqexp(dim+1, x.T, x0.T, K, dK)
+
+
 # negative log-posterior
 def nll_chol(hyp, x, y, K, build_K=build_K, jac=False):
     nd = len(hyp) - 2
@@ -75,10 +79,9 @@ def nll_chol(hyp, x, y, K, build_K=build_K, jac=False):
     KyinvaaT =  Kyinv - np.outer(alpha, alpha)
 
     dnll = np.empty(len(hyp))
-    dKy = np.empty((nx, nx))  # for storing derivatives of Ky
+    dKy = np.empty((nx, nx), order='F')  # for storing derivatives of Ky
     for i in np.arange(nd):
-        for ka in np.arange(nx):
-            dKy[ka, :] = -0.5*(x[ka, i] - x[:, i])**2*K[ka, :]
+        build_dKdth(i, x, x, hyp[:-2], K, dKy)
         dnll[i] = 0.5*np.einsum('jk,kj', KyinvaaT, dKy)
 
     # Derivatives w.r.t. sig2f and sig2n
