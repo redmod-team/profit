@@ -6,6 +6,8 @@ import time
 import matplotlib.pyplot as plt
 from profit.sur.backend.gpfunc import gpfunc
 
+log2pihalf = 0.5*np.log(2.0*np.pi)
+
 def k(xa, xb, l):
     return np.exp(-(xa-xb)**2 / (2.0*l**2))
 
@@ -63,31 +65,31 @@ def build_dKdth(dim, x, x0, th, K, dK):
 
 
 # negative log-posterior
-def nll_chol(hyp, x, y, K, build_K=build_K, jac=False):
+def nll_chol(hyp, x, y, K, dK=None, build_K=build_K):
+    print(hyp)
     nd = len(hyp) - 2
     nx = len(x)
     build_K(x, x, hyp[:-2], K)
-    Ky = hyp[-2]*K + hyp[-1]*np.diag(np.ones(nx))
+    Ky = hyp[-2]*(K + hyp[-1]*np.diag(np.ones(nx)))
     L = np.linalg.cholesky(Ky)
     alpha = solve_cholesky(L, y)
-    nll = 0.5*y.T.dot(alpha) + np.sum(np.log(L.diagonal()))
+    nll = 0.5*y.T.dot(alpha) + np.sum(np.log(L.diagonal())) + nx*log2pihalf
 
-    if not jac:
+    if dK is None:
         return nll.item()
 
     Kyinv = invert_cholesky(L)
     KyinvaaT =  Kyinv - np.outer(alpha, alpha)
 
     dnll = np.empty(len(hyp))
-    dKy = np.empty((nx, nx), order='F')  # for storing derivatives of Ky
     for i in np.arange(nd):
-        build_dKdth(i, x, x, hyp[:-2], K, dKy)
-        dnll[i] = 0.5*np.einsum('jk,kj', KyinvaaT, dKy)
+        build_dKdth(i, x, x, hyp[:-2], K, dK)
+        dnll[i] = 0.5*np.einsum('jk,kj', KyinvaaT, dK)
 
     # Derivatives w.r.t. sig2f and sig2n
-    dnll[-2] = 0.5*np.einsum('jk,kj', KyinvaaT, K)
+    dnll[-2] = 0.5*np.einsum('jk,kj', KyinvaaT, K + hyp[-1]*np.diag(np.ones(nx)))
     # TODO: Optimize next line
-    dnll[-1] = 0.5*np.einsum('jk,kj', KyinvaaT, np.diag(np.ones(nx)))
+    dnll[-1] = 0.5*hyp[-2]*np.einsum('jk,kj', KyinvaaT, np.diag(np.ones(nx)))
 
     return nll.item(), dnll
 

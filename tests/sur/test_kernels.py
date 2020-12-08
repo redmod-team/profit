@@ -2,6 +2,7 @@ import pytest
 import numpy as np
 import matplotlib.pyplot as plt
 import time
+from scipy.optimize import minimize
 from profit.sur.backend.gpfunc import gpfunc
 from profit.sur.backend.gp_functions import build_K, nll_chol, solve_cholesky
 from profit.util.halton import halton
@@ -87,36 +88,36 @@ def test_grad_nll():
     hyp = np.hstack([l**(-2), [1.0, 0.1]])
 
     K = np.empty((na, na), order='F')
+    dK = np.empty((na, na), order='F')
     build_K(xa, xa, l**(-2), K)
 
-    flik = nll_chol(hyp, xa, ya, K, jac=False)
-    flik2, dflik = nll_chol(hyp, xa, ya, K, jac=True)
+    flik = nll_chol(hyp, xa, ya, K)
+    flik2, dflik = nll_chol(hyp, xa, ya, K, dK=dK)
 
     # Testing length scales
     dl = 1e-6
     lm0 = l**(-2) + [-0.5*dl, 0]
-    flikm0 = nll_chol(np.hstack([lm0, [1.0, 0.1]]), xa, ya, K, jac=False)
+    flikm0 = nll_chol(np.hstack([lm0, [1.0, 0.1]]), xa, ya, K)
     lp0 = l**(-2) + [0.5*dl, 0]
-    flikp0 = nll_chol(np.hstack([lp0, [1.0, 0.1]]), xa, ya, K, jac=False)
+    flikp0 = nll_chol(np.hstack([lp0, [1.0, 0.1]]), xa, ya, K)
     l0m = l**(-2) + [0, -0.5*dl]
-    flik0m = nll_chol(np.hstack([l0m, [1.0, 0.1]]), xa, ya, K, jac=False)
+    flik0m = nll_chol(np.hstack([l0m, [1.0, 0.1]]), xa, ya, K)
     l0p = l**(-2) + [0, 0.5*dl]
-    flik0p = nll_chol(np.hstack([l0p, [1.0, 0.1]]), xa, ya, K, jac=False)
+    flik0p = nll_chol(np.hstack([l0p, [1.0, 0.1]]), xa, ya, K)
 
     dflik_num = np.array([flikp0-flikm0, flik0p-flik0m])/dl
     assert(np.allclose(dflik[:-2], dflik_num, rtol=1e-8, atol=1e-9))
 
     # Testing sig2f and sig2n
     ds2 = 1e-6
-    flikm0 = nll_chol(np.hstack([l**(-2), [1.0-0.5*ds2, 0.1]]), xa, ya, K, jac=False)
-    flikp0 = nll_chol(np.hstack([l**(-2), [1.0+0.5*ds2, 0.1]]), xa, ya, K, jac=False)
-    flik0m = nll_chol(np.hstack([l**(-2), [1.0, 0.1-0.5*ds2]]), xa, ya, K, jac=False)
-    flik0p = nll_chol(np.hstack([l**(-2), [1.0, 0.1+0.5*ds2]]), xa, ya, K, jac=False)
+    flikm0 = nll_chol(np.hstack([l**(-2), [1.0-0.5*ds2, 0.1]]), xa, ya, K)
+    flikp0 = nll_chol(np.hstack([l**(-2), [1.0+0.5*ds2, 0.1]]), xa, ya, K)
+    flik0m = nll_chol(np.hstack([l**(-2), [1.0, 0.1-0.5*ds2]]), xa, ya, K)
+    flik0p = nll_chol(np.hstack([l**(-2), [1.0, 0.1+0.5*ds2]]), xa, ya, K)
 
     dflik_num = np.array([flikp0-flikm0, flik0p-flik0m])/ds2
     assert(np.allclose(dflik[-2:], dflik_num, rtol=1e-8, atol=1e-9))
 
-test_grad_nll()
 
 def test_fit_manual():
     ntrain = 128
@@ -144,6 +145,35 @@ def test_fit_manual():
     ymean = KstarT.dot(alpha)
     yref = np.sin(2*xtest[:,0]) + np.cos(3*xtest[:,1])
     assert(np.allclose(ymean, yref, rtol=1e-3, atol=1e-3))
+
+
+def test_optim():
+    # TODO
+    ntrain = 128
+    xtrain = halton(2, ntrain)
+    K = np.empty((ntrain, ntrain), order='F')
+    dK = np.empty((ntrain, ntrain), order='F')
+    l = np.array([0.5, 0.5])
+    sig2f = 1.0
+    sig2n = 1e-8
+    hyp = np.hstack([1.0/l**2, [sig2f, sig2n/sig2f]])
+
+    ytrain = np.sin(2*xtrain[:,0]) + np.cos(3*xtrain[:,1])
+
+    loghyp0 = np.log10(hyp)
+
+    def cost(loghyp):
+        h = 10**loghyp
+        val, jac = nll_chol(h, xtrain, ytrain, K, dK)
+        return val, h*np.log(10.0)*jac
+
+
+    minimize(
+        cost, loghyp0, method='L-BFGS-B', jac=True, bounds=(
+            (-2, 2), (-2, 2), (-2, 2), (-8, 0)
+        )
+    )
+
 
 
 # TODO: test nll_chol

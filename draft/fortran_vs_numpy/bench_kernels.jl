@@ -70,15 +70,16 @@ xb = xa
 K = zeros((na, nb))
 ##
 @time build_K_elem!(K, xa, xb, l, kern_sqexp_elem, nu_L2_elem)
+#@code_native build_K_elem!(K, xa, xb, l, kern_sqexp_elem, nu_L2_elem)
 ##
-# @btime build_K!(K, xa, xb, l, kern_sqexp!, nu_L2!)
+@time build_K!(K, xa, xb, l, kern_sqexp!, nu_L2!)
 ##
 # @btime @views K = [kern_sqexp_elem(nu_L2_index(xa, xb, ka, kb, l)) for ka in axes(xa, 2), kb in axes(xb, 2)]
 # print()
 ##
-using KernelFunctions
+# using KernelFunctions
 
-k₁ = SqExponentialKernel()
-##
-@time kernelmatrix!(K₁,k₁,xa,obsdim=2)
-print()
+# k₁ = SqExponentialKernel()
+# ##
+# @time kernelmatrix!(K₁,k₁,xa,obsdim=2)
+# print()
