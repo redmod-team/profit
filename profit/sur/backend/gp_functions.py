@@ -4,6 +4,9 @@ from scipy.linalg import solve_triangular
 from scipy.sparse.linalg import eigsh
 import time
 import matplotlib.pyplot as plt
+from profit.sur.backend.gpfunc import gpfunc
+
+log2pihalf = 0.5*np.log(2.0*np.pi)
 
 def k(xa, xb, l):
     return np.exp(-(xa-xb)**2 / (2.0*l**2))
@@ -52,19 +55,42 @@ def invert(K, neig=0, tol=1e-10):
         w, Q = eigsh(K, neig, tol=tol)
     return Q.dot(np.diag(1.0/w).dot(Q.T))
 
-def build_K(x, x0, hyp, K):
-    K[:,:] = sklearn.metrics.pairwise.rbf_kernel(x, x0, 0.5/hyp[0]**2)
+
+def build_K(x, x0, th, K):
+    gpfunc.build_k_sqexp(x.T, x0.T, th, K)
+
+
+def build_dKdth(dim, x, x0, th, K, dK):
+    gpfunc.build_dkdth_sqexp(dim+1, x.T, x0.T, K, dK)
+
 
 # negative log-posterior
-def nll_chol(hyp, x, y, build_K=build_K):
-    K = np.zeros((len(x), len(x)))
-    build_K(x, x, hyp[:-1], K)
-    Ky = K + np.abs(hyp[-1])*np.diag(np.ones(len(x)))
+def nll_chol(hyp, x, y, K, dK=None, build_K=build_K):
+    nd = len(hyp) - 2
+    nx = len(x)
+    build_K(x, x, hyp[:-2], K)
+    Ky = hyp[-2]*(K + hyp[-1]*np.diag(np.ones(nx)))
     L = np.linalg.cholesky(Ky)
     alpha = solve_cholesky(L, y)
-    ret = 0.5*y.T.dot(alpha) + np.sum(np.log(L.diagonal()))
+    nll = 0.5*y.T.dot(alpha) + np.sum(np.log(L.diagonal())) + nx*log2pihalf
 
-    return ret.item()
+    if dK is None:
+        return nll.item()
+
+    Kyinv = invert_cholesky(L)
+    KyinvaaT =  Kyinv - np.outer(alpha, alpha)
+
+    dnll = np.empty(len(hyp))
+    for i in np.arange(nd):
+        build_dKdth(i, x, x, hyp[:-2], K, dK)
+        dnll[i] = 0.5*np.einsum('jk,kj', KyinvaaT, dK)
+
+    # Derivatives w.r.t. sig2f and sig2n
+    # TODO: optimize
+    dnll[-2] = 0.5*np.einsum('jk,kj', KyinvaaT, K + hyp[-1]*np.diag(np.ones(nx)))
+    dnll[-1] = 0.5*hyp[-2]*np.einsum('jk,kj', KyinvaaT, np.diag(np.ones(nx)))
+
+    return nll.item(), dnll
 
 
 def nll(hyp, x, y, neig=0, build_K=build_K):
@@ -386,4 +412,3 @@ def plot_searching_phase(scores, xtest, next_candidate, ntrain):
     plt.ylabel('score')
     plt.savefig('Active Gaussian Process with '+ str(ntrain) + ' observation(s)')
     plt.show()
-

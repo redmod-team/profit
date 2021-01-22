@@ -75,6 +75,10 @@
 
 \begin_body
 
+\begin_layout Section
+Kernels
+\end_layout
+
 \begin_layout Standard
 \begin_inset FormulaMacro
 \newcommand{\d}{\mathrm{d}}
@@ -90,7 +94,7 @@ The original idea was to support arbitrary combinations of kernels in a
  realize and still not extremely fast in a compiled language.
  The easiest solution would be an array of function pointers in C.
  Even there, the function call overhead would be significant without inlining.
- So to capture 90% of use cases, the default is to support at first
+ So to capture 90% of use cases, we support only
 \end_layout
 
 \begin_layout Itemize
@@ -105,7 +109,7 @@ Product kernels with the same kernel in all dimensions
 Say we have a product kernel
 \begin_inset Formula 
 \begin{equation}
-k=k_{1}(x_{1}/l_{1})k(x_{2}/l_{2})\dots
+k=k_{1}(x_{1}\lambda_{1})k(x_{2}\lambda_{2})\dots
 \end{equation}
 
 \end_inset
@@ -113,7 +117,7 @@ k=k_{1}(x_{1}/l_{1})k(x_{2}/l_{2})\dots
 Then
 \begin_inset Formula 
 \begin{equation}
-\frac{\partial k}{\partial x_{i}}=\frac{1}{l_{i}}k_{1}k_{2}\dots k_{i}^{\prime}\dots
+\frac{\partial k}{\partial x_{i}}=\lambda_{i}k_{1}k_{2}\dots k_{i}^{\prime}\dots=\lambda_{i}k\frac{k_{i}^{\prime}}{k_{i}}
 \end{equation}
 
 \end_inset
@@ -121,7 +125,7 @@ Then
 and
 \begin_inset Formula 
 \begin{equation}
-\frac{\partial k}{\partial l_{i}}=-\frac{x_{i}}{l_{i}^{\,2}}k_{1}k_{2}\dots k_{i}^{\prime}\dots
+\frac{\partial k}{\partial\lambda_{i}}=x_{i}k_{1}k_{2}\dots k_{i}^{\prime}\dots=x_{i}k\frac{k_{i}^{\prime}}{k_{i}}
 \end{equation}
 
 \end_inset
@@ -129,7 +133,7 @@ and
 If there's only a single length scale, we have
 \begin_inset Formula 
 \begin{equation}
-\frac{\partial k}{\partial l}=-\frac{1}{l^{2}}\left(x_{1}k_{1}^{\,\prime}k_{2}\dots+x_{2}k_{1}k_{2}^{\,\prime}\dots+\dots\right)
+\frac{\partial k}{\partial l}=\left(x_{1}k_{1}^{\,\prime}k_{2}\dots+x_{2}k_{1}k_{2}^{\,\prime}\dots+\dots\right)=k\sum\frac{x_{i}}{k_{i}}k_{i}^{\prime}
 \end{equation}
 
 \end_inset
@@ -156,6 +160,42 @@ Derivative
 \begin{equation}
 \d K=\frac{\partial K}{\partial l_{i}}\d l_{i}
 \end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Details are now found in draft/generate_kern_vec/test_gen_kern.ipynb
+\end_layout
+
+\begin_layout Section
+Likelihood
+\end_layout
+
+\begin_layout Standard
+Value and derivative of the negative log-likelihood are
+\begin_inset Formula 
+\begin{align}
+-2\log p & =\boldsymbol{y}^{T}K_{y}^{-1}\boldsymbol{y}+\log|K_{y}|+n\log2\pi.\\
+-2\frac{\partial}{\partial\theta_{i}}\log p & =-\boldsymbol{y}^{T}K_{y}^{-1}\frac{\partial K_{y}}{\partial\theta_{i}}K_{y}^{-1}\boldsymbol{y}+\mathrm{tr}K_{y}^{-1}\frac{\partial K_{y}}{\partial\theta_{i}}\\
+ & =\mathrm{tr}\left((K_{y}^{-1}-\boldsymbol{\alpha}\boldsymbol{\alpha}^{T})\frac{\partial K_{y}}{\partial\theta_{i}}\right)
+\end{align}
+
+\end_inset
+
+with 
+\begin_inset Formula $\boldsymbol{\alpha}=K_{y}^{-1}\boldsymbol{y}$
+\end_inset
+
+.
+ In indexed notation this means
+\begin_inset Formula 
+\begin{align}
+-2\frac{\partial}{\partial\theta_{i}}\log p & =\sum_{j,k,l}\delta_{jl}\left((K_{y\,jk}^{-1}-a_{j}a_{k})\left(\frac{\partial K_{y}}{\partial\theta_{i}}\right)_{kl}\right)\nonumber \\
+ & =\sum_{j,k}(K_{y\,jk}^{-1}-a_{j}a_{k})\left(\frac{\partial K_{y}}{\partial\theta_{i}}\right)_{kj}.
+\end{align}
 
 \end_inset
 

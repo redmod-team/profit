@@ -10,6 +10,7 @@ Welcome to proFit's documentation!
    :maxdepth: 2
    :caption: Contents:
 
+   design
    modules
    kernels
    codegen

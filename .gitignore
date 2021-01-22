@@ -42,4 +42,9 @@ output.txt
 tests/backend_uqp/libuqp.dll
 examples/mockup/mockup.out
 .vs/
-kernels.f90
+kernels_base.f90
+*.x
+*.pyf
+*.plist
+a.out
+*.S
