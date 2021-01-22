@@ -76,6 +76,14 @@
 \begin_body
 
 \begin_layout Standard
+\begin_inset FormulaMacro
+\newcommand{\d}{\mathrm{d}}
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
 The original idea was to support arbitrary combinations of kernels in a
  product kernel.
  The problem is that this is either slow in a dynamic language or hard to
@@ -122,6 +130,31 @@ If there's only a single length scale, we have
 \begin_inset Formula 
 \begin{equation}
 \frac{\partial k}{\partial l}=-\frac{1}{l^{2}}\left(x_{1}k_{1}^{\,\prime}k_{2}\dots+x_{2}k_{1}k_{2}^{\,\prime}\dots+\dots\right)
+\end{equation}
+
+\end_inset
+
+For NLL:
+\begin_inset Formula 
+\[
+-\log p=\frac{1}{2}y^{T}K_{y}^{-1}y+\frac{1}{2}\log|K_{y}^{-1}|+\frac{n}{2}\log2\pi
+\]
+
+\end_inset
+
+Derivative
+\begin_inset Formula 
+\begin{align}
+-\d\log p & =\frac{1}{2}y^{T}\d K_{y}^{-1}y+\frac{1}{2}\d\log|K_{y}|\nonumber \\
+ & =-\frac{1}{2}y^{T}K_{y}^{-1}\d K_{y}K_{y}^{-1}y+\frac{1}{2}\frac{1}{|K_{y}|}\mathrm{tr}\left(K_{y}\d K_{y}\right)
+\end{align}
+
+\end_inset
+
+
+\begin_inset Formula 
+\begin{equation}
+\d K=\frac{\partial K}{\partial l_{i}}\d l_{i}
 \end{equation}
 
 \end_inset
