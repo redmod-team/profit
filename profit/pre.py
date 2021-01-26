@@ -101,16 +101,14 @@ def get_eval_points(config):
         # match word(int_or_float, int_or_float, optional_int_or_float)
         mat = re.match(r'(\w+)\((\d+(?:\.\d+)?),.(\d+(?:\.\d+)?),?.?(\d+(?:\.\d+)?)?\)', v['kind'])
         kind = mat.group(1)
-        start = float(mat.group(2))
-        end = float(mat.group(3))
-        step = float(mat.group(4)) if mat.lastindex == 4 else 1  # relevant for kind 'Linear' and 'Independent(...)'
+        inputs = tuple(float(entry) for entry in mat.groups()[1:] if entry is not None)
 
         try:
             func = getattr(variable_kinds, util.safe_str(kind))
         except AttributeError:
             raise AttributeError("Variable kind not defined.\n"
                                  "Valid Functions: {}".format(util.get_class_methods(variable_kinds)))
-        x = func(start, end, step, npoints)
+        x = func(*inputs, npoints)
 
         if np.issubdtype(eval_points[k].dtype, np.integer):
             eval_points[k] = np.round(x)

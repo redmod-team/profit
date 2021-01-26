@@ -99,19 +99,21 @@ class Config(OrderedDict):
                 self['output'][k] = self['variables'][k]
 
         # Run configuration
-        run = self['run']
-        if run:
+        try:
+            run = self['run']
             # Shorthand to put cmd direcly into run
             if isinstance(run, str):
                 self['run'] = {'cmd': run}
 
             # Default to single-thread
-            if not 'ntask' in self['run']:
+            if 'ntask' not in self['run']:
                 self['run']['ntask'] = 1
+        except KeyError:
+            pass
 
             # TODO: add options like active_learning and check if e.g. cmd is in run
-        else:
-            raise NameError("No 'run' command found in config file.")
+            #       But don't do it here, but in the run phase.
+            #       So the 'run' directory can be filled without the 'run' command in the config file.
 
         return self
 

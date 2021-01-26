@@ -3,6 +3,8 @@ Created: Fri Jul 26 10:43:08 2019
 @author: Christopher Albert <albert@alumni.tugraz.at>
 """
 
+from os import path
+
 
 def load_txt(filename):
     from numpy import genfromtxt
@@ -39,7 +41,6 @@ def hdf2txt(txtfile, hdffile):
 
 
 def safe_path_to_file(arg, default, valid_extensions=('.yaml', '.py')):
-    from os import path
 
     if path.isfile(arg):
         if arg.endswith(valid_extensions):
