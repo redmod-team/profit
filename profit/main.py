@@ -6,30 +6,19 @@ Created on Wed Sep 12 16:36:34 2018
 @author: ert
 """
 
-import os
 import importlib
-from os import path, mkdir, walk
-
+from os import getcwd, path, chdir
 import sys
-# import chaospy as cp
-from collections import OrderedDict
 
 try:
     from tqdm import tqdm
-    use_tqdm = True
-except:
-    use_tqdm = False
-
-    def tqdm(x):
-        return x
+except ModuleNotFoundError:
+    from profit.util import tqdm_surrogate as tqdm
 
 import profit
 from profit.config import Config
-from profit.util import get_eval_points
-#from profit.uq.backend import ChaosPy
-#from profit.sur.backend import gp
-#from inspect import signature
-#from post import Postprocessor, evaluate_postprocessing
+from profit.util import safe_path_to_file
+from profit.pre import get_eval_points, fill_run_dir
 
 yes = False  # always answer 'y'
 
@@ -47,14 +36,6 @@ def read_input(base_dir):
     return data.view((float, len(data.dtype.names))).T
 
 
-def pre(self):
-    write_input()
-#        if(not isinstance(run.backend, run.PythonFunction)):
-    if not path.exists(self.template_dir):
-        print("Error: template directory {} doesn't exist.".format(self.template_dir))
-    fill_run_dir()
-
-
 def fill_uq(self, krun, content):
     params_fill = SafeDict()
     kp = 0
@@ -64,20 +45,8 @@ def fill_uq(self, krun, content):
     return content.format_map(params_fill)
 
 
-def fill_template(self, krun, out_dir):
-    for root, dirs, files in walk(out_dir):
-        for filename in files:
-            if not self.param_files or filename in self.param_files:
-                filepath = path.join(root, filename)
-                with open(filepath, 'r') as f:
-                    content = f.read()
-                    #content = content.format_map(SafeDict(params))
-                    content = self.fill_uq(krun, content)
-                with open(filepath, 'w') as f:
-                    f.write(content)
-
-
 def print_usage():
+    # TODO: Add options like active learning on/off: Usage: profit <mode> (--option) (base-dir)
     print("Usage: profit <mode> (base-dir)")
     print("Modes:")
     print("pre  ... prepare simulation runs based on templates")
@@ -86,39 +55,53 @@ def print_usage():
 
 
 def main():
-    print(sys.argv) #sys.argv is an array whose values are the entered series of command (ex: sys.argv=['profit','run'])
+    """
+    Main command line interface
+    sys.argv is an array whose values are the entered series of command
+    (e.g.: sys.argv=['profit','run', '--active-learning', '/home/user/example'])
+    """
+
+    """ Get parameters from argv """
+    print(sys.argv)
     if len(sys.argv) < 2:
         print_usage()
         return
     if len(sys.argv) < 3:
-        config_file = os.path.join(os.getcwd(), 'profit.yaml')
+        base_dir_path = getcwd()
+    elif len(sys.argv) < 4:
+        # TODO: add options or everything in yaml?
+        base_dir_path = sys.argv[2]
     else:
-        config_file = os.path.abspath(sys.argv[2])
+        print_usage()
+        return
 
+    """ Instantiate Config class from the given file """
+    config_file = safe_path_to_file(base_dir_path, default='profit.yaml')
     config = Config.from_file(config_file)
 
     sys.path.append(config['base_dir'])
 
-    if(sys.argv[1] == 'pre'):
-        eval_points = get_eval_points(config)
+    if sys.argv[1] == 'pre':
+        """ Get input points ready to fill run directory """
+        eval_points = profit.pre.get_eval_points(config)
 
         try:
-            profit.fill_run_dir(eval_points, template_dir=config['template_dir'],
-                                run_dir=config['run_dir'], overwrite=False)
+            fill_run_dir(eval_points, template_dir=config['template_dir'],
+                         run_dir=config['run_dir'], overwrite=False)
         except RuntimeError:
             question = ("Warning: Run directories in {} already exist "
                         "and will be overwritten. Continue? (y/N) ").format(config['run_dir'])
-            if (yes):
+            if yes:
                 print(question+'y')
             else:
                 answer = input(question)
-                if (not yes) and not (answer == 'y' or answer == 'Y'):
+                if not answer.lower() == 'y':
                     exit()
 
-            profit.fill_run_dir(eval_points, template_dir=config['template_dir'],
-                                run_dir=config['run_dir'], overwrite=True)
+            fill_run_dir(eval_points, template_dir=config['template_dir'],
+                         run_dir=config['run_dir'], overwrite=True)
 
-    elif(sys.argv[1] == 'run'):
+    elif sys.argv[1] == 'run':
         print(read_input(config['base_dir']))
         if config['run']:
             run = profit.run.LocalCommand(config['run']['cmd'], config['run']['ntask'])
@@ -126,7 +109,7 @@ def main():
         else:
             raise RuntimeError('No "run" entry in profit.yaml')
 
-    elif(sys.argv[1] == 'collect'):
+    elif sys.argv[1] == 'collect':
         from numpy import array, empty, nan, savetxt
         from .util import save_txt
         spec = importlib.util.spec_from_file_location('interface',
@@ -135,18 +118,18 @@ def main():
         spec.loader.exec_module(interface)
         data = empty((config['ntrain'], len(config['output'])))
         for krun in range(config['ntrain']):
-            run_dir_single = os.path.join(config['run_dir'], str(krun).zfill(3)) #.zfill(3) is an option that forces krun to have 3 digits
+            run_dir_single = path.join(config['run_dir'], str(krun).zfill(3)) #.zfill(3) is an option that forces krun to have 3 digits
             print(run_dir_single)
             try:
-                os.chdir(run_dir_single)
+                chdir(run_dir_single)
                 data[krun,:] = interface.get_output()
             except:
                 data[krun,:] = nan
             finally:
-                os.chdir(config['base_dir'])
+                chdir(config['base_dir'])
         savetxt('output.txt', data, header=' '.join(config['output']))
 
-    elif(sys.argv[1] == 'fit'):
+    elif sys.argv[1] == 'fit':
         from numpy import loadtxt
         from h5py import File #h5py lets you store huge amounts of numerical data, and easily manipulate that data from NumPy.
         x = loadtxt('input.txt')
@@ -160,7 +143,7 @@ def main():
             #h5f['variables'] = [
             #    v.numpy() for v in fresp.m.variables]
 
-    elif(sys.argv[1] == 'ui'):
+    elif sys.argv[1] == 'ui':
         from profit.ui import app
         app.app.run_server(debug=True)
 
