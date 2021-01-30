@@ -1,6 +1,8 @@
 from os import path, getcwd
+import re
 import yaml
 from collections import OrderedDict
+from profit.util import SafeDict
 
 VALID_FORMATS = ('.yaml', '.py')
 
@@ -53,13 +55,20 @@ class Config(OrderedDict):
 
     def __init__(self, base_dir=getcwd(), **entries):
         super(Config, self).__init__()
-        self['base_dir'] = base_dir
+        self['base_dir'] = path.abspath(base_dir)
         self['template_dir'] = path.join(self['base_dir'], 'template')
         self['run_dir'] = path.join(self['base_dir'], 'run')
         self['command'] = None
         self['runner_backend'] = None
         self['uq'] = {}
         self['interface'] = path.join(self['base_dir'], 'interface.py')
+        self['variables'] = {}
+        self['save'] = None  # TODO: implement saving files as '.txt' or '.hdf'
+        self['surrogate'] = None
+
+        # Not to fill directly in file
+        self['independent'] = {}
+        self['input'] = {}
         self['output'] = {}
         self.update(entries)
 
@@ -89,14 +98,44 @@ class Config(OrderedDict):
                             "Valid file formats: {}".format(filename.split('.')[-1], VALID_FORMATS))
         self.update(entries)
 
-        # Variable configuration
-        # Shorthand to put kind directly into variables
+        """ Variable configuration
+        kind: Independent, Uniform, etc.
+        range: (start, end, step=1) or {'dependent variable': (start, end, step=1)} for output
+        dtype: float64
+        """
         for k, v in self['variables'].items():
             if isinstance(v, str):
-                self['variables'][k] = {'kind': v}
+                # match word(int_or_float, int_or_float, int_or_float)
+                mat = re.match(r'(\w+)\(?(-?\d+(?:\.\d+)?)?,?\s?(-?\d+(?:\.\d+)?)?,?\s?(-?\d+(?:\.\d+)?)?\)?', v)
+                kind = mat.group(1)
+                entries = tuple(float(entry) for entry in mat.groups()[1:] if entry is not None)
 
-            if self['variables'][k]['kind'] == 'Output':
-                self['output'][k] = self['variables'][k]
+                self['variables'][k] = {'kind': kind}
+
+                if kind == 'Output':
+                    # TODO: match arbitrary number of independent variables
+                    mat = re.match(r'.*\((\w+)?[\,,\,\s]?(\w+)?', v)
+                    dependent = tuple(d for d in mat.groups() if d is not None) \
+                        if mat else ()
+                    self['variables'][k]['range'] = {k: None for k in dependent}
+                else:
+                    self['variables'][k]['range'] = entries
+
+            # Process data types
+            if 'dtype' not in self['variables'][k].keys():
+                self['variables'][k]['dtype'] = 'float64'
+
+            # Add to corresponding variables 'output', 'independent' or 'input'
+            kind = self['variables'][k]['kind']
+            kind = kind.lower() if kind in ('Output', 'Independent') else 'input'
+            self[kind][k] = self['variables'][k]
+
+        # Fill range of output vector
+        for k, v in self['output'].items():
+            if not isinstance(v['range'], dict):
+                v['range'] = {d: None for d in v['range']}
+            for d in v['range']:
+                self['output'][k]['range'][d] = self['variables'][d]['range']
 
         # Run configuration
         try:

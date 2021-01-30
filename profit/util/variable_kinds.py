@@ -21,7 +21,7 @@ def linear(start=0, end=1, step=1, size=None):
     return np.arange(start, end, step)
 
 
-def independentrange(start=0, end=1, step=1, size=None):
+def independent(start=0, end=1, step=1, size=None):
     return linear(start, end, step, size)
 
 

@@ -3,7 +3,9 @@ variables:
     u: Uniform(4.7, 5.3)
     v: Uniform(0.55, 0.6)
     w: ActiveLearning(0, 10)
-    r: Independent
-    f: Output
+    r: Independent(0, 1, 0.1)
+    f: Output(r)
+    g: Output(r)
+
 run: 
-    python3 ../../../mockup.py
+    python3 ../mockup.py

@@ -8,7 +8,7 @@ def read_input(run_dir):
 
 
 def collect_output(config, default_interface=False):
-    from numpy import zeros, nan, savetxt
+    from numpy import zeros, arange, nan, savetxt
     from importlib.util import spec_from_file_location, module_from_spec
     try:
         from tqdm import tqdm
@@ -29,7 +29,20 @@ def collect_output(config, default_interface=False):
             name = None
         interface = DefaultInterface(name)
 
-    data = zeros((config['ntrain'], len(config['output'])))
+    # Get vector output
+    # TODO: make this more stable
+    nout = 0
+    for k, v in config['output'].items():
+        nout += 1
+        for d, r in v['range'].items():
+            nout -= 1
+            try:
+                nout += (r[1] - r[0]) / (r[2] if len(r) > 2 else 1)
+            except IndexError:
+                raise RuntimeError("No range specified for independent variable '{}' "
+                                   "which is used for output '{}'.".format(d, k))
+
+    data = zeros((config['ntrain'], max(int(nout), 1)))
 
     kruns = tqdm(range(config['ntrain']))
     for krun in kruns:
@@ -43,8 +56,23 @@ def collect_output(config, default_interface=False):
         except:
             data[krun, :] = nan
         finally:
-            chdir(config['base_dir'])
-    savetxt('output.txt', data, header=' '.join(config['output']))
+            chdir(config['run_dir'])
+
+    # TODO: do this in less code?
+    # Header for output
+    header = []
+    for out, values in config['output'].items():
+        if not values['range']:
+            header.append("{f}".format(f=out))
+        else:
+            for dependent, entries in values['range'].items():
+                if not entries:
+                    header.append("{f}({x})".format(f=out, x=dependent))
+                else:
+                    rng = arange(*entries)
+                    for number in rng:
+                        header.append("{f}({x}={n})".format(f=out, x=dependent, n=round(number, 2)))
+    savetxt('output.txt', data, header=' '.join(header))
 
 
 class DefaultInterface:

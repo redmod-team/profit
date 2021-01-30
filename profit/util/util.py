@@ -22,14 +22,20 @@ def save_txt(filename, data, fmt=None):
 def save_hdf(filename, data):
     from h5py import File
     with File(filename, 'w') as h5f:
-        h5f['data'] = data
+        if isinstance(data, dict):
+            for key, value in data.items():
+                h5f[key] = data[key]
+        else:
+            h5f['data'] = data
 
 
 def load_hdf(filename):
     from h5py import File
     with File(filename, 'r') as h5f:
-        data = h5f['data'][:]
-    return data
+        if len(h5f.keys()) > 1:
+            return hdf2dict(h5f)
+        else:
+            return h5f['data']
 
 
 def txt2hdf(txtfile, hdffile):
@@ -38,6 +44,12 @@ def txt2hdf(txtfile, hdffile):
 
 def hdf2txt(txtfile, hdffile):
     save_txt(txtfile, load_hdf(hdffile))
+
+
+def hdf2dict(dataset):
+    from numpy import array
+    return {key: array(dataset[key]) if dataset[key].ndim > 0 else array(dataset[key]).item()
+            for key in dataset.keys()}
 
 
 def safe_path_to_file(arg, default, valid_extensions=('.yaml', '.py')):
@@ -67,5 +79,19 @@ def get_class_methods(cls):
     return [func for func in dir(cls) if callable(getattr(cls, func)) and not func.startswith("_")]
 
 
+def get_class_attribs(self):
+    return [attr for attr in dir(self) if not callable(getattr(self, attr)) and not attr.startswith('_')]
+
+
 def tqdm_surrogate(x):
     return x
+
+
+def quasirand(ndim=1, npoint=1):
+    from .halton import halton
+    return halton(ndim, npoint)
+
+
+class SafeDict(dict):
+    def __missing__(self, key):
+        return '{' + key + '}'

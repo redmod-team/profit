@@ -90,7 +90,7 @@ def main():
                 print(question+'y')
             else:
                 answer = input(question)
-                if not answer.lower() == 'y':
+                if not answer.lower().startswith('y'):
                     exit()
 
             fill_run_dir(eval_points, template_dir=config['template_dir'],
@@ -122,7 +122,7 @@ def main():
                 print(question+'y')
             else:
                 answer = input(question)
-                if not answer.lower() == 'y':
+                if not answer.lower().startswith('y'):
                     exit()
 
             collect_output(config, default_interface=True)
