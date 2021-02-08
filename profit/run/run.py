@@ -19,7 +19,7 @@ except ImportError:
 try:
     from tqdm import tqdm
 except ModuleNotFoundError:
-    from profit.util import tqdm_surrogate as tqdm
+    def tqdm(x): return x
 
 
 class PythonFunction:
@@ -58,12 +58,14 @@ def spawn(args):
 
 class LocalCommand:
     def __init__(self, command, ntask=1, run_dir='run', base_dir='.'):
-        self.command = ' '.join([os.path.join(base_dir, s) if s.startswith('.') else s for s in command.split()])
-        self.ntask = ntask
+        self.command = ' '.join([os.path.abspath(os.path.join(base_dir, s))
+                                 if s.startswith('.') else s for s in command.split()])
+        self.ntask = min(ntask, mp.cpu_count())
         self.run_dir = run_dir
 
     def start(self):
         p = mp.Pool(self.ntask)
+        print("Running on {} core(s). Available cores: {}".format(self.ntask, mp.cpu_count()))
         subdirs = sorted(os.listdir(self.run_dir))
 
         args = []

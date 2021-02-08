@@ -83,10 +83,6 @@ def get_class_attribs(self):
     return [attr for attr in dir(self) if not callable(getattr(self, attr)) and not attr.startswith('_')]
 
 
-def tqdm_surrogate(x):
-    return x
-
-
 def quasirand(ndim=1, npoint=1):
     from .halton import halton
     return halton(ndim, npoint)
