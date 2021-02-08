@@ -3,17 +3,20 @@ from .util import load_txt
 
 
 def read_input(run_dir):
+    """ Loads data from 'input.txt' into a numpy array. """
     data = load_txt(path.join(run_dir, 'input.txt'))
     return data.view((float, len(data.dtype.names))).T
 
 
 def collect_output(config, default_interface=False):
+    """ Collects simulation results from each run directory into a single output file. """
+
     from numpy import zeros, arange, nan, savetxt
     from importlib.util import spec_from_file_location, module_from_spec
     try:
         from tqdm import tqdm
     except ModuleNotFoundError:
-        from .util import tqdm_surrogate as tqdm
+        def tqdm(x): return x
 
     if not default_interface:
         try:
@@ -76,6 +79,7 @@ def collect_output(config, default_interface=False):
 
 
 class DefaultInterface:
+    """ Fallback interface if it is not provided by the user. """
 
     def __init__(self, name=None):
         self.name = name
