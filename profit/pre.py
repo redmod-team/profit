@@ -22,10 +22,12 @@ def write_input(eval_points, out_dir=''):
 
 def fill_run_dir(eval_points, template_dir='template/', run_dir='run/',
                  overwrite=False):
+    """ Fill each run directory with input data according to template format. """
+
     try:
         from tqdm import tqdm
     except ModuleNotFoundError:
-        from profit.util import tqdm_surrogate as tqdm
+        def tqdm(x): return x
 
     kruns = tqdm(range(eval_points.size))  # run with progress bar
 
@@ -68,6 +70,10 @@ def fill_template(out_dir, params, param_files=None):
 
 
 def get_eval_points(config):
+    """ Create input data as numpy array from config information.
+    Use corresponding variable kinds (e.g. Uniform, Normal, Independent, etc.)
+    """
+
     from profit.util import variable_kinds
     import numpy as np
 

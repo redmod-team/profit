@@ -1,8 +1,7 @@
 from os import path, getcwd
-import re
+from re import match
 import yaml
 from collections import OrderedDict
-from profit.util import SafeDict
 
 VALID_FORMATS = ('.yaml', '.py')
 
@@ -37,6 +36,7 @@ yaml.add_constructor(_mapping_tag, dict_constructor)
 
 
 def load_config_from_py(filename):
+    """ Load the configuration parameters from a python file into dict. """
     from importlib.util import spec_from_file_location, module_from_spec
     spec = spec_from_file_location('f', filename)
     f = module_from_spec(spec)
@@ -45,12 +45,10 @@ def load_config_from_py(filename):
 
 
 class Config(OrderedDict):
-    # TODO: Update docstring
     """
-    UQ configuration class
-    This class provides a dictionary with possible configuration
-    parameters of the RedMod UQ software, including parameters
-    of variation, UQ-backend, and the SLURM configuration
+    Configuration class
+    This class provides a dictionary with possible configuration parameters for
+    simulation, fitting and uncertainty quantification.
     """
 
     def __init__(self, base_dir=getcwd(), **entries):
@@ -83,7 +81,7 @@ class Config(OrderedDict):
 
     @classmethod
     def from_file(cls, filename='profit.yaml'):
-        """ Load configuration from yaml file.
+        """ Load configuration from .yaml or .py file.
         The default filename is profit.yaml """
 
         self = cls(base_dir=path.split(filename)[0])
@@ -106,7 +104,7 @@ class Config(OrderedDict):
         for k, v in self['variables'].items():
             if isinstance(v, str):
                 # match word(int_or_float, int_or_float, int_or_float)
-                mat = re.match(r'(\w+)\(?(-?\d+(?:\.\d+)?)?,?\s?(-?\d+(?:\.\d+)?)?,?\s?(-?\d+(?:\.\d+)?)?\)?', v)
+                mat = match(r'(\w+)\(?(-?\d+(?:\.\d+)?)?,?\s?(-?\d+(?:\.\d+)?)?,?\s?(-?\d+(?:\.\d+)?)?\)?', v)
                 kind = mat.group(1)
                 entries = tuple(float(entry) for entry in mat.groups()[1:] if entry is not None)
 
@@ -114,7 +112,7 @@ class Config(OrderedDict):
 
                 if kind == 'Output':
                     # TODO: match arbitrary number of independent variables
-                    mat = re.match(r'.*\((\w+)?[\,,\,\s]?(\w+)?', v)
+                    mat = match(r'.*\((\w+)?[\,,\,\s]?(\w+)?', v)
                     dependent = tuple(d for d in mat.groups() if d is not None) \
                         if mat else ()
                     self['variables'][k]['range'] = {k: None for k in dependent}

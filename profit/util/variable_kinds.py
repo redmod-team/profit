@@ -17,6 +17,10 @@ def loguniform(start=0, end=1, step=None, size=None):
     return start * np.exp((np.log(end) - np.log(start)) * np.random.random(size))
 
 
+def normal(mu=0, std=1, size=None):
+    return mu + std * np.random.randn(size)
+
+
 def linear(start=0, end=1, step=1, size=None):
     return np.arange(start, end, step)
 
