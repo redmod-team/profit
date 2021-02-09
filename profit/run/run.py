@@ -13,14 +13,14 @@ import multiprocessing as mp
 
 try:
     from profit import config, read_input
-except:
+except ImportError:
     pass
 
 try:
-  from tqdm import tqdm
-  use_tqdm=True
-except:
-  use_tqdm=False
+    from tqdm import tqdm
+except ModuleNotFoundError:
+    def tqdm(x): return x
+
 
 class PythonFunction:
     def __init__(self, function):
@@ -31,10 +31,7 @@ class PythonFunction:
         nrun = config.eval_points.shape[1]
 
         # if present, use progress bar
-        if use_tqdm:
-            kruns = tqdm(range(nrun))
-        else:
-            kruns = range(nrun)
+        kruns = tqdm(range(nrun))
 
         cwd = os.getcwd()
 
@@ -58,16 +55,17 @@ def spawn(args):
                       stdout=open(os.path.join(fulldir,'stdout.txt'),'w'),
                       stderr=open(os.path.join(fulldir,'stderr.txt'),'w'))
 
+
 class LocalCommand:
     def __init__(self, command, ntask=1, run_dir='run', base_dir='.'):
-        # self.command = os.path.abspath(os.path.join(base_dir, command))
-        # TODO: support relative paths consistently
-        self.command = command
-        self.ntask = ntask
+        self.command = ' '.join([os.path.abspath(os.path.join(base_dir, s))
+                                 if s.startswith('.') else s for s in command.split()])
+        self.ntask = min(ntask, mp.cpu_count())
         self.run_dir = run_dir
 
     def start(self):
         p = mp.Pool(self.ntask)
+        print("Running on {} core(s). Available cores: {}".format(self.ntask, mp.cpu_count()))
         subdirs = sorted(os.listdir(self.run_dir))
 
         args = []
@@ -80,11 +78,12 @@ class LocalCommand:
                 args.append((cmd, fulldir))
         p.map(spawn, args)
 
+
 class Slurm:
     def __init__(self, config):
         self.eval_points = read_input(config['run_dir'])
         if config['runner_backend'] == 'slurm':
-          from backend.run.slurm import slurm_backend
+          from .backend.slurm import slurm_backend
           self.backend = slurm_backend()
           if 'slurm' in config:
             self.backend.write_slurm_scripts(num_experiments=self.eval_points.shape[1], slurm_config=config['slurm'],jobcommand=config['run'])
@@ -102,8 +101,9 @@ class Slurm:
         if self.backend is not None:
           self.backend.call_run()
 
+
 class Runner:
     def __init__(self, config):
         if config['run']:
             print(config['run'])
-            return(LocalCommand(config['run']))
+            return LocalCommand(config['run'])
