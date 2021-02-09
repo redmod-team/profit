@@ -1,8 +1,7 @@
-"""
-Created: Mon Jul  8 11:48:24 2019
-@author: Christopher Albert <albert@alumni.tugraz.at>
-"""
+"""Backends for GP surrogate models.
 
+Currently contains custom GP, GPy and GPFlow backends.
+"""
 import numpy as np
 import scipy as sp
 from scipy.optimize import minimize

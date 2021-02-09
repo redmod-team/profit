@@ -1,10 +1,8 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Fri Dec 21 09:27:19 2018
+"""Interfaces for uncertainty quantification.
 
-@author: calbert
+TODO: Refactor UQ part
 """
+
 import os
 from collections import OrderedDict
 from profit.config import Config
@@ -17,7 +15,7 @@ def read_params(filename):
     for param in data:
         if(param[1] == 'Normal'):
             params[param[0]] = Normal(param[2], param[3])
-    
+
 class UQ:
     def __init__(self, config=None, yaml=None):
         from chaospy import (generate_quadrature, orth_ttr, fit_quadrature, E, Std,
@@ -25,7 +23,7 @@ class UQ:
         self.params = OrderedDict()
         self.backend = None
         self.param_files = None
-        
+
         if yaml:
             print('  load configuration from %s'%yaml)
             config = Config.from_file(yaml)
@@ -34,10 +32,10 @@ class UQ:
             if (config['uq']['backend'] == 'ChaosPy'):
               self.backend = ChaosPy(config['uq']['order'])
               # TODO: extend
-              
+
             self.Normal = self.backend.Normal
             self.Uniform = self.backend.Uniform
-              
+
             params = config['uq']['params']
             for pkey in params:
               if params[pkey]['dist'] == 'Uniform':
@@ -45,7 +43,7 @@ class UQ:
                                                  params[pkey]['max'])
             if 'param_files' in config['uq']:
               self.param_files = config['uq']['param_files']
-            
+
         self.template_dir = 'template/'
         self.run_dir = 'run/'
 
@@ -64,8 +62,8 @@ class UQ:
           configuq['backend'] = 'ChaosPy'
           configuq['order'] = self.backend.order
           configuq['sparse'] = self.backend.sparse
-       
-        configuq['params'] = OrderedDict() 
+
+        configuq['params'] = OrderedDict()
         for param in self.params:
           p = self.params[param]
           if isinstance(p,self.backend.Uniform):
@@ -78,7 +76,7 @@ class UQ:
         config['template_dir']=self.template_dir
 
         return config
-    
+
     def write_input(self, run_dir='run/'):
         '''
         write input.txt with parameter combinations to
@@ -86,7 +84,7 @@ class UQ:
         '''
         from numpy import savetxt
         self.eval_points = self.backend.get_eval_points(self.params)
-        savetxt(os.path.join(run_dir, 'input.txt'), 
+        savetxt(os.path.join(run_dir, 'input.txt'),
                 self.eval_points.T, header=' '.join(self.params.keys()))
 
 

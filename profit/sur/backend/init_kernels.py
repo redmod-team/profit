@@ -1,9 +1,8 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Jun  22 14:50:32 2020
+"""Script to initialize kernels via SymPy.
 
-@author: ert
+Running this script generates Fortran code for kernels
+that is written to `kernels_base.f90`. This code has to
+be compiled via `make` subsequently.
 """
 #%%
 from sympy import symbols, sqrt, exp, diff

@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-import json
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
@@ -26,11 +24,11 @@ def generate_table():
             ]
     return html.Table(
         [html.Tr([
-            html.Td(dcc.Graph(id='hist{}'.format(k+2*l), 
+            html.Td(dcc.Graph(id='hist{}'.format(k+2*l),
             figure = {'data': data[k+2*l], 'layout': {}}),
             style={'width': '500px'}) for k in range(2)
         ], style={'height': '300px'}) for l in range(4)],
-        
+
     )
 
 
@@ -65,7 +63,7 @@ app.layout = html.Div(children=[
 
 def gen_callback(k):
     from numpy import array
-    def update_figure(*args):        
+    def update_figure(*args):
         defaultdata = {
             'data': [
                     {
@@ -82,7 +80,7 @@ def gen_callback(k):
         # Update was not triggered at all
         if not ctx.triggered:
             return defaultdata
-        trigger = ctx.triggered[0]    
+        trigger = ctx.triggered[0]
 
         # Reset button triggered update
         if trigger['prop_id'] == 'reset.n_clicks':
@@ -107,10 +105,10 @@ def gen_callback(k):
 for k in range(8):
     app.callback(
         output = Output('hist{}'.format(k), 'figure'),
-        inputs = ( 
+        inputs = (
             [Input('hist{}'.format(l), 'clickData') for l in range(8)]
             + [Input('reset', 'n_clicks')]))(gen_callback(k))
-    
+
 
 if __name__ == '__main__':
     app.run_server(debug=True, host='0.0.0.0')

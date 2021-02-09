@@ -1,8 +1,8 @@
-"""
-Created: Fri Jul 26 10:43:08 2019
-@author: Christopher Albert <albert@alumni.tugraz.at>
-"""
+"""Utility functions.
 
+This file contains functions for loading and saving,
+string processing as well as random sampling.
+"""
 from os import path
 
 

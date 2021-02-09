@@ -1,11 +1,7 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Sep 12 16:36:34 2018
+"""proFit main script.
 
-@author: ert
+This script is called when running the `profit` command.
 """
-
 from os import getcwd
 from sys import path, exit
 from argparse import ArgumentParser, RawTextHelpFormatter
