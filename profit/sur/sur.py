@@ -5,7 +5,6 @@ Created: Mon Jul  8 11:47:38 2019
 
 from abc import ABCMeta, abstractmethod
 
-
 class Surrogate(metaclass=ABCMeta):
     def __init__(self):
         pass
