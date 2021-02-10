@@ -8,26 +8,14 @@ from scipy.optimize import minimize
 from scipy.linalg import solve_triangular
 import matplotlib.pyplot as plt
 from profit.sur import Surrogate
+from .backend.gp_functions import build_K
 
-# try:
-#     import tensorflow as tf
-#     import tensorflow_probability as tfp
-#     import gpflow
-#     from gpflow.utilities import print_summary, set_trainable, to_default_float
-# except:
-#     pass
-
-try:
-    import GPy
-except:
-    pass
-
-from .gp_functions import build_K
 
 def gp_matrix(x0, x1, a, K):
     """Constructs GP covariance matrix between two point tuples x0 and x1"""
     build_K(x0, x1, a[:-1], K)
     K = a[-1]*K
+
 
 def gp_matrix_train(x, a, sigma_n):
     """Constructs GP matrix for training"""
@@ -53,6 +41,7 @@ def gpsolve(Ky, ft):
         lower=False, check_finite=False)
 
     return L, alpha
+
 
 def gp_nll(a, x, y, sigma_n=None):
     """Compute negative log likelihood of GP"""
@@ -192,22 +181,22 @@ class GPSurrogate(Surrogate):
 
         return Kstar.T.dot(self.Kyinv_y)
 
-class GPySurrogate(Surrogate):
-    def __init__(self):
-        # gpflow.reset_default_graph_and_session()
-        self.trained = False
-        pass
-    # TODO
 
-    def train(self, x, y, sigma_n=None, sigma_f=1e-6):
-        self.xtrain = x
-        self.ytrain = y.reshape(-1, 1)
+class GPySurrogate(Surrogate):
+    GPy = __import__('GPy')
+
+    def __init__(self):
+        self.trained = False
+
+    def train(self, x, y, sigma_n=None, sigma_f=1e-6, kernel='RBF'):
+        self.xtrain = x if x.ndim > 1 else x.reshape(-1, 1)
+        self.ytrain = y if y.ndim > 1 else y.reshape(-1, 1)
         self.ymean = np.mean(y)
         self.yvar = np.var(y)
         self.yscale = np.sqrt(self.yvar)
         self.ndim = self.xtrain.shape[-1]
-        self.kern = GPy.kern.RBF(input_dim=self.ndim)
-        self.m = GPy.models.GPRegression(self.xtrain, self.ytrain, self.kern)
+        self.kern = self._select_kernel(kernel)
+        self.m = self.GPy.models.GPRegression(self.xtrain, self.ytrain, self.kern)
         self.m.optimize()
         self.trained = True
 
@@ -220,6 +209,46 @@ class GPySurrogate(Surrogate):
 
     def predict(self, x):
         return self.m.predict(x)
+
+    def plot(self):
+        self.m.plot()
+        plt.show()
+
+    def save_model(self, filename):
+        from profit.util import save_hdf, get_class_attribs
+        attribs = [a for a in get_class_attribs(self)
+                   if a not in ('GPy', 'xtrain', 'ytrain', 'kern')]
+        sur_dict = {attr: getattr(self, attr) for attr in attribs if attr != 'm'}
+        sur_dict['m'] = self.m.to_dict()
+        save_hdf(filename, str(sur_dict))
+
+    @classmethod
+    def load_model(cls, filename):
+        from profit.util import load_hdf
+        sur_dict = eval(load_hdf(filename, as_dict=True)['data'])
+        self = cls()
+
+        for attr, value in sur_dict.items():
+            setattr(self, attr, value
+                    if attr != 'm' else cls.GPy.models.GPRegression.from_dict(value))
+        if self.m:
+            self.xtrain = self.m.X
+            self.ytrain = self.m.Y
+            self.kern = self.m.kern
+
+        return self
+
+    def _select_kernel(self, kernel):
+        if isinstance(kernel, str):
+            if kernel.lower() == 'rbf':
+                return self.GPy.kern.RBF(input_dim=self.ndim)
+            elif kernel.lower() == 'matern52':
+                return self.GPy.kern.Matern52
+            else:
+                return NotImplementedError("Kernel {} is not implemented yet.".format(kernel))
+        elif isinstance(kernel, (list, tuple)):
+            # TODO: add sum and prod kernels
+            pass
 
 
 class GPFlowSurrogate(Surrogate):

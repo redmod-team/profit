@@ -2,8 +2,9 @@
 
 This script is called when running the `profit` command.
 """
-from os import getcwd
-from sys import path, exit
+
+from os import getcwd, path
+import sys
 from argparse import ArgumentParser, RawTextHelpFormatter
 
 try:
@@ -65,7 +66,7 @@ def main():
     config_file = safe_path_to_file(args.base_dir, default='profit.yaml')
     config = Config.from_file(config_file)
 
-    path.append(config['base_dir'])
+    sys.path.append(config['base_dir'])
 
     if args.mode == 'pre':
         from profit.pre import fill_run_dir, get_eval_points
@@ -85,7 +86,7 @@ def main():
                 answer = input(question)
                 if not answer.lower().startswith('y'):
                     print('exit...')
-                    exit()
+                    sys.exit()
 
             fill_run_dir(eval_points, template_dir=config['template_dir'],
                          run_dir=config['run_dir'], overwrite=True)
@@ -118,23 +119,28 @@ def main():
                 answer = input(question)
                 if not answer.lower().startswith('y'):
                     print('exit...')
-                    exit()
+                    sys.exit()
 
             collect_output(config, default_interface=True)
 
     elif args.mode == 'fit':
         from numpy import loadtxt
-        from h5py import File #h5py lets you store huge amounts of numerical data, and easily manipulate that data from NumPy.
-        x = loadtxt('input.txt')
-        y = loadtxt('output.txt')
-        fresp = fit(x, y)
-        with File('profit.hdf5', 'w') as h5f: #creates a file under the name of 'profit.hdf5' having the h5f format with the following information:
-            h5f['xtrain'] = fresp.xtrain
-            h5f['ytrain'] = fresp.ytrain
-            h5f['yscale'] = fresp.yscale
-            h5f['ndim'] = fresp.ndim
-            #h5f['variables'] = [
-            #    v.numpy() for v in fresp.m.variables]
+        from profit.fit import get_surrogate
+
+        x = loadtxt(config['files']['input'])
+        y = loadtxt(config['files']['output'])
+        sur = get_surrogate(config['fit']['surrogate'])
+
+        if config['fit'].get('load'):
+            sur = sur.load_model(path.join(config['base_dir'], config['fit']['load']))
+        else:
+            sur.train(x, y)
+            # TODO: plot_searching_phase
+
+        if config['fit'].get('save'):
+            sur.save_model(path.join(config['base_dir'], config['fit']['save']))
+        if config['fit'].get('plot'):
+            sur.plot()
 
     elif args.mode == 'ui':
         from profit.ui import app

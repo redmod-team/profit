@@ -61,8 +61,15 @@ class Config(OrderedDict):
         self['uq'] = {}
         self['interface'] = path.join(self['base_dir'], 'interface.py')
         self['variables'] = {}
-        self['save'] = None  # TODO: implement saving files as '.txt' or '.hdf'
-        self['surrogate'] = None
+        self['save_format'] = 'txt'  # TODO: implement saving files as '.txt' or '.hdf'
+        self['fit'] = {'surrogate': 'GPy',
+                       'kernel': 'RBF',
+                       'save': False,
+                       'load': False,
+                       'plot_results': False,
+                       'plot_searching_phase': False}
+        self['files'] = {'input': path.join(self['run_dir'], 'input.' + self['save_format']),
+                         'output': path.join(self['run_dir'], 'output.' + self['save_format'])}
 
         # Not to fill directly in file
         self['independent'] = {}
@@ -152,6 +159,12 @@ class Config(OrderedDict):
             #       But don't do it here, but in the run phase.
             #       So the 'run' directory can be filled without the 'run' command in the config file.
 
+        self['files']['input'] = path.join(self['base_dir'], self['files']['input'])
+        self['files']['output'] = path.join(self['base_dir'], self['files']['output'])
+        if self['fit'].get('load'):
+            self['fit']['load'] = path.join(self['base_dir'], self['fit']['load'])
+        if self['fit'].get('save'):
+            self['fit']['save'] = path.join(self['base_dir'], self['fit']['save'])
         return self
 
     def _remove_nones(self,config=None):

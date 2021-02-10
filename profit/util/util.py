@@ -29,10 +29,10 @@ def save_hdf(filename, data):
             h5f['data'] = data
 
 
-def load_hdf(filename):
+def load_hdf(filename, as_dict=False):
     from h5py import File
     with File(filename, 'r') as h5f:
-        if len(h5f.keys()) > 1:
+        if len(h5f.keys()) > 1 or as_dict:
             return hdf2dict(h5f)
         else:
             return h5f['data']
