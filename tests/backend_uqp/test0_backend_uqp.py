@@ -1,43 +1,41 @@
+"""Tests for Fortran UQ code from Roland Preuss
 """
-Created: 2019-04-01
-@author: Christopher Albert <albert@alumni.tugraz.at>
-"""
-
 import os
 import pytest
 import numpy as np
 from time import time
-from fffi import FortranModule
 from profit import uq
 
 
 @pytest.fixture(scope='module')
 def uqp():
+    from fffi import FortranModule
+
     cwd = os.path.dirname(__file__)
     os.chdir(cwd)
 
     fort_mod = FortranModule('uqp', 'mod_unqu')
 
     fort_mod.fdef("""
-      integer :: np, nall, npar, nt, iflag_run, iflag_mod, iflag_pol  
-    
+      integer :: np, nall, npar, nt, iflag_run, iflag_mod, iflag_pol
+
       subroutine allocate_params end
       subroutine init_uq end
-      
+
       subroutine set_legendre_borders(kpar, lower, upper)
         integer, intent(in) :: kpar
         double precision, intent(in) :: lower, upper
       end
-    
+
       subroutine set_hermite_mean_std(kpar, mean0, std)
         integer, intent(in) :: kpar
         double precision, intent(in) :: mean0, std
       end
-      
+
       subroutine pre_uq(axi)
         double precision, intent(inout) :: axi(:,:)
       end
-      
+
       subroutine run_uq end
       """)
 
@@ -46,6 +44,7 @@ def uqp():
     return fort_mod
 
 
+@pytest.mark.skip(reason="Fortran code for UQ currently unavailable")
 def test_hermite_points(uqp):
     """
     Test Hermite quadrature points in 2D

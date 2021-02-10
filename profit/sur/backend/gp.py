@@ -22,21 +22,18 @@ try:
 except:
     pass
 
-from profit.sur.backend.gpfunc import gpfunc
+from .gp_functions import build_K
 
 def gp_matrix(x0, x1, a, K):
     """Constructs GP covariance matrix between two point tuples x0 and x1"""
-    n0 = len(x0)
-    n1 = len(x1)
-    for k0 in range(n0):
-        for k1 in range(n1):
-            K[k0, k1] = a[1]*gpfunc.kern_sqexp(x0[k0, :], x1[k1, :], a)
+    build_K(x0, x1, a[:-1], K)
+    K = a[-1]*K
 
 def gp_matrix_train(x, a, sigma_n):
     """Constructs GP matrix for training"""
     nx = x.shape[0]
 
-    K = np.empty([nx, nx])
+    K = np.empty([nx, nx], order='F')
     gp_matrix(x, x, a, K)
     if sigma_n is None:
         return K
@@ -44,7 +41,7 @@ def gp_matrix_train(x, a, sigma_n):
     if isinstance(sigma_n, np.ndarray):
         sigmatrix = np.diag(sigma_n**2)
     else:
-        sigmatrix = np.diag(np.ones(nx)*sigma_n**2)
+        sigmatrix = np.diag(np.ones(nx, order='F')*sigma_n**2)
 
     return K + sigmatrix
 

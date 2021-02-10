@@ -1,6 +1,4 @@
-import pytest
 import numpy as np
-import matplotlib.pyplot as plt
 import time
 from scipy.optimize import minimize
 from profit.sur.backend.gpfunc import gpfunc

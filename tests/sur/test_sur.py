@@ -4,7 +4,7 @@
 import numpy as np
 import pytest
 
-from profit.sur.backend.gp import GPSurrogate, GPFlowSurrogate
+from profit.sur.backend.gp import GPSurrogate, GPySurrogate
 
 
 def f(x):
@@ -21,7 +21,5 @@ nxtrain = len(xtrain)
 a = np.array([1.0, 1.0])
 
 def test_sur():
-    gps = GPSurrogate()
+    gps = GPySurrogate()
     gps.train(x, y)
-
-test_sur()

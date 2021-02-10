@@ -2,6 +2,9 @@
 #! /usr/bin/python
 
 from setuptools import setup, find_packages
+from distutils.command.build import build
+import sys
+import subprocess
 import fastentrypoints
 
 NAME = 'profit'
@@ -34,6 +37,14 @@ packages = find_packages(exclude=["*.tests", "*.tests.*", "tests.*", "tests"])
 
 install_requires = ['chaospy', 'numpy', 'scipy', 'PyYAML', 'pyccel']
 
+class BuildCommand(build):
+    """Builds modules from Fortran code via f2py."""
+    def run(self):
+        import profit.sur.backend.init_kernels
+        protoc_command = ['make', '-C', 'profit/sur/backend/']
+        if subprocess.call(protoc_command) != 0:
+            sys.exit(-1)
+        build.run(self)  # Default build steps
 
 def setup_package():
     setup(packages=packages,
@@ -41,6 +52,7 @@ def setup_package():
           install_requires=install_requires,
           setup_requires=['pytest-runner'],
           tests_require=['pytest'],
+          cmdclass={'build': BuildCommand},
           **setup_args)
 
 
