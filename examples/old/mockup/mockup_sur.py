@@ -3,8 +3,7 @@
 
 import matplotlib.pyplot as plt
 import numpy as np
-import scipy as sp
-from profit.sur.backend.gp import GPSurrogate
+from profit.sur.gp import GPSurrogate
 
 
 #%% Define some model f(u, v)
@@ -51,7 +50,7 @@ plt.xlabel('u')
 plt.ylabel('f(u,v0)')
 
 #%% Plot likelihood over hyperparameters
-from profit.sur.backend.gp import gp_nll
+from profit.sur.gp import gp_nll
 
 hypaplot = np.empty([100,2])
 hypaplot[:,0] = np.linspace(1.0,4.0,100)

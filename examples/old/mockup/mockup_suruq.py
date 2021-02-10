@@ -3,8 +3,8 @@
 
 import matplotlib.pyplot as plt
 import numpy as np
-from profit.sur.backend.gp import GPSurrogate, GPFlowSurrogate
-from profit.sur.backend.ann import ANNSurrogate
+from profit.sur.gp import GPSurrogate
+
 
 # %% Define some model f(u, v)
 

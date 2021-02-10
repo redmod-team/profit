@@ -1,5 +1,5 @@
 import numpy as np
-from profit.sur.backend.gp import gp_matrix, gp_matrix_train, gpsolve
+from profit.sur.gp import gp_matrix, gp_matrix_train, gpsolve
 
 
 def f(x):

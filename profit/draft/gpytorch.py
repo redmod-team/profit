@@ -2,7 +2,6 @@ import numpy as np
 import torch
 import gpytorch
 
-from profit.sur import Surrogate
 
 class ExactGPModel(gpytorch.models.ExactGP):
     def __init__(self, train_x, train_y, likelihood):

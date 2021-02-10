@@ -19,7 +19,7 @@ yes = False  # always answer 'y'
 
 
 def fit(x, y):
-    from profit.sur.backend.gp import GPySurrogate
+    from profit.sur.gp import GPySurrogate
     fresp = GPySurrogate()
     fresp.train(x, y)
     return fresp
