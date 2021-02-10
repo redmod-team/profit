@@ -1,10 +1,4 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Feb  4 08:34:52 2019
-
-@author: Christopher Albert
-"""
+"""Mockup domain code."""
 import numpy as np
 
 

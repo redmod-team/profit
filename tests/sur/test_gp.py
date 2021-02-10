@@ -1,11 +1,5 @@
-#!/usr/bin/env python
-# coding: utf-8
-
 import numpy as np
-import pytest
-
-from profit.sur.backend.kernels import gp_matrix
-from profit.sur.backend.gp import gp_matrix_train, gpsolve
+from profit.sur.backend.gp import gp_matrix, gp_matrix_train, gpsolve
 
 
 def f(x):
@@ -34,7 +28,7 @@ def test_gp_1D():
     assert np.allclose(alpha2, alpha, rtol=1e-10, atol=1e-10)
     assert np.allclose(alpha3, alpha, rtol=1e-10, atol=1e-10)
 
-    KstarT = np.empty([nx, nxtrain])
+    KstarT = np.empty([nx, nxtrain], order='F')
     gp_matrix(x, xtrain, a, KstarT)
     ypred = KstarT.dot(alpha)
 

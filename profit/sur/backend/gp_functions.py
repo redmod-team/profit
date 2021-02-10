@@ -1,3 +1,7 @@
+"""Functions for custom GPs.
+
+Custom implementations of main routines used for GP regression.
+"""
 import numpy as np
 import sklearn.metrics
 from scipy.linalg import solve_triangular

@@ -1,11 +1,8 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Fri Dec 21 09:27:19 2018
+"""This module contains runners for domain codes.
 
-@author: calbert
+This is used to run domain code via Python functions or
+local and distributed systems.
 """
-
 import os
 import sys
 import subprocess

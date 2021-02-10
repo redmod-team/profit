@@ -1,9 +1,6 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Fri Dec 21 09:27:19 2018
+"""Backends for uncertainty quantification.
 
-@author: calbert
+TODO: Refactor UQ part
 """
 
 class ChaosPy:
