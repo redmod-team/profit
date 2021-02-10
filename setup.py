@@ -35,7 +35,7 @@ setup_args = dict(
 packages = find_packages(exclude=["*.tests", "*.tests.*", "tests.*", "tests"])
 # ...
 
-install_requires = ['chaospy', 'numpy', 'scipy', 'PyYAML', 'pyccel']
+install_requires = ['numpy', 'PyYAML']
 
 class BuildCommand(build):
     """Builds modules from Fortran code via f2py."""
