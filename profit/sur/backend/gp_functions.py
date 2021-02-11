@@ -68,8 +68,20 @@ def build_dKdth(dim, x, x0, th, K, dK):
     gpfunc.build_dkdth_sqexp(dim+1, x.T, x0.T, K, dK)
 
 
-# negative log-posterior
 def nll_chol(hyp, x, y, K, dK=None, build_K=build_K):
+    """Computes the negative log-likelihood.
+
+    hyp: Hyperparameters (sig2f, sig2n, theta)
+    x: Training points
+    y: Function values at training points
+    K: Empty matrix to store covariance
+    dK: optional empty matrix to store covariance derivatives (default: None)
+    build_K: Function to build covariance matrix (default: build_K)
+
+    Computation according to Rasmussen&Williams 2006, p. 19, 113-114 .
+    Default hyperparemeters are a tuple containing inverse squared length
+    scales for each dimension of x.
+    """
     nd = len(hyp) - 2
     nx = len(x)
     build_K(x, x, hyp[:-2], K)
@@ -81,8 +93,12 @@ def nll_chol(hyp, x, y, K, dK=None, build_K=build_K):
     if dK is None:
         return nll.item()
 
-    Kyinv = invert_cholesky(L)
-    KyinvaaT =  Kyinv - np.outer(alpha, alpha)
+    # This is according to Rasmussen&Williams 2006, p. 114, Eq. (5.9).
+    # We try to minimize the number of additional DxD matrices to store.
+    # In particular, dK contiainig derivatives is overwritten for each
+    # kernel hyperparameter in hyp[:-2].
+    KyinvaaT = invert_cholesky(L)
+    KyinvaaT -= np.outer(alpha, alpha)
 
     dnll = np.empty(len(hyp))
     for i in np.arange(nd):

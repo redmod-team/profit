@@ -1,0 +1,443 @@
+#LyX 2.3 created this file. For more info see http://www.lyx.org/
+\lyxformat 544
+\begin_document
+\begin_header
+\save_transient_properties true
+\origin unavailable
+\textclass article
+\use_default_options true
+\maintain_unincluded_children false
+\language english
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman "default" "default"
+\font_sans "default" "default"
+\font_typewriter "default" "default"
+\font_math "auto" "auto"
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100 100
+\font_tt_scale 100 100
+\use_microtype false
+\use_dash_ligatures true
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize default
+\use_hyperref false
+\papersize default
+\use_geometry false
+\use_package amsmath 1
+\use_package amssymb 1
+\use_package cancel 1
+\use_package esint 1
+\use_package mathdots 1
+\use_package mathtools 1
+\use_package mhchem 1
+\use_package stackrel 1
+\use_package stmaryrd 1
+\use_package undertilde 1
+\cite_engine basic
+\cite_engine_type default
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\justification true
+\use_refstyle 1
+\use_minted 0
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation default
+\is_math_indent 0
+\math_numbering_side default
+\quotes_style english
+\dynamic_quotes 0
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Standard
+The use case is to find a vector xi of d hidden (latent) variables that
+ retains the full predictive power of originally 
+\begin_inset Formula $D$
+\end_inset
+
+ variables in the input vector 
+\begin_inset Formula $\boldsymbol{x}$
+\end_inset
+
+.
+ The transformation from 
+\begin_inset Formula $\boldsymbol{x}$
+\end_inset
+
+ to 
+\begin_inset Formula $\boldsymbol{\xi}$
+\end_inset
+
+ may be linear or nonlinear.
+ 
+\end_layout
+
+\begin_layout Subsubsection*
+1) Linear case: Linear embeddings.
+ 
+\end_layout
+
+\begin_layout Standard
+Here we apply a linear transformation 
+\begin_inset Formula $\boldsymbol{\xi}=R\boldsymbol{x}$
+\end_inset
+
+ with a 
+\begin_inset Formula $d\times D$
+\end_inset
+
+ matrix to the input 
+\begin_inset Formula $\boldsymbol{x}$
+\end_inset
+
+ and the GP maps from a 
+\begin_inset Formula $d$
+\end_inset
+
+-dimensional space with 
+\begin_inset Formula $d<D$
+\end_inset
+
+ to the output.
+ See active learning of linear embeddings by Garnett: 
+\begin_inset CommandInset href
+LatexCommand href
+target "https://arxiv.org/pdf/1310.6740.pdf"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection*
+2) Nonlinear case: Deep kernel learning with autoencoder.
+ 
+\end_layout
+
+\begin_layout Standard
+Here we apply a nonlinear transformation to the input before passing it
+ to the kernel.
+ We use an autoencoder neural network that reduces the input dimension from
+ D to d by a transform xi=g(x) and a GP mapping d dimensions to the output.
+ The linear case above is a special case where 
+\begin_inset Formula $\boldsymbol{g}(\boldsymbol{x})=R\boldsymbol{x}$
+\end_inset
+
+.
+ See 
+\begin_inset CommandInset href
+LatexCommand href
+target "https://arxiv.org/pdf/1511.02222.pdf"
+
+\end_inset
+
+ 
+\begin_inset CommandInset href
+LatexCommand href
+target "https://docs.gpytorch.ai/en/v1.1.1/examples/06_PyTorch_NN_Integration_DKL/"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+This should be easy to implement.
+ In both cases we shift a portion of the fit to a nonlinear optimization
+ problem: 
+\begin_inset Formula $d\times D$
+\end_inset
+
+ hyperparameters in case 1), and the number of network weights in case 2).
+ Furthermore we should do a (Bayesian) model comparison working from the
+ most simple model (linear, 
+\begin_inset Formula $d=1$
+\end_inset
+
+).
+ E.g.
+ 
+\begin_inset Formula $D=d$
+\end_inset
+
+ is an extremely general model (even more general than automatic relevance
+ detection with one length scale per input dimension), so at 
+\begin_inset Formula $d\gg1$
+\end_inset
+
+ we should expect the nonlinear embedding to produce not too much added
+ value.
+ However, for 
+\begin_inset Formula $d\ll D$
+\end_inset
+
+ and "bended" dependencies, nonlinear embeddings could be very convenient
+ to identify hidden nonlinear dependencies in the data.
+\end_layout
+
+\begin_layout Subsection*
+Hyperparameter optimization and gradients
+\end_layout
+
+\begin_layout Standard
+Most optimizers require gradients over kernel hyperparameters.
+ These are usually scaling 
+\begin_inset Formula $\sigma_{f}$
+\end_inset
+
+ and noise 
+\begin_inset Formula $\sigma_{n}$
+\end_inset
+
+ as well as additional parameters 
+\begin_inset Formula $\boldsymbol{\theta}$
+\end_inset
+
+ of the transformation 
+\begin_inset Formula $\boldsymbol{g}(\boldsymbol{x};\boldsymbol{\theta})$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Itemize
+In the isotropic case, there is only a single inverse squared length scale
+ 
+\begin_inset Formula $\theta_{1}=l^{-1}$
+\end_inset
+
+ with 
+\begin_inset Formula $g(\boldsymbol{x};\theta_{1})\equiv\theta_{1}\boldsymbol{x}$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Itemize
+With automatic relevance detection we have multiple inverse length scales
+ 
+\begin_inset Formula $\theta_{i}=l_{i}^{-1}$
+\end_inset
+
+ with 
+\begin_inset Formula $\boldsymbol{g}(\boldsymbol{x};\boldsymbol{\theta})\equiv\boldsymbol{\theta}\cdot\boldsymbol{x}$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Itemize
+In the linear embedding case, components of 
+\begin_inset Formula $R$
+\end_inset
+
+ appear as hyperparameters 
+\begin_inset Formula $\boldsymbol{\theta}$
+\end_inset
+
+.
+ 
+\end_layout
+
+\begin_layout Itemize
+In the nonlinear embedding case, 
+\begin_inset Formula $\boldsymbol{\theta}$
+\end_inset
+
+ contains neural network parameters (biasses weights) as well as other hyperpara
+meters.
+\end_layout
+
+\begin_layout Standard
+For propagating derivatives we use the chain rule
+\begin_inset Formula 
+\begin{align}
+k(\boldsymbol{x},\boldsymbol{x}^{\prime};\boldsymbol{\theta})= & \kappa(\boldsymbol{g}(\boldsymbol{x};\boldsymbol{\theta}),\boldsymbol{g}(\boldsymbol{x}^{\prime};\boldsymbol{\theta}^{\prime}))\\
+\frac{\partial k}{\partial\theta_{j}} & =\frac{\partial\kappa}{\partial\xi_{i}}\frac{\partial g_{i}(\boldsymbol{x};\boldsymbol{\theta})}{\partial\theta_{j}}+\frac{\partial\kappa}{\partial\xi_{i}^{\prime}}\frac{\partial g_{i}(\boldsymbol{x}^{\prime};\boldsymbol{\theta})}{\partial\theta_{j}}.
+\end{align}
+
+\end_inset
+
+In the usual case (by abuse of notation), 
+\begin_inset Formula 
+\begin{align}
+\kappa & =\kappa(\boldsymbol{\xi},\boldsymbol{\xi}^{\prime})=\kappa(\boldsymbol{\xi}-\boldsymbol{\xi}^{\prime}),\\
+\frac{\partial\kappa}{\partial\xi_{i}} & =-\frac{\partial\kappa}{\partial\xi_{i}^{\prime}}=\partial_{i}\kappa.
+\end{align}
+
+\end_inset
+
+Then
+\begin_inset Formula 
+\begin{align}
+\frac{\partial k}{\partial\theta_{j}} & =(\partial_{i}\kappa)\left(\frac{\partial g_{i}(\boldsymbol{x};\boldsymbol{\theta})}{\partial\theta_{j}}-\frac{\partial g_{i}(\boldsymbol{x}^{\prime};\boldsymbol{\theta})}{\partial\theta_{j}}\right)\\
+ & =(\partial_{i}\kappa)\frac{\partial}{\partial\theta_{j}}\left(g_{i}(\boldsymbol{x};\boldsymbol{\theta})-g_{i}(\boldsymbol{x}^{\prime};\boldsymbol{\theta})\right).
+\end{align}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+For isotropic: 
+\begin_inset Formula $g(\boldsymbol{x};\theta_{1})\equiv\theta_{1}\boldsymbol{x}$
+\end_inset
+
+ we have a 
+\begin_inset Formula $D\times1$
+\end_inset
+
+ Jacobian
+\begin_inset Formula 
+\begin{equation}
+\frac{\partial g_{i}(\boldsymbol{x};\boldsymbol{\theta})}{\partial\theta_{1}}=\boldsymbol{x}.
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+For ARD: 
+\begin_inset Formula $\boldsymbol{g}(\boldsymbol{x};\boldsymbol{\theta})\equiv\boldsymbol{\theta}\cdot\boldsymbol{x}$
+\end_inset
+
+ we have a diagonal 
+\begin_inset Formula $D\times D$
+\end_inset
+
+ Jacobian
+\begin_inset Formula 
+\begin{equation}
+\frac{\partial g_{i}(\boldsymbol{x};\boldsymbol{\theta})}{\partial\theta_{j}}=\delta_{ij}x_{j}.
+\end{equation}
+
+\end_inset
+
+This case is currently implemented inside 
+\family typewriter
+build_dKdth_sqexp
+\family default
+ in 
+\family typewriter
+gpfunc.f90
+\family default
+ and used in 
+\family typewriter
+nll_chol
+\family default
+ inside 
+\family typewriter
+gp_functions.py
+\family default
+.
+ However, right now we are using 
+\begin_inset Formula $l_{i}^{-2}$
+\end_inset
+
+ instead of 
+\begin_inset Formula $l_{i}^{-1}$
+\end_inset
+
+ as hyperparameters.
+\end_layout
+
+\begin_layout Itemize
+For linear embeddings: 
+\begin_inset Formula $\boldsymbol{g}(\boldsymbol{x};\boldsymbol{\theta})\equiv R\boldsymbol{x}=R_{ij}x_{j}$
+\end_inset
+
+ we have a 
+\begin_inset Formula $d\times(d\cdot D)$
+\end_inset
+
+ Jacobian 
+\begin_inset Formula 
+\begin{equation}
+\frac{\partial g_{i}(\boldsymbol{x};\boldsymbol{\theta})}{\partial R_{ij}}=x_{j}.
+\end{equation}
+
+\end_inset
+
+(We can write 
+\begin_inset Formula $n_{p}=(d\cdot D)$
+\end_inset
+
+ values of 
+\begin_inset Formula $R_{ij}$
+\end_inset
+
+ in a row inside 
+\begin_inset Formula $\boldsymbol{\theta}$
+\end_inset
+
+.) Again it is apparent (see paper of Garnett) that ARD is a special case
+ with 
+\begin_inset Formula $R_{ij}=l_{i}^{-1}\delta_{ij}$
+\end_inset
+
+ and that inverse length scales are the 
+\begin_inset Quotes eld
+\end_inset
+
+natural
+\begin_inset Quotes erd
+\end_inset
+
+ hyperparameters here.
+\end_layout
+
+\begin_layout Itemize
+For arbitrary nonlinear autoencoder 
+\begin_inset Formula $\boldsymbol{g}(\boldsymbol{x};\boldsymbol{\theta})$
+\end_inset
+
+ we have a 
+\begin_inset Formula $d\times n_{p}$
+\end_inset
+
+ Jacobian for 
+\begin_inset Formula $n_{p}$
+\end_inset
+
+ network parameters.
+ This Jacobian is usually obtained by reverse mode autodifferentiation (backprop
+agation), being most efficient for 
+\begin_inset Formula $n_{p}\gg d$
+\end_inset
+
+ in contrast to forward mode autodifferentiation.
+ E.g.
+ JAX provides the tools.
+\end_layout
+
+\end_body
+\end_document
