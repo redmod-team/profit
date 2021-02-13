@@ -1,17 +1,17 @@
 from os import path, chdir, listdir
-from .util import load_txt
+from .util import save, load
 
 
-def read_input(run_dir):
-    """ Loads data from 'input.txt' into a numpy array. """
-    data = load_txt(path.join(run_dir, 'input.txt'))
+def read_input(filename):
+    """ Loads data from input file into a numpy array. """
+    data = load(filename)
     return data.view((float, len(data.dtype.names))).T
 
 
 def collect_output(config, default_interface=False):
     """ Collects simulation results from each run directory into a single output file. """
 
-    from numpy import zeros, arange, nan, savetxt
+    from numpy import zeros, nan
     from importlib.util import spec_from_file_location, module_from_spec
     try:
         from tqdm import tqdm
@@ -32,20 +32,25 @@ def collect_output(config, default_interface=False):
             name = None
         interface = DefaultInterface(name)
 
-    # Get vector output
-    # TODO: make this more stable
-    nout = 0
-    for k, v in config['output'].items():
-        nout += 1
-        for d, r in v['range'].items():
-            nout -= 1
-            try:
-                nout += (r[1] - r[0]) / (r[2] if len(r) > 2 else 1)
-            except IndexError:
-                raise RuntimeError("No range specified for independent variable '{}' "
-                                   "which is used for output '{}'.".format(d, k))
+    # TODO: do this in less code?
+    # Header for output
+    header = []
+    for out, values in config['output'].items():
+        if not values['range']:
+            header.append("{f}".format(f=out))
+        else:
+            for dependent, rng in values['range'].items():
+                for number in rng:
+                    header.append("{f}({x}={n})".format(f=out, x=dependent, n=round(number, 2)))
 
-    data = zeros((config['ntrain'], max(int(nout), 1)))
+    # Get vector output
+    nout = 0
+    for v in config['output'].values():
+        for rng in v['range'].values():
+            nout += rng.size
+
+    dtypes = [(key, float) for key in config['output'].keys()]
+    data = zeros((config['ntrain'], max(int(nout), 1)), dtype=dtypes)
 
     kruns = tqdm(range(config['ntrain']))
     for krun in kruns:
@@ -55,27 +60,16 @@ def collect_output(config, default_interface=False):
         try:
             chdir(run_dir_single)
             # TODO: make get_output run with parameters e.g. config['interface']['params'] as *args
-            data[krun, :] = interface.get_output()
+            # Interface should return a tuple or list if more than one output variable.
+            alldata = interface.get_output()
+            for i, key in enumerate(data.dtype.names):
+                data[key][krun, :] = alldata[i] if isinstance(alldata, (tuple, list)) else alldata
         except:
             data[krun, :] = nan
         finally:
             chdir(config['run_dir'])
 
-    # TODO: do this in less code?
-    # Header for output
-    header = []
-    for out, values in config['output'].items():
-        if not values['range']:
-            header.append("{f}".format(f=out))
-        else:
-            for dependent, entries in values['range'].items():
-                if not entries:
-                    header.append("{f}({x})".format(f=out, x=dependent))
-                else:
-                    rng = arange(*entries)
-                    for number in rng:
-                        header.append("{f}({x}={n})".format(f=out, x=dependent, n=round(number, 2)))
-    savetxt('output.txt', data, header=' '.join(header))
+    save(config['files']['output'], data, ' '.join(header))
 
 
 class DefaultInterface:

@@ -78,7 +78,7 @@ class LocalCommand:
 
 class Slurm:
     def __init__(self, config):
-        self.eval_points = read_input(config['run_dir'])
+        self.eval_points = read_input(config['files']['input'])
         if config['runner_backend'] == 'slurm':
           from .backend.slurm import slurm_backend
           self.backend = slurm_backend()

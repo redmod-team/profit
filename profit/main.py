@@ -3,7 +3,7 @@
 This script is called when running the `profit` command.
 """
 
-from os import getcwd, path
+from os import getcwd
 import sys
 from argparse import ArgumentParser, RawTextHelpFormatter
 
@@ -69,11 +69,12 @@ def main():
     sys.path.append(config['base_dir'])
 
     if args.mode == 'pre':
-        from profit.pre import fill_run_dir, get_eval_points
+        from profit.pre import write_input, fill_run_dir, get_eval_points
 
         """ Get input points ready to fill run directory """
         eval_points = get_eval_points(config)
 
+        write_input(config['files']['input'], eval_points)
         try:
             fill_run_dir(eval_points, template_dir=config['template_dir'],
                          run_dir=config['run_dir'], overwrite=False)
@@ -95,7 +96,7 @@ def main():
         from profit.run import LocalCommand
 
         # TODO: Include options (in call or in config file) which run backend should be used.
-        print(read_input(config['run_dir']))
+        print(read_input(config['files']['input']))
         try:
             run = LocalCommand(config['run']['cmd'], config['run']['ntask'],
                                run_dir=config['run_dir'], base_dir=config['base_dir'])

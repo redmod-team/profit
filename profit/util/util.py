@@ -6,36 +6,62 @@ string processing as well as random sampling.
 from os import path
 
 
+def save(filename, data, header=None, fmt=None):
+
+    if filename.endswith('.txt'):
+        save_txt(filename, data, header, fmt)
+    elif filename.endswith('.hdf5'):
+        save_hdf(filename, data)
+
+
+def load(filename, as_type='dtype'):
+    if filename.endswith('.txt'):
+        return load_txt(filename)
+    elif filename.endswith('.hdf5'):
+        return load_hdf(filename, as_type)
+
+
 def load_txt(filename):
     from numpy import genfromtxt
     return genfromtxt(filename, names=True)
 
 
-def save_txt(filename, data, fmt=None):
-    from numpy import savetxt
+def save_txt(filename, data, header=None, fmt=None):
+    from numpy import hstack, savetxt
+    if not header:
+        header = ' '.join(data.dtype.names)
+    data = hstack([data[key] for key in data.dtype.names])
     if fmt:
-        savetxt(filename, data, header=' '.join(data.dtype.names), fmt=fmt)
+        savetxt(filename, data, header=header, fmt=fmt)
     else:
-        savetxt(filename, data, header=' '.join(data.dtype.names))
+        savetxt(filename, data, header=header)
 
 
 def save_hdf(filename, data):
+    """ Save data to a hdf5 file.
+    HDF5 keys according to either numpy dtypes, dict keys or 'data' if none of the above is true. """
     from h5py import File
     with File(filename, 'w') as h5f:
-        if isinstance(data, dict):
+        if hasattr(data, 'dtype'):
+            for key in data.dtype.names:
+                h5f[key] = data[key]
+        elif isinstance(data, dict):
             for key, value in data.items():
                 h5f[key] = data[key]
         else:
             h5f['data'] = data
 
 
-def load_hdf(filename, as_dict=False):
+def load_hdf(filename, astype='dtype'):
     from h5py import File
+    from numpy import array
     with File(filename, 'r') as h5f:
-        if len(h5f.keys()) > 1 or as_dict:
+        if astype == 'dtype':
+            return hdf2numpy(h5f)
+        if astype == 'dict':
             return hdf2dict(h5f)
         else:
-            return h5f['data']
+            return array(h5f['data'])
 
 
 def txt2hdf(txtfile, hdffile):
@@ -44,6 +70,16 @@ def txt2hdf(txtfile, hdffile):
 
 def hdf2txt(txtfile, hdffile):
     save_txt(txtfile, load_hdf(hdffile))
+
+
+def hdf2numpy(dataset):
+    from numpy import zeros_like, array
+    dtypes = [(key, float) for key in list(dataset.keys())]
+    data = zeros_like(dataset[dtypes[0][0]], dtype=dtypes)
+    for key in data.dtype.names:
+        # TODO: Maybe reshape (n,) -> (n, 1)?
+        data[key] = array(dataset[key])
+    return data
 
 
 def hdf2dict(dataset):
