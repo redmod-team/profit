@@ -54,6 +54,11 @@ def fill_template(out_dir, params, param_files=None):
                 filepath = os.path.join(root, filename)
                 with open(filepath, 'r') as f:
                     content = f.read()
+                    # Escape '{*}' for e.g. json templates by replacing it with '{{*}}'.
+                    # Variables then have to be declared as '{{*}}' which is replaced by a single '{*}'.
+                    if '{{' in content:
+                        content = content.replace('{{', '§').replace('}}', '§§')\
+                            .replace('{', '{{').replace('}', '}}').replace('§§', '}').replace('§', '{')
                     content = content.format_map(util.SafeDict(rec2dict(params)))
                 with open(filepath, 'w') as f:
                     f.write(content)
