@@ -1,9 +1,0 @@
-numpy
-scipy
-matplotlib
-scikit-learn
-sympy
-pyyaml
-chaospy
-GPy
-sphinx_math_dollar
