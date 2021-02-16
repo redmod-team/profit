@@ -135,7 +135,7 @@ Then we can solve for
  via the equation
 \begin_inset Formula 
 \begin{equation}
-M\boldsymbol{f}=\boldsymbol{b}.
+\boldsymbol{b}=M\boldsymbol{f}.
 \end{equation}
 
 \end_inset
@@ -212,7 +212,15 @@ with eigenvalues
 \end_inset
 
 .
- Since columns of 
+ 
+\begin_inset Formula 
+\begin{equation}
+Q\in\mathbb{R}^{N\times n},\quad\Lambda\in\mathbb{R}^{n\times n},\quad M\in\mathbb{R}^{N\times N}.
+\end{equation}
+
+\end_inset
+
+Since columns of 
 \begin_inset Formula $Q$
 \end_inset
 
@@ -453,6 +461,58 @@ The first reduction from high (or even formally infinite) dimensions via
 \end_inset
 
 .
+\end_layout
+
+\begin_layout Standard
+Dimension vs nonlinearity: kernel trick
+\begin_inset Formula 
+\begin{equation}
+f(x)=e^{x}+x
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+2D fit:
+\begin_inset Formula 
+\begin{equation}
+\varphi_{1}(x)=1,\,\varphi_{2}(x)=x
+\end{equation}
+
+\end_inset
+
+
+\begin_inset Formula 
+\begin{equation}
+f(x)\approx ax+b
+\end{equation}
+
+\end_inset
+
+Optimum:
+\begin_inset Formula 
+\begin{equation}
+\varphi_{1}(x)=x,\,\varphi_{2}(x)=e^{x}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+N-D:
+\begin_inset Formula 
+\begin{equation}
+\varphi_{1}(x)=x,\,\varphi_{2}(x)=x^{2},\,\varphi_{3}(x)=x^{3},\dots
+\end{equation}
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Subsection*

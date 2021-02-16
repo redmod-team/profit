@@ -83,9 +83,3 @@ plt.plot(ytest)
 plt.xlabel('Independent variable x')
 plt.ylabel(f'Output f(x;u={utest})')
 plt.legend(['Reconstruction', 'Reference'])
-
-# %%
-import pytorch
-
-
-# %%
