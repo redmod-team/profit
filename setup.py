@@ -1,60 +1,29 @@
-# -*- coding: UTF-8 -*-
-#! /usr/bin/python
+# setup.py
+# install script using setuptools / numpy.distutils
+# TODO: should be integrated in setup.cfg
 
-from setuptools import setup, find_packages
-from distutils.command.build import build
-import sys
-import subprocess
-import fastentrypoints
+import sys, site
+site.ENABLE_USER_SITE = "--user" in sys.argv[1:]
 
-NAME = 'profit'
-VERSION = '0.0.1'
-AUTHOR = 'Christopher Albert'
-EMAIL = 'albert@alumni.tugraz.at'
-URL = 'https://github.com/redmod-team/profit'
-DESCR = 'Probabilistic response surface fitting'
-KEYWORDS = ['PCE', 'UQ']
-LICENSE = 'MIT'
+from numpy.distutils.core import Extension, setup
 
-setup_args = dict(
-    name=NAME,
-    version=VERSION,
-    description=DESCR,
-    #    long_description     = open('README.md').read(),
-    author=AUTHOR,
-    author_email=EMAIL,
-    license=LICENSE,
-    keywords=KEYWORDS,
-    url=URL,
-    entry_points={
-        'console_scripts': ['profit=profit.main:main'],
-    }
-)
+ext_kwargs = {
+    'libraries': ['gomp'],
+    'extra_f90_compile_args': ['-Wall', '-march=native', '-O2', '-fopenmp', 
+                               '-g', '-fbacktrace']} 
 
-# ...
-packages = find_packages(exclude=["*.tests", "*.tests.*", "tests.*", "tests"])
-# ...
 
-install_requires = ['numpy', 'PyYAML']
+ext_gpfunc = Extension(
+    name = 'profit.sur.backend.gpfunc', 
+    sources = ['profit/sur/backend/gpfunc.f90'],
+    **ext_kwargs)
 
-class BuildCommand(build):
-    """Builds modules from Fortran code via f2py."""
-    def run(self):
-        import profit.sur.backend.init_kernels
-        protoc_command = ['make', '-C', 'profit/sur/backend/']
-        if subprocess.call(protoc_command) != 0:
-            sys.exit(-1)
-        build.run(self)  # Default build steps
-
-def setup_package():
-    setup(packages=packages,
-          include_package_data=True,
-          install_requires=install_requires,
-          setup_requires=['pytest-runner'],
-          tests_require=['pytest'],
-          cmdclass={'build': BuildCommand},
-          **setup_args)
+ext_kernels = Extension(
+    name = 'profit.sur.backend.kernels',
+    sources = ['profit/sur/backend/kernels.f90', 'profit/sur/backend/kernels_base.f90'],
+    **ext_kwargs)
 
 
 if __name__ == "__main__":
-    setup_package()
+    setup(ext_modules = [ext_gpfunc, ext_kernels])
+

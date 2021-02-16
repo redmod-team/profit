@@ -5,4 +5,4 @@ variables:
     r: Independent
     f: Output
 run: 
-    python3 ../../../mockup.py
+    python3 ../mockup.py

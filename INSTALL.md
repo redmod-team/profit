@@ -3,8 +3,13 @@
 ## Linux:
 In the terminal run each one of the following commands: 
 ```bash
-python3 init_func.py
-f2py -c kernels.f90 -m kernels
+git clone https://github.com/redmod-team/profit.git
+
+cd profit
+python3 -m venv venv
+source venv/bin/activate
+
+pip install -e .
 ```
 	
 ## Windows:
