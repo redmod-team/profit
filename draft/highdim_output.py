@@ -50,19 +50,19 @@ y_3*y_4 = a_1 y_3*y_1 + a_2 y_3*y_2 + a_3 y_3*y_3
 We see that we have to solve a linear system with the
 covariance matrix M_ij = y_i*y_j . To find the most relevant features
 and reduce dimensionality, we use a PCA with only the highest eigenvalues.
+We center the covariance around the mean, i.e. subtract ymean before.
 """
-M = np.empty((ntrain, ntrain))  # Covariance matrix
-for i in range(ntrain):
-    for j in range(ntrain):
-        M[i,j] = ytrain[i].dot(ytrain[j])
+ymean = np.mean(ytrain, 0)
+dytrain = ytrain - ymean
+M = dytrain @ dytrain.T
 
 w, Q = eigsh(M, 10)
 plt.figure()
 plt.plot(w)
 
 plt.figure()
-for i in range(10):
-    plt.plot(w[i]*Q[:,i].dot(ytrain))
+for i in range(len(w)):
+    plt.plot(w[i]*Q[:,i] @ dytrain)
 plt.title('10 most significant eigenvectors')
 plt.xlabel('Independent variable x')
 plt.ylabel('Eigenvectors scaled by eigenvalue')
@@ -72,16 +72,20 @@ utest = 0.7
 ytest = f(utest, x)
 b = np.empty(ntrain)
 for i in range(ntrain):
-    b[i] = ytest.dot(ytrain[i])
+    b[i] = (ytest - ymean) @ dytrain[i]
 
-a = Q.dot(np.diag(1.0/w).dot(Q.T.dot(b)))
+a = Q @ (np.diag(1.0/w) @ (Q.T @ b))  # Brackets to avoid production of matrices
 #a = np.linalg.solve(M, b)
 
 plt.figure()
-plt.plot(a.dot(ytrain), '--')
+plt.plot(ymean + a @ dytrain, '--')
 plt.plot(ytest)
 plt.xlabel('Independent variable x')
 plt.ylabel(f'Output f(x;u={utest})')
 plt.legend(['Reconstruction', 'Reference'])
+
+# %%
+import pytorch
+
 
 # %%
