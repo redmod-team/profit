@@ -2,6 +2,9 @@
 # install script using setuptools / numpy.distutils
 # TODO: should be integrated in setup.cfg
 
+import sys, site
+site.ENABLE_USER_SITE = "--user" in sys.argv[1:]
+
 from numpy.distutils.core import Extension, setup
 
 ext_kwargs = {
