@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+from profit.sur.backend.ann import Autoencoder
 
 class LinearAutoencoder(nn.Module):
     """Linear autoencoder as 'rich man's PCA'.
@@ -19,22 +20,6 @@ class LinearAutoencoder(nn.Module):
     def forward(self, x):
         x = F.linear(x, self.W)     # encoder
         x = F.linear(x, self.W.t()) # decoder
-        return x
-
-class Autoencoder(nn.Module):
-    """Nonlinear autoencoder with activation functions"""
-    def __init__(self, D, d):
-        super(Autoencoder, self).__init__()
-        self.enc1 = nn.Linear(in_features=D, out_features=D//2)
-        self.enc2 = nn.Linear(in_features=D//2, out_features=d)
-        self.dec1 = nn.Linear(in_features=d, out_features=D//2)
-        self.dec2 = nn.Linear(in_features=D//2, out_features=D)
-
-    def forward(self, x):
-        x = F.tanh(self.enc1(x))
-        x = F.tanh(self.enc2(x))
-        x = F.tanh(self.dec1(x))
-        x = F.tanh(self.dec2(x))
         return x
 
 D = 4
@@ -72,7 +57,7 @@ print(loss)
 #%% PyTorch SGD variant (Adam)
 optimizer = optim.Adam(ae.parameters(), lr=0.01)
 
-for k in range(10000):
+for k in range(1000):
     optimizer.zero_grad()
     output = ae(input)
     loss = criterion(output, target)
