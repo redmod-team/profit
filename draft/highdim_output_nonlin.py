@@ -22,34 +22,35 @@ class LinearAutoencoder(nn.Module):
         return x
 
 class Autoencoder(nn.Module):
-    """Nonlinear autoencoder wich activation functions
-
-    TODO: Add hidden layers and check if symmetry is needed
-    """
+    """Nonlinear autoencoder with activation functions"""
     def __init__(self, D, d):
         super(Autoencoder, self).__init__()
-        self.W = nn.Parameter(torch.randn((d,D))/np.sqrt(d*D))
-        #self.W = nn.Parameter(torch.eye(D))
+        self.enc1 = nn.Linear(in_features=D, out_features=D//2)
+        self.enc2 = nn.Linear(in_features=D//2, out_features=d)
+        self.dec1 = nn.Linear(in_features=d, out_features=D//2)
+        self.dec2 = nn.Linear(in_features=D//2, out_features=D)
 
     def forward(self, x):
-        x = F.tanh(F.linear(x, self.W))
-        x = F.tanh(F.linear(x, self.W.t()))
+        x = F.tanh(self.enc1(x))
+        x = F.tanh(self.enc2(x))
+        x = F.tanh(self.dec1(x))
+        x = F.tanh(self.dec2(x))
         return x
 
 D = 4
 d = 2
 
-Wlift = torch.Tensor([[1.0, 0], [0, 1.0], [0.0, 0.0], [0.0, 0.0]])
+Wlift = torch.Tensor([[1.0, 0], [0, 1.0], [0.0, 0.2], [0.3, 0.0]])
 
 x = Wlift @ torch.rand(d)
 
-ae = LinearAutoencoder(D, d)
+ae = Autoencoder(D, d)
 print(list(ae.parameters()))
 y = ae.forward(x)
 print(x)
 print(y)
 # %%
-ntrain = 100
+ntrain = 10
 input = (Wlift @ (torch.rand(d, ntrain) - 0.5)).T
 output = ae(input)
 target = input
@@ -71,14 +72,17 @@ print(loss)
 #%% PyTorch SGD variant (Adam)
 optimizer = optim.Adam(ae.parameters(), lr=0.01)
 
-for k in range(100):
+for k in range(10000):
     optimizer.zero_grad()
     output = ae(input)
     loss = criterion(output, target)
     loss.backward()
     optimizer.step()
     print(loss.data)
-
+#%%
+x = Wlift @ (torch.rand(d) - 0.5)
+print(x.data)
+print(ae(x).data)
 #%% PyTorch Quasi-Newton (LBFGS)
 
 # # create your optimizer
@@ -123,9 +127,11 @@ for k in range(100):
 # print(res.fun)
 # with torch.no_grad():
 #     ae.W.copy_(torch.Tensor(res.x.reshape([d,D])))
+#
+# print()
+# print("Weights: ")
+# print(ae.W @ ae.W.T)
+# print(ae.W.T @ ae.W)
 # %%
-print()
-print("Weights: ")
-print(ae.W @ ae.W.T)
-print(ae.W.T @ ae.W)
+
 # %%
