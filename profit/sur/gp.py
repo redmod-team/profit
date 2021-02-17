@@ -189,10 +189,11 @@ class GPySurrogate(Surrogate):
         self.trained = False
 
     def train(self, x, y, sigma_n=None, sigma_f=1e-6, kernel='RBF'):
-        self.xtrain = x if x.ndim > 1 else x.reshape(-1, 1)
-        self.ytrain = y if y.ndim > 1 else y.reshape(-1, 1)
-        self.ymean = np.mean(y)
-        self.yvar = np.var(y)
+        """ Train the model with data. Data noise can be set explicitly. """
+        self.xtrain = x
+        self.ytrain = y
+        self.ymean = np.mean(y, axis=0)
+        self.yvar = np.var(y, axis=0)
         self.yscale = np.sqrt(self.yvar)
         self.ndim = self.xtrain.shape[-1]
         self.kern = self._select_kernel(kernel)

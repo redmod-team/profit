@@ -23,7 +23,7 @@ def load(filename, as_type='dtype'):
 
 def load_txt(filename):
     from numpy import genfromtxt
-    return genfromtxt(filename, names=True)
+    return check_ndim(genfromtxt(filename, names=True))
 
 
 def save_txt(filename, data, header=None, fmt=None):
@@ -77,9 +77,8 @@ def hdf2numpy(dataset):
     dtypes = [(key, float) for key in list(dataset.keys())]
     data = zeros_like(dataset[dtypes[0][0]], dtype=dtypes)
     for key in data.dtype.names:
-        # TODO: Maybe reshape (n,) -> (n, 1)?
         data[key] = array(dataset[key])
-    return data
+    return check_ndim(data)
 
 
 def hdf2dict(dataset):
@@ -122,6 +121,10 @@ def get_class_attribs(self):
 def quasirand(ndim=1, npoint=1):
     from .halton import halton
     return halton(ndim, npoint)
+
+
+def check_ndim(arr):
+    return arr if arr.ndim > 1 else arr.reshape(-1, 1)
 
 
 class SafeDict(dict):

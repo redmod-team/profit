@@ -89,7 +89,7 @@ def main():
                     print('exit...')
                     sys.exit()
 
-            fill_run_dir(eval_points, template_dir=config['template_dir'],
+            fill_run_dir(eval_points.flatten(), template_dir=config['template_dir'],
                          run_dir=config['run_dir'], overwrite=True)
 
     elif args.mode == 'run':

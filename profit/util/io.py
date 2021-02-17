@@ -40,7 +40,7 @@ def collect_output(config, default_interface=False):
             header.append("{f}".format(f=out))
         else:
             for dependent, rng in values['range'].items():
-                for number in rng:
+                for number in rng.flatten():
                     header.append("{f}({x}={n})".format(f=out, x=dependent, n=round(number, 2)))
 
     # Get vector output

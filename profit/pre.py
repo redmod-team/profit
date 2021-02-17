@@ -76,7 +76,7 @@ def get_eval_points(config):
     npoints = config['ntrain']
     dtypes = [(key, inputs[key]['dtype']) for key in inputs.keys()]
 
-    eval_points = np.zeros(npoints, dtype=dtypes)
+    eval_points = np.zeros((npoints, 1), dtype=dtypes)
 
     for n, (k, v) in enumerate(inputs.items()):
         eval_points[k] = np.round(v['range']) if np.issubdtype(eval_points[k].dtype, np.integer) else v['range']
