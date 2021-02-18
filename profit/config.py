@@ -162,7 +162,7 @@ class Config(OrderedDict):
                 else:
                     try:
                         func = getattr(variable_kinds, safe_str(kind))
-                        self['variables'][k]['range'] = func(*entries, size=self['ntrain'])
+                        self['variables'][k]['range'] = func(*entries, size=self['ntrain']) if entries else None
                     except AttributeError:
                         raise RuntimeError("Variable kind not defined.\n"
                                            "Valid Functions: {}".format(get_class_methods(variable_kinds)))
@@ -174,7 +174,8 @@ class Config(OrderedDict):
             # Add to corresponding variables 'output', 'independent' or 'input'
             kind = self['variables'][k]['kind'].lower()
             kind = kind if kind in ('output', 'independent') else 'input'
-            self[kind][k] = self['variables'][k]
+            if self['variables'][k].get('range') is not None:
+                self[kind][k] = self['variables'][k]
 
         # Fill range of output vector
         for k, v in self['output'].items():
