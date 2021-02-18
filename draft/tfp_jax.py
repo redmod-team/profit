@@ -51,3 +51,29 @@ d2K = d2kmap(jnp.array([[0.0, 0.0], [1.0, 0.0], [2.0, 0.0]]),
      jnp.array([1.0, 0.0]),
      jnp.array(1.0), jnp.array(1.0))
 print(d2K)
+
+def f(x):
+    return jnp.sin(x[0] + 0.5*x[1])
+
+fmap = vmap(f)
+#%%
+na = 3
+nb = 2
+xa = np.array([[0.0, 0.0], [0.0, 0.5], [-0.5, 0.1]])
+xb = np.array([[0.0, 0.0], [1.4, 1.0]])
+
+# See http://num.pyro.ai/en/latest/examples/gp.html
+@jit
+def k(x, x0, sig_f, l):
+    dx2 = jnp.power((x[:,None] - x0) / l, 2)
+    return sig_f * jnp.exp(-0.5 * dx2)
+
+k(xa, xb, 1.0, 1.0)
+dk = jax.jacrev(k, 0)
+d2k = jax.jacfwd(dk, 0)
+#%%
+dk(xa, xb, 1.0, 1.0)
+# %%
+a = d2k(xa, xb, 1.0, 1.0)
+
+# %%
