@@ -13,10 +13,7 @@ def collect_output(config, default_interface=False):
 
     from numpy import zeros, nan
     from importlib.util import spec_from_file_location, module_from_spec
-    try:
-        from tqdm import tqdm
-    except ModuleNotFoundError:
-        def tqdm(x): return x
+    from tqdm import tqdm
 
     if not default_interface:
         try:

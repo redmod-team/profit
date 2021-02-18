@@ -7,11 +7,6 @@ from os import getcwd
 import sys
 from argparse import ArgumentParser, RawTextHelpFormatter
 
-try:
-    from tqdm import tqdm
-except ModuleNotFoundError:
-    def tqdm(x): return x
-
 from profit.config import Config
 from profit.util import safe_path_to_file
 from profit.util.io import read_input, collect_output

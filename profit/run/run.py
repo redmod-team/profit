@@ -7,16 +7,12 @@ import os
 import sys
 import subprocess
 import multiprocessing as mp
+from tqdm import tqdm
 
 try:
     from profit import config, read_input
 except ImportError:
     pass
-
-try:
-    from tqdm import tqdm
-except ModuleNotFoundError:
-    def tqdm(x): return x
 
 
 class PythonFunction:

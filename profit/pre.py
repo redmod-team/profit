@@ -15,11 +15,7 @@ def write_input(eval_points, filename='input.txt'):
 def fill_run_dir(eval_points, template_dir='template/', run_dir='run/',
                  overwrite=False):
     """ Fill each run directory with input data according to template format. """
-
-    try:
-        from tqdm import tqdm
-    except ModuleNotFoundError:
-        def tqdm(x): return x
+    from tqdm import tqdm
 
     kruns = tqdm(range(eval_points.size))  # run with progress bar
 
