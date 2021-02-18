@@ -2,9 +2,8 @@
 # coding: utf-8
 
 import numpy as np
-import pytest
 
-from profit.sur.backend.gp import GPSurrogate, GPySurrogate
+from profit.sur.gp import GPySurrogate
 
 
 def f(x):

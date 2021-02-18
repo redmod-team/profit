@@ -5,7 +5,7 @@ from abc import ABCMeta, abstractmethod
 
 class Surrogate(metaclass=ABCMeta):
     def __init__(self):
-        pass
+        self.trained = False
 
     @abstractmethod
     def train(self, x, y, sigma=None):

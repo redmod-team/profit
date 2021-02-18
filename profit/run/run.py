@@ -7,16 +7,12 @@ import os
 import sys
 import subprocess
 import multiprocessing as mp
+from tqdm import tqdm
 
 try:
     from profit import config, read_input
 except ImportError:
     pass
-
-try:
-    from tqdm import tqdm
-except ModuleNotFoundError:
-    def tqdm(x): return x
 
 
 class PythonFunction:
@@ -78,7 +74,7 @@ class LocalCommand:
 
 class Slurm:
     def __init__(self, config):
-        self.eval_points = read_input(config['run_dir'])
+        self.eval_points = read_input(config['files']['input'])
         if config['runner_backend'] == 'slurm':
           from .backend.slurm import slurm_backend
           self.backend = slurm_backend()

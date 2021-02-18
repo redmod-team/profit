@@ -8,26 +8,14 @@ from scipy.optimize import minimize
 from scipy.linalg import solve_triangular
 import matplotlib.pyplot as plt
 from profit.sur import Surrogate
+from .backend.gp_functions import build_K
 
-# try:
-#     import tensorflow as tf
-#     import tensorflow_probability as tfp
-#     import gpflow
-#     from gpflow.utilities import print_summary, set_trainable, to_default_float
-# except:
-#     pass
-
-try:
-    import GPy
-except:
-    pass
-
-from .gp_functions import build_K
 
 def gp_matrix(x0, x1, a, K):
     """Constructs GP covariance matrix between two point tuples x0 and x1"""
     build_K(x0, x1, a[:-1], K)
     K = a[-1]*K
+
 
 def gp_matrix_train(x, a, sigma_n):
     """Constructs GP matrix for training"""
@@ -53,6 +41,7 @@ def gpsolve(Ky, ft):
         lower=False, check_finite=False)
 
     return L, alpha
+
 
 def gp_nll(a, x, y, sigma_n=None):
     """Compute negative log likelihood of GP"""
@@ -192,22 +181,23 @@ class GPSurrogate(Surrogate):
 
         return Kstar.T.dot(self.Kyinv_y)
 
-class GPySurrogate(Surrogate):
-    def __init__(self):
-        # gpflow.reset_default_graph_and_session()
-        self.trained = False
-        pass
-    # TODO
 
-    def train(self, x, y, sigma_n=None, sigma_f=1e-6):
+class GPySurrogate(Surrogate):
+    GPy = __import__('GPy')
+
+    def __init__(self):
+        self.trained = False
+
+    def train(self, x, y, sigma_n=None, sigma_f=1e-6, kernel='RBF'):
+        """ Train the model with data. Data noise can be set explicitly. """
         self.xtrain = x
-        self.ytrain = y.reshape(-1, 1)
-        self.ymean = np.mean(y)
-        self.yvar = np.var(y)
+        self.ytrain = y
+        self.ymean = np.mean(y, axis=0)
+        self.yvar = np.var(y, axis=0)
         self.yscale = np.sqrt(self.yvar)
         self.ndim = self.xtrain.shape[-1]
-        self.kern = GPy.kern.RBF(input_dim=self.ndim)
-        self.m = GPy.models.GPRegression(self.xtrain, self.ytrain, self.kern)
+        self.kern = self._select_kernel(kernel)
+        self.m = self.GPy.models.GPRegression(self.xtrain, self.ytrain, self.kern)
         self.m.optimize()
         self.trained = True
 
@@ -219,7 +209,99 @@ class GPySurrogate(Surrogate):
         raise NotImplementedError()
 
     def predict(self, x):
-        return self.m.predict(x)
+        """ Predict output from unseen data with the trained model.
+        :return: (mean, var)
+        """
+        if self.trained:
+            return self.m.predict(x)
+        else:
+            raise RuntimeError("Need to train() before predict()!")
+
+    def plot(self, x=None, independent=None):
+        if x is not None:
+            xpred = x if x.ndim > 1 else x.reshape(-1, 1)
+        else:
+            minval = 0.9 * self.xtrain.min(axis=0)
+            maxval = 1.1 * self.xtrain.max(axis=0)
+            step = 0.1 * (maxval - minval) / maxval
+            npoints = ((maxval - minval) // step + 1).astype(int)
+            xpred = np.zeros((max(npoints), self.ndim))
+            for d in range(self.ndim):
+                xpred[:npoints[d], d] = np.arange(minval[d], maxval[d], step[d])
+        ypred, yvarpred = self.predict(xpred)
+        ystd_pred = np.sqrt(yvarpred)
+        if independent:
+            # 2D with one input parameter and one independent variable.
+            if self.ndim == 1 and ypred.ndim == 2:
+                ax = plt.axes(projection='3d')
+                for k, v in independent.items():
+                    x1t, x2t = np.meshgrid(v['range'], self.xtrain)
+                    x1, x2 = np.meshgrid(v['range'], xpred)
+                for i in range(x1t.shape[0]):
+                    ax.plot(x1t[i, :], x2t[i, :], self.ytrain[i, :], color='blue', linewidth=2)
+                ax.plot_surface(x1, x2, ypred, color='red', alpha=0.8)
+                ax.plot_surface(x1, x2, ypred + 2 * ystd_pred, color='grey', alpha=0.6)
+                ax.plot_surface(x1, x2, ypred - 2 * ystd_pred, color='grey', alpha=0.6)
+            else:
+                raise NotImplementedError("Plotting is only implemented for dimensions <= 2. Use profit ui instead.")
+        else:
+            if self.ndim == 1 and ypred.shape[-1] == 1:
+                # Only one input parameter to plot.
+                plt.plot(xpred, ypred)
+                plt.fill_between(xpred, ypred + 2 * ystd_pred, ypred - 2 * ystd_pred, color='grey', alpha='0.6')
+            elif self.ndim == 2 and ypred.shape[-1] == 1:
+                # Two fitted input variables.
+                ax = plt.axes(projection='3d')
+                ax.scatter(self.xtrain[:, 0], self.xtrain[:, 1], self.ytrain[:], color='red', alpha=0.8)
+            else:
+                raise NotImplementedError("Plotting is only implemented for dimension <= 2. Use profit ui instead.")
+
+        # self.m.plot()
+        plt.show()
+
+    def save_model(self, filename):
+        """ Save the GPySurrogate class object with all attributes to a hdf5 file. """
+        from profit.util import save_hdf, get_class_attribs
+        attribs = [a for a in get_class_attribs(self)
+                   if a not in ('GPy', 'xtrain', 'ytrain', 'kern')]
+        sur_dict = {attr: getattr(self, attr) for attr in attribs if attr != 'm'}
+        sur_dict['m'] = self.m.to_dict()
+        save_hdf(filename, str(sur_dict))
+
+    @classmethod
+    def load_model(cls, filename):
+        """ Load a saved GPySurrogate object with hdf5 format. """
+        from profit.util import load
+        sur_dict = eval(load(filename, as_type='dict'))
+        self = cls()
+
+        for attr, value in sur_dict.items():
+            setattr(self, attr, value
+                    if attr != 'm' else cls.GPy.models.GPRegression.from_dict(value))
+        if self.m:
+            self.xtrain = self.m.X
+            self.ytrain = self.m.Y
+            self.kern = self.m.kern
+
+        return self
+
+    def _select_kernel(self, kernel):
+        """ Get the GPy.kern.src.stationary kernel by matching a string using regex.
+         Also sum and product kernels are possible, e.g. RBF + Matern52. """
+
+        from re import match
+        kern_map = {'rbf': 'self.GPy.kern.RBF({})'.format(self.ndim),
+                    'matern52': 'self.GPy.kern.Matern52({})'.format(self.ndim),
+                    '+': '+',
+                    '*': '*'}
+
+        kern = match("""(\w+)(\+|\*)?(\w+)?""", kernel)
+        kern = [k.lower() for k in kern.groups() if k is not None]
+
+        try:
+            return eval(''.join(kern_map[k] for k in kern))
+        except KeyError:
+            raise RuntimeError("Kernel {} is not implemented yet.".format(kernel))
 
 
 class GPFlowSurrogate(Surrogate):

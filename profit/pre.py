@@ -7,27 +7,15 @@ def rec2dict(rec):
     return {name: rec[name] for name in rec.dtype.names}
 
 
-def write_input(eval_points, out_dir=''):
-    """ Write input.txt with parameter combinations to directory 'out_dir' """
-
-    from numpy import array, savetxt
-    filename = os.path.join(out_dir, 'input.txt')
-    if isinstance(eval_points, dict):
-        savetxt(filename,
-                array(list(eval_points.values())).T,
-                header=' '.join(eval_points.keys()))
-    else:
-        util.save_txt(filename, eval_points)
+def write_input(eval_points, filename='input.txt'):
+    """ Create input file with parameter combinations. """
+    util.save(eval_points, filename)
 
 
 def fill_run_dir(eval_points, template_dir='template/', run_dir='run/',
                  overwrite=False):
     """ Fill each run directory with input data according to template format. """
-
-    try:
-        from tqdm import tqdm
-    except ModuleNotFoundError:
-        def tqdm(x): return x
+    from tqdm import tqdm
 
     kruns = tqdm(range(eval_points.size))  # run with progress bar
 
@@ -43,8 +31,6 @@ def fill_run_dir(eval_points, template_dir='template/', run_dir='run/',
         copy_template(template_dir, run_dir_single)
 
         fill_template(run_dir_single, eval_points[krun])
-
-    write_input(eval_points, run_dir)  # place input.txt with all eval_points in run directory
 
 
 def copy_template(template_dir, out_dir, dont_copy=None):
@@ -64,6 +50,11 @@ def fill_template(out_dir, params, param_files=None):
                 filepath = os.path.join(root, filename)
                 with open(filepath, 'r') as f:
                     content = f.read()
+                    # Escape '{*}' for e.g. json templates by replacing it with '{{*}}'.
+                    # Variables then have to be declared as '{{*}}' which is replaced by a single '{*}'.
+                    if '{{' in content:
+                        content = content.replace('{{', '§').replace('}}', '§§')\
+                            .replace('{', '{{').replace('}', '}}').replace('§§', '}').replace('§', '{')
                     content = content.format_map(util.SafeDict(rec2dict(params)))
                 with open(filepath, 'w') as f:
                     f.write(content)
@@ -74,7 +65,6 @@ def get_eval_points(config):
     Use corresponding variable kinds (e.g. Uniform, Normal, Independent, etc.)
     """
 
-    from profit.util import variable_kinds
     import numpy as np
 
     inputs = config['input']
@@ -82,20 +72,9 @@ def get_eval_points(config):
     npoints = config['ntrain']
     dtypes = [(key, inputs[key]['dtype']) for key in inputs.keys()]
 
-    eval_points = np.zeros(npoints, dtype=dtypes)
+    eval_points = np.zeros((npoints, 1), dtype=dtypes)
 
     for n, (k, v) in enumerate(inputs.items()):
-
-        try:
-            func = getattr(variable_kinds, util.safe_str(v['kind']))
-        except AttributeError:
-            raise AttributeError("Variable kind not defined.\n"
-                                 "Valid Functions: {}".format(util.get_class_methods(variable_kinds)))
-        x = func(*v['range'], size=npoints)
-
-        if np.issubdtype(eval_points[k].dtype, np.integer):
-            eval_points[k] = np.round(x)
-        else:
-            eval_points[k] = x
+        eval_points[k] = np.round(v['range']) if np.issubdtype(eval_points[k].dtype, np.integer) else v['range']
 
     return eval_points

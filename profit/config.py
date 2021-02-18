@@ -49,6 +49,47 @@ class Config(OrderedDict):
     Configuration class
     This class provides a dictionary with possible configuration parameters for
     simulation, fitting and uncertainty quantification.
+
+    Possible parameters in .yaml:
+
+    base_dir: .
+    template_dir: ./template
+    run_dir: ./run
+    runner_backend: local
+    uq: # TODO: implement
+    interface: ./interface.py
+    files:
+        input: ./input.txt
+        output: ./output.txt
+    ntrain: 30
+    variables:
+        input1:
+            kind: Normal
+            range: (0, 1)
+            dtype: float
+        ...
+        independent1:
+            kind: Independent
+            range: (0, 10, 1)
+            dtype: int
+        ...
+        output1:
+            kind: Output
+            range: independent1
+            dtype: float
+    run:
+        cmd: python3 ../simulation.py
+        ntask: 4
+    fit:
+        surrogate: GPy
+        kernel: RBF
+        sigma_n: None
+        sigma_f: 1e-6
+        save: ./model.hdf5
+        load: ./model.hdf5
+        plot: Bool
+            xpred: ((0, 1, 0.01), (0, 10, 0.1))
+        plot_searching_phase: Bool
     """
 
     def __init__(self, base_dir=getcwd(), **entries):
@@ -61,8 +102,10 @@ class Config(OrderedDict):
         self['uq'] = {}
         self['interface'] = path.join(self['base_dir'], 'interface.py')
         self['variables'] = {}
-        self['save'] = None  # TODO: implement saving files as '.txt' or '.hdf'
-        self['surrogate'] = None
+        self['fit'] = {'surrogate': 'GPy',
+                       'kernel': 'RBF'}
+        self['files'] = {'input': path.join(self['base_dir'], 'input.txt'),
+                         'output': path.join(self['base_dir'], 'output.txt')}
 
         # Not to fill directly in file
         self['independent'] = {}
@@ -83,6 +126,7 @@ class Config(OrderedDict):
     def from_file(cls, filename='profit.yaml'):
         """ Load configuration from .yaml or .py file.
         The default filename is profit.yaml """
+        from profit.util import variable_kinds, safe_str, get_class_methods
 
         self = cls(base_dir=path.split(filename)[0])
 
@@ -113,20 +157,25 @@ class Config(OrderedDict):
                 if kind == 'Output':
                     # TODO: match arbitrary number of independent variables
                     mat = match(r'.*\((\w+)?[\,,\,\s]?(\w+)?', v)
-                    dependent = tuple(d for d in mat.groups() if d is not None) \
-                        if mat else ()
+                    dependent = tuple(d for d in mat.groups() if d is not None) if mat else ()
                     self['variables'][k]['range'] = {k: None for k in dependent}
                 else:
-                    self['variables'][k]['range'] = entries
+                    try:
+                        func = getattr(variable_kinds, safe_str(kind))
+                        self['variables'][k]['range'] = func(*entries, size=self['ntrain']) if entries else None
+                    except AttributeError:
+                        raise RuntimeError("Variable kind not defined.\n"
+                                           "Valid Functions: {}".format(get_class_methods(variable_kinds)))
 
             # Process data types
             if 'dtype' not in self['variables'][k].keys():
                 self['variables'][k]['dtype'] = 'float64'
 
             # Add to corresponding variables 'output', 'independent' or 'input'
-            kind = self['variables'][k]['kind']
-            kind = kind.lower() if kind in ('Output', 'Independent') else 'input'
-            self[kind][k] = self['variables'][k]
+            kind = self['variables'][k]['kind'].lower()
+            kind = kind if kind in ('output', 'independent') else 'input'
+            if self['variables'][k].get('range') is not None:
+                self[kind][k] = self['variables'][k]
 
         # Fill range of output vector
         for k, v in self['output'].items():
@@ -152,6 +201,12 @@ class Config(OrderedDict):
             #       But don't do it here, but in the run phase.
             #       So the 'run' directory can be filled without the 'run' command in the config file.
 
+        self['files']['input'] = path.join(self['base_dir'], self['files']['input'])
+        self['files']['output'] = path.join(self['base_dir'], self['files']['output'])
+        if self['fit'].get('load'):
+            self['fit']['load'] = path.join(self['base_dir'], self['fit']['load'])
+        if self['fit'].get('save'):
+            self['fit']['save'] = path.join(self['base_dir'], self['fit']['save'])
         return self
 
     def _remove_nones(self,config=None):
