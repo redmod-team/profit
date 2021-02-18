@@ -209,13 +209,58 @@ class GPySurrogate(Surrogate):
         raise NotImplementedError()
 
     def predict(self, x):
-        return self.m.predict(x)
+        """ Predict output from unseen data with the trained model.
+        :return: (mean, var)
+        """
+        if self.trained:
+            return self.m.predict(x)
+        else:
+            raise RuntimeError("Need to train() before predict()!")
 
-    def plot(self):
-        self.m.plot()
+    def plot(self, x=None, independent=None):
+        if x is not None:
+            xpred = x if x.ndim > 1 else x.reshape(-1, 1)
+        else:
+            minval = 0.9 * self.xtrain.min(axis=0)
+            maxval = 1.1 * self.xtrain.max(axis=0)
+            step = 0.1 * (maxval - minval) / maxval
+            npoints = ((maxval - minval) // step + 1).astype(int)
+            xpred = np.zeros((max(npoints), self.ndim))
+            for d in range(self.ndim):
+                xpred[:npoints[d], d] = np.arange(minval[d], maxval[d], step[d])
+        ypred, yvarpred = self.predict(xpred)
+        ystd_pred = np.sqrt(yvarpred)
+        if independent:
+            # 2D with one input parameter and one independent variable.
+            if self.ndim == 1 and ypred.ndim == 2:
+                ax = plt.axes(projection='3d')
+                for k, v in independent.items():
+                    x1t, x2t = np.meshgrid(v['range'], self.xtrain)
+                    x1, x2 = np.meshgrid(v['range'], xpred)
+                for i in range(x1t.shape[0]):
+                    ax.plot(x1t[i, :], x2t[i, :], self.ytrain[i, :], color='blue', linewidth=2)
+                ax.plot_surface(x1, x2, ypred, color='red', alpha=0.8)
+                ax.plot_surface(x1, x2, ypred + 2 * ystd_pred, color='grey', alpha=0.6)
+                ax.plot_surface(x1, x2, ypred - 2 * ystd_pred, color='grey', alpha=0.6)
+            else:
+                raise NotImplementedError("Plotting is only implemented for dimensions <= 2. Use profit ui instead.")
+        else:
+            if self.ndim == 1 and ypred.shape[-1] == 1:
+                # Only one input parameter to plot.
+                plt.plot(xpred, ypred)
+                plt.fill_between(xpred, ypred + 2 * ystd_pred, ypred - 2 * ystd_pred, color='grey', alpha='0.6')
+            elif self.ndim == 2 and ypred.shape[-1] == 1:
+                # Two fitted input variables.
+                ax = plt.axes(projection='3d')
+                ax.scatter(self.xtrain[:, 0], self.xtrain[:, 1], self.ytrain[:], color='red', alpha=0.8)
+            else:
+                raise NotImplementedError("Plotting is only implemented for dimension <= 2. Use profit ui instead.")
+
+        # self.m.plot()
         plt.show()
 
     def save_model(self, filename):
+        """ Save the GPySurrogate class object with all attributes to a hdf5 file. """
         from profit.util import save_hdf, get_class_attribs
         attribs = [a for a in get_class_attribs(self)
                    if a not in ('GPy', 'xtrain', 'ytrain', 'kern')]
@@ -225,8 +270,9 @@ class GPySurrogate(Surrogate):
 
     @classmethod
     def load_model(cls, filename):
-        from profit.util import load_hdf
-        sur_dict = eval(load_hdf(filename, as_dict=True)['data'])
+        """ Load a saved GPySurrogate object with hdf5 format. """
+        from profit.util import load
+        sur_dict = eval(load(filename, as_type='dict'))
         self = cls()
 
         for attr, value in sur_dict.items():
@@ -240,16 +286,22 @@ class GPySurrogate(Surrogate):
         return self
 
     def _select_kernel(self, kernel):
-        if isinstance(kernel, str):
-            if kernel.lower() == 'rbf':
-                return self.GPy.kern.RBF(input_dim=self.ndim)
-            elif kernel.lower() == 'matern52':
-                return self.GPy.kern.Matern52
-            else:
-                return NotImplementedError("Kernel {} is not implemented yet.".format(kernel))
-        elif isinstance(kernel, (list, tuple)):
-            # TODO: add sum and prod kernels
-            pass
+        """ Get the GPy.kern.src.stationary kernel by matching a string using regex.
+         Also sum and product kernels are possible, e.g. RBF + Matern52. """
+
+        from re import match
+        kern_map = {'rbf': 'self.GPy.kern.RBF({})'.format(self.ndim),
+                    'matern52': 'self.GPy.kern.Matern52({})'.format(self.ndim),
+                    '+': '+',
+                    '*': '*'}
+
+        kern = match("""(\w+)(\+|\*)?(\w+)?""", kernel)
+        kern = [k.lower() for k in kern.groups() if k is not None]
+
+        try:
+            return eval(''.join(kern_map[k] for k in kern))
+        except KeyError:
+            raise RuntimeError("Kernel {} is not implemented yet.".format(kernel))
 
 
 class GPFlowSurrogate(Surrogate):

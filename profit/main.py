@@ -125,23 +125,34 @@ def main():
             collect_output(config, default_interface=True)
 
     elif args.mode == 'fit':
-        from numpy import loadtxt
+        from numpy import arange, hstack
+        from profit.util import load
         from profit.fit import get_surrogate
 
-        x = loadtxt(config['files']['input'])
-        y = loadtxt(config['files']['output'])
         sur = get_surrogate(config['fit']['surrogate'])
 
         if config['fit'].get('load'):
-            sur = sur.load_model(path.join(config['base_dir'], config['fit']['load']))
+            sur = sur.load_model(config['fit']['load'])
         else:
-            sur.train(x, y)
+            x = load(config['files']['input'])
+            y = load(config['files']['output'])
+            x = hstack([x[key] for key in x.dtype.names])
+            y = hstack([y[key] for key in y.dtype.names])
+
+            sur.train(x, y,
+                      sigma_n=config['fit'].get('sigma_n'),
+                      sigma_f=config['fit'].get('sigma_f'),
+                      kernel=config['fit'].get('kernel'))
             # TODO: plot_searching_phase
 
         if config['fit'].get('save'):
-            sur.save_model(path.join(config['base_dir'], config['fit']['save']))
+            sur.save_model(config['fit']['save'])
         if config['fit'].get('plot'):
-            sur.plot()
+            try:
+                x = arange(*eval(config['fit']['plot'].get('xpred'))).reshape(-1, 1)
+            except AttributeError:
+                x = None
+            sur.plot(x=x, independent=config['independent'])
 
     elif args.mode == 'ui':
         from profit.ui import app
