@@ -1,4 +1,5 @@
 [![DOI](https://zenodo.org/badge/168945305.svg)](https://zenodo.org/badge/latestdoi/168945305)
+[![Documentation Status](https://readthedocs.org/projects/profit/badge/?version=latest)](https://profit.readthedocs.io/en/latest/?badge=latest)
 
 <img src="logo.png" width="208.5px">
 
@@ -44,17 +45,25 @@ from GitHub via Git and pulled regularily.
 * GPFlow 2.0
 * pyccel
 
-Some dependencies should be installed automatically when using `pip`, 
-however GPflow 2.0 should be installed from GitHub at https://github.com/GPflow/GPflow.
+All dependencies should be installed automatically when using `pip`.
 
 ### Installation from Git
-To install proFit in-place use
+To install proFit for the current user (`--user`) in development-mode (`-e`) use:
 
 ```bash
 git clone https://github.com/redmod-team/profit.git
 cd profit
 pip install -e . --user
 ```
+
+### Options
+* Disable compilation of the fortran modules
+
+        pip install . --global-option "--no-fortran"
+
+* Install requirements for building the documentation using `sphinx`
+
+        pip install .[docs]        
 
 ## HowTo
 
