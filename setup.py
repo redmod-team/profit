@@ -27,12 +27,9 @@ if __name__ == "__main__":
     # explicitly allow installation in user site in development mode
     site.ENABLE_USER_SITE = "--user" in sys.argv[1:]
 
-    # forgo compiling fortran while building the docs for readthedocs
-    if os.environ.get('READTHEDOCS') == 'True':
-        setup()
-    elif "--no-fortran" in sys.argv[1:]:
-        sys.argv.remove("--no-fortran") # need to remove argument before setup() is called
-        setup()
-    else:
+    if "--fortran" in sys.argv[1:]:
+        sys.argv.remove("--fortran")  # need to remove argument before setup() is called
         setup(ext_modules=[ext_gpfunc, ext_kernels])
+    else:
+        setup()
 
