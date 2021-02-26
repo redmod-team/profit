@@ -11,6 +11,7 @@ from profit.sur import Surrogate
 
 
 class ANNSurrogate(Surrogate):
+    """ TODO: Port to PyTorch """
     def __init__(self):
         self.trained = False
         pass
@@ -44,3 +45,35 @@ class ANNSurrogate(Surrogate):
         fpred.append(self.model.predict(x))
         fpred.append(np.zeros_like(fpred[0]))  # no uncertainty information from ANN
         return fpred
+
+# New classes should be based on PyTorch
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
+
+
+class Autoencoder(nn.Module):
+    """Nonlinear autoencoder with activation functions"""
+    def __init__(self, D, d):
+        super(Autoencoder, self).__init__()
+        self.enc1 = nn.Linear(in_features=D, out_features=D//2)
+        self.enc2 = nn.Linear(in_features=D//2, out_features=d)
+        self.dec1 = nn.Linear(in_features=d, out_features=D//2)
+        self.dec2 = nn.Linear(in_features=D//2, out_features=D)
+
+    def forward(self, x):
+        x = F.tanh(self.enc1(x))
+        x = F.tanh(self.enc2(x))
+        x = F.tanh(self.dec1(x))
+        x = F.tanh(self.dec2(x))
+        return x
+
+    def train(self, x, learning_rate=0.01, nstep=1000):
+        optimizer = optim.Adam(ae.parameters(), learning_rate=0.01)
+        for k in range(nstep):
+            optimizer.zero_grad()
+            output = ae(input)
+            loss = criterion(output, target)
+            loss.backward()
+            optimizer.step()
+            print(loss.data)

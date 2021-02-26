@@ -1,0 +1,598 @@
+#LyX 2.3 created this file. For more info see http://www.lyx.org/
+\lyxformat 544
+\begin_document
+\begin_header
+\save_transient_properties true
+\origin unavailable
+\textclass article
+\use_default_options true
+\maintain_unincluded_children false
+\language english
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman "default" "default"
+\font_sans "default" "default"
+\font_typewriter "default" "default"
+\font_math "auto" "auto"
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100 100
+\font_tt_scale 100 100
+\use_microtype false
+\use_dash_ligatures true
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize default
+\use_hyperref false
+\papersize default
+\use_geometry false
+\use_package amsmath 1
+\use_package amssymb 1
+\use_package cancel 1
+\use_package esint 1
+\use_package mathdots 1
+\use_package mathtools 1
+\use_package mhchem 1
+\use_package stackrel 1
+\use_package stmaryrd 1
+\use_package undertilde 1
+\cite_engine basic
+\cite_engine_type default
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\justification true
+\use_refstyle 1
+\use_minted 0
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation default
+\is_math_indent 0
+\math_numbering_side default
+\quotes_style english
+\dynamic_quotes 0
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Standard
+Let 
+\begin_inset Formula $|f\rangle$
+\end_inset
+
+be in some inner product vector space.
+ This can be a finite-dimensional space of column vectors with the usual
+ inner product or an infinite-dimensional function (Hilbert) space with
+\begin_inset Formula 
+\begin{equation}
+\left\langle f|g\right\rangle =\int_{\Omega}f(x)g(x)\mathrm{d}x.
+\end{equation}
+
+\end_inset
+
+We would like to represent our data in a basis
+\begin_inset Formula 
+\begin{equation}
+|f\rangle=\sum_{j=1}^{N}f_{j}|\varphi_{j}\rangle.
+\end{equation}
+
+\end_inset
+
+Be aware that 
+\begin_inset Formula $f_{i}$
+\end_inset
+
+ are generally 
+\emph on
+not 
+\emph default
+Cartesian components of 
+\begin_inset Formula $|f\rangle$
+\end_inset
+
+, but (e.g.
+ Fourier) expansion coefficients in the basis 
+\begin_inset Formula $|\varphi_{j}\rangle$
+\end_inset
+
+.
+ These can be obtained by multiplying with 
+\begin_inset Formula $\langle\varphi_{i}|$
+\end_inset
+
+ to obtain
+\begin_inset Formula 
+\begin{equation}
+\langle\varphi_{i}|f\rangle=\sum_{j=1}^{N}f_{j}\langle\varphi_{i}|\varphi_{j}\rangle.
+\end{equation}
+
+\end_inset
+
+Then we can solve for 
+\begin_inset Formula $f_{j}$
+\end_inset
+
+ via the equation
+\begin_inset Formula 
+\begin{equation}
+\boldsymbol{b}=M\boldsymbol{f}.
+\end{equation}
+
+\end_inset
+
+with
+\begin_inset Formula 
+\begin{equation}
+M_{ij}=\langle\varphi_{i}|\varphi_{j}\rangle,\quad b_{i}=\langle\varphi_{i}|f\rangle.
+\end{equation}
+
+\end_inset
+
+Here 
+\begin_inset Formula $M$
+\end_inset
+
+ is called the covariance or mass matrix, and 
+\begin_inset Formula $b_{i}$
+\end_inset
+
+ are the projections of 
+\begin_inset Formula $f$
+\end_inset
+
+ into the span of the vectors 
+\begin_inset Formula $|\varphi_{j}\rangle$
+\end_inset
+
+.
+ In non-degenerate cases, 
+\begin_inset Formula $|\varphi_{j}\rangle$
+\end_inset
+
+ form a basis of this 
+\begin_inset Formula $N$
+\end_inset
+
+-dimensional space.
+ We are now looking for a way to represent vectors in a smaller basis with
+ only 
+\begin_inset Formula $n$
+\end_inset
+
+ vectors, thereby reducing the dimension.
+ This is equivalent to finding a low-rank approximation of dimension 
+\begin_inset Formula $n$
+\end_inset
+
+ for the covariance matrix 
+\begin_inset Formula $M$
+\end_inset
+
+.
+ A common way to do this is the PCA (more generally SVD or POD), that truncates
+ the spectrum of 
+\begin_inset Formula $M$
+\end_inset
+
+ at small eigenvalues.
+ Then we represent
+\begin_inset Formula 
+\begin{equation}
+M\approx Q^{T}\Lambda Q,\quad\Lambda_{ij}=\lambda_{i}\delta_{ij},
+\end{equation}
+
+\end_inset
+
+with eigenvalues 
+\begin_inset Formula $\lambda_{i}$
+\end_inset
+
+ and eigenvectors in columns 
+\begin_inset Formula $Q_{i\cdot}$
+\end_inset
+
+.
+ 
+\begin_inset Formula 
+\begin{equation}
+Q\in\mathbb{R}^{N\times n},\quad\Lambda\in\mathbb{R}^{n\times n},\quad M\in\mathbb{R}^{N\times N}.
+\end{equation}
+
+\end_inset
+
+Since columns of 
+\begin_inset Formula $Q$
+\end_inset
+
+ are orthogonal, we can then simply write the inverse
+\begin_inset Formula 
+\begin{equation}
+M^{-1}\approx Q\Lambda^{-1}Q^{T}
+\end{equation}
+
+\end_inset
+
+and
+\begin_inset Formula 
+\begin{equation}
+\boldsymbol{f}\approx Q\Lambda^{-1}Q^{T}\boldsymbol{b}.
+\end{equation}
+
+\end_inset
+
+In terms of eigenvectors
+\begin_inset Formula 
+\begin{equation}
+|q_{i}\rangle=|\varphi_{j}\rangle Q_{ji}
+\end{equation}
+
+\end_inset
+
+
+\begin_inset Formula 
+\begin{equation}
+\langle\varphi_{k}|q_{i}\rangle=\langle\varphi_{k}|\varphi_{j}\rangle Q_{ji}=M_{kj}Q_{ji}
+\end{equation}
+
+\end_inset
+
+we can thus write 
+\begin_inset Formula 
+\begin{equation}
+|f\rangle=\sum_{j=1}^{n}f_{j}|\varphi_{j}\rangle=\sum_{j=1}^{n}\bar{f}_{j}|q_{j}\rangle=\sum_{j=1}^{n}\bar{f}_{j}Q_{ji}|\varphi_{j}\rangle
+\end{equation}
+
+\end_inset
+
+and
+\begin_inset Formula 
+\begin{equation}
+b_{i}=\langle\varphi_{i}|f\rangle=M_{ij}f_{j}=\sum_{j=1}^{n}\bar{f}_{j}\langle\varphi_{i}|q_{j}\rangle=\bar{f}_{j}M_{il}Q_{lj}.
+\end{equation}
+
+\end_inset
+
+or
+\begin_inset Formula 
+\begin{equation}
+\langle q_{i}|f\rangle=Q_{ji}f_{j}=\sum_{j=1}^{n}\bar{f}_{j}\langle q_{i}|q_{j}\rangle=\bar{f}_{i}.
+\end{equation}
+
+\end_inset
+
+So we see that coefficients can be obtained directly by a projection in
+ the orthonormal basis 
+\begin_inset Formula $|\varphi_{j}\rangle$
+\end_inset
+
+,
+\begin_inset Formula 
+\begin{equation}
+\bar{\boldsymbol{f}}=Q^{T}\boldsymbol{f}=Q^{T}M^{-1}\boldsymbol{b}\approx\underbrace{Q^{T}Q}_{I_{n}}\Lambda^{-1}Q^{T}\boldsymbol{b}=\Lambda^{-1}\bar{\boldsymbol{b}}.
+\end{equation}
+
+\end_inset
+
+in the perfect world.
+\end_layout
+
+\begin_layout Subsection*
+Representation by pixels
+\end_layout
+
+\begin_layout Standard
+If continuous functions are represented by 
+\begin_inset Quotes eld
+\end_inset
+
+pixel
+\begin_inset Quotes erd
+\end_inset
+
+ values, there is another projection involved.
+ Here we approximate
+\begin_inset Formula 
+\begin{equation}
+\langle f|g\rangle\approx\frac{V_{\Omega}}{N_{x}}\sum_{i=1}^{N_{x}}f(x_{i})g(x_{i})
+\end{equation}
+
+\end_inset
+
+via a 
+\begin_inset Quotes eld
+\end_inset
+
+Cartesian inner product
+\begin_inset Quotes erd
+\end_inset
+
+ at the 
+\begin_inset Quotes eld
+\end_inset
+
+pixel
+\begin_inset Quotes erd
+\end_inset
+
+ values in the observed vector with entries 
+\begin_inset Formula $F_{i}=f(x_{i})$
+\end_inset
+
+.
+ The dimension of this vector space is 
+\begin_inset Formula $N_{x}$
+\end_inset
+
+ and can be substantially higher than the number of existing training samples
+ 
+\begin_inset Formula $N$
+\end_inset
+
+ that we use to span our space.
+ Within this approximation the relation between 
+\begin_inset Formula $F_{i}$
+\end_inset
+
+ and 
+\begin_inset Formula $f_{j}$
+\end_inset
+
+ (omitting normalization) is linear since
+\begin_inset Formula 
+\begin{equation}
+M_{ij}f_{j}=\langle\varphi_{i}|f\rangle\approx\sum_{k=1}^{N_{x}}\varphi_{i}(x_{k})f(x_{k})=\Phi_{ik}F_{k}.
+\end{equation}
+
+\end_inset
+
+The sum is taken over the 
+\begin_inset Formula $N$
+\end_inset
+
+ basis functions 
+\begin_inset Formula $j$
+\end_inset
+
+ on the left, and over 
+\begin_inset Formula $N_{x}$
+\end_inset
+
+ pixels 
+\begin_inset Formula $k$
+\end_inset
+
+ on the right.
+ Both sides give the output 
+\begin_inset Formula $i\in1,N$
+\end_inset
+
+.
+ If we want to predict 
+\begin_inset Formula $F_{k}=f(x_{k})$
+\end_inset
+
+ we can use
+\begin_inset Formula 
+\begin{equation}
+F_{k}=f(x_{k})\approx\sum_{i=1}^{N}f_{i}\varphi_{i}(x_{k})=\Phi_{ik}f_{i}.
+\end{equation}
+
+\end_inset
+
+This is in accordance with the construction 
+\begin_inset Formula $M_{ij}\approx\sum_{k}\varphi_{i}(x_{k})\varphi_{j}(x_{k})$
+\end_inset
+
+ that produces the matrix 
+\begin_inset Formula $M\approx\Phi\Phi^{T}$
+\end_inset
+
+ from pixel values.
+ To sum up we go from
+\begin_inset Formula 
+\begin{equation}
+\underset{N_{x}}{\boldsymbol{F}}\overset{\Phi}{\rightarrow}\underset{N}{\boldsymbol{b}}\overset{M^{-1}}{\rightarrow}\underset{N}{\boldsymbol{f}}\overset{\Phi^{T}}{\rightarrow}\underset{N_{x}}{\boldsymbol{F}}
+\end{equation}
+
+\end_inset
+
+to the approximation
+\begin_inset Formula 
+\begin{equation}
+\underset{N_{x}}{\boldsymbol{F}}\overset{\Phi}{\rightarrow}\underset{N}{\boldsymbol{b}}\overset{Q^{T}}{\rightarrow}\underset{n}{\boldsymbol{\bar{b}}}\overset{\Lambda^{-1}}{\rightarrow}\underset{n}{\boldsymbol{\bar{f}}}\overset{Q}{\rightarrow}\underset{N}{\boldsymbol{f}}\overset{\Phi^{T}}{\rightarrow}\underset{N_{x}}{\boldsymbol{F}}.
+\end{equation}
+
+\end_inset
+
+This can also be written in shorter form as
+\begin_inset Formula 
+\begin{equation}
+\underset{N_{x}}{\boldsymbol{F}}\overset{\Phi}{\rightarrow}\underset{N}{\boldsymbol{b}}\overset{W^{T}}{\rightarrow}\underset{n}{\tilde{\boldsymbol{f}}}\overset{W}{\rightarrow}\underset{N}{\boldsymbol{f}}\overset{\Phi^{T}}{\rightarrow}\underset{N_{x}}{\boldsymbol{F}},
+\end{equation}
+
+\end_inset
+
+where
+\begin_inset Formula 
+\begin{equation}
+W=\Lambda^{-1/2}Q,\quad M^{-1}\approx WW^{T},\quad\tilde{\boldsymbol{f}}=\Lambda^{-1/2}\bar{\boldsymbol{f}}.
+\end{equation}
+
+\end_inset
+
+The first reduction from high (or even formally infinite) dimensions via
+ 
+\begin_inset Formula $\Phi$
+\end_inset
+
+ is kept linear for now, as it is generated via a rich linear basis that
+ can be augmented by adding more training data samples 
+\begin_inset Formula $|\varphi_{j}\rangle$
+\end_inset
+
+.
+ The interesting part to replace by a nonlinear mapping is the PCA step
+ from 
+\begin_inset Formula $N$
+\end_inset
+
+ to 
+\begin_inset Formula $n$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+Dimension vs nonlinearity: kernel trick
+\begin_inset Formula 
+\begin{equation}
+f(x)=e^{x}+x
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+2D fit:
+\begin_inset Formula 
+\begin{equation}
+\varphi_{1}(x)=1,\,\varphi_{2}(x)=x
+\end{equation}
+
+\end_inset
+
+
+\begin_inset Formula 
+\begin{equation}
+f(x)\approx ax+b
+\end{equation}
+
+\end_inset
+
+Optimum:
+\begin_inset Formula 
+\begin{equation}
+\varphi_{1}(x)=x,\,\varphi_{2}(x)=e^{x}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+N-D:
+\begin_inset Formula 
+\begin{equation}
+\varphi_{1}(x)=x,\,\varphi_{2}(x)=x^{2},\,\varphi_{3}(x)=x^{3},\dots
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection*
+Nonlinear PCA via autoencoders
+\end_layout
+
+\begin_layout Standard
+A simple way to generalize the PCA to the nonlinear case consists in replacing
+ the linear map 
+\begin_inset Formula $Q\bar{\boldsymbol{x}}$
+\end_inset
+
+ by a nonlinear map 
+\begin_inset Formula $\boldsymbol{q}(\bar{\boldsymbol{x}})=\boldsymbol{g}(Q\bar{\boldsymbol{x}}+\bar{\boldsymbol{d}})$
+\end_inset
+
+.
+ We would like to retain the feature that
+\begin_inset Formula 
+\begin{equation}
+Q^{T}Q=I_{n},\quad Q_{ki}Q_{kj}=\delta_{ij}^{n}
+\end{equation}
+
+\end_inset
+
+is the identity transform in the reduced eigenspace.
+ For the choice of replacing the projector 
+\begin_inset Formula $Q^{T}\boldsymbol{x}$
+\end_inset
+
+ by 
+\begin_inset Formula $\bar{\boldsymbol{q}}(\boldsymbol{x})=\bar{\boldsymbol{g}}(Q^{T}\boldsymbol{x}+\boldsymbol{d})$
+\end_inset
+
+ this means
+\begin_inset Formula 
+\begin{equation}
+\bar{\boldsymbol{x}}=(\bar{\boldsymbol{q}}\circ\boldsymbol{q})(\bar{\boldsymbol{x}})=\bar{\boldsymbol{q}}(\boldsymbol{q}(\bar{\boldsymbol{x}}))=\bar{\boldsymbol{q}}(\boldsymbol{g}(Q\bar{\boldsymbol{x}}+\boldsymbol{d}))=\bar{\boldsymbol{g}}(Q^{T}\boldsymbol{g}(Q\bar{\boldsymbol{x}}+\boldsymbol{d})+\bar{\boldsymbol{d}}).
+\end{equation}
+
+\end_inset
+
+In components and for the same function 
+\begin_inset Formula $g$
+\end_inset
+
+ in all components:
+\begin_inset Formula 
+\begin{equation}
+\bar{x}_{j}=\bar{g}(Q_{ik}g(Q_{ij}\bar{x}_{j}+d_{i})+\bar{d}_{k}).
+\end{equation}
+
+\end_inset
+
+This looks a bit hard to solve.
+ Alternative:
+\begin_inset Formula 
+\begin{align}
+\bar{\boldsymbol{x}} & =Q^{T}Q\bar{\boldsymbol{x}}\approx Q^{T}\boldsymbol{x}\\
+\boldsymbol{x} & \approx Q\bar{\boldsymbol{x}}\approx QQ^{T}\boldsymbol{x}
+\end{align}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection*
+References
+\end_layout
+
+\begin_layout Itemize
+\begin_inset CommandInset href
+LatexCommand href
+target "https://arxiv.org/pdf/1702.00177.pdf"
+
+\end_inset
+
+
+\end_layout
+
+\end_body
+\end_document
