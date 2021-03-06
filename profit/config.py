@@ -59,6 +59,7 @@ class Config(OrderedDict):
     uq: # TODO: implement
     interface: ./interface.py
     files:
+        param_files: [params1.in, params2.in, symlink.txt]
         input: ./input.txt
         output: ./output.txt
     ntrain: 30
@@ -104,7 +105,8 @@ class Config(OrderedDict):
         self['variables'] = {}
         self['fit'] = {'surrogate': 'GPy',
                        'kernel': 'RBF'}
-        self['files'] = {'input': path.join(self['base_dir'], 'input.txt'),
+        self['files'] = {'param_files': None,
+                         'input': path.join(self['base_dir'], 'input.txt'),
                          'output': path.join(self['base_dir'], 'output.txt')}
 
         # Not to fill directly in file

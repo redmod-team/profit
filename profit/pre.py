@@ -12,8 +12,7 @@ def write_input(eval_points, filename='input.txt'):
     util.save(eval_points, filename)
 
 
-def fill_run_dir(eval_points, template_dir='template/', run_dir='run/',
-                 overwrite=False):
+def fill_run_dir(eval_points, template_dir='template/', run_dir='run/', param_files=None, overwrite=False):
     """ Fill each run directory with input data according to template format. """
     from tqdm import tqdm
 
@@ -30,7 +29,7 @@ def fill_run_dir(eval_points, template_dir='template/', run_dir='run/',
                 raise RuntimeError('Run directory not empty: {}'.format(run_dir_single))
         copy_template(template_dir, run_dir_single)
 
-        fill_template(run_dir_single, eval_points[krun])
+        fill_template(run_dir_single, eval_points[krun], param_files=param_files)
 
 
 def copy_template(template_dir, out_dir, dont_copy=None):
@@ -39,7 +38,22 @@ def copy_template(template_dir, out_dir, dont_copy=None):
     if dont_copy:
         copytree(template_dir, out_dir, ignore=ignore_patterns(*dont_copy))
     else:
-        copytree(template_dir, out_dir)
+        copytree(template_dir, out_dir, symlinks=True)
+    convert_relative_symlinks(template_dir, out_dir)
+
+
+def convert_relative_symlinks(template_dir, out_dir):
+    """ When copying the template directory to the single run directories,
+     relative paths in symbolic links are converted to absolute paths. """
+    for root, dirs, files in os.walk(out_dir):
+        for filename in files:
+            filepath = os.path.join(root, filename)
+            if os.path.islink(filepath):
+                linkto = os.readlink(filepath)
+                if linkto.startswith('.'):
+                    os.remove(filepath)
+                    start_dir = os.path.relpath(root, out_dir)
+                    os.symlink(os.path.join(template_dir, start_dir, filename), filepath)
 
 
 def fill_template(out_dir, params, param_files=None):

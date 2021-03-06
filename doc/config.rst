@@ -36,6 +36,11 @@ The following gives an overview of all possible parameters
 
 * files:
 
+    * param_files:
+        | Files in template which contain placeholders for variables.
+        | Default: None (Takes all files in template_dir as parameter files.)
+        | E.g. [params1.in, params2.in]
+
     * input:
         | Input variables of all runs.
         | Default: ./input.txt

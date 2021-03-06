@@ -84,8 +84,9 @@ def main():
                     print('exit...')
                     sys.exit()
 
-            fill_run_dir(eval_points.flatten(), template_dir=config['template_dir'],
-                         run_dir=config['run_dir'], overwrite=True)
+            fill_run_dir(eval_points.flatten(), template_dir=config['template_dir'], run_dir=config['run_dir'],
+                         param_files=config['files'].get('param_files'),
+                         overwrite=True)
 
     elif args.mode == 'run':
         from profit.run import LocalCommand
