@@ -148,7 +148,7 @@ def main():
                 x = arange(*eval(config['fit']['plot'].get('xpred'))).reshape(-1, 1)
             except AttributeError:
                 x = None
-            sur.plot(x=x, independent=config['independent'])
+            sur.plot(x=x, independent=config['independent'], show=True)
 
     elif args.mode == 'ui':
         from profit.ui import app
