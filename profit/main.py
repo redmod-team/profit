@@ -8,7 +8,7 @@ import sys
 from argparse import ArgumentParser, RawTextHelpFormatter
 
 from profit.config import Config
-from profit.util import safe_path_to_file
+from profit.util import safe_path_to_file, safe_str
 from profit.util.io import read_input, collect_output
 
 yes = False  # always answer 'y'
@@ -71,8 +71,9 @@ def main():
 
         write_input(config['files']['input'], eval_points)
         try:
-            fill_run_dir(eval_points, template_dir=config['template_dir'],
-                         run_dir=config['run_dir'], overwrite=False)
+            fill_run_dir(eval_points.flatten(), template_dir=config['template_dir'],
+                         run_dir=config['run_dir'], param_files=config['files'].get('param_files'),
+                         overwrite=False)
         except RuntimeError:
             question = "Warning: Run directories in {} already exist " \
                        "and will be overwritten. Continue? (y/N) ".format(config['run_dir'])
@@ -91,18 +92,23 @@ def main():
     elif args.mode == 'run':
         from profit.run import LocalCommand
 
-        # TODO: Include options (in call or in config file) which run backend should be used.
-        print(read_input(config['files']['input']))
-        try:
-            run = LocalCommand(config['run']['cmd'], config['run']['ntask'],
-                               run_dir=config['run_dir'], base_dir=config['base_dir'])
-            run.start()
-        except KeyError:
-            raise RuntimeError("No 'run' entry in profit.yaml")
-        except FileNotFoundError:
-            # TODO: Error occurs in single threads and is written to stderr.
-            #       Make it easier for the user to recognise this error
-            pass
+        if 'activelearning' in (safe_str(v['kind']) for v in config['input'].values()):
+            from profit.fit import ActiveLearning
+            al = ActiveLearning(config)
+            al.learn()
+        else:
+            # TODO: Include options (in call or in config file) which run backend should be used.
+            print(read_input(config['files']['input']))
+            try:
+                run = LocalCommand(config['run']['cmd'], config['run']['ntask'],
+                                   run_dir=config['run_dir'], base_dir=config['base_dir'])
+                run.start()
+            except KeyError:
+                raise RuntimeError("No 'run' entry in profit.yaml")
+            except FileNotFoundError:
+                # TODO: Error occurs in single threads and is written to stderr.
+                #       Make it easier for the user to recognise this error
+                pass
 
     elif args.mode == 'collect':
 

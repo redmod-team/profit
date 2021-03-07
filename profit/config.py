@@ -156,7 +156,7 @@ class Config(OrderedDict):
 
                 self['variables'][k] = {'kind': kind}
 
-                if kind == 'Output':
+                if safe_str(kind) == 'output':
                     # TODO: match arbitrary number of independent variables
                     mat = match(r'.*\((\w+)?[\,,\,\s]?(\w+)?', v)
                     dependent = tuple(d for d in mat.groups() if d is not None) if mat else ()
@@ -164,7 +164,10 @@ class Config(OrderedDict):
                 else:
                     try:
                         func = getattr(variable_kinds, safe_str(kind))
-                        self['variables'][k]['range'] = func(*entries, size=self['ntrain']) if entries else None
+                        if safe_str(kind) in ('activelearning', 'halton'):
+                            self['variables'][k]['range'] = func(size=self['ntrain'])
+                        else:
+                            self['variables'][k]['range'] = func(*entries, size=self['ntrain']) if entries else None
                     except AttributeError:
                         raise RuntimeError("Variable kind not defined.\n"
                                            "Valid Functions: {}".format(get_class_methods(variable_kinds)))

@@ -71,6 +71,13 @@ class LocalCommand:
                 args.append((cmd, fulldir))
         p.map(spawn, args)
 
+    def start_single(self, single_run_dir):
+        p = mp.Pool(self.ntask)
+        cmd = self.command.split()
+        if cmd[0].endswith('.py'):
+            cmd.insert(0, sys.executable)
+        p.map(spawn, [(cmd, single_run_dir)])
+
 
 class Slurm:
     def __init__(self, config):

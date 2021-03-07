@@ -15,15 +15,15 @@ def save(filename, data, header=None, fmt=None):
 
 
 def load(filename, as_type='dtype'):
-    if filename.endswith('.txt'):
-        return load_txt(filename)
+    if filename.endswith(('.txt', '.in', '.out')):
+        return load_txt(filename, names=True if as_type == 'dtype' else None)
     elif filename.endswith('.hdf5'):
         return load_hdf(filename, as_type)
 
 
-def load_txt(filename):
+def load_txt(filename, names=True):
     from numpy import genfromtxt
-    return check_ndim(genfromtxt(filename, names=True))
+    return check_ndim(genfromtxt(filename, names=names))
 
 
 def save_txt(filename, data, header=None, fmt=None):

@@ -22,7 +22,7 @@ def normal(mu=0, std=1, size=None):
     return check_ndim(mu + std * np.random.randn(size))
 
 
-def linear(start=0, end=1, step=1):
+def linear(start=0, end=1, step=1, size=None):
     return check_ndim(np.arange(start, end, step))
 
 
