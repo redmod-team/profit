@@ -21,7 +21,7 @@ The following gives an overview of all possible parameters
 
 * run_dir:
     | Directory where the single runs are generated.
-    | Default: ./run
+    | Default: .
 
 * runner_backend:
     | Not implemented yet. Decide if the simulation runs on local machine or on cluster.

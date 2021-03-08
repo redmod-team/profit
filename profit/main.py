@@ -43,12 +43,13 @@ def main():
                             formatter_class=RawTextHelpFormatter)
     parser.add_argument('mode',
                         metavar='mode',
-                        choices=['pre', 'run', 'collect', 'fit', 'ui'],
+                        choices=['pre', 'run', 'collect', 'fit', 'ui', 'clean'],
                         help='pre ... prepare simulation runs based on templates \n'
                              'run ... start simulation runs \n'
                              'collect ... collect simulation output \n'
                              'fit ... fit data with Gaussian Process \n'
-                             'ui ... visualise results')
+                             'ui ... visualise results \n'
+                             'clean ... remove run directories and input/output files')
     parser.add_argument('base_dir',
                         metavar='base-dir',
                         help='path to config file (default: current working directory)',
@@ -159,6 +160,35 @@ def main():
     elif args.mode == 'ui':
         from profit.ui import app
         app.app.run_server(debug=True)
+
+    elif args.mode == 'clean':
+        from shutil import rmtree
+        from os import path, remove
+        run_dir = config['run_dir']
+        base_dir = config['base_dir']
+
+        question = "Are you sure you want to remove the run directories in {} " \
+                   "and input/output files? (y/N) ".format(config['run_dir'])
+        if yes:
+            print(question + 'y')
+        else:
+            answer = input(question)
+            if not answer.lower().startswith('y'):
+                print('exit...')
+                sys.exit()
+
+        if run_dir != base_dir:
+            if path.exists(run_dir):
+                rmtree(run_dir)
+        else:
+            for krun in range(config['ntrain']):
+                single_run_dir = path.join(run_dir, str(krun).zfill(3))
+                if path.exists(single_run_dir):
+                    rmtree(single_run_dir)
+        if path.exists(config['files']['input']):
+            remove(config['files']['input'])
+        if path.exists(config['files']['output']):
+            remove(config['files']['output'])
 
 
 if __name__ == '__main__':

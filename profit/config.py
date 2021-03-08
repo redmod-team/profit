@@ -54,7 +54,7 @@ class Config(OrderedDict):
 
     base_dir: .
     template_dir: ./template
-    run_dir: ./run
+    run_dir: .
     runner_backend: local
     uq: # TODO: implement
     interface: ./interface.py
@@ -97,7 +97,7 @@ class Config(OrderedDict):
         super(Config, self).__init__()
         self['base_dir'] = path.abspath(base_dir)
         self['template_dir'] = path.join(self['base_dir'], 'template')
-        self['run_dir'] = path.join(self['base_dir'], 'run')
+        self['run_dir'] = self['base_dir']
         self['command'] = None
         self['runner_backend'] = None
         self['uq'] = {}
