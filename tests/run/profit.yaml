@@ -1,0 +1,23 @@
+ntrain: 30
+variables:
+    u: Uniform(4.7, 5.3)
+    v: Uniform(0.55, 0.6)
+    r: Independent
+    f: Output
+run:
+  system:
+    class: local
+  interface:
+    class: memmap
+    path: ../interface.npy
+  pre:
+    class: template
+    path: ../template
+  post:
+    class: json
+    path: ./mockup.out
+  command: ./mockup.py
+  stdout: ./stdout
+  stderr: ./stderr
+  clean: true
+  time: true
