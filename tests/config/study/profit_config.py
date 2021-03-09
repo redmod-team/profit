@@ -5,4 +5,8 @@ variables = {'u': 'Uniform(4.7, 5.3)',
              'r': 'Independent(0, 1, 0.1)',
              'f': {'kind': 'Output', 'range': 'r'},
              'g': 'Output(r)'}
+
+files = {'param_files': ['mockup.in'],
+         'input': 'input.txt',
+         'output': 'output.txt'}
 run = 'python3 ../mockup.py'

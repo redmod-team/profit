@@ -1,4 +1,4 @@
-ntrain: 30
+ntrain: 2
 variables:
     u: Uniform(4.7, 5.3)
     v: Uniform(0.55, 0.6)
@@ -6,6 +6,9 @@ variables:
     r: Independent(0, 1, 0.1)
     f: Output(r)
     g: Output(r)
+
+files:
+    param_files: [symlink_link.txt]
 
 run: 
     python3 ../mockup.py
