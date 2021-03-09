@@ -9,8 +9,8 @@ from numpy.distutils.core import Extension, setup
 
 ext_kwargs = {
     'libraries': ['gomp'],
-    'extra_f90_compile_args': ['-Wall', '-march=native', '-O2', '-fopenmp', 
-                               '-g', '-fbacktrace']} 
+    'extra_f90_compile_args': ['-Wall', '-march=native', '-O2', '-fopenmp',
+                               '-g', '-fbacktrace']}
 
 ext_gpfunc = Extension(
     name='profit.sur.backend.gpfunc',
@@ -27,12 +27,8 @@ if __name__ == "__main__":
     # explicitly allow installation in user site in development mode
     site.ENABLE_USER_SITE = "--user" in sys.argv[1:]
 
-    # forgo compiling fortran while building the docs for readthedocs
-    if os.environ.get('READTHEDOCS') == 'True':
-        setup()
-    elif "--no-fortran" in sys.argv[1:]:
-        sys.argv.remove("--no-fortran") # need to remove argument before setup() is called
-        setup()
-    else:
+    use_fortran = os.environ.get("USE_FORTRAN", None)
+    if use_fortran:
         setup(ext_modules=[ext_gpfunc, ext_kernels])
-
+    else:
+        setup()

@@ -57,9 +57,9 @@ pip install -e . --user
 ```
 
 ### Options
-* Disable compilation of the fortran modules
+* Enable compilation of the fortran modules
 
-        pip install . --global-option "--no-fortran"
+        USE_FORTRAN=1 pip install .
 
 * Install requirements for building the documentation using `sphinx`
 
