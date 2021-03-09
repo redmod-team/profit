@@ -205,30 +205,33 @@ class GPySurrogate(Surrogate):
         """Adds input points x and model outputs y with std. deviation sigma
            and updates the inverted covariance matrix for the GP via the
            Sherman-Morrison-Woodbury formula"""
+        self.xtrain = np.concatenate([self.xtrain, x], axis=0)
+        self.ytrain = np.concatenate([self.ytrain, y], axis=0)
+        self.m.set_XY(X=self.xtrain, Y=self.ytrain)
 
-        raise NotImplementedError()
-
-    def predict(self, x):
+    def predict(self, x=None):
         """ Predict output from unseen data with the trained model.
         :return: (mean, var)
         """
+        if x is not None:
+            self.xpred = x if x.ndim > 1 else x.reshape(-1, 1)
+        else:
+            minval = 0.8 * self.xtrain.min(axis=0)
+            maxval = 1.2 * self.xtrain.max(axis=0)
+            step = 0.01 * (maxval - minval) / maxval
+            npoints = ((maxval - minval) // step + 1).astype(int)
+            self.xpred = np.full((max(npoints), self.ndim), np.nan)
+            for d in range(self.ndim):
+                self.xpred[:npoints[d], d] = np.linspace(minval[d], maxval[d], npoints[d])
         if self.trained:
-            return self.m.predict(x)
+            return self.m.predict(self.xpred)
         else:
             raise RuntimeError("Need to train() before predict()!")
 
-    def plot(self, x=None, independent=None):
-        if x is not None:
-            xpred = x if x.ndim > 1 else x.reshape(-1, 1)
-        else:
-            minval = 0.9 * self.xtrain.min(axis=0)
-            maxval = 1.1 * self.xtrain.max(axis=0)
-            step = 0.1 * (maxval - minval) / maxval
-            npoints = ((maxval - minval) // step + 1).astype(int)
-            xpred = np.zeros((max(npoints), self.ndim))
-            for d in range(self.ndim):
-                xpred[:npoints[d], d] = np.arange(minval[d], maxval[d], step[d])
-        ypred, yvarpred = self.predict(xpred)
+    def plot(self, x=None, independent=None, show=False, ref=None):
+        ypred, yvarpred = self.predict(x)
+        ypred = ypred[~np.isnan(ypred)].reshape(-1, 1)
+        yvarpred = yvarpred[~np.isnan(yvarpred)].reshape(-1, 1)
         ystd_pred = np.sqrt(yvarpred)
         if independent:
             # 2D with one input parameter and one independent variable.
@@ -236,7 +239,7 @@ class GPySurrogate(Surrogate):
                 ax = plt.axes(projection='3d')
                 for k, v in independent.items():
                     x1t, x2t = np.meshgrid(v['range'], self.xtrain)
-                    x1, x2 = np.meshgrid(v['range'], xpred)
+                    x1, x2 = np.meshgrid(v['range'], self.xpred)
                 for i in range(x1t.shape[0]):
                     ax.plot(x1t[i, :], x2t[i, :], self.ytrain[i, :], color='blue', linewidth=2)
                 ax.plot_surface(x1, x2, ypred, color='red', alpha=0.8)
@@ -247,17 +250,28 @@ class GPySurrogate(Surrogate):
         else:
             if self.ndim == 1 and ypred.shape[-1] == 1:
                 # Only one input parameter to plot.
-                plt.plot(xpred, ypred)
-                plt.fill_between(xpred, ypred + 2 * ystd_pred, ypred - 2 * ystd_pred, color='grey', alpha='0.6')
+                self.m.plot()
+                if ref:
+                    plt.plot(self.xpred.flatten(), ref(self.xpred), color='red')
+                #plt.plot(xpred.flatten(), ypred.flatten())
+                #plt.scatter(self.xtrain, self.ytrain, marker='x', s=50, c='k')
+                #plt.fill_between(xpred.flatten(),
+                #                 ypred.flatten() + 2 * ystd_pred.flatten(), ypred.flatten() - 2 * ystd_pred.flatten(),
+                #                 color='grey', alpha=0.6)
             elif self.ndim == 2 and ypred.shape[-1] == 1:
                 # Two fitted input variables.
                 ax = plt.axes(projection='3d')
                 ax.scatter(self.xtrain[:, 0], self.xtrain[:, 1], self.ytrain[:], color='red', alpha=0.8)
+                x1, x2 = np.meshgrid(self.xpred[~np.isnan(self.xpred[:, 0]), 0], self.xpred[~np.isnan(self.xpred[:, 1]), 1])
+                ax.plot_surface(x1, x2, ypred, color='red', alpha=0.8)
+                ax.plot_surface(x1, x2, ypred + 2 * ystd_pred, color='grey', alpha=0.6)
+                ax.plot_surface(x1, x2, ypred - 2 * ystd_pred, color='grey', alpha=0.6)
             else:
                 raise NotImplementedError("Plotting is only implemented for dimension <= 2. Use profit ui instead.")
 
         # self.m.plot()
-        plt.show()
+        if show:
+            plt.show()
 
     def save_model(self, filename):
         """ Save the GPySurrogate class object with all attributes to a hdf5 file. """
@@ -284,6 +298,10 @@ class GPySurrogate(Surrogate):
             self.kern = self.m.kern
 
         return self
+
+    def get_marginal_variance(self, xpred=None):
+        mtilde, vhat = self.predict(xpred)
+        return vhat.reshape(-1, 1)
 
     def _select_kernel(self, kernel):
         """ Get the GPy.kern.src.stationary kernel by matching a string using regex.

@@ -54,11 +54,12 @@ class Config(OrderedDict):
 
     base_dir: .
     template_dir: ./template
-    run_dir: ./run
+    run_dir: .
     runner_backend: local
     uq: # TODO: implement
     interface: ./interface.py
     files:
+        param_files: [params1.in, params2.in, symlink.txt]
         input: ./input.txt
         output: ./output.txt
     ntrain: 30
@@ -96,7 +97,7 @@ class Config(OrderedDict):
         super(Config, self).__init__()
         self['base_dir'] = path.abspath(base_dir)
         self['template_dir'] = path.join(self['base_dir'], 'template')
-        self['run_dir'] = path.join(self['base_dir'], 'run')
+        self['run_dir'] = self['base_dir']
         self['command'] = None
         self['runner_backend'] = None
         self['uq'] = {}
@@ -104,7 +105,8 @@ class Config(OrderedDict):
         self['variables'] = {}
         self['fit'] = {'surrogate': 'GPy',
                        'kernel': 'RBF'}
-        self['files'] = {'input': path.join(self['base_dir'], 'input.txt'),
+        self['files'] = {'param_files': None,
+                         'input': path.join(self['base_dir'], 'input.txt'),
                          'output': path.join(self['base_dir'], 'output.txt')}
 
         # Not to fill directly in file
@@ -154,7 +156,7 @@ class Config(OrderedDict):
 
                 self['variables'][k] = {'kind': kind}
 
-                if kind == 'Output':
+                if safe_str(kind) == 'output':
                     # TODO: match arbitrary number of independent variables
                     mat = match(r'.*\((\w+)?[\,,\,\s]?(\w+)?', v)
                     dependent = tuple(d for d in mat.groups() if d is not None) if mat else ()
@@ -162,7 +164,10 @@ class Config(OrderedDict):
                 else:
                     try:
                         func = getattr(variable_kinds, safe_str(kind))
-                        self['variables'][k]['range'] = func(*entries, size=self['ntrain']) if entries else None
+                        if safe_str(kind) in ('activelearning', 'halton'):
+                            self['variables'][k]['range'] = func(size=self['ntrain'])
+                        else:
+                            self['variables'][k]['range'] = func(*entries, size=self['ntrain']) if entries else None
                     except AttributeError:
                         raise RuntimeError("Variable kind not defined.\n"
                                            "Valid Functions: {}".format(get_class_methods(variable_kinds)))

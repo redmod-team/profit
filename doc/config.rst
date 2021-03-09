@@ -21,7 +21,7 @@ The following gives an overview of all possible parameters
 
 * run_dir:
     | Directory where the single runs are generated.
-    | Default: ./run
+    | Default: .
 
 * runner_backend:
     | Not implemented yet. Decide if the simulation runs on local machine or on cluster.
@@ -35,6 +35,11 @@ The following gives an overview of all possible parameters
     | Default: ./interface.py
 
 * files:
+
+    * param_files:
+        | Files in template which contain placeholders for variables.
+        | Default: None (Takes all files in template_dir as parameter files.)
+        | E.g. [params1.in, params2.in]
 
     * input:
         | Input variables of all runs.
