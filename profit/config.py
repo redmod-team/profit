@@ -206,6 +206,17 @@ class Config(OrderedDict):
             #       But don't do it here, but in the run phase.
             #       So the 'run' directory can be filled without the 'run' command in the config file.
 
+        # Set missing mandatory dict entries to default
+        if not self['files'].get('input'):
+            self['files']['input'] = path.join(self['base_dir'], 'input.txt')
+        if not self['files'].get('output'):
+            self['files']['output'] = path.join(self['base_dir'], 'output.txt')
+        if not self['fit'].get('surrogate'):
+            self['fit']['surrogate'] = 'GPy'
+        if not self['fit'].get('kernel'):
+            self['fit']['kernel'] = 'RBF'
+
+        # Set absolute paths
         self['files']['input'] = path.join(self['base_dir'], self['files']['input'])
         self['files']['output'] = path.join(self['base_dir'], self['files']['output'])
         if self['fit'].get('load'):
