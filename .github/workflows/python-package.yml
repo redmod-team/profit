@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.7, 3.8]
+        python-version: [3.7, 3.8, 3.9]
 
     steps:
     - uses: actions/checkout@v2
@@ -26,12 +26,12 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
+        python -m pip install setuptools wheel
         python -m pip install flake8 pytest
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
     - name: Install package
       run: |
-        python -m pip install -e .
-        python setup.py build --fortran
+        USE_FORTRAN=1 python -m pip install -e .
  #   - name: Lint with flake8
  #     run: |
  #       # stop the build if there are Python syntax errors or undefined names

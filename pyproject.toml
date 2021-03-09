@@ -1,5 +1,10 @@
 # Specifying the build system - PEP 517
 
 [build-system]
-requires = ["setuptools", "wheel", "oldest-supported-numpy"]
+requires = [
+    "setuptools", "wheel",
+    "numpy==1.16.0; python_version<='3.7' and platform_machine!='aarch64'",
+    "numpy==1.17.3; python_version=='3.8' and platform_machine!='aarch64'",
+    "numpy==1.19.3; python_version>='3.9' and platform_machine!='aarch64'",
+    "numpy==1.19.3; platform_machine=='aarch64'"]
 build-backend = "setuptools.build_meta"
