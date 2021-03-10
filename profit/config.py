@@ -228,6 +228,8 @@ class Config(OrderedDict):
             self['fit']['kernel'] = 'RBF'
 
         # Set absolute paths
+        self['template_dir'] = path.join(self['base_dir'], self['template_dir'])
+        self['interface'] = path.join(self['base_dir'], self['interface'])
         self['files']['input'] = path.join(self['base_dir'], self['files']['input'])
         self['files']['output'] = path.join(self['base_dir'], self['files']['output'])
         if self['fit'].get('load'):

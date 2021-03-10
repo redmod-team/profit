@@ -56,14 +56,13 @@ class LocalCommand:
         self.ntask = min(ntask, mp.cpu_count())
         self.run_dir = run_dir
 
-    def start(self):
+    def start(self, nruns):
         p = mp.Pool(self.ntask)
         print("Running on {} core(s). Available cores: {}".format(self.ntask, mp.cpu_count()))
-        subdirs = sorted(os.listdir(self.run_dir))
 
         args = []
-        for subdir in subdirs:
-            fulldir = os.path.join(self.run_dir, subdir)
+        for krun in range(nruns):
+            fulldir = os.path.join(self.run_dir, str(krun).zfill(3))
             if os.path.isdir(fulldir):
                 cmd = self.command.split()
                 if cmd[0].endswith('.py'):

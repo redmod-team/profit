@@ -103,7 +103,7 @@ def main():
             try:
                 run = LocalCommand(config['run']['cmd'], config['run']['ntask'],
                                    run_dir=config['run_dir'], base_dir=config['base_dir'])
-                run.start()
+                run.start(config['ntrain'])
             except KeyError:
                 raise RuntimeError("No 'run' entry in profit.yaml")
             except FileNotFoundError:
