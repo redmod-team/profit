@@ -147,6 +147,8 @@ class Config(OrderedDict):
         range: (start, end, step=1) or {'dependent variable': (start, end, step=1)} for output
         dtype: float64
         """
+
+        halton_dim = []
         for k, v in self['variables'].items():
             if isinstance(v, str):
                 # match word(int_or_float, int_or_float, int_or_float)
@@ -164,10 +166,10 @@ class Config(OrderedDict):
                 else:
                     try:
                         func = getattr(variable_kinds, safe_str(kind))
-                        if safe_str(kind) in ('activelearning', 'halton'):
-                            self['variables'][k]['range'] = func(size=self['ntrain'])
+                        if safe_str(kind) == 'halton':
+                            halton_dim.append((k, entries))
                         else:
-                            self['variables'][k]['range'] = func(*entries, size=self['ntrain']) if entries else None
+                            self['variables'][k]['range'] = func(*entries, size=self['ntrain'])
                     except AttributeError:
                         raise RuntimeError("Variable kind not defined.\n"
                                            "Valid Functions: {}".format(get_class_methods(variable_kinds)))
@@ -181,6 +183,15 @@ class Config(OrderedDict):
             kind = kind if kind in ('output', 'independent') else 'input'
             if self['variables'][k].get('range') is not None:
                 self[kind][k] = self['variables'][k]
+
+        # Fill halton variables with single dimensions of n-D halton
+        if halton_dim:
+            halton = variable_kinds.halton(size=(self['ntrain'], len(halton_dim)))
+            for d, (k, entries) in enumerate(halton_dim):
+                diff = (entries[1] - entries[0]) if entries else 1
+                low = entries[0] if entries else 0
+                self['variables'][k]['range'] = diff * halton[:, d].reshape(-1, 1) + low
+                self['input'][k] = self['variables'][k]
 
         # Fill range of output vector
         for k, v in self['output'].items():
