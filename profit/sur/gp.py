@@ -210,7 +210,7 @@ class GPySurrogate(Surrogate):
         self.ytrain = np.concatenate([self.ytrain, y], axis=0)
         self.m.set_XY(X=self.xtrain, Y=self.ytrain)
 
-    def predict(self, x=None):
+    def predict(self, x=None, return_input=False):
         """ Predict output from unseen data with the trained model.
         :return: (mean, var)
         """

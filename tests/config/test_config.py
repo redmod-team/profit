@@ -11,9 +11,18 @@ Testcases for some configuration features:
 from profit.config import Config
 from profit.util import load
 from json import load as jload
-from os import system, path, remove
+from os import system, path, remove, chdir, getcwd
 from numpy import ndarray, genfromtxt, array
 from shutil import rmtree
+from pytest import fixture
+
+
+@fixture(autouse=True)
+def chdir_pytest():
+    pytest_root_dir = getcwd()
+    chdir(path.dirname(path.abspath(__file__)))
+    yield
+    chdir(pytest_root_dir)
 
 
 def profit(mode, base_dir='.'):
@@ -38,8 +47,8 @@ def clean(config):
 def test_yaml_py_config():
     """Tests if .yaml and .py configuration files are equal by comparing dict keys and values."""
 
-    yaml_file = 'study/profit.yaml'
-    py_file = 'study/profit_config.py'
+    yaml_file = '././study/profit.yaml'
+    py_file = '././study/profit_config.py'
     config_yaml = Config.from_file(yaml_file)
     config_py = Config.from_file(py_file)
 
@@ -60,17 +69,17 @@ def test_yaml_py_config():
 def test_txt_input():
     """Tests if the input files in the single run directories are created from the template."""
 
-    config_file = 'study/profit.yaml'
+    config_file = './study/profit.yaml'
     config = Config.from_file(config_file)
     profit("pre", config_file)
-    assert path.isfile('study/000/mockup.in')
+    assert path.isfile('./study/000/mockup.in')
     clean(config)
 
 
 def test_txt_json_input():
     """Checks if the numpy arrays resulting from a text and a json input are equal."""
 
-    config_file = 'study/profit_json.yaml'
+    config_file = './study/profit_json.yaml'
     config = Config.from_file(config_file)
     try:
         profit("pre", config_file)
@@ -88,7 +97,7 @@ def test_txt_json_input():
 def test_hdf5_input_output():
     """Checks the data inside a .hdf5 input file."""
 
-    config_file = 'study/profit_hdf5.yaml'
+    config_file = './study/profit_hdf5.yaml'
     config = Config.from_file(config_file)
     try:
         profit("pre", config_file)
@@ -102,10 +111,10 @@ def test_hdf5_input_output():
 def test_symlinks():
     """Checks if relative symbolic links are handled correctly."""
 
-    config_file = 'study/profit_symlink.yaml'
+    config_file = './study/profit_symlink.yaml'
     config = Config.from_file(config_file)
-    base_file = 'study/template/symlink_base.txt'
-    link_file = 'study/template/some_subdir/symlink_link.txt'
+    base_file = './study/template/symlink_base.txt'
+    link_file = './study/template/some_subdir/symlink_link.txt'
     try:
         profit("pre", config_file)
         with open(link_file, 'r') as link:
@@ -126,9 +135,9 @@ def test_default_values():
     and then with some parameters customized, to check if missing dict entries are set correctly. """
 
     # First with simple configuration
-    config_file = 'study/profit_default.yaml'
+    config_file = './study/profit_default.yaml'
     config = Config.from_file(config_file)
-    assert config.get('base_dir') == path.abspath('study')
+    assert config.get('base_dir') == path.abspath('./study')
     assert config.get('template_dir') == path.join(config.get('base_dir'), 'template')
     assert config.get('run_dir') == config.get('base_dir')
     assert config.get('interface') == path.join(config.get('base_dir'), 'interface.py')
@@ -139,7 +148,7 @@ def test_default_values():
     assert config['fit'].get('kernel') == 'RBF'
 
     # Now check when dicts are only partially set
-    config_file = 'study/profit_default_2.yaml'
+    config_file = './study/profit_default_2.yaml'
     config = Config.from_file(config_file)
     assert config['files'].get('param_files') == ['mockup.in']
     assert config['files'].get('input') == path.join(config.get('base_dir'), 'custom_input.in')

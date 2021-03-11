@@ -168,6 +168,8 @@ class Config(OrderedDict):
                         func = getattr(variable_kinds, safe_str(kind))
                         if safe_str(kind) == 'halton':
                             halton_dim.append((k, entries))
+                        elif safe_str(kind) == 'independent':
+                            self['variables'][k]['range'] = func(*entries, size=self['ntrain']) if entries else None
                         else:
                             self['variables'][k]['range'] = func(*entries, size=self['ntrain'])
                     except AttributeError:

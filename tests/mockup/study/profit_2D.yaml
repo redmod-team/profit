@@ -1,0 +1,15 @@
+ntrain: 10
+variables:
+    u: Halton(4.7, 5.3)
+    v: Halton(0.55, 0.6)
+    r: Independent
+    f: Output
+
+run:
+    python3 ../mockup_2D.py
+
+files:
+    input: input_2D.txt
+    output: output_2D.txt
+fit:
+    save: model_2D.hdf5
