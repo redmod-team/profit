@@ -2,11 +2,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 from profit.sur.backend.gp_functions import invert, nll, predict_f, \
     get_marginal_variance_BBQ, plot_searching_phase
-from profit.sur.backend.kernels import kern_sqexp
+from profit.sur.backend.gp_functions import k as kern_sqexp
 from scipy.optimize import minimize
 
 
 def f(x): return x*np.cos(10*x)
+
 
 # Custom function to build GP matrix
 def build_K(xa, xb, hyp, K):
@@ -14,16 +15,18 @@ def build_K(xa, xb, hyp, K):
         for j in np.arange(len(xb)):
             K[i, j] = kern_sqexp(xa[i], xb[j], hyp[0])
 
+
 def nll_transform(log10hyp):
     hyp = 10**log10hyp
-    return nll(hyp, xtrain, ytrain, 0)
+    return nll(hyp, xtrain, ytrain, 1, build_K=build_K)
+
 
 def sigmoid(x):
     return 1.0/(1.0 + np.exp(-x))
 
+
 def prior(hyp):
     return sigmoid(hyp[0]-6)*sigmoid(hyp[-1]-6)
-
 
 
 noise_train = 0.01
@@ -85,7 +88,6 @@ for ntrain in range(1, total_train + 1):
 
     ######################### PLOT ########################
 
-    #plt.subplot(2,1,1)
     plt.plot(xtrain, ytrain, 'kx')
     plt.plot(xtest, ftest, 'm-')
     plt.plot(xtest, fmean, 'r--')
@@ -106,29 +108,18 @@ for ntrain in range(1, total_train + 1):
                      (fmean.flatten() + 2 * np.sqrt(marginal_variance.flatten())), # y1
                      (fmean.flatten() - 2 * np.sqrt(marginal_variance.flatten())), facecolor='yellow', alpha=0.4) # y2
 
-
-    #plt.show()
     ################ FIND NEXT POINT ################
-
 
     scores = marginal_variance + varf
     print(np.c_[marginal_variance, varf, scores])
     next_candidate = np.argmax(scores)
 
-    #plot_searching_phase(scores, xtest, next_candidate, ntrain)
-    plt.show()
-
-
-
-
+    plot_searching_phase(scores, xtest, next_candidate, ntrain)
+    #plt.show()
 
     #################################################
-
 
     hyp = new_hyp
     print("next candidate ->\nx = ", xtest[next_candidate])
 
-
-
-
-
+plt.show()
