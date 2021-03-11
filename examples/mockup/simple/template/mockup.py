@@ -21,7 +21,8 @@ def f(r, u, v):
 params = np.loadtxt('mockup.in')
 result = f(0.25, params[0], params[1])
 print(result)
-sleep(2)
+sleep(1)
 with open('mockup.out', 'w') as f:
     data = dict(f=result)
     json.dump(data, f)
+sleep(1)

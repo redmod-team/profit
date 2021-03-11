@@ -3,6 +3,8 @@ from re import match
 import yaml
 from collections import OrderedDict
 
+from profit.run import Runner
+
 VALID_FORMATS = ('.yaml', '.py')
 
 """
@@ -142,6 +144,11 @@ class Config(OrderedDict):
                             "Valid file formats: {}".format(filename.split('.')[-1], VALID_FORMATS))
         self.update(entries)
 
+        if path.isabs(filename):
+            self['config_path'] = filename
+        else:
+            self['config_path'] = path.abspath(path.join(getcwd(), filename))
+
         """ Variable configuration
         kind: Independent, Uniform, etc.
         range: (start, end, step=1) or {'dependent variable': (start, end, step=1)} for output
@@ -203,21 +210,9 @@ class Config(OrderedDict):
                 self['output'][k]['range'][d] = self['variables'][d]['range']
 
         # Run configuration
-        try:
-            run = self['run']
-            # Shorthand to put cmd direcly into run
-            if isinstance(run, str):
-                self['run'] = {'cmd': run}
-
-            # Default to single-thread
-            if 'ntask' not in self['run']:
-                self['run']['ntask'] = 1
-        except KeyError:
-            pass
-
-            # TODO: add options like active_learning and check if e.g. cmd is in run
-            #       But don't do it here, but in the run phase.
-            #       So the 'run' directory can be filled without the 'run' command in the config file.
+        if 'run' not in self:
+            self['run'] = {}
+        Runner.handle_config(self['run'], self)
 
         # Set missing mandatory dict entries to default
         if not self['files'].get('input'):
