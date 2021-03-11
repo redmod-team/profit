@@ -46,7 +46,7 @@ def nlp_transform(log10hyp):
 noise_train = 0.0
 
 ntrain = 10
-xtrain = halton(1, ntrain)
+xtrain = halton(ntrain, 1)
 ftrain = f(xtrain)
 ytrain = ftrain + noise_train*(np.random.rand(ntrain, 1) - 0.5)
 

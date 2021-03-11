@@ -7,7 +7,7 @@ def halton(size=(1, 1)):
     if isinstance(size, (tuple, list, np.ndarray)):
         return _halton_base(*size)
     else:
-        return check_ndim(_halton_base(1, size))
+        return check_ndim(_halton_base(size, 1))
 
 
 def uniform(start=0, end=1, size=None):

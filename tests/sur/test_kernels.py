@@ -119,7 +119,7 @@ def test_grad_nll():
 
 def test_fit_manual():
     ntrain = 128
-    xtrain = halton(2, ntrain)
+    xtrain = halton(ntrain, 2)
     K = np.empty((ntrain, ntrain), order='F')
     l = np.array([0.5, 0.5])
     sig2f = 1.0
@@ -148,7 +148,7 @@ def test_fit_manual():
 def test_optim():
     # TODO
     ntrain = 128
-    xtrain = halton(2, ntrain)
+    xtrain = halton(ntrain, 2)
     K = np.empty((ntrain, ntrain), order='F')
     dK = np.empty((ntrain, ntrain), order='F')
     l = np.array([0.5, 0.5])

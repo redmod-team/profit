@@ -17,7 +17,7 @@ noise_train = 0.01
 
 #ntrain = 20
 for ntrain in range(1, 31):
-    xtrain = halton(1, ntrain)
+    xtrain = halton(ntrain, 1)
     ftrain = f(xtrain)
     np.random.seed(0)
     ytrain = ftrain + noise_train*np.random.randn(ntrain, 1)

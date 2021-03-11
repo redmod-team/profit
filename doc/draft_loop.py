@@ -28,7 +28,7 @@ def prior(hyp):
 noise_train = 0.01
 for i in range(1,20):
     ntrain = i
-    xtrain = halton(1, ntrain)
+    xtrain = halton(ntrain, 1)
     ftrain = f(xtrain)
     np.random.seed(0)
     ytrain = ftrain + noise_train*np.random.randn(ntrain, 1)
@@ -72,7 +72,7 @@ for i in range(1,20):
     ################################
 
     tac = time.time()
-    marginal_variance = get_marginal_variance(hess_inv, new_hyp, ntrain, ntest, xtrain, xtest, Kyinv, ytrain, varf,True)
+    marginal_variance = get_marginal_variance_BBQ(hess_inv, new_hyp, ntrain, ntest, xtrain, xtest, Kyinv, ytrain, varf,True)
     tuc = time.time()
 
     log_time = tuc - tac
