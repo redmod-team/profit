@@ -152,7 +152,7 @@ def main():
             sur.save_model(config['fit']['save'])
         if config['fit'].get('plot'):
             try:
-                x = arange(*eval(config['fit']['plot'].get('xpred'))).reshape(-1, 1)
+                x = [arange(minv, maxv, step) for minv, maxv, step in config['fit']['plot'].get('xpred')]
             except AttributeError:
                 x = None
             sur.plot(x=x, independent=config['independent'], show=True)

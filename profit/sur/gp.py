@@ -197,7 +197,8 @@ class GPySurrogate(Surrogate):
         self.yscale = np.sqrt(self.yvar)
         self.ndim = self.xtrain.shape[-1]
         self.kern = self._select_kernel(kernel)
-        self.m = self.GPy.models.GPRegression(self.xtrain, self.ytrain, self.kern)
+        self.m = self.GPy.models.GPRegression(self.xtrain, self.ytrain, self.kern,
+                                              noise_var=sigma_n**2 if sigma_n else 1e-6)
         self.m.optimize()
         self.trained = True
 
@@ -213,63 +214,62 @@ class GPySurrogate(Surrogate):
         """ Predict output from unseen data with the trained model.
         :return: (mean, var)
         """
-        if x is not None:
-            self.xpred = x if x.ndim > 1 else x.reshape(-1, 1)
-        else:
-            minval = 0.8 * self.xtrain.min(axis=0)
-            maxval = 1.2 * self.xtrain.max(axis=0)
-            step = 0.01 * (maxval - minval) / maxval
-            npoints = ((maxval - minval) // step + 1).astype(int)
-            self.xpred = np.full((max(npoints), self.ndim), np.nan)
-            for d in range(self.ndim):
-                self.xpred[:npoints[d], d] = np.linspace(minval[d], maxval[d], npoints[d])
+        if x is None:
+            minval = self.xtrain.min(axis=0)
+            maxval = self.xtrain.max(axis=0)
+            npoints = [50] * len(minval)
+            x = [np.linspace(minv, maxv, n) for minv, maxv, n in zip(minval, maxval, npoints)]
+        xgrid = np.meshgrid(*x) if isinstance(x, list) else np.meshgrid([x[:, d] for d in range(x.shape[-1])])
+        xpred = np.hstack([xi.flatten().reshape(-1, 1) for xi in xgrid])
+
         if self.trained:
-            return self.m.predict(self.xpred)
+            ymean, yvar = self.m.predict(xpred)
+            if return_input:
+                return ymean, yvar, xpred, xgrid
+            else:
+                return ymean, yvar
         else:
             raise RuntimeError("Need to train() before predict()!")
 
     def plot(self, x=None, independent=None, show=False, ref=None):
-        ypred, yvarpred = self.predict(x)
-        ypred = ypred[~np.isnan(ypred)].reshape(-1, 1)
-        yvarpred = yvarpred[~np.isnan(yvarpred)].reshape(-1, 1)
+        ypred, yvarpred, xpred, xgrid = self.predict(x, return_input=True)
         ystd_pred = np.sqrt(yvarpred)
         if independent:
             # 2D with one input parameter and one independent variable.
             if self.ndim == 1 and ypred.ndim == 2:
                 ax = plt.axes(projection='3d')
                 for k, v in independent.items():
-                    x1t, x2t = np.meshgrid(v['range'], self.xtrain)
-                    x1, x2 = np.meshgrid(v['range'], self.xpred)
-                for i in range(x1t.shape[0]):
-                    ax.plot(x1t[i, :], x2t[i, :], self.ytrain[i, :], color='blue', linewidth=2)
-                ax.plot_surface(x1, x2, ypred, color='red', alpha=0.8)
-                ax.plot_surface(x1, x2, ypred + 2 * ystd_pred, color='grey', alpha=0.6)
-                ax.plot_surface(x1, x2, ypred - 2 * ystd_pred, color='grey', alpha=0.6)
+                    xtgrid = np.meshgrid(v['range'], self.xtrain)
+                    xgrid = np.meshgrid(v['range'], xpred)
+                for i in range(xtgrid[0].shape[0]):
+                    ax.plot(xtgrid[0][i, :], xtgrid[1][i, :], self.ytrain[i, :], color='blue', linewidth=2)
+                ax.plot_surface(xgrid[0], xgrid[1], ypred, color='red', alpha=0.8)
+                ax.plot_surface(xgrid[0], xgrid[1], ypred + 2 * ystd_pred, color='grey', alpha=0.6)
+                ax.plot_surface(xgrid[0], xgrid[1], ypred - 2 * ystd_pred, color='grey', alpha=0.6)
             else:
                 raise NotImplementedError("Plotting is only implemented for dimensions <= 2. Use profit ui instead.")
         else:
             if self.ndim == 1 and ypred.shape[-1] == 1:
                 # Only one input parameter to plot.
-                self.m.plot()
                 if ref:
-                    plt.plot(self.xpred.flatten(), ref(self.xpred), color='red')
-                #plt.plot(xpred.flatten(), ypred.flatten())
-                #plt.scatter(self.xtrain, self.ytrain, marker='x', s=50, c='k')
-                #plt.fill_between(xpred.flatten(),
-                #                 ypred.flatten() + 2 * ystd_pred.flatten(), ypred.flatten() - 2 * ystd_pred.flatten(),
-                #                 color='grey', alpha=0.6)
+                    plt.plot(xpred, ref(xpred), color='red')
+                plt.plot(xpred, ypred)
+                plt.scatter(self.xtrain, self.ytrain, marker='x', s=50, c='k')
+                plt.fill_between(xpred.flatten(),
+                                 ypred.flatten() + 2 * ystd_pred.flatten(), ypred.flatten() - 2 * ystd_pred.flatten(),
+                                 color='grey', alpha=0.6)
             elif self.ndim == 2 and ypred.shape[-1] == 1:
                 # Two fitted input variables.
                 ax = plt.axes(projection='3d')
-                ax.scatter(self.xtrain[:, 0], self.xtrain[:, 1], self.ytrain[:], color='red', alpha=0.8)
-                x1, x2 = np.meshgrid(self.xpred[~np.isnan(self.xpred[:, 0]), 0], self.xpred[~np.isnan(self.xpred[:, 1]), 1])
-                ax.plot_surface(x1, x2, ypred, color='red', alpha=0.8)
-                ax.plot_surface(x1, x2, ypred + 2 * ystd_pred, color='grey', alpha=0.6)
-                ax.plot_surface(x1, x2, ypred - 2 * ystd_pred, color='grey', alpha=0.6)
+                ypred = ypred.reshape(xgrid[0].shape)
+                ystd_pred = ystd_pred.reshape(xgrid[0].shape)
+                ax.scatter(self.xtrain[:, 0], self.xtrain[:, 1], self.ytrain, color='red', alpha=0.8)
+                ax.plot_surface(xgrid[0], xgrid[1], ypred, color='red', alpha=0.8)
+                ax.plot_surface(xgrid[0], xgrid[1], ypred + 2 * ystd_pred, color='grey', alpha=0.6)
+                ax.plot_surface(xgrid[0], xgrid[1], ypred - 2 * ystd_pred, color='grey', alpha=0.6)
             else:
                 raise NotImplementedError("Plotting is only implemented for dimension <= 2. Use profit ui instead.")
 
-        # self.m.plot()
         if show:
             plt.show()
 
@@ -286,7 +286,7 @@ class GPySurrogate(Surrogate):
     def load_model(cls, filename):
         """ Load a saved GPySurrogate object with hdf5 format. """
         from profit.util import load
-        sur_dict = eval(load(filename, as_type='dict'))
+        sur_dict = eval(load(filename, as_type='dict').get('data'))
         self = cls()
 
         for attr, value in sur_dict.items():
