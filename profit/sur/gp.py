@@ -210,39 +210,33 @@ class GPySurrogate(Surrogate):
         self.ytrain = np.concatenate([self.ytrain, y], axis=0)
         self.m.set_XY(X=self.xtrain, Y=self.ytrain)
 
-    def predict(self, x=None, return_input=False):
+    def predict(self, xpred=None):
         """ Predict output from unseen data with the trained model.
         :return: (mean, var)
         """
-        if x is None:
-            minval = self.xtrain.min(axis=0)
-            maxval = self.xtrain.max(axis=0)
-            npoints = [50] * len(minval)
-            x = [np.linspace(minv, maxv, n) for minv, maxv, n in zip(minval, maxval, npoints)]
-        xgrid = np.meshgrid(*x) if isinstance(x, list) else np.meshgrid([x[:, d] for d in range(x.shape[-1])])
-        xpred = np.hstack([xi.flatten().reshape(-1, 1) for xi in xgrid])
+        if xpred is None:
+            xpred = self.default_xpred()
 
         if self.trained:
             ymean, yvar = self.m.predict(xpred)
-            if return_input:
-                return ymean, yvar, xpred, xgrid
-            else:
-                return ymean, yvar
+            return ymean, yvar
         else:
             raise RuntimeError("Need to train() before predict()!")
 
-    def plot(self, x=None, independent=None, show=False, ref=None):
-        ypred, yvarpred, xpred, xgrid = self.predict(x, return_input=True)
+    def plot(self, xpred=None, independent=None, show=False, ref=None):
+        if xpred is None:
+            xpred = self.default_xpred()
+        ypred, yvarpred = self.predict(xpred)
         ystd_pred = np.sqrt(yvarpred)
         if independent:
             # 2D with one input parameter and one independent variable.
             if self.ndim == 1 and ypred.ndim == 2:
                 ax = plt.axes(projection='3d')
-                for k, v in independent.items():
-                    xtgrid = np.meshgrid(v['range'], self.xtrain)
-                    xgrid = np.meshgrid(v['range'], xpred)
-                for i in range(xtgrid[0].shape[0]):
-                    ax.plot(xtgrid[0][i, :], xtgrid[1][i, :], self.ytrain[i, :], color='blue', linewidth=2)
+                xind = np.hstack([v['range'] for k, v in independent.items()])
+                xtgrid = np.meshgrid(*[xind, self.xtrain])
+                xgrid = np.meshgrid(*[xind, xpred])
+                for i in range(self.xtrain.shape[0]):
+                    ax.plot(xtgrid[0][i], xtgrid[1][i], self.ytrain[i], color='blue', linewidth=2)
                 ax.plot_surface(xgrid[0], xgrid[1], ypred, color='red', alpha=0.8)
                 ax.plot_surface(xgrid[0], xgrid[1], ypred + 2 * ystd_pred, color='grey', alpha=0.6)
                 ax.plot_surface(xgrid[0], xgrid[1], ypred - 2 * ystd_pred, color='grey', alpha=0.6)
@@ -261,12 +255,12 @@ class GPySurrogate(Surrogate):
             elif self.ndim == 2 and ypred.shape[-1] == 1:
                 # Two fitted input variables.
                 ax = plt.axes(projection='3d')
-                ypred = ypred.reshape(xgrid[0].shape)
-                ystd_pred = ystd_pred.reshape(xgrid[0].shape)
+                ypred = ypred.flatten()
+                ystd_pred = ystd_pred.flatten()
                 ax.scatter(self.xtrain[:, 0], self.xtrain[:, 1], self.ytrain, color='red', alpha=0.8)
-                ax.plot_surface(xgrid[0], xgrid[1], ypred, color='red', alpha=0.8)
-                ax.plot_surface(xgrid[0], xgrid[1], ypred + 2 * ystd_pred, color='grey', alpha=0.6)
-                ax.plot_surface(xgrid[0], xgrid[1], ypred - 2 * ystd_pred, color='grey', alpha=0.6)
+                ax.plot_trisurf(xpred[:, 0], xpred[:, 1], ypred, color='red', alpha=0.8)
+                ax.plot_trisurf(xpred[:, 0], xpred[:, 1], ypred + 2 * ystd_pred, color='grey', alpha=0.6)
+                ax.plot_trisurf(xpred[:, 0], xpred[:, 1], ypred - 2 * ystd_pred, color='grey', alpha=0.6)
             else:
                 raise NotImplementedError("Plotting is only implemented for dimension <= 2. Use profit ui instead.")
 
@@ -302,6 +296,16 @@ class GPySurrogate(Surrogate):
     def get_marginal_variance(self, xpred=None):
         mtilde, vhat = self.predict(xpred)
         return vhat.reshape(-1, 1)
+
+    def default_xpred(self):
+        if self.ndim <= 3:
+            minval = self.xtrain.min(axis=0)
+            maxval = self.xtrain.max(axis=0)
+            npoints = [50] * len(minval)
+            xpred = [np.linspace(minv, maxv, n) for minv, maxv, n in zip(minval, maxval, npoints)]
+            return np.hstack([xi.flatten().reshape(-1, 1) for xi in np.meshgrid(*xpred)])
+        else:
+            raise RuntimeError("Require x for prediction in > 3 dimensions!")
 
     def _select_kernel(self, kernel):
         """ Get the GPy.kern.src.stationary kernel by matching a string using regex.
