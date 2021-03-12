@@ -4,8 +4,15 @@ variables:
     v: Uniform(0.55, 0.6)
     r: Independent
     f: Output
-run: 
-    python3 ../mockup.py
+run:
+    runner:
+        class: local
+        parallel: 4
+        sleep: 0
+    post:
+        class: numpytxt
+        path: mockup.out
+    command: ./mockup.py
 
 fit:
     plot:

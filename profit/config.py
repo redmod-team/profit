@@ -212,6 +212,8 @@ class Config(OrderedDict):
         # Run configuration
         if 'run' not in self:
             self['run'] = {}
+        if isinstance(self['run'], str):
+            self['run'] = {'command': self['run']}
         Runner.handle_config(self['run'], self)
 
         # Set missing mandatory dict entries to default

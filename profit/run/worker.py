@@ -15,10 +15,6 @@ import time
 import subprocess
 from collections.abc import MutableMapping
 
-import numpy
-from profit.pre import fill_run_dir_single, convert_relative_symlinks
-import json
-
 
 def checkenv(name):  # ToDo: move to utils? Modify logger name
     if os.getenv(name) is None:
@@ -61,35 +57,6 @@ class Interface(ABC):
         return cls.interfaces[item]
 
 
-@Interface.register('memmap')
-class MemmapInterface(Interface):
-    """ Worker Interface using `numpy.memmap`
-
-    YAML:
-    ```
-    interface:
-        class: memmap
-        path: $BASE_DIR/interface.npy  -  path to memmap file (relative to calling directory [~base_dir])
-    ```
-    """
-    def __init__(self, *args):
-        super().__init__(*args)
-        try:
-            self._memmap = numpy.load(self.config['path'], mmap_mode='r+')
-        except FileNotFoundError:
-            self.worker.logger.error(
-                f'{self.__class__.__name__} could not load {self.config["path"]} (cwd: {os.getcwd()})')
-            raise
-
-    @property
-    def data(self):
-        return self._memmap[self.worker.run_id]
-
-    def done(self):
-        self.data['DONE'] = True
-        self._memmap.flush()
-
-
 # === Pre === #
 
 
@@ -113,6 +80,7 @@ class Preprocessor(ABC):
         pass
 
     @classmethod
+    @abstractmethod
     def handle_config(cls, config, base_config):
         pass
 
@@ -127,33 +95,6 @@ class Preprocessor(ABC):
 
     def __class_getitem__(cls, item):
         return cls.preprocessors[item]
-
-
-@Preprocessor.register('template')
-class TemplatePreprocessor(Preprocessor):
-    def pre(self):
-        fill_run_dir_single(self.worker.data, self.config['path'], '.', ignore_path_exists=True)
-
-    @classmethod
-    def runner_init(cls, config):
-        logger = logging.getLogger(f'{__name__}.{cls.__name__}')
-        if config['path'][0] == '.':
-            logger.error(f'cannot convert template symlinks if template-path is relative')
-            return
-        logger.debug(f"converting template symlinks {config['path']}")
-        convert_relative_symlinks(config['path'], config['path'])
-
-    @classmethod
-    def handle_config(cls, config, base_config):
-        """
-        class: template
-        path: template      # directory to copy from, relative to base directory
-        """
-        if 'path' not in config:
-            config['path'] = 'template'
-        # 'path' is relative to base_dir, convert to absolute path
-        if not os.path.isabs(config['path'][0]):
-            config['path'] = os.path.abspath(os.path.join(base_config['base_dir'], config['path']))
 
 
 # === Post === #
@@ -174,6 +115,7 @@ class Postprocessor(ABC):
         return self.post()
 
     @classmethod
+    @abstractmethod
     def handle_config(cls, config, base_config):
         return config
 
@@ -188,24 +130,6 @@ class Postprocessor(ABC):
 
     def __class_getitem__(cls, item):
         return cls.postprocessors[item]
-
-
-@Postprocessor.register('json')
-class JSONPostprocessor(Postprocessor):
-    def post(self):
-        with open(self.config['path']) as f:
-            output = json.load(f)
-        for key, value in output.items():
-            self.worker.data[key] = value
-
-    @classmethod
-    def handle_config(cls, config, base_config):
-        """
-        class: json
-        path: stdout    # file to read from, relative to run directory
-        """
-        if 'path' not in config:
-            config['path'] = 'stdout'
 
 
 # === Worker === #
@@ -248,7 +172,7 @@ class Worker:
         ToDo: check for correct types & valid paths
         ToDo: give warnings
         """
-        defaults = {'pre': 'template', 'post': json, 'command': './simulation', 'stdout': 'stdout', 'stderr': None,
+        defaults = {'pre': 'template', 'post': 'json', 'command': './simulation', 'stdout': 'stdout', 'stderr': None,
                     'clean': True, 'time': True}
         for key, default in defaults.items():
             if key not in config:

@@ -83,7 +83,7 @@ def main():
 
             eval_points = get_eval_points(config)
             write_input(config['files']['input'], eval_points)
-            params_array = [{key: run[key] for key in eval_points.dtype.names} for run in eval_points]
+            params_array = [row[0] for row in eval_points]
             runner.spawn_array(tqdm(params_array), blocking=True)
 
             # ToDo: handle vector output
@@ -146,7 +146,7 @@ def main():
                 rmtree(run_dir)
         else:
             for krun in range(config['ntrain']):
-                single_run_dir = path.join(run_dir, str(krun).zfill(3))
+                single_run_dir = path.join(run_dir, f'run_{krun:03d}')
                 if path.exists(single_run_dir):
                     rmtree(single_run_dir)
         if path.exists(config['files']['input']):
@@ -154,7 +154,7 @@ def main():
         if path.exists(config['files']['output']):
             remove(config['files']['output'])
 
-        runner = Runner.from_config(config['run'], config, config_file)
+        runner = Runner.from_config(config['run'], config)
         runner.clean()
 
 

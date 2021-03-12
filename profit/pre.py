@@ -25,7 +25,8 @@ def fill_run_dir(eval_points, template_dir='template/', run_dir='run/', param_fi
         fill_run_dir_single(eval_points[krun], template_dir, run_dir_single, param_files, overwrite)
 
 
-def fill_run_dir_single(params, template_dir, run_dir_single, param_files=None, overwrite=False, ignore_path_exists=False):
+def fill_run_dir_single(params, template_dir, run_dir_single, param_files=None, overwrite=False,
+                        ignore_path_exists=False):
     if os.path.exists(run_dir_single) and not ignore_path_exists:  # ToDo: make ignore_path_exists default
         if overwrite:
             rmtree(run_dir_single)
