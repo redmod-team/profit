@@ -6,7 +6,7 @@ from profit.util.halton import halton
 from profit.sur.backend.gp_functions import nll_chol
 
 ntrain = 32
-xtrain = halton(2, ntrain)
+xtrain = halton(ntrain, 2)
 K = np.empty((ntrain, ntrain), order='F')
 dK = np.empty((ntrain, ntrain), order='F')
 l0 = np.array([0.5, 0.5])

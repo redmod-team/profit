@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import profit as pf
 import GPy
 
-xtrain = pf.util.quasirand(2, 20)
+xtrain = pf.util.quasirand(20, 2)
 n1 = 20
 n2 = 20
 x1, x2 = np.meshgrid(np.linspace(0,1,n1), np.linspace(0,1,n2))

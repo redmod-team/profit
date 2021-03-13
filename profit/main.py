@@ -103,7 +103,7 @@ def main():
             try:
                 run = LocalCommand(config['run']['cmd'], config['run']['ntask'],
                                    run_dir=config['run_dir'], base_dir=config['base_dir'])
-                run.start()
+                run.start(config['ntrain'])
             except KeyError:
                 raise RuntimeError("No 'run' entry in profit.yaml")
             except FileNotFoundError:
@@ -128,7 +128,7 @@ def main():
             collect_output(config, default_interface=True)
 
     elif args.mode == 'fit':
-        from numpy import arange, hstack
+        from numpy import arange, hstack, meshgrid
         from profit.util import load
         from profit.fit import get_surrogate
 
@@ -152,10 +152,11 @@ def main():
             sur.save_model(config['fit']['save'])
         if config['fit'].get('plot'):
             try:
-                x = arange(*eval(config['fit']['plot'].get('xpred'))).reshape(-1, 1)
+                xpred = [arange(minv, maxv, step) for minv, maxv, step in config['fit']['plot'].get('xpred')]
+                xpred = hstack([xi.flatten().reshape(-1, 1) for xi in meshgrid(*xpred)])
             except AttributeError:
-                x = None
-            sur.plot(x=x, independent=config['independent'], show=True)
+                xpred = None
+            sur.plot(xpred, independent=config['independent'], show=True)
 
     elif args.mode == 'ui':
         from profit.ui import app

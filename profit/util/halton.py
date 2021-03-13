@@ -68,11 +68,11 @@ def van_der_corput(n_sample, base=2):
     return sequence
 
 
-def halton(dim, n_sample):
+def halton(n_sample, dim):
     """Halton sequence.
 
-    :param int dim: dimension
     :param int n_sample: number of samples.
+    :param int dim: dimension
     :return: sequence of Halton.
     :rtype: array_like (n_samples, n_features)
     """

@@ -7,7 +7,7 @@ from profit.util.halton import halton
 # specify initial conditions (q0, p0)
 method = 'all'
 # samples = bluenoise(2, N, method, qmin, qmax, pmin, pmax)
-samples = halton(2, N)*np.array([qmax-qmin, pmax-pmin]) + np.array([qmin, pmin])
+samples = halton(N, 2)*np.array([qmax-qmin, pmax-pmin]) + np.array([qmin, pmin])
 
 q = samples[:,0]
 p = samples[:,1]*1.5

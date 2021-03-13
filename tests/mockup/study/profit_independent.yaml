@@ -1,0 +1,18 @@
+ntrain: 10
+variables:
+    T: Halton()
+    E: Independent(0, 10, 0.1)
+    f: Output(E)
+
+run:
+    cmd: python3 ../mockup_independent.py
+    ntask: 4
+
+interface: interface_hdf5.py
+
+files:
+    param_files: [mockup_independent.json]
+    input: input_independent.txt
+    output: output_independent.txt
+fit:
+    save: model_independent.hdf5

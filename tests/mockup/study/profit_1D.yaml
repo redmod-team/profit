@@ -1,0 +1,14 @@
+ntrain: 7
+variables:
+    u: Halton()
+    f: Output
+
+run:
+    cmd: python3 ../mockup_1D.py
+    ntask: 4
+
+files:
+    input: input_1D.hdf5
+    output: output_1D.hdf5
+fit:
+    save: model_1D.hdf5

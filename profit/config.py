@@ -147,6 +147,8 @@ class Config(OrderedDict):
         range: (start, end, step=1) or {'dependent variable': (start, end, step=1)} for output
         dtype: float64
         """
+
+        halton_dim = []
         for k, v in self['variables'].items():
             if isinstance(v, str):
                 # match word(int_or_float, int_or_float, int_or_float)
@@ -164,10 +166,12 @@ class Config(OrderedDict):
                 else:
                     try:
                         func = getattr(variable_kinds, safe_str(kind))
-                        if safe_str(kind) in ('activelearning', 'halton'):
-                            self['variables'][k]['range'] = func(size=self['ntrain'])
-                        else:
+                        if safe_str(kind) == 'halton':
+                            halton_dim.append((k, entries))
+                        elif safe_str(kind) == 'independent':
                             self['variables'][k]['range'] = func(*entries, size=self['ntrain']) if entries else None
+                        else:
+                            self['variables'][k]['range'] = func(*entries, size=self['ntrain'])
                     except AttributeError:
                         raise RuntimeError("Variable kind not defined.\n"
                                            "Valid Functions: {}".format(get_class_methods(variable_kinds)))
@@ -181,6 +185,15 @@ class Config(OrderedDict):
             kind = kind if kind in ('output', 'independent') else 'input'
             if self['variables'][k].get('range') is not None:
                 self[kind][k] = self['variables'][k]
+
+        # Fill halton variables with single dimensions of n-D halton
+        if halton_dim:
+            halton = variable_kinds.halton(size=(self['ntrain'], len(halton_dim)))
+            for d, (k, entries) in enumerate(halton_dim):
+                diff = (entries[1] - entries[0]) if entries else 1
+                low = entries[0] if entries else 0
+                self['variables'][k]['range'] = diff * halton[:, d].reshape(-1, 1) + low
+                self['input'][k] = self['variables'][k]
 
         # Fill range of output vector
         for k, v in self['output'].items():
@@ -206,6 +219,19 @@ class Config(OrderedDict):
             #       But don't do it here, but in the run phase.
             #       So the 'run' directory can be filled without the 'run' command in the config file.
 
+        # Set missing mandatory dict entries to default
+        if not self['files'].get('input'):
+            self['files']['input'] = path.join(self['base_dir'], 'input.txt')
+        if not self['files'].get('output'):
+            self['files']['output'] = path.join(self['base_dir'], 'output.txt')
+        if not self['fit'].get('surrogate'):
+            self['fit']['surrogate'] = 'GPy'
+        if not self['fit'].get('kernel'):
+            self['fit']['kernel'] = 'RBF'
+
+        # Set absolute paths
+        self['template_dir'] = path.join(self['base_dir'], self['template_dir'])
+        self['interface'] = path.join(self['base_dir'], self['interface'])
         self['files']['input'] = path.join(self['base_dir'], self['files']['input'])
         self['files']['output'] = path.join(self['base_dir'], self['files']['output'])
         if self['fit'].get('load'):

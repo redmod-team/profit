@@ -120,7 +120,7 @@ def get_class_attribs(self):
 
 def quasirand(ndim=1, npoint=1):
     from .halton import halton
-    return halton(ndim, npoint)
+    return halton(npoint, ndim)
 
 
 def check_ndim(arr):
