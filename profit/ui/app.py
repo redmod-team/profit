@@ -8,6 +8,8 @@ from dash.dependencies import Input, Output, State, MATCH, ALL
 from math import log10, floor
 import numpy as np
 
+import plotly.express as px
+
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
@@ -39,15 +41,71 @@ app.layout = html.Div([
                 selected_style=tab_selected_style,
                 children=[
                     html.Div(dcc.Graph(id='graph1')),
-                    html.Div(dcc.Dropdown(
-                        id='invar',
-                        options=dropdown_opts,
-                        value=invars[0], )
-                    ),
+                    html.Div(dcc.RadioItems(
+                        id='graph-type',
+                        options=[{'label': i, 'value': i} for i in ['1D scatter',
+                                                                    '2D scatter',
+                                                                    '2D contour']
+                        ],
+                        value='1D scatter',
+                        labelStyle={'display': 'inline-block'})),
+                    html.Div(id='invar-1-div', style={'display': 'flex', 'align-items': 'baseline'}, children=[
+                        html.B('x: ', style={'width': 100}),
+                        dcc.Dropdown(
+                            id='invar',
+                            options=dropdown_opts,
+                            value=invars[0],
+                            style={'width': 700},
+                        ),
+                    ]),
+                    html.Div(id='invar-2-div', style={'display': 'flex', 'align-items': 'baseline'}, children=[
+                        html.B('y: ', style={'width': 100}),
+                        dcc.Dropdown(
+                            id='invar_2',
+                            options=dropdown_opts,
+                            value=invars[1],
+                            style={'width': 700},
+                        ),
+                    ]),
+                    html.Div(id='color-div', style={'display': 'flex', 'align-items': 'baseline'}, children=[
+                        html.B("color: ", style={'width': 100}),
+                        dcc.Dropdown(
+                            id='color-dropdown',
+                            options=dropdown_opts,
+                            value=invars[2],
+                            style={'width': 700},
+                        ),
+                        html.B("use color:", style={'width': 100, 'text-align': 'center'}),
+                        dcc.RadioItems(
+                            id='color-use',
+                            value='false',
+                            options=[
+                                {'label': 'True', 'value': 'true'},
+                                {'label': 'False', 'value': 'false'}
+                            ],
+                            labelStyle={'display': 'inline-block'},
+                        ),
+                        html.I("(for scatter plot only)", style={'width': 150, 'text-align': 'right'})
+                    ]),
                     html.Div(html.Table(html.Tr([
                         html.Td(html.Button("Add Filter", id='add-filter', n_clicks=0)),
                         html.Td(html.Button("Clear Filter", id='clear-filter', n_clicks=0)),
                         html.Td(html.Button("Clear all Filter", id='clear-all-filter', n_clicks=0)),
+                        html.Td(dcc.Slider(id='scale-slider',
+                                           min=-0.5, max=0.5,
+                                           value=0, step=0.01,
+                                           marks={-1: '-100%',
+                                                  -0.75: '-75%',
+                                                  -0.5: '-50%',
+                                                  -0.25: '-25%',
+                                                  0: '0%',
+                                                  0.25: '25%',
+                                                  0.5: '50%',
+                                                  0.75: '75%',
+                                                  1: '100%'}
+                                           ),
+                                style={'width': 500}),
+                        html.Td(html.Button("Scale", id='scale', n_clicks=0)),
                     ]))),
                     html.Div(html.Table(id='param-table', children=[
                         html.Thead(id='param-table-head', children=[
@@ -101,7 +159,7 @@ app.layout = html.Div([
                         ),
                     ]
                     ),
-                    html.Div(dcc.Graph(id='graph2', style={'height': 600}))
+                    html.Div(dcc.Graph(id='graph2', style={'height': 600})),
                 ]
             ),
             dcc.Tab(
@@ -194,31 +252,40 @@ def update_step(step):
      Input({'type': 'param-range-max', 'index': MATCH}, 'value'),
      Input({'type': 'param-slider', 'index': MATCH}, 'value'),
      Input({'type': 'param-center', 'index': MATCH}, 'value'),
-     Input({'type': 'param-span', 'index': MATCH}, 'value'), ],
-    State({'type': 'param-slider', 'index': MATCH}, 'step')
+     Input({'type': 'param-span', 'index': MATCH}, 'value'),
+     Input('scale', 'n_clicks'), ],
+    [State({'type': 'param-slider', 'index': MATCH}, 'step'),
+     State('scale-slider', 'value'), ]
 )
-def update_dyn_slider_range(dyn_min, dyn_max, slider_val, center, span, step):
+def update_dyn_slider_range(dyn_min, dyn_max, slider_val, center, span, scale, step, scale_slider):
     ctx = dash.callback_context
-    trigger_id = ctx.triggered[0]["prop_id"].split('}')[0].split(',')[1].split(':')[1]
-    # TODO: search in str instead of split
-    if trigger_id == '"param-center"' or trigger_id == '"param-span"' and (center and span):
-        # print('center')
+    # print(ctx.triggered[0]["prop_id"])
+    if ctx.triggered[0]["prop_id"] == "scale.n_clicks":
+        span = span * (1+scale_slider)
         dyn_min = center - span
         dyn_max = center + span
         slider_val = [dyn_min, dyn_max]
-    elif (trigger_id == '"param-range-min"' or trigger_id == '"param-range-max"') and (dyn_min is not None and dyn_max is not None):
-        # print('range')
-        # print('min:', dyn_min, 'max:', dyn_max)
-        slider_val = [dyn_min, dyn_max]
-        span = (slider_val[1] - slider_val[0]) / 2
-        center = slider_val[0] + span
-    elif slider_val:
-        # print('else')
-        dyn_min = slider_val[0]
-        dyn_max = slider_val[1]
-        span = (slider_val[1] - slider_val[0])/2
-        center = slider_val[0] + span
-    # rounding based on stepsize of slider
+    else:
+        trigger_id = ctx.triggered[0]["prop_id"].split('}')[0].split(',')[1].split(':')[1]
+        # TODO: search in str instead of split
+        if trigger_id == '"param-center"' or trigger_id == '"param-span"' and (center and span):
+            # print('center')
+            dyn_min = center - span
+            dyn_max = center + span
+            slider_val = [dyn_min, dyn_max]
+        elif (trigger_id == '"param-range-min"' or trigger_id == '"param-range-max"') and (dyn_min is not None and dyn_max is not None):
+            # print('range')
+            # print('min:', dyn_min, 'max:', dyn_max)
+            slider_val = [dyn_min, dyn_max]
+            span = (slider_val[1] - slider_val[0]) / 2
+            center = slider_val[0] + span
+        elif slider_val:
+            # print('else')
+            dyn_min = slider_val[0]
+            dyn_max = slider_val[1]
+            span = (slider_val[1] - slider_val[0])/2
+            center = slider_val[0] + span
+        # rounding based on stepsize of slider
     dig = int(-log10(step))
     slider_val = [round(slider_val[0], dig), round(slider_val[1], dig)]
     return round(dyn_min, dig), round(dyn_max, dig), slider_val, round(center, dig), round(span, dig)
@@ -249,10 +316,14 @@ def create_slider(dd_value):
     Output('graph1', 'figure'),
     [Input('tabs', 'value'),
      Input('invar', 'value'),
-     Input({'type': 'param-slider', 'index': ALL}, 'value'), ],
-    State({'type': 'param-slider', 'index': ALL}, 'id'),
+     Input('invar_2', 'value'),
+     Input({'type': 'param-slider', 'index': ALL}, 'value'),
+     Input('graph-type', 'value'),
+     Input('color-use', 'value'),
+     Input('color-dropdown', 'value'), ],
+    [State({'type': 'param-slider', 'index': ALL}, 'id'), ],
 )
-def update_figure(tab, invar, param_slider, id):
+def update_figure(tab, invar, invar_2, param_slider, graph_type, color_use, color_dd, id):
     if invar is None:
         return go.Figure()
     sel_y = np.full((len(outdata), ), True)
@@ -263,16 +334,103 @@ def update_figure(tab, invar, param_slider, id):
         # filter for maximum
         sel_y_max = np.array(indata[dds_value] <= param_slider[iteration][1])
         sel_y = sel_y_min & sel_y_max & sel_y
-    fig = go.Figure(
-        data=[go.Scatter(
-            x=indata[invar].iloc[sel_y],
-            y=outdata.iloc[sel_y, 0],
-            mode='markers',
-        )],
-        layout=go.Layout(scene=dict(xaxis_title=invar), )
-    )
-    fig.update_xaxes(rangeslider=dict(visible=True, ), title=invar, )
+    if graph_type == '1D scatter':
+        fig = go.Figure(
+            data=[go.Scatter(
+                x=indata[invar].iloc[sel_y],
+                y=outdata.iloc[sel_y, 0],
+                mode='markers',
+            )],
+            layout=go.Layout(scene=dict(xaxis_title=invar), )
+        )
+        fig.update_xaxes(rangeslider=dict(visible=True, ), title=invar, )
+        # fig.update_traces()
+    elif graph_type == '2D scatter':
+        fig = go.Figure(
+            data=[go.Scatter3d(
+                x=indata[invar].iloc[sel_y],
+                y=indata[invar_2].iloc[sel_y],
+                z=outdata.iloc[sel_y, 0],
+                mode='markers',
+            )],
+            layout=go.Layout(scene=dict(xaxis_title=invar, yaxis_title=invar_2), )
+        )
+    elif graph_type == '2D contour':
+        fig = go.Figure(
+            data=go.Contour(
+                x=indata[invar].iloc[sel_y],
+                y=indata[invar_2].iloc[sel_y],
+                z=outdata.iloc[sel_y, 0],
+            ),
+        )
+        fig.update_xaxes(title=invar)
+        fig.update_yaxes(title=invar_2)
+    else:
+        fig = go.Figure(
+            data=go.Surface(
+                x=indata[invar].iloc[sel_y],
+                y=indata[invar_2].iloc[sel_y],
+                z=outdata.iloc[sel_y, 0],
+            ),
+        )
+        fig.update_xaxes(title=invar)
+        fig.update_yaxes(title=invar_2)
+    if color_use == 'true':
+        fig.update_traces(marker=dict(
+            color=indata[color_dd].iloc[sel_y],
+            colorscale='Viridis',
+            colorbar=dict(thickness=20, title=color_dd),
+        ))
     return fig
+
+
+# @app.callback(
+#     Output('invar-2-div', 'style'),
+#     Input('graph-type', 'value')
+# )
+# def update_dropdown_visability(graph_type):
+#     if graph_type == '1D scatter':
+#         return {'visibility': 'hidden'}
+#     else:
+#         return {'visibility': 'visible'}
+
+
+# @app.callback(
+#     [Output({'type': 'param-slide', 'index': MATCH}, 'value'), ],
+#     [Input('graph1', 'relayoutData'), ],
+#     [State('invar', 'value'), ]
+# )
+# def update_range(relayoutdata, invar):
+#     ind = invars.to_list().index(invar)
+#     ctx = dash.callback_context
+#     trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
+#     print(trigger_id)
+#     # print(trigger_id)
+#     range_list = [None, None]  # set default
+#     # if trigger_id == 'reset-button':
+#     #     center = None
+#     #     span = None
+#     # elif (trigger_id == 'center' or trigger_id == 'span') and (center is not None and span is not None):
+#     #     range_list = [center - span, center + span]
+#     if trigger_id == 'graph1':
+#         if list(relayoutdata.keys())[0] == 'xaxis.range':
+#             range_list = relayoutdata['xaxis.range']
+#         elif list(relayoutdata.keys())[0] == 'xaxis.range[0]':
+#             range_list[0] = relayoutdata['xaxis.range[0]']
+#             range_list[1] = relayoutdata['xaxis.range[1]']
+#     # else:
+#     #     range_list = [range_min, range_max]
+#     print(range_list)
+#     if range_list[0] is not None and range_list[1] is not None:
+#         span = (range_list[1] - range_list[0]) / 2
+#         center = range_list[0] + span
+#         # round values to num_digits
+#         range_list[0] = round(range_list[0], num_digits)
+#         range_list[1] = round(range_list[1], num_digits)
+#         center = round(center, num_digits)
+#         span = round(span, num_digits)
+#     step_size = 10 ** -num_digits  # stepsize for input-forms
+#     return range_list[0], range_list[1], center, span, step_size, step_size, step_size, step_size
 
 
 @app.callback(
@@ -300,6 +458,14 @@ def update_figure2(tab, invar1, invar2):
             )
         )
     )
+    # fig = px.parallel_coordinates(data.iloc[:, 0:8], dimensions=['coeff_d_loss',
+    #                                                              'k_light_sm',
+    #                                                              'k_alg_si',
+    #                                                              'k_att_shade',
+    #                                                              'frac_si_alg',
+    #                                                              'factor_silica',
+    #                                                              'k_alg_growth_max'
+    #                                                              ], color='coeff_d_loss')
     return fig
 
 
