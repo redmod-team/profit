@@ -12,7 +12,7 @@ run:
     post:
         class: numpytxt
         path: mockup.out
-    command: ./mockup.py
+    command: python3 mockup.py
 
 fit:
     plot:

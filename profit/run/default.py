@@ -8,17 +8,12 @@ JSON Postprocessor
 
 from .runner import Runner, RunnerInterface
 from .worker import Interface, Preprocessor, Postprocessor
-import logging
 
 import subprocess
 from time import sleep
 
 import numpy as np
 import os
-
-from profit.pre import fill_run_dir_single, convert_relative_symlinks
-
-import json
 
 
 # === Local Runner === #
@@ -158,6 +153,7 @@ class MemmapInterface(Interface):
 @Preprocessor.register('template')
 class TemplatePreprocessor(Preprocessor):
     def pre(self):
+        from profit.pre import fill_run_dir_single
         fill_run_dir_single(self.worker.data, self.config['path'], '.', ignore_path_exists=True)
 
     @classmethod
@@ -179,6 +175,7 @@ class TemplatePreprocessor(Preprocessor):
 @Postprocessor.register('json')
 class JSONPostprocessor(Postprocessor):
     def post(self):
+        import json
         with open(self.config['path']) as f:
             output = json.load(f)
         for key, value in output.items():
@@ -215,3 +212,24 @@ class NumpytxtPostprocessor(Postprocessor):
             config['path'] = 'stdout'
         if 'names' not in config:
             config['names'] = ' '.join(base_config['output'].keys())
+
+
+# === HDF5 Postprocessor === #
+
+
+@Postprocessor.register('hdf5')
+class HDF5Postprocessor(Postprocessor):
+    def post(self):
+        import h5py
+        with h5py.File(self.config['path'], 'r') as f:
+            for key in f.keys():
+                self.worker.data[key] = f[key]
+
+    @classmethod
+    def handle_config(cls, config, base_config):
+        """
+        class: hdf5
+        path: output.hdf5   # file to read from, relative to the run directory
+        """
+        if 'path' not in config:
+            config['path'] = 'output.hdf5'

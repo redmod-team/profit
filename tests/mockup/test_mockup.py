@@ -32,12 +32,6 @@ def chdir_pytest():
 ACCURACY = 0.5
 
 
-def profit(mode, base_dir='.'):
-    """Shortcut to call profit from shell."""
-
-    system("profit {mode} {base_dir}".format(mode=mode, base_dir=base_dir))
-
-
 def clean(config):
     """Delete run directories and input/outpt files after the test."""
 
@@ -57,10 +51,8 @@ def test_1D():
     config_file = './study/profit_1D.yaml'
     config = Config.from_file(config_file)
     try:
-        profit("pre", config_file)
-        profit("run", config_file)
-        profit("collect", config_file)
-        profit("fit", config_file)
+        system(f"profit run {config_file}")
+        system(f"profit fit {config_file}")
         model = eval(load('./study/model_1D.hdf5', as_type='dict').get('data'))
         assert isinstance(model, dict)
         assert model['trained'] is True
@@ -79,10 +71,8 @@ def test_2D():
     config_file = './study/profit_2D.yaml'
     config = Config.from_file(config_file)
     try:
-        profit("pre", config_file)
-        profit("run", config_file)
-        profit("collect", config_file)
-        profit("fit", config_file)
+        system(f"profit run {config_file}")
+        system(f"profit fit {config_file}")
         model = eval(load('./study/model_2D.hdf5', as_type='dict').get('data'))
         assert isinstance(model, dict)
         assert model['trained'] is True
@@ -102,10 +92,8 @@ def test_2D_independent():
     config_file = './study/profit_independent.yaml'
     config = Config.from_file(config_file)
     try:
-        profit("pre", config_file)
-        profit("run", config_file)
-        profit("collect", config_file)
-        profit("fit", config_file)
+        system(f"profit run {config_file}")
+        system(f"profit fit {config_file}")
         model = eval(load('./study/model_independent.hdf5', as_type='dict').get('data'))
         assert isinstance(model, dict)
         assert model['trained'] is True

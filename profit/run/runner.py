@@ -25,14 +25,16 @@ class RunnerInterface(ABC):
 
         self.dtype = []
 
-    def construct_dtype(self):  # ToDo: replace with external spec? provided by Config maybe?
+    def construct_dtype(self):
         self.dtype = []
         for variable, spec in self.base_config['input'].items():
             self.dtype.append((variable, spec['dtype']))
-        self.dtype += [('DONE', np.bool8), ('TIME', np.uint32)]
+        self.dtype += [('DONE', np.bool8)]
+        if self.runner.config['time']:
+            self.dtype += [('TIME', np.uint32)]
         for variable, spec in self.base_config['output'].items():
-            if len(spec['range']) > 0:  # vector output
-                self.dtype.append((variable, (spec['dtype'], list(spec['range'].items())[0][1].shape)))
+            if len(spec['shape']) > 0:  # vector output
+                self.dtype.append((variable, (spec['dtype'], spec['shape'])))
             else:
                 self.dtype.append((variable, spec['dtype']))
 
@@ -131,7 +133,24 @@ class Runner(ABC):
 
     @property
     def data(self):
+        """ view on internal data (only completed runs, structured array) """
         return self.interface.data[self.interface.data['DONE']]  # only completed runs
+
+    @property
+    def input_data(self):
+        """ flattened data (copied, dtype converted)
+        very likely very inefficient """
+        return np.vstack([np.hstack([row[key].flatten() for key in self.base_config['input'].keys()])
+                          for row in self.interface.data])
+
+    @property
+    def output_data(self):
+        """ flattened data (copied, dtype converted, only completed runs)
+        very likely very inefficient """
+        if self.data.size == 0:
+            return np.array([])
+        return np.vstack([np.hstack([row[key].flatten() for key in self.base_config['output'].keys()])
+                          for row in self.data])
 
     def clean(self):
         self.interface.clean()

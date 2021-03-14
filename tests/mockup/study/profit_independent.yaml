@@ -5,10 +5,10 @@ variables:
     f: Output(E)
 
 run:
-    cmd: python3 ../mockup_independent.py
-    ntask: 4
-
-interface: interface_hdf5.py
+    post:
+        class: hdf5
+        path: mockup.hdf5
+    command: python3 bin/mockup_independent.py
 
 files:
     param_files: [mockup_independent.json]

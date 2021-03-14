@@ -13,4 +13,7 @@ files:
     output: custom_output.hdf5
 
 run:
-    python3 ../mockup.py
+    post:
+        class: numpytxt
+        path: mockup.out
+    command: python3 mockup.py

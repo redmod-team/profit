@@ -1,4 +1,4 @@
-ntrain: 2
+ntrain: 10
 variables:
     u: Halton()
     v: Uniform(0.55, 0.6)
@@ -12,5 +12,8 @@ files:
     input: input.txt
     output: output.txt
 
-run: 
-    python3 ../mockup.py
+run:
+    post:
+        class: numpytxt
+        path: mockup.out
+    command: python3 mockup.py

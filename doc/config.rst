@@ -153,6 +153,11 @@ The following gives an overview of all possible parameters
             path: stdout    # file to read from, relative to the run directory
             names: "f g"    # whitespace separated list of output variables in order, default read from config/variables
 
+        .. code-block:: yaml
+
+            class: hdf5
+            path: output.hdf5   # file to read from, relative to the run directory
+
     * command:
         | shell/bash command
         | default: :code:`./simulation`

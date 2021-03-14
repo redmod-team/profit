@@ -9,4 +9,5 @@ variables = {'u': 'Halton()',
 files = {'param_files': ['mockup.in'],
          'input': 'input.txt',
          'output': 'output.txt'}
-run = 'python3 ../mockup.py'
+run = {'post': {'class': 'numpytxt', 'path': 'mockup.out'},
+       'command': 'python3 mockup.py'}

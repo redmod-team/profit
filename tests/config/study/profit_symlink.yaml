@@ -10,5 +10,8 @@ variables:
 files:
     param_files: [symlink_link.txt]
 
-run: 
-    python3 ../mockup.py
+run:
+    post:
+        class: numpytxt
+        path: mockup.out
+    command: python3 mockup.py

@@ -1,5 +1,5 @@
 from os import path, getcwd
-from re import match
+from re import match, split
 import yaml
 from collections import OrderedDict
 
@@ -98,10 +98,6 @@ class Config(OrderedDict):
     def __init__(self, base_dir=getcwd(), **entries):
         super(Config, self).__init__()
         self['base_dir'] = path.abspath(base_dir)
-        self['template_dir'] = path.join(self['base_dir'], 'template')
-        self['run_dir'] = self['base_dir']
-        self['command'] = None
-        self['runner_backend'] = None
         self['uq'] = {}
         self['interface'] = path.join(self['base_dir'], 'interface.py')
         self['variables'] = {}
@@ -166,9 +162,12 @@ class Config(OrderedDict):
                 self['variables'][k] = {'kind': kind}
 
                 if safe_str(kind) == 'output':
-                    # TODO: match arbitrary number of independent variables
-                    mat = match(r'.*\((\w+)?[\,,\,\s]?(\w+)?', v)
-                    dependent = tuple(d for d in mat.groups() if d is not None) if mat else ()
+                    spl = split('[()]', v)
+                    if len(spl) >= 3:
+                        dependent = [var.strip() for var in split(',', spl[1])]
+                    else:
+                        dependent = []
+                    self['variables'][k]['depend'] = tuple(dependent)
                     self['variables'][k]['range'] = {k: None for k in dependent}
                 else:
                     try:
@@ -206,8 +205,11 @@ class Config(OrderedDict):
         for k, v in self['output'].items():
             if not isinstance(v['range'], dict):
                 v['range'] = {d: None for d in v['range']}
+            shape = []
             for d in v['range']:
                 self['output'][k]['range'][d] = self['variables'][d]['range']
+                shape.append(self['variables'][d]['range'].shape[0])
+            self['output'][k]['shape'] = tuple(shape)
 
         # Run configuration
         if 'run' not in self:
@@ -227,8 +229,6 @@ class Config(OrderedDict):
             self['fit']['kernel'] = 'RBF'
 
         # Set absolute paths
-        self['template_dir'] = path.join(self['base_dir'], self['template_dir'])
-        self['interface'] = path.join(self['base_dir'], self['interface'])
         self['files']['input'] = path.join(self['base_dir'], self['files']['input'])
         self['files']['output'] = path.join(self['base_dir'], self['files']['output'])
         if self['fit'].get('load'):
