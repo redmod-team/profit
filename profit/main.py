@@ -66,29 +66,29 @@ def main():
     sys.path.append(config['base_dir'])
 
     if args.mode == 'run':
-        # ToDo: split into a seperate mode 'learn'?
+        from tqdm import tqdm
+        from profit.pre import get_eval_points, write_input
+        from profit.util import save
+
+        runner = Runner.from_config(config['run'], config)
+        runner.prepare()
+
+        eval_points = get_eval_points(config)
+        write_input(config['files']['input'], eval_points)
+
         if 'activelearning' in (safe_str(v['kind']) for v in config['input'].values()):
             from profit.fit import ActiveLearning
-            al = ActiveLearning(config)
+            runner.fill(eval_points)
+            al = ActiveLearning(config, runner)
             al.learn()
         else:
-            # not finalized (Runner design is WIP)
-            from tqdm import tqdm
-            from profit.pre import get_eval_points, write_input
-            from profit.util import save
-
-            logging.basicConfig(level=logging.INFO)
-            runner = Runner.from_config(config['run'], config)
-            runner.prepare()
-
-            eval_points = get_eval_points(config)
-            write_input(config['files']['input'], eval_points)
             params_array = [row[0] for row in eval_points]
             runner.spawn_array(tqdm(params_array), blocking=True)
 
-            # ToDo: handle vector output
-            # ToDo: correct dtype in txt
-            save(config['files']['output'], runner.data.reshape((runner.data.size, 1)))
+        if config['files']['output'].endswith('.txt'):
+            save(config['files']['output'], runner.structured_output_data.reshape(runner.data.size, 1))
+        else:
+            save(config['files']['output'], runner.output_data)
 
     elif args.mode == 'fit':
         from numpy import arange, hstack, meshgrid
@@ -129,7 +129,6 @@ def main():
         from shutil import rmtree
         from os import path, remove
         run_dir = config['run_dir']
-        base_dir = config['base_dir']
 
         question = "Are you sure you want to remove the run directories in {} " \
                    "and input/output files? (y/N) ".format(config['run_dir'])
@@ -141,14 +140,10 @@ def main():
                 print('exit...')
                 sys.exit()
 
-        if run_dir != base_dir:
-            if path.exists(run_dir):
-                rmtree(run_dir)
-        else:
-            for krun in range(config['ntrain']):
-                single_run_dir = path.join(run_dir, f'run_{krun:03d}')
-                if path.exists(single_run_dir):
-                    rmtree(single_run_dir)
+        for krun in range(config['ntrain']):
+            single_run_dir = path.join(run_dir, f'run_{krun:03d}')
+            if path.exists(single_run_dir):
+                rmtree(single_run_dir)
         if path.exists(config['files']['input']):
             remove(config['files']['input'])
         if path.exists(config['files']['output']):

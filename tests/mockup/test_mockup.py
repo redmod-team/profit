@@ -60,9 +60,11 @@ def test_1D():
         assert model['m']['likelihood']['variance'][0] <= 4.809421284738159e-11 * (1 + ACCURACY)
         assert allclose(model['m']['kernel']['variance'][0], 1.6945780226638725, rtol=ACCURACY)
         assert allclose(model['m']['kernel']['lengthscale'][0], 0.22392982500520792, rtol=ACCURACY)
+        system(f"profit clean {config_file}")
     finally:
         clean(config)
-        remove('./study/model_1D.hdf5')
+        if path.exists('./study/model_1D.hdf5'):
+            remove('./study/model_1D.hdf5')
 
 
 def test_2D():
@@ -81,9 +83,11 @@ def test_2D():
         assert model['m']['likelihood']['variance'][0] <= 2.657441549034709e-08 * (1 + ACCURACY)
         assert allclose(model['m']['kernel']['variance'][0], 270.2197671669302, rtol=ACCURACY)
         assert allclose(model['m']['kernel']['lengthscale'][0], 1.079943283873971, rtol=ACCURACY)
+        system(f"profit clean {config_file}")
     finally:
         clean(config)
-        remove('./study/model_2D.hdf5')
+        if path.exists('./study/model_2D.hdf5'):
+            remove('./study/model_2D.hdf5')
 
 
 def test_2D_independent():
@@ -102,6 +106,8 @@ def test_2D_independent():
         assert model['m']['likelihood']['variance'][0] <= 2.8769632382230903e-05 * (1 + ACCURACY)
         assert allclose(model['m']['kernel']['variance'][0], 0.4382486018781694, rtol=ACCURACY)
         assert allclose(model['m']['kernel']['lengthscale'][0], 0.6125251001393358, rtol=ACCURACY)
+        system(f"profit clean {config_file}")
     finally:
         clean(config)
-        remove('./study/model_independent.hdf5')
+        if path.exists('./study/model_independent.hdf5'):
+            remove('./study/model_independent.hdf5')

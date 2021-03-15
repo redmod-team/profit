@@ -1,10 +1,5 @@
 from profit.sur.gp import GPSurrogate, GPySurrogate
-from os import path, walk
 import numpy as np
-from profit.util import load
-from profit.util.io import collect_output
-from profit.run import Runner
-from profit.pre import get_eval_points
 
 
 def get_surrogate(sur):
@@ -18,20 +13,18 @@ def get_surrogate(sur):
 
 class ActiveLearning:
 
-    def __init__(self, config):
+    def __init__(self, config, runner):
         self.config = config
 
-        self.runner = Runner.from_config(config['run'], config)  # ToDo: WIP
-        self.runner.prepare()
+        self.runner = runner
 
         self.sur = get_surrogate(config['fit']['surrogate'])
 
-        self.x = self.runner.input_data
+        self.x = self.runner.flat_input_data
         self.y = None
 
     def update_run(self, krun, al_value):
         # Update input for single run
-        print(krun)
         params = {}
         for pos, key in enumerate(self.config['input']):
             if self.config['input'][key]['kind'] == 'ActiveLearning':
@@ -40,7 +33,7 @@ class ActiveLearning:
         # Start single run
         self.runner.spawn_run(params, wait=True)
         # Read output (all available data)
-        self.y = self.runner.output_data
+        self.y = self.runner.flat_output_data
 
     def first_runs(self, nfirst):
         al_keys = [key for key in self.config['input'] if self.config['input'][key]['kind'] == 'ActiveLearning']
@@ -49,8 +42,8 @@ class ActiveLearning:
             for n in range(nfirst):
                 params_array[n][key] = np.random.random()
         self.runner.spawn_array(params_array, blocking=True)
-        self.x = self.runner.input_data
-        self.y = self.runner.output_data
+        self.x = self.runner.flat_input_data
+        self.y = self.runner.flat_output_data
 
     @staticmethod
     def f(u):

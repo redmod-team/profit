@@ -1,4 +1,4 @@
-ntrain: 10
+ntrain: 2
 variables:
     u: Halton()
     v: Uniform(0.55, 0.6)

@@ -100,6 +100,12 @@ class Runner(ABC):
         self.interface.prepare()
         Preprocessor[self.config['pre']['class']].runner_init(self.config['pre'])
 
+    def fill(self, params_array, offset=0):
+        for r, row in enumerate(params_array):
+            mapping = params2map(row)
+            for key, value in mapping.items():
+                self.interface.data[key][r + offset] = value
+
     @abstractmethod
     def spawn_run(self, params=None, wait=False):
         """spawn a single run
@@ -125,7 +131,7 @@ class Runner(ABC):
         return self.interface.data[self.interface.data['DONE']]  # only completed runs
 
     @property
-    def input_data(self):
+    def flat_input_data(self):
         """ flattened data (copied, dtype converted)
         very likely very inefficient """
         return np.vstack([np.hstack([row[key].flatten() for key in self.base_config['input'].keys()])
@@ -133,6 +139,39 @@ class Runner(ABC):
 
     @property
     def output_data(self):
+        return self.data[list(self.base_config['output'].keys())]
+
+    @property
+    def structured_output_data(self):
+        """ flattened data (copied, new column names, only completed runs)
+        very likely very inefficient """
+        dtype = []
+        columns = {}
+        for variable, spec in self.base_config['output'].items():
+            if len(spec['shape']) == 0:
+                dtype.append((variable, spec['dtype']))
+                columns[variable] = [variable]
+            else:
+                from numpy import meshgrid
+                ranges = []
+                columns[variable] = []
+                for dep in spec['depend']:
+                    ranges.append(spec['range'][dep])
+                meshes = [m.flatten() for m in meshgrid(*ranges)]
+                for i in range(meshes[0].size):
+                    name = variable + '(' + ', '.join([f'{m[i]}' for m in meshes]) + ')'
+                    dtype.append((name, spec['dtype']))
+                    columns[variable].append(name)
+
+        output = np.zeros(self.data.shape, dtype=dtype)
+        for variable, spec in self.base_config['output'].items():
+            for i in range(self.data.size):
+                output[columns[variable]][i] = tuple(self.data[variable][i])
+
+        return output
+
+    @property
+    def flat_output_data(self):
         """ flattened data (copied, dtype converted, only completed runs)
         very likely very inefficient """
         if self.data.size == 0:
