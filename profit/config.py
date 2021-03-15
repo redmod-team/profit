@@ -55,13 +55,10 @@ class Config(OrderedDict):
     Possible parameters in .yaml:
 
     base_dir: .
-    template_dir: ./template
     run_dir: .
-    runner_backend: local
     uq: # TODO: implement
     interface: ./interface.py
     files:
-        param_files: [params1.in, params2.in, symlink.txt]
         input: ./input.txt
         output: ./output.txt
     ntrain: 30
@@ -98,13 +95,12 @@ class Config(OrderedDict):
     def __init__(self, base_dir=getcwd(), **entries):
         super(Config, self).__init__()
         self['base_dir'] = path.abspath(base_dir)
+        self['run_dir'] = self['base_dir']
         self['uq'] = {}
-        self['interface'] = path.join(self['base_dir'], 'interface.py')
         self['variables'] = {}
         self['fit'] = {'surrogate': 'GPy',
                        'kernel': 'RBF'}
-        self['files'] = {'param_files': None,
-                         'input': path.join(self['base_dir'], 'input.txt'),
+        self['files'] = {'input': path.join(self['base_dir'], 'input.txt'),
                          'output': path.join(self['base_dir'], 'output.txt')}
 
         # Not to fill directly in file

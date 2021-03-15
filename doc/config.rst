@@ -15,15 +15,14 @@ The following gives an overview of all possible parameters
     | Directory where the 'profit.yaml' file is located.
     | Default: .
 
+* run_dir:
+    | Directory where the single runs are generated.
+    | Default: .
+
 * uq:
     | Not implemented yet.
 
 * files:
-
-    * param_files:
-        | Files in template which contain placeholders for variables.
-        | Default: None (Takes all files in template_dir as parameter files.)
-        | E.g. [params1.in, params2.in]
 
     * input:
         | Input variables of all runs.
@@ -130,6 +129,7 @@ The following gives an overview of all possible parameters
 
             class: template
             path: template      # directory to copy from, relative to base directory
+            param_files: null   # on which files template substitution should be applied, null means all files
 
     * post:
         | the worker postprocessor

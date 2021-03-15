@@ -36,7 +36,7 @@ def clean(config):
     """Delete run directories and input/outpt files after the test."""
 
     for krun in range(config.get('ntrain')):
-        single_dir = path.join(config.get('run_dir'), str(krun).zfill(3))
+        single_dir = path.join(config.get('run_dir'), f'run_{krun:03d}')
         if path.exists(single_dir):
             rmtree(single_dir)
     if path.exists(config['files'].get('input')):

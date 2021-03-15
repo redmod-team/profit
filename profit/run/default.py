@@ -154,19 +154,25 @@ class MemmapInterface(Interface):
 class TemplatePreprocessor(Preprocessor):
     def pre(self):
         from profit.pre import fill_run_dir_single
-        fill_run_dir_single(self.worker.data, self.config['path'], '.', ignore_path_exists=True)
+        fill_run_dir_single(self.worker.data, self.config['path'], '.', ignore_path_exists=True,
+                            param_files=self.config['param_files'])
 
     @classmethod
     def handle_config(cls, config, base_config):
         """
         class: template
         path: template      # directory to copy from, relative to base directory
+        param_files: null   # files in template which contain placeholders for variables, null means all files
         """
         if 'path' not in config:
             config['path'] = 'template'
         # 'path' is relative to base_dir, convert to absolute path
         if not os.path.isabs(config['path'][0]):
             config['path'] = os.path.abspath(os.path.join(base_config['base_dir'], config['path']))
+        if 'param_files' not in config:
+            config['param_files'] = None
+        if isinstance(config['param_files'], str):
+            config['param_files'] = [config['param_files']]
 
 
 # === JSON Postprocessor === #

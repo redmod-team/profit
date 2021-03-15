@@ -128,8 +128,30 @@ def check_ndim(arr):
 
 
 class SafeDict(dict):
+    def __init__(self, obj, pre='{', post='}'):
+        self.pre = pre
+        self.post = post
+        super().__init__(obj)
+
+    @classmethod
+    def from_params(cls, params, **kwargs):
+        return cls(params2map(params), **kwargs)
+
     def __missing__(self, key):
-        return '{' + key + '}'
+        return self.pre + key + self.post
+
+
+def params2map(params):
+    from collections.abc import MutableMapping
+    if params is None:
+        return {}
+    if isinstance(params, MutableMapping):
+        return params
+    try:
+        return {key: params[key] for key in params.dtype.names}
+    except AttributeError:
+        pass
+    raise TypeError('params are not a Mapping')
 
 
 def load_includes(paths):

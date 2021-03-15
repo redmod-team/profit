@@ -75,10 +75,12 @@ def fill_template_file(template_filepath, output_filepath, params):
         content = f.read()
         # Escape '{*}' for e.g. json templates by replacing it with '{{*}}'.
         # Variables then have to be declared as '{{*}}' which is replaced by a single '{*}'.
+        pre, post = '{', '}'
         if '{{' in content:
             content = content.replace('{{', '§').replace('}}', '§§') \
                 .replace('{', '{{').replace('}', '}}').replace('§§', '}').replace('§', '{')
-        content = content.format_map(params)
+            pre, post = '{{', '}}'
+        content = content.format_map(util.SafeDict.from_params(params, pre=pre, post=post))
     with open(output_filepath, 'w') as f:
         f.write(content)
 

@@ -10,7 +10,7 @@ from abc import ABC, abstractmethod  # Abstract Base Class
 from collections.abc import MutableMapping
 
 from .worker import Worker, Preprocessor
-from profit.util import load_includes
+from profit.util import load_includes, params2map
 
 import numpy as np
 
@@ -107,21 +107,9 @@ class Runner(ABC):
         :param params: a mapping which defines input parameters to be set
         :param wait: whether to wait for the run to complete
         """
-        mapping = self.params2map(params)
+        mapping = params2map(params)
         for key, value in mapping.items():
             self.interface.data[key][self.next_run_id] = value
-
-    @staticmethod
-    def params2map(params):
-        if params is None:
-            return {}
-        if isinstance(params, MutableMapping):
-            return params
-        try:
-            return {key: params[key] for key in params.dtype.names}
-        except AttributeError:
-            pass
-        raise TypeError('params are not a Mapping')
 
     @abstractmethod
     def spawn_array(self, params_array, blocking=True):

@@ -8,13 +8,16 @@ variables:
     g: Output(r)
 
 run:
+    pre:
+        class: template
+        param_files: [mockup.in]
     post:
         class: numpytxt
         path: mockup.out
     command: python3 mockup.py
+    clean: false
 
 files:
-    param_files: [mockup.in]
     input: custom_input.in
 
 fit:

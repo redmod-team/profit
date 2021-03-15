@@ -12,3 +12,4 @@ run:
         class: numpytxt
         path: mockup.out
     command: python3 mockup.py
+    clean: false
