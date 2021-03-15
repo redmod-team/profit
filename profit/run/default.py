@@ -28,10 +28,12 @@ class LocalRunner(Runner):
         env = self.env.copy()
         env['PROFIT_RUN_ID'] = str(self.next_run_id)
         if self.config['custom']:
-            cmd = [self.config['command']]
+            cmd = self.config['command']
+            shell = True
         else:
             cmd = ['profit-worker']
-        self.runs[self.next_run_id] = subprocess.Popen(cmd, env=env, cwd=self.base_config['run_dir'])
+            shell = False
+        self.runs[self.next_run_id] = subprocess.Popen(cmd, shell=shell, env=env, cwd=self.base_config['run_dir'])
         if wait:
             self.runs[self.next_run_id].wait()
             del self.runs[self.next_run_id]

@@ -36,6 +36,8 @@ def clean(config):
         single_dir = path.join(config.get('run_dir'), f'run_{krun:03d}')
         if path.exists(single_dir):
             rmtree(single_dir)
+    if path.exists('./study/interface.npy'):
+        remove('./study/interface.npy')
     if path.exists(config['files'].get('input')):
         remove(config['files'].get('input'))
     if path.exists(config['files'].get('output')):
@@ -71,7 +73,6 @@ def test_txt_input():
     config = Config.from_file(config_file)
     run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
     assert path.isfile('./study/run_000/mockup.in')
-    run(f"profit clean {config_file}", shell=True, timeout=TIMEOUT)
     clean(config)
 
 
@@ -89,7 +90,6 @@ def test_txt_json_input():
             txt_input = genfromtxt(tf)
         assert json_input.dtype == txt_input.dtype
         assert json_input.shape == txt_input.shape
-        run(f"profit clean {config_file}", shell=True, timeout=TIMEOUT)
     finally:
         clean(config)
 
@@ -104,7 +104,6 @@ def test_hdf5_input_output():
         data_in = load(config['files'].get('input'))
         assert data_in.shape == (2, 1)
         assert data_in.dtype.names == ('u', 'v', 'w')
-        run(f"profit clean {config_file}", shell=True, timeout=TIMEOUT)
     finally:
         clean(config)
 
@@ -123,7 +122,6 @@ def test_symlinks():
                 link_data = link.read()
                 base_data = base.read()
                 assert link_data == base_data and not link_data.startswith('{')
-        run(f"profit clean {config_file}", shell=True, timeout=TIMEOUT)
     finally:
         clean(config)
         with open(link_file, 'w') as link:

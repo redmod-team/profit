@@ -215,9 +215,7 @@ class Runner(ABC):
         if not isinstance(config['interface'], MutableMapping):
             config['interface'] = {'class': config['interface']}
         RunnerInterface[config['interface']['class']].handle_config(config['interface'], base_config)
-
-        if not config['custom']:
-            Worker.handle_config(config, base_config)
+        Worker.handle_config(config, base_config)
 
     @classmethod
     @abstractmethod

@@ -1,0 +1,15 @@
+# similar to 1D
+ntrain: 7
+variables:
+    u: Halton()
+    f: Output
+
+run:
+    command: python3 ../mockup_custom_worker.py
+    custom: true
+
+files:
+    input: input_custom_worker.hdf5
+    output: output_custom_worker.hdf5
+fit:
+    save: model_custom_worker.hdf5
