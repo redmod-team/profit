@@ -11,7 +11,8 @@ Testcases for some configuration features:
 from profit.config import Config
 from profit.util import load
 from json import load as jload
-from os import system, path, remove, chdir, getcwd, listdir
+from os import path, remove, chdir, getcwd
+from subprocess import run
 from numpy import ndarray, genfromtxt, array
 from shutil import rmtree
 from pytest import fixture
@@ -23,6 +24,9 @@ def chdir_pytest():
     chdir(path.dirname(path.abspath(__file__)))
     yield
     chdir(pytest_root_dir)
+
+
+TIMEOUT = 30  # seconds
 
 
 def clean(config):
@@ -65,9 +69,9 @@ def test_txt_input():
 
     config_file = './study/profit.yaml'
     config = Config.from_file(config_file)
-    system(f"profit run {config_file}")
+    run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
     assert path.isfile('./study/run_000/mockup.in')
-    system(f"profit clean {config_file}")
+    run(f"profit clean {config_file}", shell=True, timeout=TIMEOUT)
     clean(config)
 
 
@@ -77,7 +81,7 @@ def test_txt_json_input():
     config_file = './study/profit_json.yaml'
     config = Config.from_file(config_file)
     try:
-        system(f"profit run {config_file}")
+        run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
         with open(path.join(config['run_dir'], 'run_000', 'mockup_json.in')) as jf:
             json_input = jload(jf)
         json_input = array([float(val) for val in json_input.values()])
@@ -85,7 +89,7 @@ def test_txt_json_input():
             txt_input = genfromtxt(tf)
         assert json_input.dtype == txt_input.dtype
         assert json_input.shape == txt_input.shape
-        system(f"profit clean {config_file}")
+        run(f"profit clean {config_file}", shell=True, timeout=TIMEOUT)
     finally:
         clean(config)
 
@@ -96,11 +100,11 @@ def test_hdf5_input_output():
     config_file = './study/profit_hdf5.yaml'
     config = Config.from_file(config_file)
     try:
-        system(f"profit run {config_file}")
+        run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
         data_in = load(config['files'].get('input'))
         assert data_in.shape == (2, 1)
         assert data_in.dtype.names == ('u', 'v', 'w')
-        system(f"profit clean {config_file}")
+        run(f"profit clean {config_file}", shell=True, timeout=TIMEOUT)
     finally:
         clean(config)
 
@@ -113,13 +117,13 @@ def test_symlinks():
     base_file = './study/template/symlink_base.txt'
     link_file = './study/template/some_subdir/symlink_link.txt'
     try:
-        system(f"profit run {config_file}")
+        run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
         with open(link_file, 'r') as link:
             with open(base_file, 'r') as base:
                 link_data = link.read()
                 base_data = base.read()
                 assert link_data == base_data and not link_data.startswith('{')
-        system(f"profit clean {config_file}")
+        run(f"profit clean {config_file}", shell=True, timeout=TIMEOUT)
     finally:
         clean(config)
         with open(link_file, 'w') as link:

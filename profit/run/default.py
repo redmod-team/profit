@@ -14,6 +14,7 @@ from time import sleep
 
 import numpy as np
 import os
+from shutil import rmtree
 
 
 # === Local Runner === #
@@ -44,16 +45,18 @@ class LocalRunner(Runner):
             self.spawn_run(params)
             while len(self.runs) >= self.config['runner']['parallel']:
                 sleep(self.config['runner']['sleep'])
-                self.check_runs()
+                self.check_runs(poll=True)
         while len(self.runs):
             sleep(self.config['runner']['sleep'])
-            self.check_runs()
+            self.check_runs(poll=True)
 
-    def check_runs(self):
-        """ check the status of runs via the interface, processes are not polled """
+    def check_runs(self, poll=False):
+        """ check the status of runs via the interface """
         for run_id, process in list(self.runs.items()):  # preserve state before deletions
             if self.interface.data['DONE'][run_id]:
                 process.wait()  # just to make sure
+                del self.runs[run_id]
+            elif poll and process.poll() is not None:
                 del self.runs[run_id]
 
     @classmethod
@@ -153,9 +156,13 @@ class MemmapInterface(Interface):
 @Preprocessor.register('template')
 class TemplatePreprocessor(Preprocessor):
     def pre(self):
+        # No call to super()! replaces the default preprocessing
         from profit.pre import fill_run_dir_single
-        fill_run_dir_single(self.worker.data, self.config['path'], '.', ignore_path_exists=True,
+        if os.path.exists(self.worker.run_dir):
+            rmtree(self.worker.run_dir)
+        fill_run_dir_single(self.worker.data, self.config['path'], self.worker.run_dir, ignore_path_exists=True,
                             param_files=self.config['param_files'])
+        os.chdir(self.worker.run_dir)
 
     @classmethod
     def handle_config(cls, config, base_config):

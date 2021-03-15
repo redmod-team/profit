@@ -56,6 +56,8 @@ class ActiveLearning:
 
         # First runs
         nfirst = 3
+        if nfirst < self.config['ntrain']:
+            nfirst = self.config['ntrain']
         self.first_runs(nfirst)
 
         self.sur.train(self.x[:nfirst], self.y[:nfirst], kernel=self.config['fit'].get('kernel'))

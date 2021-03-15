@@ -69,7 +69,10 @@ class Preprocessor(ABC):
 
     @abstractmethod
     def pre(self):
-        pass
+        if os.path.exists(self.worker.run_dir):
+            shutil.rmtree(self.worker.run_dir)
+        os.mkdir(self.worker.run_dir)
+        os.chdir(self.worker.run_dir)
 
     def __call__(self):
         return self.pre()
@@ -145,6 +148,7 @@ class Worker:
         self.post = post(self, config['post'])
         self.interface = interface(self, config['interface'])
         self.run_id = run_id
+        self.run_dir = f'run_{self.run_id:03d}'
 
     @classmethod
     def from_config(cls, config, run_id):
@@ -198,11 +202,6 @@ class Worker:
         subprocess.run(self.config['command'], shell=True, text=True, **kwargs)
 
     def main(self):
-        run_dir = f'run_{self.run_id:03d}'
-        if os.path.exists(run_dir):
-            shutil.rmtree(run_dir)
-        os.mkdir(run_dir)
-        os.chdir(run_dir)
         self.pre()
 
         timestamp = time.time()
@@ -214,7 +213,7 @@ class Worker:
         self.interface.done()
         os.chdir('..')
         if self.config['clean']:
-            shutil.rmtree(run_dir)
+            shutil.rmtree(self.run_dir)
 
 
 # === Entry Point === #

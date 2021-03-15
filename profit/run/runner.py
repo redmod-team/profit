@@ -165,8 +165,11 @@ class Runner(ABC):
 
         output = np.zeros(self.data.shape, dtype=dtype)
         for variable, spec in self.base_config['output'].items():
-            for i in range(self.data.size):
-                output[columns[variable]][i] = tuple(self.data[variable][i])
+            if len(spec['shape']) == 0:
+                output[variable] = self.data[variable]
+            else:
+                for i in range(self.data.size):
+                    output[columns[variable]][i] = tuple(self.data[variable][i])
 
         return output
 

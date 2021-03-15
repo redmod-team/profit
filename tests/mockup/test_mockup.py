@@ -14,7 +14,8 @@ Testcases for mockup simulations:
 
 from profit.config import Config
 from profit.util import load
-from os import system, path, remove, chdir, getcwd
+from os import path, remove, chdir, getcwd
+from subprocess import run
 from numpy import array, allclose  # necessary for eval() method when loading the surrogate model
 from shutil import rmtree
 from pytest import fixture
@@ -30,6 +31,7 @@ def chdir_pytest():
 
 # Allow a large range of parameters, just ensure that it is approximately at the same scale
 ACCURACY = 0.5
+TIMEOUT = 30  # seconds
 
 
 def clean(config):
@@ -51,8 +53,8 @@ def test_1D():
     config_file = './study/profit_1D.yaml'
     config = Config.from_file(config_file)
     try:
-        system(f"profit run {config_file}")
-        system(f"profit fit {config_file}")
+        run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
+        run(f"profit fit {config_file}", shell=True, timeout=TIMEOUT)
         model = eval(load('./study/model_1D.hdf5', as_type='dict').get('data'))
         assert isinstance(model, dict)
         assert model['trained'] is True
@@ -60,7 +62,7 @@ def test_1D():
         assert model['m']['likelihood']['variance'][0] <= 4.809421284738159e-11 * (1 + ACCURACY)
         assert allclose(model['m']['kernel']['variance'][0], 1.6945780226638725, rtol=ACCURACY)
         assert allclose(model['m']['kernel']['lengthscale'][0], 0.22392982500520792, rtol=ACCURACY)
-        system(f"profit clean {config_file}")
+        run(f"profit clean {config_file}", shell=True, timeout=TIMEOUT)
     finally:
         clean(config)
         if path.exists('./study/model_1D.hdf5'):
@@ -73,8 +75,8 @@ def test_2D():
     config_file = './study/profit_2D.yaml'
     config = Config.from_file(config_file)
     try:
-        system(f"profit run {config_file}")
-        system(f"profit fit {config_file}")
+        run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
+        run(f"profit fit {config_file}", shell=True, timeout=TIMEOUT)
         model = eval(load('./study/model_2D.hdf5', as_type='dict').get('data'))
         assert isinstance(model, dict)
         assert model['trained'] is True
@@ -83,7 +85,7 @@ def test_2D():
         assert model['m']['likelihood']['variance'][0] <= 2.657441549034709e-08 * (1 + ACCURACY)
         assert allclose(model['m']['kernel']['variance'][0], 270.2197671669302, rtol=ACCURACY)
         assert allclose(model['m']['kernel']['lengthscale'][0], 1.079943283873971, rtol=ACCURACY)
-        system(f"profit clean {config_file}")
+        run(f"profit clean {config_file}", shell=True, timeout=TIMEOUT)
     finally:
         clean(config)
         if path.exists('./study/model_2D.hdf5'):
@@ -96,8 +98,8 @@ def test_2D_independent():
     config_file = './study/profit_independent.yaml'
     config = Config.from_file(config_file)
     try:
-        system(f"profit run {config_file}")
-        system(f"profit fit {config_file}")
+        run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
+        run(f"profit fit {config_file}", shell=True, timeout=TIMEOUT)
         model = eval(load('./study/model_independent.hdf5', as_type='dict').get('data'))
         assert isinstance(model, dict)
         assert model['trained'] is True
@@ -106,7 +108,7 @@ def test_2D_independent():
         assert model['m']['likelihood']['variance'][0] <= 2.8769632382230903e-05 * (1 + ACCURACY)
         assert allclose(model['m']['kernel']['variance'][0], 0.4382486018781694, rtol=ACCURACY)
         assert allclose(model['m']['kernel']['lengthscale'][0], 0.6125251001393358, rtol=ACCURACY)
-        system(f"profit clean {config_file}")
+        run(f"profit clean {config_file}", shell=True, timeout=TIMEOUT)
     finally:
         clean(config)
         if path.exists('./study/model_independent.hdf5'):

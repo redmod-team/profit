@@ -41,9 +41,9 @@ def copy_template(template_dir, out_dir, dont_copy=None):
     """ TODO: explain dont_copy patterns """
 
     if dont_copy:
-        copytree(template_dir, out_dir, symlinks=True, dirs_exist_ok=True, ignore=ignore_patterns(*dont_copy))
+        copytree(template_dir, out_dir, symlinks=True, ignore=ignore_patterns(*dont_copy))
     else:
-        copytree(template_dir, out_dir, symlinks=True, dirs_exist_ok=True)
+        copytree(template_dir, out_dir, symlinks=True)
     convert_relative_symlinks(template_dir, out_dir)
 
 
