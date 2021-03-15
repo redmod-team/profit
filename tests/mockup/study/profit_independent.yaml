@@ -8,7 +8,7 @@ run:
     post:
         class: hdf5
         path: mockup.hdf5
-    command: python3 bin/mockup_independent.py
+    command: python3 mockup_independent.py
 
 files:
     param_files: [mockup_independent.json]
