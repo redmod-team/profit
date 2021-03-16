@@ -83,3 +83,8 @@ plt.plot(ytest)
 plt.xlabel('Independent variable x')
 plt.ylabel(f'Output f(x;u={utest})')
 plt.legend(['Reconstruction', 'Reference'])
+
+#%% Test with SVD
+U, S, Vt = np.linalg.svd(dytrain, full_matrices=False)
+
+# %%
