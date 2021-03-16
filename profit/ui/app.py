@@ -134,21 +134,6 @@ app.layout = html.Div(children=[
             )
         ])
     ]),
-    # html.Div(['Specify range with slider or via text input (min/max or center/range) - #digits',
-    #     dcc.Input(id='num-digits', type='number', min=0, value=3),
-    #     html.Button(id='reset-button', children='reset slider', n_clicks=0)
-    # ]),
-    # html.Div(children=[
-    #     html.B('Range min/max: '),
-    #     html.I('Data-range: ('), html.I(id='graph1_min'), ' - ', html.I(id='graph1_max'),
-    #     html.I(')'),
-    #     html.Br(),
-    #     dcc.Input(id='range-min', type='number', placeholder='range min', step=0.001),
-    #     dcc.Input(id='range-max', type='number', placeholder='range max', step=0.001),
-    #     html.B('  center & span:'),
-    #     dcc.Input(id='center', type='number', placeholder='center', step=0.001),
-    #     dcc.Input(id='span', type='number', placeholder='span', step=0.001),
-    # ]),
 ])
 
 
