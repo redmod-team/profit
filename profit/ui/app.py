@@ -8,8 +8,6 @@ from dash.dependencies import Input, Output, State, MATCH, ALL
 from math import log10, floor
 import numpy as np
 
-import plotly.express as px
-
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
@@ -33,151 +31,124 @@ invars_list = invars.to_list()
 dropdown_opts = [{'label': invar, 'value': invar} for invar in invars]
 # print(dropdown_opts)
 
-app.layout = html.Div([
+app.layout = html.Div(children=[
+    html.Div(dcc.Graph(id='graph1')),
+    html.Div(dcc.RadioItems(
+        id='graph-type',
+        options=[{'label': i, 'value': i} for i in ['1D scatter',
+                                                    '2D scatter',
+                                                    '2D contour']
+                 ],
+        value='1D scatter',
+        labelStyle={'display': 'inline-block'})),
+    html.Div(id='invar-1-div', style={'display': 'flex', 'align-items': 'baseline'}, children=[
+        html.B('x: ', style={'width': 100}),
+        dcc.Dropdown(
+            id='invar',
+            options=dropdown_opts,
+            value=invars[0],
+            style={'width': 700},
+        ),
+    ]),
+    html.Div(id='invar-2-div', style={'display': 'flex', 'align-items': 'baseline'}, children=[
+        html.B('y: ', style={'width': 100}),
+        dcc.Dropdown(
+            id='invar_2',
+            options=dropdown_opts,
+            value=invars[0],
+            style={'width': 700},
+        ),
+    ]),
+    html.Div(id='color-div', style={'display': 'flex', 'align-items': 'baseline'}, children=[
+        html.B("color: ", style={'width': 100}),
+        dcc.Dropdown(
+            id='color-dropdown',
+            options=dropdown_opts,
+            value=invars[0],
+            style={'width': 700},
+        ),
+        html.B("use color:", style={'width': 100, 'text-align': 'center'}),
+        dcc.RadioItems(
+            id='color-use',
+            value='false',
+            options=[
+                {'label': 'True', 'value': 'true'},
+                {'label': 'False', 'value': 'false'}
+            ],
+            labelStyle={'display': 'inline-block'},
+        ),
+        html.I("(for scatter plot only)", style={'width': 150, 'text-align': 'right'})
+    ]),
+    html.Div(html.Table(html.Tr([
+        html.Td(html.Button("Add Filter", id='add-filter', n_clicks=0)),
+        html.Td(html.Button("Clear Filter", id='clear-filter', n_clicks=0)),
+        html.Td(html.Button("Clear all Filter", id='clear-all-filter', n_clicks=0)),
+        html.Td(dcc.Slider(id='scale-slider',
+                           min=-0.5, max=0.5,
+                           value=0, step=0.01,
+                           marks={-1: '-100%',
+                                  -0.75: '-75%',
+                                  -0.5: '-50%',
+                                  -0.25: '-25%',
+                                  0: '0%',
+                                  0.25: '25%',
+                                  0.5: '50%',
+                                  0.75: '75%',
+                                  1: '100%'}
+                           ),
+                style={'width': 500}),
+        html.Td(html.Button("Scale", id='scale', n_clicks=0)),
+    ]))),
+    html.Div(html.Table(id='param-table', children=[
+        html.Thead(id='param-table-head', children=[
+            html.Tr(children=[
+                html.Th("Parameter", style={'width': 150}),
+                html.Th("Slider", style={'width': 300}),
+                html.Th("Range (min/max)"),
+                html.Th("center/span"),
+                html.Th("filter active"),
+            ]),
+        ]),
+        html.Tbody(id='param-table-body', children=[
+            html.Tr(children=[
+                html.Td(html.Div(id='param-text-div', children=[])),
+                html.Td(html.Div(id='param-slider-div', children=[])),
+                html.Td(html.Div(id='param-range-div', children=[])),
+                html.Td(html.Div(id='param-center-div', children=[])),
+                html.Td(html.Div(id='param-active-div', children=[])),
+            ]),
+        ]),
+    ])),
     html.Div([
-        dcc.Tabs(id='tabs', children=[
-            dcc.Tab(
-                label='1D Graphs',
-                selected_style=tab_selected_style,
-                children=[
-                    html.Div(dcc.Graph(id='graph1')),
-                    html.Div(dcc.RadioItems(
-                        id='graph-type',
-                        options=[{'label': i, 'value': i} for i in ['1D scatter',
-                                                                    '2D scatter',
-                                                                    '2D contour']
-                        ],
-                        value='1D scatter',
-                        labelStyle={'display': 'inline-block'})),
-                    html.Div(id='invar-1-div', style={'display': 'flex', 'align-items': 'baseline'}, children=[
-                        html.B('x: ', style={'width': 100}),
-                        dcc.Dropdown(
-                            id='invar',
-                            options=dropdown_opts,
-                            value=invars[0],
-                            style={'width': 700},
-                        ),
-                    ]),
-                    html.Div(id='invar-2-div', style={'display': 'flex', 'align-items': 'baseline'}, children=[
-                        html.B('y: ', style={'width': 100}),
-                        dcc.Dropdown(
-                            id='invar_2',
-                            options=dropdown_opts,
-                            value=invars[1],
-                            style={'width': 700},
-                        ),
-                    ]),
-                    html.Div(id='color-div', style={'display': 'flex', 'align-items': 'baseline'}, children=[
-                        html.B("color: ", style={'width': 100}),
-                        dcc.Dropdown(
-                            id='color-dropdown',
-                            options=dropdown_opts,
-                            value=invars[2],
-                            style={'width': 700},
-                        ),
-                        html.B("use color:", style={'width': 100, 'text-align': 'center'}),
-                        dcc.RadioItems(
-                            id='color-use',
-                            value='false',
-                            options=[
-                                {'label': 'True', 'value': 'true'},
-                                {'label': 'False', 'value': 'false'}
-                            ],
-                            labelStyle={'display': 'inline-block'},
-                        ),
-                        html.I("(for scatter plot only)", style={'width': 150, 'text-align': 'right'})
-                    ]),
-                    html.Div(html.Table(html.Tr([
-                        html.Td(html.Button("Add Filter", id='add-filter', n_clicks=0)),
-                        html.Td(html.Button("Clear Filter", id='clear-filter', n_clicks=0)),
-                        html.Td(html.Button("Clear all Filter", id='clear-all-filter', n_clicks=0)),
-                        html.Td(dcc.Slider(id='scale-slider',
-                                           min=-0.5, max=0.5,
-                                           value=0, step=0.01,
-                                           marks={-1: '-100%',
-                                                  -0.75: '-75%',
-                                                  -0.5: '-50%',
-                                                  -0.25: '-25%',
-                                                  0: '0%',
-                                                  0.25: '25%',
-                                                  0.5: '50%',
-                                                  0.75: '75%',
-                                                  1: '100%'}
-                                           ),
-                                style={'width': 500}),
-                        html.Td(html.Button("Scale", id='scale', n_clicks=0)),
-                    ]))),
-                    html.Div(html.Table(id='param-table', children=[
-                        html.Thead(id='param-table-head', children=[
-                            html.Tr(children=[
-                                html.Th('Parameter', style={'width': 150}),
-                                html.Th('Slider', style={'width': 300}),
-                                html.Th('Range (min/max)'),
-                                html.Th('center/span'),
-                            ]),
-                        ]),
-                        html.Tbody(id='param-table-body', children=[
-                            html.Tr(children=[
-                                html.Td(html.Div(id='param-text-div', children=[])),
-                                html.Td(html.Div(id='param-slider-div', children=[])),
-                                html.Td(html.Div(id='param-range-div', children=[])),
-                                html.Td(html.Div(id='param-center-div', children=[])),
-                            ]),
-                        ]),
-                    ])),
-                    # html.Div(['Specify range with slider or via text input (min/max or center/range) - #digits',
-                    #     dcc.Input(id='num-digits', type='number', min=0, value=3),
-                    #     html.Button(id='reset-button', children='reset slider', n_clicks=0)
-                    # ]),
-                    # html.Div(children=[
-                    #     html.B('Range min/max: '),
-                    #     html.I('Data-range: ('), html.I(id='graph1_min'), ' - ', html.I(id='graph1_max'),
-                    #     html.I(')'),
-                    #     html.Br(),
-                    #     dcc.Input(id='range-min', type='number', placeholder='range min', step=0.001),
-                    #     dcc.Input(id='range-max', type='number', placeholder='range max', step=0.001),
-                    #     html.B('  center & span:'),
-                    #     dcc.Input(id='center', type='number', placeholder='center', step=0.001),
-                    #     dcc.Input(id='span', type='number', placeholder='span', step=0.001),
-                    # ]),
-                ]
-            ),
-            dcc.Tab(
-                label='2D Graphs',
-                selected_style=tab_selected_style,
-                children=[
-                    html.Div([
-                        dcc.Dropdown(
-                            id='invar1',
-                            options=dropdown_opts,
-                            value=invars[0]
-                        ),
-                        dcc.Dropdown(
-                            id='invar2',
-                            options=dropdown_opts,
-                            value=invars[1]
-                        ),
-                    ]
-                    ),
-                    html.Div(dcc.Graph(id='graph2', style={'height': 600})),
-                ]
-            ),
-            dcc.Tab(
-                label='Tables',
-                selected_style=tab_selected_style,
-                children=[
-                    dash_table.DataTable(
-                        id='table',
-                        columns=[{"name": i, "id": i}
-                                 for i in data.columns],
-                        data=data.to_dict('records'),
-                        page_size=20,
-                    )
-                ]
-            ),
+        html.Div(children=[
+            html.B("Show table of data:"),
+            html.Button("show table", id='show-table', n_clicks=0),
+            html.Button("hide table", id='hide-table', n_clicks=0),
+        ]),
+        html.Div(id='data-table-div', style={'visibility': 'hidden'}, children=[
+            dash_table.DataTable(
+                id='data-table',
+                columns=[{"name": i, "id": i} for i in data.columns],
+                data=data.to_dict('records'),
+                page_size=20,
+            )
         ])
     ]),
-    html.Div(id='editor')
+    # html.Div(['Specify range with slider or via text input (min/max or center/range) - #digits',
+    #     dcc.Input(id='num-digits', type='number', min=0, value=3),
+    #     html.Button(id='reset-button', children='reset slider', n_clicks=0)
+    # ]),
+    # html.Div(children=[
+    #     html.B('Range min/max: '),
+    #     html.I('Data-range: ('), html.I(id='graph1_min'), ' - ', html.I(id='graph1_max'),
+    #     html.I(')'),
+    #     html.Br(),
+    #     dcc.Input(id='range-min', type='number', placeholder='range min', step=0.001),
+    #     dcc.Input(id='range-max', type='number', placeholder='range max', step=0.001),
+    #     html.B('  center & span:'),
+    #     dcc.Input(id='center', type='number', placeholder='center', step=0.001),
+    #     dcc.Input(id='span', type='number', placeholder='span', step=0.001),
+    # ]),
 ])
 
 
@@ -185,7 +156,8 @@ app.layout = html.Div([
     [Output('param-text-div', 'children'),
      Output('param-slider-div', 'children'),
      Output('param-range-div', 'children'),
-     Output('param-center-div', 'children'),],
+     Output('param-center-div', 'children'),
+     Output('param-active-div', 'children'), ],
     [Input('add-filter', 'n_clicks'),
      Input('clear-filter', 'n_clicks'),
      Input('clear-all-filter', 'n_clicks')],
@@ -193,13 +165,14 @@ app.layout = html.Div([
      State('param-text-div', 'children'),
      State('param-slider-div', 'children'),
      State('param-range-div', 'children'),
-     State('param-center-div', 'children'), ],
+     State('param-center-div', 'children'),
+     State('param-active-div', 'children'), ],
 )
-def add_filterrow(n_clicks, clear, clear_all, invar, text, slider, range_div, center_div):
+def add_filterrow(n_clicks, clear, clear_all, invar, text, slider, range_div, center_div, active_div):
     ctx = dash.callback_context
     trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
     if trigger_id == 'clear-all-filter':
-        return [], [], [], []
+        return [], [], [], [], []
     elif trigger_id == 'clear-filter':
         for i, element in enumerate(text):  # TODO: better names
             if text[i]['props']['children'][0] == invar:
@@ -207,28 +180,38 @@ def add_filterrow(n_clicks, clear, clear_all, invar, text, slider, range_div, ce
                 slider.pop(i)
                 range_div.pop(i)
                 center_div.pop(i)
+                active_div.pop(i)
     elif trigger_id == 'add-filter':  # TODO: avoid double usage of filter
         for i, element in enumerate(text):
             if text[i]['props']['children'][0] == invar:
-                return text, slider, range_div, center_div
+                return text, slider, range_div, center_div, active_div
         ind = invars.to_list().index(invar)
         txt = invar
-        new_text = html.Div(id={'type': 'dyn-text', 'index': ind}, children=[txt], style={'height': 50})
-        new_slider = html.Div(id={'type': 'dyn-slider', 'index': ind}, style={'height': 50}, children=[
+        new_text = html.Div(id={'type': 'dyn-text', 'index': ind}, children=[txt], style={'height': 40})
+        new_slider = html.Div(id={'type': 'dyn-slider', 'index': ind}, style={'height': 40}, children=[
             create_slider(txt)], )
-        new_range = html.Div(id={'type': 'dyn-range', 'index': ind}, style={'height': 50}, children=[
+        new_range = html.Div(id={'type': 'dyn-range', 'index': ind}, style={'height': 40}, children=[
             dcc.Input(id={'type': 'param-range-min', 'index': ind}, type='number', placeholder='range min'),
             dcc.Input(id={'type': 'param-range-max', 'index': ind}, type='number', placeholder='range max'),
         ], )
-        new_center = html.Div(id={'type': 'dyn-center', 'index': ind}, style={'height': 50}, children=[
+        new_center = html.Div(id={'type': 'dyn-center', 'index': ind}, style={'height': 40}, children=[
             dcc.Input(id={'type': 'param-center', 'index': ind}, type='number', placeholder='center'),
             dcc.Input(id={'type': 'param-span', 'index': ind}, type='number', placeholder='span'),
         ], )
+        new_active = html.Div(id={'type': 'dyn-active', 'index': ind},
+                              style={'height': 40, 'text-align': 'center'},
+                              children=[
+                                  dcc.Checklist(id={'type': 'param-active', 'index': ind},
+                                                options=[{'label': '', 'value': 'act'}],
+                                                value=['act'],
+                                                )
+                              ])
         text.append(new_text)
         slider.append(new_slider)
         range_div.append(new_range)
         center_div.append(new_center)
-    return text, slider, range_div, center_div
+        active_div.append(new_active)
+    return text, slider, range_div, center_div, active_div
 
 
 @app.callback(
@@ -261,7 +244,7 @@ def update_dyn_slider_range(dyn_min, dyn_max, slider_val, center, span, scale, s
     ctx = dash.callback_context
     # print(ctx.triggered[0]["prop_id"])
     if ctx.triggered[0]["prop_id"] == "scale.n_clicks":
-        span = span * (1+scale_slider)
+        span = span * (1 + scale_slider)
         dyn_min = center - span
         dyn_max = center + span
         slider_val = [dyn_min, dyn_max]
@@ -273,7 +256,8 @@ def update_dyn_slider_range(dyn_min, dyn_max, slider_val, center, span, scale, s
             dyn_min = center - span
             dyn_max = center + span
             slider_val = [dyn_min, dyn_max]
-        elif (trigger_id == '"param-range-min"' or trigger_id == '"param-range-max"') and (dyn_min is not None and dyn_max is not None):
+        elif (trigger_id == '"param-range-min"' or trigger_id == '"param-range-max"') and (
+                dyn_min is not None and dyn_max is not None):
             # print('range')
             # print('min:', dyn_min, 'max:', dyn_max)
             slider_val = [dyn_min, dyn_max]
@@ -283,7 +267,7 @@ def update_dyn_slider_range(dyn_min, dyn_max, slider_val, center, span, scale, s
             # print('else')
             dyn_min = slider_val[0]
             dyn_max = slider_val[1]
-            span = (slider_val[1] - slider_val[0])/2
+            span = (slider_val[1] - slider_val[0]) / 2
             center = slider_val[0] + span
         # rounding based on stepsize of slider
     dig = int(-log10(step))
@@ -296,8 +280,8 @@ def create_slider(dd_value):
     slider_min = indata[dd_value].min()
     slider_max = indata[dd_value].max()
     step_exponent = floor(log10((slider_max - slider_min) / 100))
-    while slider_max / (10**step_exponent) > 1000:
-        step_exponent = step_exponent+1
+    while slider_max / (10 ** step_exponent) > 1000:
+        step_exponent = step_exponent + 1
     while (slider_max - slider_min) / (10 ** step_exponent) < 20:  # minimum of 20 steps per slider
         step_exponent = step_exponent - 1
     new_slider = dcc.RangeSlider(
@@ -314,26 +298,29 @@ def create_slider(dd_value):
 
 @app.callback(
     Output('graph1', 'figure'),
-    [Input('tabs', 'value'),
-     Input('invar', 'value'),
+    [Input('invar', 'value'),
      Input('invar_2', 'value'),
      Input({'type': 'param-slider', 'index': ALL}, 'value'),
      Input('graph-type', 'value'),
      Input('color-use', 'value'),
-     Input('color-dropdown', 'value'), ],
+     Input('color-dropdown', 'value'),
+     Input({'type': 'param-active', 'index': ALL}, 'value'), ],
     [State({'type': 'param-slider', 'index': ALL}, 'id'), ],
 )
-def update_figure(tab, invar, invar_2, param_slider, graph_type, color_use, color_dd, id):
+def update_figure(invar, invar_2, param_slider, graph_type, color_use, color_dd, filter_active, id_type):
     if invar is None:
         return go.Figure()
-    sel_y = np.full((len(outdata), ), True)
+    sel_y = np.full((len(outdata),), True)
     for iteration, values in enumerate(param_slider):
-        dds_value = invars_list[id[iteration]['index']]
+        dds_value = invars_list[id_type[iteration]['index']]
         # filter for minimum
         sel_y_min = np.array(indata[dds_value] >= param_slider[iteration][0])
         # filter for maximum
         sel_y_max = np.array(indata[dds_value] <= param_slider[iteration][1])
-        sel_y = sel_y_min & sel_y_max & sel_y
+        # print('iter ', iteration, 'filer', filter_active[iteration][0])
+        if filter_active != [[]]:
+            if filter_active[iteration] == ['act']:
+                sel_y = sel_y_min & sel_y_max & sel_y
     if graph_type == '1D scatter':
         fig = go.Figure(
             data=[go.Scatter(
@@ -384,6 +371,21 @@ def update_figure(tab, invar, invar_2, param_slider, graph_type, color_use, colo
     return fig
 
 
+@app.callback(
+    Output('data-table-div', 'style'),
+    [Input('show-table', 'n_clicks'),
+     Input('hide-table', 'n_clicks'), ]
+)
+def show_table(show, hide):
+    ctx = dash.callback_context
+    trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
+    print(trigger_id)
+    if trigger_id == 'show-table':
+        return {'visibility': 'visible'}
+    else:
+        return {'visibility': 'hidden'}
+
+
 # @app.callback(
 #     Output('invar-2-div', 'style'),
 #     Input('graph-type', 'value')
@@ -431,42 +433,6 @@ def update_figure(tab, invar, invar_2, param_slider, graph_type, color_use, colo
 #         span = round(span, num_digits)
 #     step_size = 10 ** -num_digits  # stepsize for input-forms
 #     return range_list[0], range_list[1], center, span, step_size, step_size, step_size, step_size
-
-
-@app.callback(
-    dash.dependencies.Output('graph2', 'figure'),
-    [dash.dependencies.Input('tabs', 'value'),
-     dash.dependencies.Input('invar1', 'value'),
-     dash.dependencies.Input('invar2', 'value'), ]
-)
-def update_figure2(tab, invar1, invar2):
-    if invar1 is None or invar2 is None:
-        return go.Figure()
-    fig = go.Figure(
-        data=[
-            go.Scatter3d(
-                x=indata[invar1],
-                y=indata[invar2],
-                z=outdata.values[:, 0],
-                mode='markers'
-            )
-        ],
-        layout=go.Layout(
-            scene=dict(
-                xaxis_title=invar1,
-                yaxis_title=invar2
-            )
-        )
-    )
-    # fig = px.parallel_coordinates(data.iloc[:, 0:8], dimensions=['coeff_d_loss',
-    #                                                              'k_light_sm',
-    #                                                              'k_alg_si',
-    #                                                              'k_att_shade',
-    #                                                              'frac_si_alg',
-    #                                                              'factor_silica',
-    #                                                              'k_alg_growth_max'
-    #                                                              ], color='coeff_d_loss')
-    return fig
 
 
 if __name__ == '__main__':
