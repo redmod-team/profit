@@ -57,3 +57,40 @@ On the Anaconda-prompt:
 python init_func.py
 f2py -c kernels.f90 -m kernels 
 ```
+
+## Windows via WSL2:
+1. Install WSL2 on Windows 10 (Ubuntu 20.04 LTS)
+    1. (optional) install PyCharm for Windows (tested with Professional)
+    2. adjusting PyCharm according to the [documentation](https://www.jetbrains.com/help/pycharm/using-wsl-as-a-remote-interpreter.html)
+   
+2. [WSL] clone git-repository 
+      
+   important: the project should be located in the Linux filesystem not the Windows system
+   
+        git clone https://github.com/redmod-team/profit.git
+
+3. [WSL] prepare install
+   
+         sudo apt-get install gfortran make python3-dev
+         pip3 install -r requirements.txt
+         
+3. [WSL] install proFit (development-mode, with pip / setup.py)
+
+         cd profit
+         pip3 install -e .
+         python3 setup.py build
+   
+   1. [WSL] install missing dependencies as required with pip
+   
+      h5py
+      dash
+      pandas
+   
+4. [WSL] fixed `PATH`: add the following line to your `.bashrc`
+    
+        export PATH=$HOME/.local/bin:$PATH
+    
+5. [WSL] profit should be recognized now
+
+
+tested on 2021-02-12
