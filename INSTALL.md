@@ -65,7 +65,7 @@ f2py -c kernels.f90 -m kernels
    
 2. [WSL] clone git-repository 
       
-   important: the project should be located in the linux subsystem not the windows system
+   important: the project should be located in the Linux filesystem not the Windows system
    
         git clone https://github.com/redmod-team/profit.git
 
