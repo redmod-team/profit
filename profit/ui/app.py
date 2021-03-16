@@ -371,53 +371,6 @@ def show_table(show, hide):
         return {'visibility': 'hidden'}
 
 
-# @app.callback(
-#     Output('invar-2-div', 'style'),
-#     Input('graph-type', 'value')
-# )
-# def update_dropdown_visability(graph_type):
-#     if graph_type == '1D scatter':
-#         return {'visibility': 'hidden'}
-#     else:
-#         return {'visibility': 'visible'}
-
-
-# @app.callback(
-#     [Output({'type': 'param-slide', 'index': MATCH}, 'value'), ],
-#     [Input('graph1', 'relayoutData'), ],
-#     [State('invar', 'value'), ]
-# )
-# def update_range(relayoutdata, invar):
-#     ind = invars.to_list().index(invar)
-#     ctx = dash.callback_context
-#     trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
-#     print(trigger_id)
-#     # print(trigger_id)
-#     range_list = [None, None]  # set default
-#     # if trigger_id == 'reset-button':
-#     #     center = None
-#     #     span = None
-#     # elif (trigger_id == 'center' or trigger_id == 'span') and (center is not None and span is not None):
-#     #     range_list = [center - span, center + span]
-#     if trigger_id == 'graph1':
-#         if list(relayoutdata.keys())[0] == 'xaxis.range':
-#             range_list = relayoutdata['xaxis.range']
-#         elif list(relayoutdata.keys())[0] == 'xaxis.range[0]':
-#             range_list[0] = relayoutdata['xaxis.range[0]']
-#             range_list[1] = relayoutdata['xaxis.range[1]']
-#     # else:
-#     #     range_list = [range_min, range_max]
-#     print(range_list)
-#     if range_list[0] is not None and range_list[1] is not None:
-#         span = (range_list[1] - range_list[0]) / 2
-#         center = range_list[0] + span
-#         # round values to num_digits
-#         range_list[0] = round(range_list[0], num_digits)
-#         range_list[1] = round(range_list[1], num_digits)
-#         center = round(center, num_digits)
-#         span = round(span, num_digits)
-#     step_size = 10 ** -num_digits  # stepsize for input-forms
-#     return range_list[0], range_list[1], center, span, step_size, step_size, step_size, step_size
 
 
 if __name__ == '__main__':
