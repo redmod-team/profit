@@ -128,5 +128,45 @@ def check_ndim(arr):
 
 
 class SafeDict(dict):
+    def __init__(self, obj, pre='{', post='}'):
+        self.pre = pre
+        self.post = post
+        super().__init__(obj)
+
+    @classmethod
+    def from_params(cls, params, **kwargs):
+        return cls(params2map(params), **kwargs)
+
     def __missing__(self, key):
-        return '{' + key + '}'
+        return self.pre + key + self.post
+
+
+def params2map(params):
+    from collections.abc import MutableMapping
+    if params is None:
+        return {}
+    if isinstance(params, MutableMapping):
+        return params
+    try:
+        return {key: params[key] for key in params.dtype.names}
+    except AttributeError:
+        pass
+    raise TypeError('params are not a Mapping')
+
+
+def load_includes(paths):
+    """ load python modules from the specified paths """
+    import os
+    import sys
+    from importlib.util import spec_from_file_location, module_from_spec
+    import logging
+    for path in paths:
+        name = f"profit_include_{os.path.basename(path).split('.')[0]}"
+        try:
+            spec = spec_from_file_location(name, path)
+        except FileNotFoundError:
+            logging.getLogger(__name__).error(f'could not find {path} to include')
+            continue
+        module = module_from_spec(spec)
+        sys.modules[name] = module
+        spec.loader.exec_module(module)

@@ -11,7 +11,8 @@ Testcases for some configuration features:
 from profit.config import Config
 from profit.util import load
 from json import load as jload
-from os import system, path, remove, chdir, getcwd
+from os import path, remove, chdir, getcwd
+from subprocess import run
 from numpy import ndarray, genfromtxt, array
 from shutil import rmtree
 from pytest import fixture
@@ -25,19 +26,18 @@ def chdir_pytest():
     chdir(pytest_root_dir)
 
 
-def profit(mode, base_dir='.'):
-    """Shortcut to call profit from shell."""
-
-    system("profit {mode} {base_dir}".format(mode=mode, base_dir=base_dir))
+TIMEOUT = 30  # seconds
 
 
 def clean(config):
-    """Delete run directories and input/outpt files after the test."""
+    """Delete run directories and input/output files after the test."""
 
     for krun in range(config.get('ntrain')):
-        single_dir = path.join(config.get('run_dir'), str(krun).zfill(3))
+        single_dir = path.join(config.get('run_dir'), f'run_{krun:03d}')
         if path.exists(single_dir):
             rmtree(single_dir)
+    if path.exists('./study/interface.npy'):
+        remove('./study/interface.npy')
     if path.exists(config['files'].get('input')):
         remove(config['files'].get('input'))
     if path.exists(config['files'].get('output')):
@@ -60,7 +60,7 @@ def test_yaml_py_config():
             elif type(value1) is ndarray:
                 assert value1.dtype == value2.dtype
                 assert value1.shape == value2.shape
-            else:
+            elif key1 != 'config_path':
                 assert value1 == value2
 
     assert_dict(config_yaml.items(), config_py.items())
@@ -71,8 +71,8 @@ def test_txt_input():
 
     config_file = './study/profit.yaml'
     config = Config.from_file(config_file)
-    profit("pre", config_file)
-    assert path.isfile('./study/000/mockup.in')
+    run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
+    assert path.isfile('./study/run_000/mockup.in')
     clean(config)
 
 
@@ -82,11 +82,11 @@ def test_txt_json_input():
     config_file = './study/profit_json.yaml'
     config = Config.from_file(config_file)
     try:
-        profit("pre", config_file)
-        with open(path.join(config['run_dir'], '000', 'mockup_json.in')) as jf:
+        run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
+        with open(path.join(config['run_dir'], 'run_000', 'mockup_json.in')) as jf:
             json_input = jload(jf)
         json_input = array([float(val) for val in json_input.values()])
-        with open(path.join(config['run_dir'], '000', 'mockup.in')) as tf:
+        with open(path.join(config['run_dir'], 'run_000', 'mockup.in')) as tf:
             txt_input = genfromtxt(tf)
         assert json_input.dtype == txt_input.dtype
         assert json_input.shape == txt_input.shape
@@ -100,7 +100,7 @@ def test_hdf5_input_output():
     config_file = './study/profit_hdf5.yaml'
     config = Config.from_file(config_file)
     try:
-        profit("pre", config_file)
+        run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
         data_in = load(config['files'].get('input'))
         assert data_in.shape == (2, 1)
         assert data_in.dtype.names == ('u', 'v', 'w')
@@ -116,7 +116,7 @@ def test_symlinks():
     base_file = './study/template/symlink_base.txt'
     link_file = './study/template/some_subdir/symlink_link.txt'
     try:
-        profit("pre", config_file)
+        run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
         with open(link_file, 'r') as link:
             with open(base_file, 'r') as base:
                 link_data = link.read()
@@ -138,10 +138,7 @@ def test_default_values():
     config_file = './study/profit_default.yaml'
     config = Config.from_file(config_file)
     assert config.get('base_dir') == path.abspath('./study')
-    assert config.get('template_dir') == path.join(config.get('base_dir'), 'template')
     assert config.get('run_dir') == config.get('base_dir')
-    assert config.get('interface') == path.join(config.get('base_dir'), 'interface.py')
-    assert config['files'].get('param_files') is None
     assert config['files'].get('input') == path.join(config.get('base_dir'), 'input.txt')
     assert config['files'].get('output') == path.join(config.get('base_dir'), 'output.txt')
     assert config['fit'].get('surrogate') == 'GPy'
@@ -150,7 +147,6 @@ def test_default_values():
     # Now check when dicts are only partially set
     config_file = './study/profit_default_2.yaml'
     config = Config.from_file(config_file)
-    assert config['files'].get('param_files') == ['mockup.in']
     assert config['files'].get('input') == path.join(config.get('base_dir'), 'custom_input.in')
     assert config['files'].get('output') == path.join(config.get('base_dir'), 'output.txt')
     assert config['fit'].get('surrogate') == 'GPy'

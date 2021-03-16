@@ -6,10 +6,13 @@ This script is called when running the `profit` command.
 from os import getcwd
 import sys
 from argparse import ArgumentParser, RawTextHelpFormatter
+import logging
 
 from profit.config import Config
 from profit.util import safe_path_to_file, safe_str
 from profit.util.io import read_input, collect_output
+
+from profit.run import Runner
 
 yes = False  # always answer 'y'
 
@@ -41,12 +44,10 @@ def main():
     parser = ArgumentParser(usage='profit <mode> (base-dir)',
                             description="Probabilistic Response Model Fitting with Interactive Tools",
                             formatter_class=RawTextHelpFormatter)
-    parser.add_argument('mode',
+    parser.add_argument('mode',  # ToDo: subparsers?
                         metavar='mode',
-                        choices=['pre', 'run', 'collect', 'fit', 'ui', 'clean'],
-                        help='pre ... prepare simulation runs based on templates \n'
-                             'run ... start simulation runs \n'
-                             'collect ... collect simulation output \n'
+                        choices=['run', 'fit', 'ui', 'clean'],
+                        help='run ... start simulation runs \n'
                              'fit ... fit data with Gaussian Process \n'
                              'ui ... visualise results \n'
                              'clean ... remove run directories and input/output files')
@@ -64,68 +65,30 @@ def main():
 
     sys.path.append(config['base_dir'])
 
-    if args.mode == 'pre':
-        from profit.pre import write_input, fill_run_dir, get_eval_points
+    if args.mode == 'run':
+        from tqdm import tqdm
+        from profit.pre import get_eval_points, write_input
+        from profit.util import save
 
-        """ Get input points ready to fill run directory """
+        runner = Runner.from_config(config['run'], config)
+        runner.prepare()
+
         eval_points = get_eval_points(config)
-
         write_input(config['files']['input'], eval_points)
-        try:
-            fill_run_dir(eval_points.flatten(), template_dir=config['template_dir'],
-                         run_dir=config['run_dir'], param_files=config['files'].get('param_files'),
-                         overwrite=False)
-        except RuntimeError:
-            question = "Warning: Run directories in {} already exist " \
-                       "and will be overwritten. Continue? (y/N) ".format(config['run_dir'])
-            if yes:
-                print(question+'y')
-            else:
-                answer = input(question)
-                if not answer.lower().startswith('y'):
-                    print('exit...')
-                    sys.exit()
-
-            fill_run_dir(eval_points.flatten(), template_dir=config['template_dir'], run_dir=config['run_dir'],
-                         param_files=config['files'].get('param_files'),
-                         overwrite=True)
-
-    elif args.mode == 'run':
-        from profit.run import LocalCommand
 
         if 'activelearning' in (safe_str(v['kind']) for v in config['input'].values()):
             from profit.fit import ActiveLearning
-            al = ActiveLearning(config)
+            runner.fill(eval_points)
+            al = ActiveLearning(config, runner)
             al.learn()
         else:
-            # TODO: Include options (in call or in config file) which run backend should be used.
-            print(read_input(config['files']['input']))
-            try:
-                run = LocalCommand(config['run']['cmd'], config['run']['ntask'],
-                                   run_dir=config['run_dir'], base_dir=config['base_dir'])
-                run.start(config['ntrain'])
-            except KeyError:
-                raise RuntimeError("No 'run' entry in profit.yaml")
-            except FileNotFoundError:
-                # TODO: Error occurs in single threads and is written to stderr.
-                #       Make it easier for the user to recognise this error
-                pass
+            params_array = [row[0] for row in eval_points]
+            runner.spawn_array(tqdm(params_array), blocking=True)
 
-    elif args.mode == 'collect':
-
-        try:
-            collect_output(config)
-        except ImportError:
-            question = "Interface could not be imported. Try with default interface? (y/N)"
-            if yes:
-                print(question+'y')
-            else:
-                answer = input(question)
-                if not answer.lower().startswith('y'):
-                    print('exit...')
-                    sys.exit()
-
-            collect_output(config, default_interface=True)
+        if config['files']['output'].endswith('.txt'):
+            save(config['files']['output'], runner.structured_output_data.reshape(runner.data.size, 1))
+        else:
+            save(config['files']['output'], runner.output_data)
 
     elif args.mode == 'fit':
         from numpy import arange, hstack, meshgrid
@@ -166,7 +129,6 @@ def main():
         from shutil import rmtree
         from os import path, remove
         run_dir = config['run_dir']
-        base_dir = config['base_dir']
 
         question = "Are you sure you want to remove the run directories in {} " \
                    "and input/output files? (y/N) ".format(config['run_dir'])
@@ -178,18 +140,17 @@ def main():
                 print('exit...')
                 sys.exit()
 
-        if run_dir != base_dir:
-            if path.exists(run_dir):
-                rmtree(run_dir)
-        else:
-            for krun in range(config['ntrain']):
-                single_run_dir = path.join(run_dir, str(krun).zfill(3))
-                if path.exists(single_run_dir):
-                    rmtree(single_run_dir)
+        for krun in range(config['ntrain']):
+            single_run_dir = path.join(run_dir, f'run_{krun:03d}')
+            if path.exists(single_run_dir):
+                rmtree(single_run_dir)
         if path.exists(config['files']['input']):
             remove(config['files']['input'])
         if path.exists(config['files']['output']):
             remove(config['files']['output'])
+
+        runner = Runner.from_config(config['run'], config)
+        runner.clean()
 
 
 if __name__ == '__main__':

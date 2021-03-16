@@ -67,14 +67,3 @@ def collect_output(config, default_interface=False):
             chdir(config['run_dir'])
 
     save(config['files']['output'], data, ' '.join(header))
-
-
-class DefaultInterface:
-    """ Fallback interface if it is not provided by the user. """
-
-    def __init__(self, name=None):
-        self.name = name
-
-    def get_output(self):
-        from numpy import loadtxt
-        return loadtxt(self.name)

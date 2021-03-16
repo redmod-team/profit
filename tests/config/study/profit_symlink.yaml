@@ -7,8 +7,12 @@ variables:
     f: Output(r)
     g: Output(r)
 
-files:
-    param_files: [symlink_link.txt]
-
-run: 
-    python3 ../mockup.py
+run:
+    pre:
+        class: template
+        param_files: [mockup.in]
+    post:
+        class: numpytxt
+        path: mockup.out
+    command: python3 mockup.py
+    clean: false

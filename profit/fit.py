@@ -1,8 +1,5 @@
 from profit.sur.gp import GPSurrogate, GPySurrogate
-from os import path, walk
 import numpy as np
-from profit.util import load
-from profit.util.io import collect_output
 
 
 def get_surrogate(sur):
@@ -16,43 +13,37 @@ def get_surrogate(sur):
 
 class ActiveLearning:
 
-    def __init__(self, config):
-        from profit.run import LocalCommand
+    def __init__(self, config, runner):
         self.config = config
-        x = load(self.config['files']['input'])
-        self.x = np.hstack([x[key] for key in x.dtype.names])
-        self.y = None
-        self.run = LocalCommand(config['run']['cmd'], config['run']['ntask'],
-                                run_dir=config['run_dir'], base_dir=config['base_dir'])
+
+        self.runner = runner
+
         self.sur = get_surrogate(config['fit']['surrogate'])
 
+        self.x = self.runner.flat_input_data
+        self.y = None
+
     def update_run(self, krun, al_value):
-        #y_single = np.array([[self.f(*self.x[krun])]])
-
-        # Update input file for single run
-        single_run_dir = path.join(self.config['run_dir'], str(krun).zfill(3))
-        self.update_input(single_run_dir, al_value)
+        # Update input for single run
+        params = {}
+        for pos, key in enumerate(self.config['input']):
+            if self.config['input'][key]['kind'] == 'ActiveLearning':
+                params[key] = al_value[pos]
+                self.x[krun, pos] = al_value[pos]
         # Start single run
-        self.run.start_single(single_run_dir)
-        # Read output
-        collect_output(self.config)
-        # TODO: get single output file from config or interface. Or get output.txt (.hdf) as a whole?
-        y = load(path.join(single_run_dir, self.config['files']['output']))
-        self.y = np.hstack([y[key] for key in y.dtype.names])
+        self.runner.spawn_run(params, wait=True)
+        # Read output (all available data)
+        self.y = self.runner.flat_output_data
 
-    @staticmethod
-    def update_input(run_dir_single, numbers, param_files=None):
-        for root, dirs, files in walk(run_dir_single):
-            for filename in files:
-                if not param_files or filename in param_files:
-                    filepath = path.join(root, filename)
-                    with open(filepath, 'r') as f:
-                        content = f.read()
-                        # TODO: better with format_map? --> don't write 'nan' initially, but leave {{u}}
-                        for number in numbers:
-                            content = content.replace('nan', str(number))
-                    with open(filepath, 'w') as f:
-                        f.write(content)
+    def first_runs(self, nfirst):
+        al_keys = [key for key in self.config['input'] if self.config['input'][key]['kind'] == 'ActiveLearning']
+        params_array = [{} for _ in range(nfirst)]
+        for key in al_keys:
+            for n in range(nfirst):
+                params_array[n][key] = np.random.random()
+        self.runner.spawn_array(params_array, blocking=True)
+        self.x = self.runner.flat_input_data
+        self.y = self.runner.flat_output_data
 
     @staticmethod
     def f(u):
@@ -65,11 +56,10 @@ class ActiveLearning:
 
         # First runs
         nfirst = 3
-        for kfirst in range(nfirst):
-            is_al = np.isnan(self.x[kfirst])
-            al_value = np.random.random(sum(is_al))
-            self.x[kfirst, is_al] = al_value
-            self.update_run(kfirst, al_value)
+        if nfirst > self.config['ntrain']:
+            nfirst = self.config['ntrain']
+        self.first_runs(nfirst)
+
         self.sur.train(self.x[:nfirst], self.y[:nfirst], kernel=self.config['fit'].get('kernel'))
         #self.sur.plot(ref=self.f)
 
@@ -86,8 +76,6 @@ class ActiveLearning:
                 al_value = xpred[np.argmax(loss)]
             else:
                 al_value = xpred[np.random.randint(xpred.shape[0])]
-            is_al = np.isnan(self.x[krun])
-            self.x[krun, is_al] = al_value
             self.update_run(krun, al_value)
             self.sur.add_training_data(self.x[krun].reshape(-1, 1), self.y[krun].reshape(-1, 1))
             if not (krun+1) % 1:

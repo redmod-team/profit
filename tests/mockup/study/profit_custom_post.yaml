@@ -1,0 +1,16 @@
+# similar to 1D
+ntrain: 7
+variables:
+    u: Halton()
+    f: Output
+
+run:
+    post: mockup
+    command: python3 mockup_1D.py
+    include: custom_post.py
+
+files:
+    input: input_custom_post.hdf5
+    output: output_custom_post.hdf5
+fit:
+    save: model_custom_post.hdf5

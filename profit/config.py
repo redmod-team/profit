@@ -1,7 +1,9 @@
 from os import path, getcwd
-from re import match
+from re import match, split
 import yaml
 from collections import OrderedDict
+
+from profit.run import Runner
 
 VALID_FORMATS = ('.yaml', '.py')
 
@@ -53,13 +55,10 @@ class Config(OrderedDict):
     Possible parameters in .yaml:
 
     base_dir: .
-    template_dir: ./template
     run_dir: .
-    runner_backend: local
     uq: # TODO: implement
     interface: ./interface.py
     files:
-        param_files: [params1.in, params2.in, symlink.txt]
         input: ./input.txt
         output: ./output.txt
     ntrain: 30
@@ -96,17 +95,12 @@ class Config(OrderedDict):
     def __init__(self, base_dir=getcwd(), **entries):
         super(Config, self).__init__()
         self['base_dir'] = path.abspath(base_dir)
-        self['template_dir'] = path.join(self['base_dir'], 'template')
         self['run_dir'] = self['base_dir']
-        self['command'] = None
-        self['runner_backend'] = None
         self['uq'] = {}
-        self['interface'] = path.join(self['base_dir'], 'interface.py')
         self['variables'] = {}
         self['fit'] = {'surrogate': 'GPy',
                        'kernel': 'RBF'}
-        self['files'] = {'param_files': None,
-                         'input': path.join(self['base_dir'], 'input.txt'),
+        self['files'] = {'input': path.join(self['base_dir'], 'input.txt'),
                          'output': path.join(self['base_dir'], 'output.txt')}
 
         # Not to fill directly in file
@@ -142,6 +136,11 @@ class Config(OrderedDict):
                             "Valid file formats: {}".format(filename.split('.')[-1], VALID_FORMATS))
         self.update(entries)
 
+        if path.isabs(filename):
+            self['config_path'] = filename
+        else:
+            self['config_path'] = path.abspath(path.join(getcwd(), filename))
+
         """ Variable configuration
         kind: Independent, Uniform, etc.
         range: (start, end, step=1) or {'dependent variable': (start, end, step=1)} for output
@@ -159,9 +158,12 @@ class Config(OrderedDict):
                 self['variables'][k] = {'kind': kind}
 
                 if safe_str(kind) == 'output':
-                    # TODO: match arbitrary number of independent variables
-                    mat = match(r'.*\((\w+)?[\,,\,\s]?(\w+)?', v)
-                    dependent = tuple(d for d in mat.groups() if d is not None) if mat else ()
+                    spl = split('[()]', v)
+                    if len(spl) >= 3:
+                        dependent = [var.strip() for var in split(',', spl[1])]
+                    else:
+                        dependent = []
+                    self['variables'][k]['depend'] = tuple(dependent)
                     self['variables'][k]['range'] = {k: None for k in dependent}
                 else:
                     try:
@@ -199,25 +201,18 @@ class Config(OrderedDict):
         for k, v in self['output'].items():
             if not isinstance(v['range'], dict):
                 v['range'] = {d: None for d in v['range']}
+            shape = []
             for d in v['range']:
                 self['output'][k]['range'][d] = self['variables'][d]['range']
+                shape.append(self['variables'][d]['range'].shape[0])
+            self['output'][k]['shape'] = tuple(shape)
 
         # Run configuration
-        try:
-            run = self['run']
-            # Shorthand to put cmd direcly into run
-            if isinstance(run, str):
-                self['run'] = {'cmd': run}
-
-            # Default to single-thread
-            if 'ntask' not in self['run']:
-                self['run']['ntask'] = 1
-        except KeyError:
-            pass
-
-            # TODO: add options like active_learning and check if e.g. cmd is in run
-            #       But don't do it here, but in the run phase.
-            #       So the 'run' directory can be filled without the 'run' command in the config file.
+        if 'run' not in self:
+            self['run'] = {}
+        if isinstance(self['run'], str):
+            self['run'] = {'command': self['run']}
+        Runner.handle_config(self['run'], self)
 
         # Set missing mandatory dict entries to default
         if not self['files'].get('input'):
@@ -230,8 +225,6 @@ class Config(OrderedDict):
             self['fit']['kernel'] = 'RBF'
 
         # Set absolute paths
-        self['template_dir'] = path.join(self['base_dir'], self['template_dir'])
-        self['interface'] = path.join(self['base_dir'], self['interface'])
         self['files']['input'] = path.join(self['base_dir'], self['files']['input'])
         self['files']['output'] = path.join(self['base_dir'], self['files']['output'])
         if self['fit'].get('load'):

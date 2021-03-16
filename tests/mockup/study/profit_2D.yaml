@@ -6,7 +6,10 @@ variables:
     f: Output
 
 run:
-    python3 ../mockup_2D.py
+    post:
+        class: numpytxt
+        path: mockup.out
+    command: python3 mockup_2D.py
 
 files:
     input: input_2D.txt

@@ -1,0 +1,22 @@
+# last update: 2021-03-21
+# author: Robert (mockup.py mainly by Chris)
+
+ntrain: 10
+variables:
+    u: Uniform(4.7, 5.3)
+    v: Uniform(0.55, 0.6)
+    r: Independent
+    f: Output
+run:
+  runner:
+    class: local
+    parallel: 2
+  interface:
+    class: memmap
+    path: interface.npy
+    max-size: 50
+  pre: template
+  post:
+    class: json
+    path: ./mockup.out
+  command: ./mockup.py
