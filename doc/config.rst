@@ -112,7 +112,7 @@ The following gives an overview of all possible parameters
 
             class: memmap
             path: interface.npy     # memory mapped interface file, relative to base directory
-            max-size: 64            # maximum number of runs, determines size of the interface file
+            max-size: null          # maximum number of runs, determines size of the interface file (default = ntrain)
 
     * pre:
         | the worker preprocessor

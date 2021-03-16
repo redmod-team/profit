@@ -56,7 +56,7 @@ class ActiveLearning:
 
         # First runs
         nfirst = 3
-        if nfirst < self.config['ntrain']:
+        if nfirst > self.config['ntrain']:
             nfirst = self.config['ntrain']
         self.first_runs(nfirst)
 

@@ -112,7 +112,7 @@ class MemmapRunnerInterface(RunnerInterface):
         """
         class: memmap
         path: interface.npy     # memory mapped interface file, relative to base directory
-        max-size: 64            # maximum number of runs, determines size of the interface file
+        max-size: null          # maximum number of runs, determines size of the interface file (default = ntrain)
         """
         if 'path' not in config:
             config['path'] = 'interface.npy'
@@ -120,7 +120,7 @@ class MemmapRunnerInterface(RunnerInterface):
         if not os.path.isabs(config['path'][0]):
             config['path'] = os.path.abspath(os.path.join(base_config['base_dir'], config['path']))
         if 'max-size' not in config:
-            config['max-size'] = 64
+            config['max-size'] = base_config['ntrain']
 
 
 @Interface.register('memmap')
