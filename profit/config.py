@@ -216,7 +216,7 @@ class Config(OrderedDict):
             self['run'] = {}
         if isinstance(self['run'], str):
             self['run'] = {'command': self['run']}
-        Runner.handle_config(self['run'], self)
+        Runner.handle_run_config(self)
 
         if self.get('fit'):
             Surrogate.handle_config(self['fit'], self)

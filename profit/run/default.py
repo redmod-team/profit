@@ -4,6 +4,8 @@ Local Runner
 Memmap Interface (numpy)
 Template Preprocessor
 JSON Postprocessor
+NumpytxtPostprocessor
+HDF5Postprocessor
 """
 
 from .runner import Runner, RunnerInterface
@@ -29,11 +31,10 @@ class LocalRunner(Runner):
         env['PROFIT_RUN_ID'] = str(self.next_run_id)
         if self.config['custom']:
             cmd = self.config['command']
-            shell = True
         else:
-            cmd = ['profit-worker']
-            shell = False
-        self.runs[self.next_run_id] = subprocess.Popen(cmd, shell=shell, env=env, cwd=self.base_config['run_dir'])
+            from profit.defaults import WORKER_CMD
+            cmd = WORKER_CMD
+        self.runs[self.next_run_id] = subprocess.Popen(cmd, shell=True, env=env, cwd=self.base_config['run_dir'])
         if wait:
             self.runs[self.next_run_id].wait()
             del self.runs[self.next_run_id]

@@ -34,10 +34,17 @@ class Interface(ABC):
     def __init__(self, worker, config):
         self.worker = worker
         self.config = config  # only the run/interface config dict (after processing defaults)
+        self.logger = logging.getLogger('Interface')
+        self.logger.parent = self.worker.logger
+
+        # self.input, self.output
 
     @property
-    @abstractmethod
-    def data(self):
+    def time(self):
+        return 0
+
+    @time.setter
+    def time(self, value):
         pass
 
     @abstractmethod
@@ -62,10 +69,13 @@ class Interface(ABC):
 
 class Preprocessor(ABC):
     preprocessors = {}
+    no_run_dir = False
 
     def __init__(self, worker, config):
         self.worker = worker
         self.config = config  # only the run/pre config dict (after processing defaults)
+        self.logger = logging.getLogger('Preprocessor')
+        self.logger.parent = self.worker.logger
 
     @abstractmethod
     def pre(self):
@@ -109,6 +119,8 @@ class Postprocessor(ABC):
     def __init__(self, worker, config):
         self.worker = worker
         self.config = config  # only the run/post config dict (after processing defaults)
+        self.logger = logging.getLogger('Postprocessor')
+        self.logger.parent = self.worker.logger
 
     @abstractmethod
     def post(self):
@@ -140,15 +152,15 @@ class Postprocessor(ABC):
 
 class Worker:
     def __init__(self, config, interface, pre, post, run_id):
-        self.logger = logging.getLogger(f'{__name__}.{self.__class__.__name__}')
+        self.logger = logging.getLogger('Worker')
 
         self.config = config  # ~ base_config['run']
-        # ToDo: Config could be nicer as a NamedDict ? (is it called that?) --> config.run.pre.class, etc.
+        self.run_id = run_id
+        self.run_dir = f'run_{self.run_id:03d}'
+
         self.pre = pre(self, config['pre'])
         self.post = post(self, config['post'])
         self.interface = interface(self, config['interface'])
-        self.run_id = run_id
-        self.run_dir = f'run_{self.run_id:03d}'
 
     @classmethod
     def from_config(cls, config, run_id):
@@ -189,10 +201,6 @@ class Worker:
             config['post'] = {'class': config['post']}
         Postprocessor[config['post']['class']].handle_config(config['post'], base_config)
 
-    @property
-    def data(self):
-        return self.interface.data
-
     def run(self):
         kwargs = {}
         if self.config['stdout'] is not None:
@@ -207,13 +215,17 @@ class Worker:
         timestamp = time.time()
         self.run()
         if self.config['time']:
-            self.data['TIME'] = int(time.time() - timestamp)
+            self.interface.time = int(time.time() - timestamp)
 
         self.post()
         self.interface.done()
-        os.chdir('..')
-        if self.config['clean']:
-            shutil.rmtree(self.run_dir)
+        if not self.pre.no_run_dir:
+            os.chdir('..')
+            if self.config['clean']:
+                shutil.rmtree(self.run_dir)
+
+    def cancel(self):
+        pass
 
 
 # === Entry Point === #
