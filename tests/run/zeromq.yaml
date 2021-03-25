@@ -1,0 +1,12 @@
+ntrain: 7
+variables:
+    u: Halton()
+    f: Output
+
+run:
+    runner: local
+    interface: zeromq
+    pre: null
+    post: null
+    command: python worker.py
+    custom: true

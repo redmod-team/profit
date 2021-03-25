@@ -1,12 +1,22 @@
-""" test modules
+""" run flow components mainly used in testing
 
-test / debug modules for worker & runner
+for calling a worker within the same process (label='internal')
+* InternalRunner
+* InternalRunnerInterface (req. InternalRunner)
+* InternalInterface (req. InternalRunner)
+
+no pre- or postprocessing needed (label='null'~None)
+* NoPreprocessor
+* NoPostprocessor
+
+a worker for testing purposes without a simulation
+* MockupWorker
 """
 
 from .worker import Worker, Interface, Preprocessor, Postprocessor
 from .runner import Runner, RunnerInterface
 
-import numpy as np
+import asyncio
 
 
 def mockup_f(r, u, v, a, b):
@@ -21,24 +31,20 @@ class InternalRunner(Runner):
         super().__init__(interface_class, config, base_config)
         self.worker_cls = worker_cls
 
-    def spawn_run(self, params=None, wait=False):
-        if not wait:
-            raise NotImplementedError
-        self.runs[self.next_run_id] = self.worker_cls.from_config(self.run_config, self.next_run_id)
+    async def spawn_run(self, params=None, wait=False):
+        self.runs[self.next_run_id] = dict(worker=self.worker_cls.from_config(self.run_config, self.next_run_id))
         if self.run_config['interface']['class'] == 'internal':
-            self.runs[self.next_run_id].interface.connect(self.interface)
-        self.runs[self.next_run_id].main()
+            self.runs[self.next_run_id]['worker'].interface.connect(self.interface)
+        self.runs[self.next_run_id]['task'] = asyncio.create_task(self.runs[self.next_run_id]['worker'].main())
+        if wait:
+            await self.runs[self.next_run_id]['task']
         self.next_run_id += 1
 
     def check_runs(self):
-        for run_id, worker in list(self.runs.items()):
+        for run_id in list(self.runs.keys()):
             if not self.interface.internal['DONE'][run_id]:
                 self.logger.warning(f'run_{run_id:03d} likely crashed')
             del self.runs[run_id]
-
-    def cancel(self, run_id=None):
-        self.logger.info('asynchronous running not implemented, nothing to cancel')
-        pass
 
 
 @RunnerInterface.register('internal')
@@ -56,9 +62,11 @@ class InternalInterface(Interface):
     def __init__(self, *args):
         super().__init__(*args)
         # full initialization requires an external call to connect()
+        self.ready = False
 
     def connect(self, parent: RunnerInterface):
         self.parent = parent
+        self.ready = True
 
     @property
     def input(self):
@@ -87,6 +95,10 @@ class NoPreprocessor(Preprocessor):
     def pre(self):
         self.logger.info('preprocessing')
         self.logger.debug(f'input {self.worker.interface.input}')
+
+    def post(self):
+        self.logger.info('no cleanup for preprocessor necessary')
+        pass
 
     @classmethod
     def handle_config(cls, config, base_config):

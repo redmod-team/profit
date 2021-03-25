@@ -1,10 +1,7 @@
-"""proFit default worker
+"""proFit worker class & components
 
-in development (Mar 2021)
-Goal: a class and script to handle single runs on a cluster
- - the worker is subclassed to handle the run input and output
-
-ToDo: move subclasses?
+:author: Robert Babin
+:date: Mar 2021
 """
 
 import os
@@ -36,16 +33,10 @@ class Interface(ABC):
         self.config = config  # only the run/interface config dict (after processing defaults)
         self.logger = logging.getLogger('Interface')
         self.logger.parent = self.worker.logger
+        # self.ready = False
+        # self.time = 0
 
         # self.input, self.output
-
-    @property
-    def time(self):
-        return 0
-
-    @time.setter
-    def time(self, value):
-        pass
 
     @abstractmethod
     def done(self):
@@ -69,7 +60,6 @@ class Interface(ABC):
 
 class Preprocessor(ABC):
     preprocessors = {}
-    no_run_dir = False
 
     def __init__(self, worker, config):
         self.worker = worker
@@ -83,6 +73,11 @@ class Preprocessor(ABC):
             shutil.rmtree(self.worker.run_dir)
         os.mkdir(self.worker.run_dir)
         os.chdir(self.worker.run_dir)
+
+    def post(self):
+        os.chdir('..')
+        if self.worker.config['clean']:
+            shutil.rmtree(self.worker.run_dir)
 
     def __call__(self):
         return self.pre()
@@ -209,7 +204,14 @@ class Worker:
             kwargs['stderr'] = open(self.config['stderr'], 'w')
         subprocess.run(self.config['command'], shell=True, text=True, **kwargs)
 
-    def main(self):
+    async def main(self):
+        try:
+            ready = await self.interface.ready
+        except TypeError:
+            ready = self.interface.ready
+        if not ready:
+            self.logger.warning('interface is not ready')
+            return
         self.pre()
 
         timestamp = time.time()
@@ -219,10 +221,7 @@ class Worker:
 
         self.post()
         self.interface.done()
-        if not self.pre.no_run_dir:
-            os.chdir('..')
-            if self.config['clean']:
-                shutil.rmtree(self.run_dir)
+        self.pre.post()
 
     def cancel(self):
         pass

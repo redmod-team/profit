@@ -29,8 +29,8 @@ class LocalRunner(Runner):
         super().spawn_run(params, wait)
         env = self.env.copy()
         env['PROFIT_RUN_ID'] = str(self.next_run_id)
-        if self.config['custom']:
-            cmd = self.config['command']
+        if self.run_config['custom']:
+            cmd = self.run_config['command']
         else:
             from profit.defaults import WORKER_CMD
             cmd = WORKER_CMD
@@ -46,11 +46,11 @@ class LocalRunner(Runner):
             raise NotImplementedError
         for params in params_array:
             self.spawn_run(params)
-            while len(self.runs) >= self.config['runner']['parallel']:
-                sleep(self.config['runner']['sleep'])
+            while len(self.runs) >= self.config['parallel']:
+                sleep(self.config['sleep'])
                 self.check_runs(poll=True)
         while len(self.runs):
-            sleep(self.config['runner']['sleep'])
+            sleep(self.config['sleep'])
             self.check_runs(poll=True)
 
     def check_runs(self, poll=False):
@@ -63,17 +63,17 @@ class LocalRunner(Runner):
                 del self.runs[run_id]
 
     @classmethod
-    def handle_subconfig(cls, subconfig, base_config):
+    def handle_config(cls, config, base_config):
         """
         class: local
         parallel: 1     # maximum number of simultaneous runs (for spawn array)
         sleep: 0        # number of seconds to sleep while polling
         """
         from profit.defaults import RUN_RUNNER_LOCAL_PARALLEL, RUN_RUNNER_LOCAL_SLEEP
-        if 'parallel' not in subconfig:
-            subconfig['parallel'] = RUN_RUNNER_LOCAL_PARALLEL
-        if 'sleep' not in subconfig:
-            subconfig['sleep'] = RUN_RUNNER_LOCAL_SLEEP
+        if 'parallel' not in config:
+            config['parallel'] = RUN_RUNNER_LOCAL_PARALLEL
+        if 'sleep' not in config:
+            config['sleep'] = RUN_RUNNER_LOCAL_SLEEP
 
 
 # === Numpy Memmap Inerface === #

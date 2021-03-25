@@ -9,7 +9,7 @@ import logging
 from abc import ABC, abstractmethod  # Abstract Base Class
 from collections.abc import MutableMapping
 
-from .worker import Worker, Preprocessor
+from .worker import Worker
 from profit.util import load_includes, params2map
 
 import numpy as np
@@ -37,9 +37,6 @@ class RunnerInterface:
         self.output_vars = []
         for variable, spec in self.runner.base_config['output'].items():
             self.output_vars.append((variable, spec['dtype'], spec['shape']))
-
-    def cancel(self, run_id):
-        return False
 
     def clean(self):
         pass
@@ -119,14 +116,8 @@ class Runner(ABC):
     def clean(self):
         self.interface.clean()
 
-    @abstractmethod
-    def cancel(self, run_id=None):
-        if run_id is None:
-            for run_id in range(self.data.size):
-                self.cancel(run_id)
-
     def get_data(self, flat=False, structured=True, selection='both', done=True):
-        raise NotImplementedError
+        return self.data
 
     """ TODO ----------------"""
     @property
