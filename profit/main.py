@@ -10,7 +10,6 @@ import logging
 
 from profit.config import Config
 from profit.util import safe_path_to_file, safe_str
-from profit.util.io import read_input, collect_output
 
 from profit.run import Runner
 
@@ -93,23 +92,17 @@ def main():
     elif args.mode == 'fit':
         from numpy import arange, hstack, meshgrid
         from profit.util import load
-        from profit.fit import get_surrogate
+        from profit.sur.sur import Surrogate
 
-        sur = get_surrogate(config['fit']['surrogate'])
+        sur = Surrogate.from_config(config['fit'], config)
 
-        if config['fit'].get('load'):
-            sur = sur.load_model(config['fit']['load'])
-        else:
+        if not sur.trained:
             x = load(config['files']['input'])
             y = load(config['files']['output'])
             x = hstack([x[key] for key in x.dtype.names])
             y = hstack([y[key] for key in y.dtype.names])
 
-            sur.train(x, y,
-                      sigma_n=config['fit'].get('sigma_n'),
-                      sigma_f=config['fit'].get('sigma_f'),
-                      kernel=config['fit'].get('kernel'))
-            # TODO: plot_searching_phase
+            sur.train(x, y)
 
         if config['fit'].get('save'):
             sur.save_model(config['fit']['save'])
