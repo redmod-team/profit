@@ -1,15 +1,11 @@
 """
-Testcases for mockup simulations:
-- all input variables are Halton sequences to ensure reproducibility
+Testcases for mockup simulations with active learning:
+- input variables are ActiveLearning instances
 - 1D function
-    - .hdf5 input/output
+    - simple active learning of one variable
 - 2D function (Rosenbrock)
-    - .txt input/output
-- 2D function (Fermi)
-    - one Halton (Temperature) and one independent (Energy) variable (simulation returns a vector)
-    - .json template
-    - .hdf5 input/output
-    - .hdf5 output of single runs with custom interface
+    - active learning of one variable while the other is a Halton sequence
+    - simultanious active learning of both variables
 """
 
 from profit.config import Config
@@ -57,12 +53,11 @@ def test_1D():
     config = Config.from_file(config_file)
     try:
         run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
-        run(f"profit fit {config_file}", shell=True, timeout=TIMEOUT)
         model = load('./study/model_1D.hdf5', as_type='dict')
         assert isinstance(model, dict)
         assert model['trained']
         assert model['model']['kernel']['name'] == 'rbf'
-        assert allclose(model['model']['likelihood']['variance'][0], 4.809421284738159e-11, atol=NLL_ATOL)
+        assert allclose(model['model']['likelihood']['variance'][0], 4.809421284738159e-11, rtol=NLL_ATOL)
         assert allclose(model['model']['kernel']['variance'][0], 1.6945780226638725, rtol=PARAM_RTOL)
         assert allclose(model['model']['kernel']['lengthscale'][0], 0.22392982500520792, rtol=PARAM_RTOL)
     finally:
@@ -71,38 +66,8 @@ def test_1D():
             remove('./study/model_1D.hdf5')
 
 
-def test_custom_post():
-    """ test 1D with custom postprocessor """
-
-    config_file = './study/profit_custom_post.yaml'
-    config = Config.from_file(config_file)
-    try:
-        run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
-        output = load('./study/output_custom_post.hdf5')
-        assert output.shape == (7, 1)
-        assert all(output['f'] - array([0.7836, -0.5511, 1.0966, 0.4403, 1.6244, -0.4455, 0.0941]).reshape((7, 1))
-                   < 1e-4)
-    finally:
-        clean(config)
-
-
-def test_custom_worker():
-    """ test 1D with custom worker """
-
-    config_file = './study/profit_custom_worker.yaml'
-    config = Config.from_file(config_file)
-    try:
-        run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
-        output = load('./study/output_custom_worker.hdf5')
-        assert output.shape == (7, 1)
-        assert all(output['f'] - array([0.7836, -0.5511, 1.0966, 0.4403, 1.6244, -0.4455, 0.0941]).reshape((7, 1))
-                   < 1e-4)
-    finally:
-        clean(config)
-
-
 def test_2D():
-    """Test a Rosenbrock 2D function with two random inputs."""
+    """Test a Rosenbrock 2D function with two inputs."""
 
     config_file = './study/profit_2D.yaml'
     config = Config.from_file(config_file)
@@ -121,25 +86,3 @@ def test_2D():
         clean(config)
         if path.exists('./study/model_2D.hdf5'):
             remove('./study/model_2D.hdf5')
-
-
-def test_2D_independent():
-    """Test a Fermi function which returns a vector over energy and is sampled over different temperatures."""
-
-    config_file = './study/profit_independent.yaml'
-    config = Config.from_file(config_file)
-    try:
-        run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
-        run(f"profit fit {config_file}", shell=True, timeout=TIMEOUT)
-        model = load('./study/model_independent.hdf5', as_type='dict')
-        assert isinstance(model, dict)
-        assert model['trained']
-        assert model['model']['kernel']['name'] == 'rbf'
-        assert model['model']['kernel']['input_dim'] == 1
-        assert allclose(model['model']['likelihood']['variance'][0], 2.8769632382230903e-05, atol=NLL_ATOL)
-        assert allclose(model['model']['kernel']['variance'][0], 0.4382486018781694, rtol=PARAM_RTOL)
-        assert allclose(model['model']['kernel']['lengthscale'][0], 0.24077767526116695, rtol=PARAM_RTOL)
-    finally:
-        clean(config)
-        if path.exists('./study/model_independent.hdf5'):
-            remove('./study/model_independent.hdf5')
