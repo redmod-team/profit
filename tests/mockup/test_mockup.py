@@ -13,6 +13,7 @@ Testcases for mockup simulations:
 """
 
 from profit.config import Config
+from profit.sur import Surrogate
 from profit.util import load
 from os import path, remove, chdir, getcwd
 from subprocess import run
@@ -55,20 +56,21 @@ def test_1D():
 
     config_file = './study/profit_1D.yaml'
     config = Config.from_file(config_file)
+    model_file = config['fit'].get('save')
     try:
         run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
         run(f"profit fit {config_file}", shell=True, timeout=TIMEOUT)
-        model = load('./study/model_1D.hdf5', as_type='dict')
-        assert isinstance(model, dict)
-        assert model['trained']
-        assert model['model']['kernel']['name'] == 'rbf'
-        assert allclose(model['model']['likelihood']['variance'][0], 4.809421284738159e-11, atol=NLL_ATOL)
-        assert allclose(model['model']['kernel']['variance'][0], 1.6945780226638725, rtol=PARAM_RTOL)
-        assert allclose(model['model']['kernel']['lengthscale'][0], 0.22392982500520792, rtol=PARAM_RTOL)
+        sur = Surrogate.load_model(model_file)
+        assert sur.get_label() == 'GPy'
+        assert sur.trained
+        assert sur.model.kern.name == 'rbf'
+        assert allclose(sur.model.likelihood.variance[0], 4.809421284738159e-11, atol=NLL_ATOL)
+        assert allclose(sur.model.kern.variance[0], 1.6945780226638725, rtol=PARAM_RTOL)
+        assert allclose(sur.model.kern.lengthscale, 0.22392982500520792, rtol=PARAM_RTOL)
     finally:
         clean(config)
-        if path.exists('./study/model_1D.hdf5'):
-            remove('./study/model_1D.hdf5')
+        if path.exists(model_file):
+            remove(model_file)
 
 
 def test_custom_post():
@@ -106,21 +108,22 @@ def test_2D():
 
     config_file = './study/profit_2D.yaml'
     config = Config.from_file(config_file)
+    model_file = config['fit'].get('save')
     try:
         run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
         run(f"profit fit {config_file}", shell=True, timeout=TIMEOUT)
-        model = load('./study/model_2D.hdf5', as_type='dict')
-        assert isinstance(model, dict)
-        assert model['trained']
-        assert model['model']['kernel']['name'] == 'rbf'
-        assert model['model']['kernel']['input_dim'] == 2
-        assert allclose(model['model']['likelihood']['variance'][0], 2.657441549034709e-08, atol=NLL_ATOL)
-        assert allclose(model['model']['kernel']['variance'][0], 270.2197671669302, rtol=PARAM_RTOL)
-        assert allclose(model['model']['kernel']['lengthscale'][0], 1.079943283873971, rtol=PARAM_RTOL)
+        sur = Surrogate.load_model(model_file)
+        assert sur.get_label() == 'GPy'
+        assert sur.trained
+        assert sur.model.kern.name == 'rbf'
+        assert sur.model.kern.input_dim == 2
+        assert allclose(sur.model.likelihood.variance[0], 2.657441549034709e-08, atol=NLL_ATOL)
+        assert allclose(sur.model.kern.variance[0], 270.2197671669302, rtol=PARAM_RTOL)
+        assert allclose(sur.model.kern.lengthscale[0], 1.079943283873971, rtol=PARAM_RTOL)
     finally:
         clean(config)
-        if path.exists('./study/model_2D.hdf5'):
-            remove('./study/model_2D.hdf5')
+        if path.exists(model_file):
+            remove(model_file)
 
 
 def test_2D_independent():
@@ -128,18 +131,19 @@ def test_2D_independent():
 
     config_file = './study/profit_independent.yaml'
     config = Config.from_file(config_file)
+    model_file = config['fit'].get('save')
     try:
         run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
         run(f"profit fit {config_file}", shell=True, timeout=TIMEOUT)
-        model = load('./study/model_independent.hdf5', as_type='dict')
-        assert isinstance(model, dict)
-        assert model['trained']
-        assert model['model']['kernel']['name'] == 'rbf'
-        assert model['model']['kernel']['input_dim'] == 1
-        assert allclose(model['model']['likelihood']['variance'][0], 2.8769632382230903e-05, atol=NLL_ATOL)
-        assert allclose(model['model']['kernel']['variance'][0], 0.4382486018781694, rtol=PARAM_RTOL)
-        assert allclose(model['model']['kernel']['lengthscale'][0], 0.24077767526116695, rtol=PARAM_RTOL)
+        sur = Surrogate.load_model(model_file)
+        assert sur.get_label() == 'GPy'
+        assert sur.trained
+        assert sur.model.kern.name == 'rbf'
+        assert sur.model.kern.input_dim == 1
+        assert allclose(sur.model.likelihood.variance[0], 2.8769632382230903e-05, atol=NLL_ATOL)
+        assert allclose(sur.model.kern.variance[0], 0.4382486018781694, rtol=PARAM_RTOL)
+        assert allclose(sur.model.kern.lengthscale[0], 0.24077767526116695, rtol=PARAM_RTOL)
     finally:
         clean(config)
-        if path.exists('./study/model_independent.hdf5'):
-            remove('./study/model_independent.hdf5')
+        if path.exists(model_file):
+            remove(model_file)

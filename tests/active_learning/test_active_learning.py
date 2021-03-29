@@ -9,6 +9,7 @@ Testcases for mockup simulations with active learning:
 """
 
 from profit.config import Config
+from profit.sur import Surrogate
 from profit.util import load
 from os import path, remove, chdir, getcwd
 from subprocess import run
@@ -51,38 +52,41 @@ def test_1D():
 
     config_file = './study/profit_1D.yaml'
     config = Config.from_file(config_file)
-    try:
-        run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
-        model = load('./study/model_1D.hdf5', as_type='dict')
-        assert isinstance(model, dict)
-        assert model['trained']
-        assert model['model']['kernel']['name'] == 'rbf'
-        assert allclose(model['model']['likelihood']['variance'][0], 4.809421284738159e-11, rtol=NLL_ATOL)
-        assert allclose(model['model']['kernel']['variance'][0], 1.6945780226638725, rtol=PARAM_RTOL)
-        assert allclose(model['model']['kernel']['lengthscale'][0], 0.22392982500520792, rtol=PARAM_RTOL)
-    finally:
-        clean(config)
-        if path.exists('./study/model_1D.hdf5'):
-            remove('./study/model_1D.hdf5')
-
-
-def test_2D():
-    """Test a Rosenbrock 2D function with two inputs."""
-
-    config_file = './study/profit_2D.yaml'
-    config = Config.from_file(config_file)
+    model_file = './study/model_1D.hdf5'
     try:
         run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
         run(f"profit fit {config_file}", shell=True, timeout=TIMEOUT)
-        model = load('./study/model_2D.hdf5', as_type='dict')
-        assert isinstance(model, dict)
-        assert model['trained']
-        assert model['model']['kernel']['name'] == 'rbf'
-        assert model['model']['kernel']['input_dim'] == 2
-        assert allclose(model['model']['likelihood']['variance'][0], 2.657441549034709e-08, atol=NLL_ATOL)
-        assert allclose(model['model']['kernel']['variance'][0], 270.2197671669302, rtol=PARAM_RTOL)
-        assert allclose(model['model']['kernel']['lengthscale'][0], 1.079943283873971, rtol=PARAM_RTOL)
+        sur = Surrogate.load_model(model_file)
+        assert sur.get_label() == 'GPy'
+        assert sur.trained
+        assert sur.model.kern.name == 'rbf'
+        assert allclose(sur.model.likelihood.variance[0], 4.809421284738159e-11, atol=NLL_ATOL)
+        assert allclose(sur.model.kern.variance[0], 1.6945780226638725, rtol=PARAM_RTOL)
+        assert allclose(sur.model.kern.lengthscale, 0.22392982500520792, rtol=PARAM_RTOL)
     finally:
         clean(config)
-        if path.exists('./study/model_2D.hdf5'):
-            remove('./study/model_2D.hdf5')
+        if path.exists(model_file):
+            remove(model_file)
+
+
+def test_2D():
+    """Test a Rosenbrock 2D function with two random inputs."""
+
+    config_file = './study/profit_2D.yaml'
+    config = Config.from_file(config_file)
+    model_file = './study/model_2D.hdf5'
+    try:
+        run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
+        run(f"profit fit {config_file}", shell=True, timeout=TIMEOUT)
+        sur = Surrogate.load_model(model_file)
+        assert sur.get_label() == 'GPy'
+        assert sur.trained
+        assert sur.model.kern.name == 'rbf'
+        assert sur.model.kern.input_dim == 2
+        assert allclose(sur.model.likelihood.variance[0], 2.657441549034709e-08, atol=NLL_ATOL)
+        assert allclose(sur.model.kern.variance[0], 270.2197671669302, rtol=PARAM_RTOL)
+        assert allclose(sur.model.kern.lengthscale[0], 1.079943283873971, rtol=PARAM_RTOL)
+    finally:
+        clean(config)
+        if path.exists(model_file):
+            remove(model_file)

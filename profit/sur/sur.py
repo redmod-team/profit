@@ -48,8 +48,10 @@ class Surrogate(ABC):
     @classmethod
     @abstractmethod
     def load_model(cls, path):
-        """Load a saved surrogate from a file. The file format can vary between surrogates."""
-        pass
+        """Load a saved surrogate from a file. The file format can vary between surrogates.
+        Identify the surrogate by its label in the path."""
+        label = next(filter(lambda l: l in path, cls._surrogates), cls._defaults['surrogate'])
+        return cls[label].load_model(path)
 
     @classmethod
     @abstractmethod
@@ -86,6 +88,13 @@ class Surrogate(ABC):
 
     def __class_getitem__(cls, item):
         return cls._surrogates[item]
+
+    @classmethod
+    def get_label(cls):
+        for label, item in cls._surrogates.items():
+            if item == cls:
+                return label
+        raise NotImplementedError("Class {} is not implemented.".format(class_to_label))
 
     def plot(self, Xpred=None, independent=None, show=False, ref=None):
         """Simple plotting for dimensions <= 2."""

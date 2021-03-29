@@ -70,7 +70,8 @@ class GaussianProcess(Surrogate, ABC):
 
     @classmethod
     def handle_subconfig(cls, config, base_config):
-        """Set default parameters if not existent. Do this recursively for each element of the hyperparameter dict."""
+        """Set default parameters if not existent. Do this recursively for each element of the hyperparameter dict.
+        Includes the class label in the save_model filename to identify the surrogate if loaded."""
 
         for key, default in cls._defaults.items():
             if key not in config:
@@ -80,6 +81,9 @@ class GaussianProcess(Surrogate, ABC):
                     for kkey, ddefault in default.items():
                         if kkey not in config[key]:
                             config[key][kkey] = ddefault
+        if config.get('save') and cls.get_label() not in config.get('save'):
+            filepath = config['save'].split('.')
+            config['save'] = ''.join(filepath[:-1]) + f'_{cls.get_label()}.' + filepath[-1]
 
     @abstractmethod
     def select_kernel(self, kernel):
