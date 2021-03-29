@@ -77,9 +77,16 @@ def main():
 
         if 'activelearning' in (safe_str(v['kind']) for v in config['input'].values()):
             from profit.fit import ActiveLearning
+            from profit.sur.sur import Surrogate
             runner.fill(eval_points)
-            al = ActiveLearning(config, runner)
+            if 'active_learning' not in config:
+                config['active_learning'] = {}
+            ActiveLearning.handle_config(config['active_learning'], config)
+            al = ActiveLearning.from_config(runner, config['active_learning'], config)
+            al.run_first()
             al.learn()
+            if config['active_learning'].get('save'):
+                al.save(config['active_learning']['save'])
         else:
             params_array = [row[0] for row in eval_points]
             runner.spawn_array(tqdm(params_array), blocking=True)
