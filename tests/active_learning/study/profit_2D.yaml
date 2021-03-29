@@ -1,0 +1,21 @@
+ntrain: 10
+variables:
+    u: ActiveLearning(4.7, 5.3)
+    v: ActiveLearning(0.55, 0.6)
+    r: Independent
+    f: Output
+
+run:
+    post:
+        class: numpytxt
+        path: mockup.out
+    command: python3 mockup_2D.py
+
+files:
+    input: input_2D.txt
+    output: output_2D.txt
+
+active_learning:
+    nrand: 5
+    Xpred: [[4.6, 5.4, 0.01], [0.54, 0.61, 0.01]]
+    save: model_2D.hdf5

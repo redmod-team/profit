@@ -10,7 +10,6 @@ import logging
 
 from profit.config import Config
 from profit.util import safe_path_to_file, safe_str
-from profit.util.io import read_input, collect_output
 
 from profit.run import Runner
 
@@ -78,9 +77,16 @@ def main():
 
         if 'activelearning' in (safe_str(v['kind']) for v in config['input'].values()):
             from profit.fit import ActiveLearning
+            from profit.sur.sur import Surrogate
             runner.fill(eval_points)
-            al = ActiveLearning(config, runner)
+            if 'active_learning' not in config:
+                config['active_learning'] = {}
+            ActiveLearning.handle_config(config['active_learning'], config)
+            al = ActiveLearning.from_config(runner, config['active_learning'], config)
+            al.run_first()
             al.learn()
+            if config['active_learning'].get('save'):
+                al.save(config['active_learning']['save'])
         else:
             params_array = [row[0] for row in eval_points]
             runner.spawn_array(tqdm(params_array), blocking=True)
@@ -93,23 +99,17 @@ def main():
     elif args.mode == 'fit':
         from numpy import arange, hstack, meshgrid
         from profit.util import load
-        from profit.fit import get_surrogate
+        from profit.sur.sur import Surrogate
 
-        sur = get_surrogate(config['fit']['surrogate'])
+        sur = Surrogate.from_config(config['fit'], config)
 
-        if config['fit'].get('load'):
-            sur = sur.load_model(config['fit']['load'])
-        else:
+        if not sur.trained:
             x = load(config['files']['input'])
             y = load(config['files']['output'])
             x = hstack([x[key] for key in x.dtype.names])
             y = hstack([y[key] for key in y.dtype.names])
 
-            sur.train(x, y,
-                      sigma_n=config['fit'].get('sigma_n'),
-                      sigma_f=config['fit'].get('sigma_f'),
-                      kernel=config['fit'].get('kernel'))
-            # TODO: plot_searching_phase
+            sur.train(x, y)
 
         if config['fit'].get('save'):
             sur.save_model(config['fit']['save'])

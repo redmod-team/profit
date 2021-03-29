@@ -4,6 +4,7 @@ import yaml
 from collections import OrderedDict
 
 from profit.run import Runner
+from profit.sur import Surrogate
 
 VALID_FORMATS = ('.yaml', '.py')
 
@@ -172,6 +173,9 @@ class Config(OrderedDict):
                             halton_dim.append((k, entries))
                         elif safe_str(kind) == 'independent':
                             self['variables'][k]['range'] = func(*entries, size=self['ntrain']) if entries else None
+                        elif safe_str(kind) == 'activelearning':
+                            self['variables'][k]['range'] = func(size=self['ntrain'])  # to insert nan in input file
+                            self['variables'][k]['al_range'] = entries  # range between active learning should happen
                         else:
                             self['variables'][k]['range'] = func(*entries, size=self['ntrain'])
                     except AttributeError:
@@ -214,15 +218,14 @@ class Config(OrderedDict):
             self['run'] = {'command': self['run']}
         Runner.handle_config(self['run'], self)
 
+        if self.get('fit'):
+            Surrogate.handle_config(self['fit'], self)
+
         # Set missing mandatory dict entries to default
         if not self['files'].get('input'):
             self['files']['input'] = path.join(self['base_dir'], 'input.txt')
         if not self['files'].get('output'):
             self['files']['output'] = path.join(self['base_dir'], 'output.txt')
-        if not self['fit'].get('surrogate'):
-            self['fit']['surrogate'] = 'GPy'
-        if not self['fit'].get('kernel'):
-            self['fit']['kernel'] = 'RBF'
 
         # Set absolute paths
         self['files']['input'] = path.join(self['base_dir'], self['files']['input'])

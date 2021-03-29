@@ -1,0 +1,19 @@
+ntrain: 7
+variables:
+    u: ActiveLearning(0, 1)
+    f: Output
+
+run:
+    post:
+        class: numpytxt
+        path: mockup.out
+    command: python3 mockup_1D.py
+
+files:
+    input: input_1D.hdf5
+    output: output_1D.hdf5
+
+active_learning:
+    nrand: 3
+    Xpred: [[0, 1, 0.01]]
+    save: model_1D.hdf5

@@ -46,8 +46,13 @@ def save_hdf(filename, data):
             for key in data.dtype.names:
                 h5f[key] = data[key]
         elif isinstance(data, dict):
-            for key, value in data.items():
-                h5f[key] = data[key]
+            def recursive_dict2hdf(_path, _dict):
+                for key, value in _dict.items():
+                    if isinstance(value, dict):
+                        recursive_dict2hdf(_path + str(key) + '/', value)
+                    else:
+                        h5f[_path + key] = value
+            recursive_dict2hdf('', data)
         else:
             h5f['data'] = data
 
@@ -82,9 +87,22 @@ def hdf2numpy(dataset):
 
 
 def hdf2dict(dataset):
-    from numpy import array
-    return {key: array(dataset[key]) if dataset[key].ndim > 0 else array(dataset[key]).item()
-            for key in dataset.keys()}
+    from numpy import array, ndarray, atleast_1d
+    from h5py import Dataset
+    load_dict = {}
+
+    def recursive_hdf2dict(_data, _dict):
+        for key in _data.keys():
+            if isinstance(_data[key], Dataset):
+                val = _data[key][()]
+                if isinstance(val, bytes):  # quick fix for new h5py version, which stores strings as bytes
+                    val = val.decode('utf-8')
+                _dict[key] = atleast_1d(array(val)) if isinstance(val, ndarray) else val
+            else:
+                _dict[key] = {}
+                recursive_hdf2dict(_data[key], _dict[key])
+    recursive_hdf2dict(dataset, load_dict)
+    return load_dict
 
 
 def safe_path_to_file(arg, default, valid_extensions=('.yaml', '.py')):
