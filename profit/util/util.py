@@ -95,6 +95,8 @@ def hdf2dict(dataset):
         for key in _data.keys():
             if isinstance(_data[key], Dataset):
                 val = _data[key][()]
+                if isinstance(val, bytes):  # quick fix for new h5py version, which stores strings as bytes
+                    val = val.decode('utf-8')
                 _dict[key] = atleast_1d(array(val)) if isinstance(val, ndarray) else val
             else:
                 _dict[key] = {}
