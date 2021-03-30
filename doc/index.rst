@@ -7,14 +7,15 @@ Welcome to proFit's documentation!
 =================================
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: Contents:
 
    design
-   modules
+   profit
    config
    kernels
    codegen
+   run_spec
    troubleshooting
 
 

@@ -1,22 +1,35 @@
-profit.run package
-==================
-
-Submodules
-----------
-
-profit.run.run module
----------------------
-
-.. automodule:: profit.run.run
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-
-Module contents
----------------
+run
+===
 
 .. automodule:: profit.run
-   :members:
-   :undoc-members:
-   :show-inheritance:
+.. currentmodule:: profit.run
+
+.. autoclass:: Runner
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+.. autoclass:: Worker
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+.. autoclass:: RunnerInterface
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+.. autoclass:: Interface
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+.. autoclass:: Preprocessor
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+.. autoclass:: Postprocessor
+    :members:
+    :undoc-members:
+    :show-inheritance:
