@@ -25,10 +25,10 @@ from logging import Logger
 
 @RunnerInterface.register('zeromq')
 class ZeroMQRunnerInterface(RunnerInterface):
-    def __init__(self, *args):
+    def __init__(self, config, size, input_config, output_config, *, logger_parent: Logger = None):
         if 'FLAGS' not in [var[0] for var in self.internal_vars]:
             self.internal_vars += [('FLAGS', np.byte)]
-        super().__init__(*args)
+        super().__init__(config, size, input_config, output_config, logger_parent=logger_parent)
         self.socket = zmq.Context.instance().socket(zmq.ROUTER)
         self.socket.bind(self.config['bind'])
         self.logger.info('connected')
@@ -74,23 +74,15 @@ class ZeroMQRunnerInterface(RunnerInterface):
         self.logger.debug('cleaning: closing socket')
         self.socket.close(0)
 
-    #def cancel(self, run_id): # Todo: redo
-    #    if not self.internal['FLAGS'][run_id] & 0b11100:
-    #        if self.internal['FLAGS'][run_id] & 0b10:
-    #            self.socket.send_multipart([b'rep' + bytes([run_id]), b'', b'CANCEL'])
-    #            self.internal['FLAGS'][run_id] |= 0x10  # cancelled
-    #            return True
-    #    return False  # not possible
-
     @classmethod
     def handle_config(cls, config, base_config):
         """
         class: zeromq
-        bind: tcp://*:9000
-        connect: tcp://localhost:9000
-        timeout: 2500  # ms
-        retries: 3
-        retry-sleep: 1 # s
+        bind: tcp://*:9000              # address the runner binds to
+        connect: tcp://localhost:9000   # address the workers connect to
+        timeout: 2500                   # zeromq polling timeout, in ms
+        retries: 3                      # number of zeromq connection retries
+        retry-sleep: 1                  # sleep between retries, in s
         """
         if 'bind' not in config:
             config['bind'] = 'tcp://*:9000'

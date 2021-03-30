@@ -70,7 +70,6 @@ def main():
         from profit.util import save
 
         runner = Runner.from_config(config['run'], config)
-        runner.prepare()
 
         eval_points = get_eval_points(config)
         write_input(config['files']['input'], eval_points)
@@ -92,7 +91,8 @@ def main():
             runner.spawn_array(tqdm(params_array), blocking=True)
 
         if config['files']['output'].endswith('.txt'):
-            save(config['files']['output'], runner.structured_output_data.reshape(runner.data.size, 1))
+            data = runner.structured_output_data
+            save(config['files']['output'], data.reshape(data.size, 1))
         else:
             save(config['files']['output'], runner.output_data)
 

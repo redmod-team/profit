@@ -14,7 +14,7 @@ VALUE_F = 3
 VALUE_T = 4
 
 
-def assert_worker(wif):
+def assert_wif(wif):
     assert wif.input.dtype.names == ('u', 'v')
     assert wif.output.dtype.names == ('f',)
     assert wif.input.shape == ()
@@ -26,14 +26,14 @@ def assert_worker(wif):
 def test_memmap():
     from profit.run.default import MemmapInterface, MemmapRunnerInterface
     import os
+    config = {'class': 'memmap'}
     try:
-        config = {'class': 'zeromq'}
         MemmapRunnerInterface.handle_config(config, BASE_CONFIG)
 
         rif = MemmapRunnerInterface(config, MAX_IDS, BASE_CONFIG['input'], BASE_CONFIG['output'])
         rif.input[['u', 'v']][1] = VALUE_U, VALUE_V
         wif = MemmapInterface(config, RUN_ID)
-        assert_worker(wif)
+        assert_wif(wif)
         wif.output['f'] = VALUE_F
         wif.time = VALUE_T
         wif.done()
@@ -41,8 +41,8 @@ def test_memmap():
         assert rif.internal['TIME'][RUN_ID] == VALUE_T
         assert rif.internal['DONE'][RUN_ID]
     finally:
-        if os.path.exists('interface.npy'):
-            os.remove('interface.npy')
+        if 'path' in config and os.path.exists(config['path']):
+            os.remove(config['path'])
 
 
 def test_zeromq():
@@ -68,7 +68,7 @@ def test_zeromq():
 
     def worker():
         wif = ZeroMQInterface(config, run_id=RUN_ID)
-        assert_worker(wif)
+        assert_wif(wif)
         wif.output['f'] = VALUE_F
         wif.time = VALUE_T
         wif.done()

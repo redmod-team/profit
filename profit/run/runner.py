@@ -10,7 +10,7 @@ from abc import ABC, abstractmethod  # Abstract Base Class
 from collections.abc import MutableMapping
 
 from .worker import Worker
-from profit.util import load_includes, params2map
+from profit.util import load_includes, params2map, spread_struct_horizontal, flatten_struct
 
 import numpy as np
 
@@ -67,8 +67,10 @@ class Runner(ABC):
         self.base_config = base_config
         self.run_config = run_config
         self.config = self.run_config['runner']
-        self.logger = logging.getLogger(f'{__name__}.{self.__class__.__name__}')
-        self.interface = interface_class(self, self.run_config['interface'])
+        self.logger = logging.getLogger('Runner')
+        self.interface: RunnerInterface = interface_class(self.run_config['interface'], self.base_config['ntrain'],
+                                                          self.base_config['input'], self.base_config['output'],
+                                                          logger_parent=self.logger)
 
         self.runs = {}  # run_id: (whatever data the system tracks)
         self.next_run_id = 0
@@ -77,8 +79,7 @@ class Runner(ABC):
         self.env['PROFIT_CONFIG_PATH'] = base_config['config_path']  # ToDo better way to pass this?
 
     @classmethod
-    def from_config(cls, base_config, config=None):
-        config = config or base_config['run']
+    def from_config(cls, config, base_config):
         child = cls[config['runner']['class']]
         interface_class = RunnerInterface[config['interface']['class']]
         return child(interface_class, config, base_config)
@@ -113,67 +114,25 @@ class Runner(ABC):
     def clean(self):
         self.interface.clean()
 
-    def get_data(self, flat=False, structured=True, selection='both', done=True):
-        return self.data
-
-    """ TODO ----------------"""
     @property
-    def data(self):
-        """ view on internal data (only completed runs, structured array) """
-        return self.interface.data[self.interface.data['DONE']]  # only completed runs
+    def input_data(self):
+        return self.interface.input[self.interface.internal['DONE']]
 
     @property
     def flat_input_data(self):
-        """ flattened data (copied, dtype converted)
-        very likely very inefficient """
-        return np.vstack([np.hstack([row[key].flatten() for key in self.base_config['input'].keys()])
-                          for row in self.interface.data])
+        return flatten_struct(self.input_data)
 
     @property
     def output_data(self):
-        return self.data[list(self.base_config['output'].keys())]
+        return self.interface.output[self.interface.internal['DONE']]
 
     @property
     def structured_output_data(self):
-        """ flattened data (copied, new column names, only completed runs)
-        very likely very inefficient """
-        dtype = []
-        columns = {}
-        for variable, spec in self.base_config['output'].items():
-            if len(spec['shape']) == 0:
-                dtype.append((variable, spec['dtype']))
-                columns[variable] = [variable]
-            else:
-                from numpy import meshgrid
-                ranges = []
-                columns[variable] = []
-                for dep in spec['depend']:
-                    ranges.append(spec['range'][dep])
-                meshes = [m.flatten() for m in meshgrid(*ranges)]
-                for i in range(meshes[0].size):
-                    name = variable + '(' + ', '.join([f'{m[i]}' for m in meshes]) + ')'
-                    dtype.append((name, spec['dtype']))
-                    columns[variable].append(name)
-
-        output = np.zeros(self.data.shape, dtype=dtype)
-        for variable, spec in self.base_config['output'].items():
-            if len(spec['shape']) == 0:
-                output[variable] = self.data[variable]
-            else:
-                for i in range(self.data.size):
-                    output[columns[variable]][i] = tuple(self.data[variable][i])
-
-        return output
+        return spread_struct_horizontal(self.output_data, self.base_config['output'])
 
     @property
     def flat_output_data(self):
-        """ flattened data (copied, dtype converted, only completed runs)
-        very likely very inefficient """
-        if self.data.size == 0:
-            return np.array([])
-        return np.vstack([np.hstack([row[key].flatten() for key in self.base_config['output'].keys()])
-                          for row in self.data])
-    """ TODO ----------------"""
+        return flatten_struct(self.output_data)
 
     @classmethod
     def handle_run_config(cls, base_config, run_config=None):

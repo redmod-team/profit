@@ -114,6 +114,15 @@ The following gives an overview of all possible parameters
             path: interface.npy     # memory mapped interface file, relative to base directory
             max-size: null          # maximum number of runs, determines size of the interface file (default = ntrain)
 
+        .. code-block:: yaml
+
+            class: zeromq
+            bind: tcp://*:9000              # address the runner binds to
+            connect: tcp://localhost:9000   # address the workers connect to
+            timeout: 2500                   # zeromq polling timeout, in ms
+            retries: 3                      # number of zeromq connection retries
+            retry-sleep: 1                  # sleep between retries, in s
+
     * pre:
         | the worker preprocessor
         | an identifier (string) -> shortcut for pre/class + default values

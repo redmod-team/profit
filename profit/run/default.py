@@ -33,8 +33,7 @@ class LocalRunner(Runner):
         if self.run_config['custom']:
             cmd = self.run_config['command']
         else:
-            from profit.defaults import WORKER_CMD
-            cmd = WORKER_CMD
+            cmd = 'profit-worker'
         self.runs[self.next_run_id] = subprocess.Popen(cmd, shell=True, env=env, cwd=self.base_config['run_dir'])
         if wait:
             self.runs[self.next_run_id].wait()
@@ -56,8 +55,9 @@ class LocalRunner(Runner):
 
     def check_runs(self, poll=False):
         """ check the status of runs via the interface """
+        self.interface.poll()
         for run_id, process in list(self.runs.items()):  # preserve state before deletions
-            if self.interface.data['DONE'][run_id]:
+            if self.interface.internal['DONE'][run_id]:
                 process.wait()  # just to make sure
                 del self.runs[run_id]
             elif poll and process.poll() is not None:
@@ -157,13 +157,17 @@ class MemmapInterface(Interface):
         self._memmap['DONE'] = True
         self._memmap.flush()
 
+    def clean(self):
+        if os.path.exists(self.config['path']):
+            os.remove(self.config['path'])
+
 
 # === Template Preprocessor === #
 
 
 @Preprocessor.register('template')
 class TemplatePreprocessor(Preprocessor):
-    def pre(self, data, *, run_dir, **kwargs):
+    def pre(self, data, run_dir):
         # No call to super()! replaces the default preprocessing
         from profit.pre import fill_run_dir_single
         if os.path.exists(run_dir):
@@ -218,7 +222,14 @@ class JSONPostprocessor(Postprocessor):
 @Postprocessor.register('numpytxt')
 class NumpytxtPostprocessor(Postprocessor):
     def post(self, data):
-        raw = np.loadtxt(self.config['path'])
+        try:
+            raw = np.loadtxt(self.config['path'])
+        except OSError:
+            self.logger.error(f'output file {self.config["path"]} not found')
+            self.logger.info(f'cwd = {os.getcwd()}')
+            dirname = os.path.dirname(self.config['path']) or '.'
+            self.logger.info(f'ls {dirname} = {os.listdir(dirname)}')
+            raise
         for k, key in enumerate(self.config['names'].split()):
             data[key] = raw[k] if len(raw.shape) else raw
 

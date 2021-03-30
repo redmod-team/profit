@@ -148,6 +148,15 @@ class Postprocessor(ABC):
 class Worker:
     def __init__(self, config: Mapping, interface_class, pre_class, post_class, run_id: int):
         self.logger = logging.getLogger('Worker')
+        self.logger.setLevel(logging.DEBUG)
+        try:
+            os.mkdir('log')
+        except FileExistsError:
+            pass
+        log_handler = logging.FileHandler(f'log/run_{run_id:03d}.log', mode='w')
+        log_formatter = logging.Formatter('{asctime} {levelname:8s} {name}: {message}', style='{')
+        log_handler.setFormatter(log_formatter)
+        self.logger.addHandler(log_handler)
 
         self.config: Mapping = config  # ~ base_config['run']
         self.run_id: int = run_id
@@ -197,6 +206,7 @@ class Worker:
         Postprocessor[config['post']['class']].handle_config(config['post'], base_config)
 
     def run(self):
+        self.logger.debug('run')
         kwargs = {}
         if self.config['stdout'] is not None:
             kwargs['stdout'] = open(self.config['stdout'], 'w')
@@ -204,14 +214,7 @@ class Worker:
             kwargs['stderr'] = open(self.config['stderr'], 'w')
         subprocess.run(self.config['command'], shell=True, text=True, **kwargs)
 
-    async def main(self):
-        try:
-            ready = await self.interface.ready
-        except TypeError:
-            ready = self.interface.ready
-        if not ready:
-            self.logger.warning('interface is not ready')
-            return
+    def main(self):
         self.pre(self.interface.input, self.run_dir)
 
         timestamp = time.time()
@@ -222,9 +225,6 @@ class Worker:
         self.post(self.interface.output)
         self.interface.done()
         self.pre.post(self.run_dir, self.config['clean'])
-
-    def cancel(self):
-        pass
 
 
 # === Entry Point === #
@@ -238,7 +238,5 @@ def main():  # ToDo: better name?
     intended to be called by the Runner class
     ToDo: entry_point OR part of main OR direct invocation via path ?
     """
-    logging.basicConfig(level=logging.DEBUG)
-
     worker = Worker.from_env()
     worker.main()
