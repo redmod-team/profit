@@ -10,7 +10,8 @@ import logging
 from abc import ABC, abstractmethod  # Abstract Base Class
 import time
 import subprocess
-from collections.abc import MutableMapping
+from collections.abc import Mapping, MutableMapping
+from numpy import zeros, void
 
 
 def checkenv(name):  # ToDo: move to utils? Modify logger name
@@ -28,15 +29,19 @@ class Interface(ABC):
     interfaces = {}  # ToDo: rename to registry?
     # ToDo: inherit from a Subworker class? __init__, registry, register is basically the same for all 3
 
-    def __init__(self, worker, config):
-        self.worker = worker
+    def __init__(self, config, run_id: int, *, logger_parent: logging.Logger = None):
         self.config = config  # only the run/interface config dict (after processing defaults)
         self.logger = logging.getLogger('Interface')
-        self.logger.parent = self.worker.logger
-        # self.ready = False
-        # self.time = 0
+        if logger_parent is not None:
+            self.logger.parent = logger_parent
+        self.run_id = run_id
 
-        # self.input, self.output
+        if 'time' not in self.__dir__():
+            self.time: int = 0
+        if 'input' not in self.__dir__():
+            self.input: void = zeros(1, dtype=[])[0]
+        if 'output' not in self.__dir__():
+            self.output: void = zeros(1, dtype=[])[0]
 
     @abstractmethod
     def done(self):
@@ -61,31 +66,26 @@ class Interface(ABC):
 class Preprocessor(ABC):
     preprocessors = {}
 
-    def __init__(self, worker, config):
-        self.worker = worker
-        self.config = config  # only the run/pre config dict (after processing defaults)
+    def __init__(self, config, *, logger_parent: logging.Logger = None):
+        self.config = config  # ~base_config['run']['post']
         self.logger = logging.getLogger('Preprocessor')
-        self.logger.parent = self.worker.logger
+        if logger_parent is not None:
+            self.logger.parent = logger_parent
 
     @abstractmethod
-    def pre(self):
-        if os.path.exists(self.worker.run_dir):
-            shutil.rmtree(self.worker.run_dir)
-        os.mkdir(self.worker.run_dir)
-        os.chdir(self.worker.run_dir)
+    def pre(self, data: Mapping, run_dir: str):
+        if os.path.exists(run_dir):
+            shutil.rmtree(run_dir)
+        os.mkdir(run_dir)
+        os.chdir(run_dir)
 
-    def post(self):
+    def post(self, run_dir: str, clean=True):
         os.chdir('..')
-        if self.worker.config['clean']:
-            shutil.rmtree(self.worker.run_dir)
+        if clean:
+            shutil.rmtree(run_dir)
 
-    def __call__(self):
-        return self.pre()
-
-    @classmethod
-    def runner_init(cls, config):
-        """ called from Runner to allow a preparation for all runs """
-        pass
+    def __call__(self, data: Mapping, run_dir: str):
+        return self.pre(data, run_dir)
 
     @classmethod
     @abstractmethod
@@ -111,23 +111,23 @@ class Preprocessor(ABC):
 class Postprocessor(ABC):
     postprocessors = {}
 
-    def __init__(self, worker, config):
-        self.worker = worker
-        self.config = config  # only the run/post config dict (after processing defaults)
+    def __init__(self, config, *, logger_parent: logging.Logger = None):
+        self.config = config  # ~base_config['run']['post']
         self.logger = logging.getLogger('Postprocessor')
-        self.logger.parent = self.worker.logger
+        if logger_parent is not None:
+            self.logger.parent = logger_parent
 
     @abstractmethod
-    def post(self):
+    def post(self, data: MutableMapping):
         pass
 
-    def __call__(self):
-        return self.post()
+    def __call__(self, data: MutableMapping):
+        return self.post(data)
 
     @classmethod
     @abstractmethod
     def handle_config(cls, config, base_config):
-        return config
+        pass
 
     @classmethod
     def register(cls, label):
@@ -146,16 +146,16 @@ class Postprocessor(ABC):
 
 
 class Worker:
-    def __init__(self, config, interface, pre, post, run_id):
+    def __init__(self, config: Mapping, interface_class, pre_class, post_class, run_id: int):
         self.logger = logging.getLogger('Worker')
 
-        self.config = config  # ~ base_config['run']
-        self.run_id = run_id
-        self.run_dir = f'run_{self.run_id:03d}'
+        self.config: Mapping = config  # ~ base_config['run']
+        self.run_id: int = run_id
+        self.run_dir: str = f'run_{self.run_id:03d}'
 
-        self.pre = pre(self, config['pre'])
-        self.post = post(self, config['post'])
-        self.interface = interface(self, config['interface'])
+        self.pre: Preprocessor = pre_class(config['pre'], logger_parent=self.logger)
+        self.post: Postprocessor = post_class(config['post'], logger_parent=self.logger)
+        self.interface: Interface = interface_class(config['interface'], run_id, logger_parent=self.logger)
 
     @classmethod
     def from_config(cls, config, run_id):
@@ -212,16 +212,16 @@ class Worker:
         if not ready:
             self.logger.warning('interface is not ready')
             return
-        self.pre()
+        self.pre(self.interface.input, self.run_dir)
 
         timestamp = time.time()
         self.run()
         if self.config['time']:
             self.interface.time = int(time.time() - timestamp)
 
-        self.post()
+        self.post(self.interface.output)
         self.interface.done()
-        self.pre.post()
+        self.pre.post(self.run_dir, self.config['clean'])
 
     def cancel(self):
         pass

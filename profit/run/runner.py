@@ -19,27 +19,24 @@ class RunnerInterface:
     interfaces = {}  # ToDo: rename to registry?
     internal_vars = [('DONE', np.bool8), ('TIME', np.uint32)]
 
-    def __init__(self, runner, config):
-        self.runner = runner
+    def __init__(self, config, size, input_config, output_config, *, logger_parent: logging.Logger = None):
         self.config = config  # base_config['run']['interface']
         self.logger = logging.getLogger('Runner Interface')
+        if logger_parent is not None:
+            self.logger.parent = logger_parent
 
-        self.construct_dtype()  # self.input_vars, self.output_vars
+        self.input_vars = [(variable, spec['dtype']) for variable, spec in input_config.items()]
+        self.output_vars = [(variable, spec['dtype'], spec['shape']) for variable, spec in output_config.items()]
 
-        self.input = np.zeros(self.runner.base_config['ntrain'], dtype=self.input_vars)
-        self.output = np.zeros(self.runner.base_config['ntrain'], dtype=self.output_vars)
-        self.internal = np.zeros(self.runner.base_config['ntrain'], dtype=self.internal_vars)
+        self.input = np.zeros(size, dtype=self.input_vars)
+        self.output = np.zeros(size, dtype=self.output_vars)
+        self.internal = np.zeros(size, dtype=self.internal_vars)
 
-    def construct_dtype(self):
-        self.input_vars = []
-        for variable, spec in self.runner.base_config['input'].items():
-            self.input_vars.append((variable, spec['dtype']))
-        self.output_vars = []
-        for variable, spec in self.runner.base_config['output'].items():
-            self.output_vars.append((variable, spec['dtype'], spec['shape']))
+    def poll(self):
+        self.logger.debug('polling')
 
     def clean(self):
-        pass
+        self.logger.debug('cleaning')
 
     @classmethod
     def handle_config(cls, config, base_config):

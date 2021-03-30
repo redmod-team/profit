@@ -17,6 +17,7 @@ from .worker import Worker, Interface, Preprocessor, Postprocessor
 from .runner import Runner, RunnerInterface
 
 import asyncio
+import logging
 
 
 def mockup_f(r, u, v, a, b):
@@ -52,52 +53,49 @@ class InternalRunnerInterface(RunnerInterface):
     def clean(self):
         self.logger.info('clean')
 
-    def cancel(self, run_id=None):
-        self.logger.info(f'cancel {run_id}')
-        return False  # not possible
-
 
 @Interface.register('internal')
 class InternalInterface(Interface):
-    def __init__(self, *args):
-        super().__init__(*args)
+    def __init__(self, config, run_id: int, *, logger_parent: logging.Logger = None):
+        super().__init__(config, run_id, logger_parent=logger_parent)
         # full initialization requires an external call to connect()
-        self.ready = False
+        self.parent = None
 
     def connect(self, parent: RunnerInterface):
         self.parent = parent
-        self.ready = True
 
     @property
     def input(self):
-        return self.parent.input[self.worker.run_id]
+        return self.parent.input[self.run_id]
 
     @property
     def output(self):
-        return self.parent.output[self.worker.run_id]
+        return self.parent.output[self.run_id]
 
     @property
     def time(self):
-        return self.parent.internal['TIME'][self.worker.run_id]
+        return self.parent.internal['TIME'][self.run_id]
 
     @time.setter
     def time(self, value):
-        self.parent.internal['TIME'][self.worker.run_id] = value
+        self.parent.internal['TIME'][self.run_id] = value
 
     def done(self):
-        self.parent.internal['DONE'][self.worker.run_id] = True
+        self.parent.internal['DONE'][self.run_id] = True
 
 
 @Preprocessor.register(None)
 class NoPreprocessor(Preprocessor):
     no_run_dir = True
 
-    def pre(self):
+    def pre(self, data, run_dir):
         self.logger.info('preprocessing')
-        self.logger.debug(f'input {self.worker.interface.input}')
+        self.logger.debug(f'input {data}')
+        self.logger.debug(f'run_dir {run_dir}')
 
-    def post(self):
+    def post(self, run_dir, clean=True):
         self.logger.info('no cleanup for preprocessor necessary')
+        self.logger.debug(f'run_dir {run_dir}, clean {clean}')
         pass
 
     @classmethod
@@ -107,8 +105,9 @@ class NoPreprocessor(Preprocessor):
 
 @Postprocessor.register(None)
 class NoPostprocessor(Postprocessor):
-    def post(self):
+    def post(self, data):
         self.logger.info('postprocessing')
+        self.logger.debug(f'output {data}')
 
     @classmethod
     def handle_config(cls, config, base_config):

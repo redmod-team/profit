@@ -1,0 +1,12 @@
+ntrain: 10
+variables:
+    u: Halton(4.7, 5.3)
+    v: Halton(0.55, 0.6)
+    r: Independent
+    f: Output
+
+run:
+    post:
+        class: numpytxt
+        path: mockup.out
+    command: python mockup_2D.py
