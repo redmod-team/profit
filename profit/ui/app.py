@@ -9,26 +9,19 @@ from math import log10, floor
 import numpy as np
 from profit.util import load
 from profit.sur import Surrogate
-
+from matplotlib import cm as colormaps
+from matplotlib.colors import to_hex as color2hex
 
 def init_app(config):
     external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
+    external_scripts = ['https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js?config=TeX-MML-AM_CHTML']
 
-    app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
+    app = dash.Dash(__name__, external_stylesheets=external_stylesheets, external_scripts=external_scripts)
     server = app.server
     app.config.suppress_callback_exceptions = False
 
-    tab_selected_style = {
-        'backgroundColor': '#119DFF',
-        'color': 'white'
-    }
-
     indata = load(config['files']['input']).flatten()
     outdata = load(config['files']['output']).flatten()
-    # indata = pd.read_csv('input.txt', delim_whitespace=True, escapechar='#')
-    # indata.rename(columns=lambda x: x.strip(), inplace=True)
-    # outdata = pd.read_csv('output.txt', delim_whitespace=True, escapechar='#')
-    # outdata.rename(columns=lambda x: x.strip(), inplace=True)
 
     # data = pd.concat([indata, outdata], 1) # TODO: data in table
 
@@ -38,26 +31,29 @@ def init_app(config):
     dropdown_opts_out = [{'label': outvar, 'value': outvar} for outvar in outvars]
     dropdown_style = {'width': 500}
     axis_options_text_style = {'width':100}
+    axis_options_div_style = {'display': 'flex', 'align-items': 'baseline'}
+    fit_options_text_style = {'width': 150}
 
-    # np.array(list(zip(a.flatten(), b.flatten())))
-    x_vec = np.array([[4.5, 0.57], [4.6, 0.58]]) # np array
-    sur = Surrogate.load_model(config['fit']['save'])
-    fit_data = sur.predict(x_vec)
-    print(fit_data)
+    def colormap(cmin, cmax, c):
+        if cmin == cmax:
+            c_scal = 0.5
+        else:
+            c_scal = (c-cmin)/(cmax-cmin)
+        return color2hex(colormaps.viridis(c_scal))
 
     app.layout = html.Div(children=[
         html.Div(dcc.Graph(id='graph1')),
         html.Div(dcc.RadioItems(
             id='graph-type',
-            options=[{'label': i, 'value': i} for i in ['1D scatter',
-                                                        '2D scatter',
+            options=[{'label': i, 'value': i} for i in ['1D',
+                                                        '2D',
                                                         '2D contour']
                      ],
-            value='1D scatter',
+            value='1D',
             labelStyle={'display': 'inline-block'})),
         html.Table(children=[html.Tr(children=[
             html.Td(id='axis-options', style={'width': 650}, children=[
-                html.Div(id='invar-1-div', style={'display': 'flex', 'align-items': 'baseline'}, children=[
+                html.Div(id='invar-1-div', style=axis_options_div_style, children=[
                     html.B('x: ', style=axis_options_text_style),
                     dcc.Dropdown(
                         id='invar',
@@ -66,7 +62,7 @@ def init_app(config):
                         style=dropdown_style,
                     ),
                 ]),
-                html.Div(id='invar-2-div', style={'display': 'flex', 'align-items': 'baseline'}, children=[
+                html.Div(id='invar-2-div', style=axis_options_div_style, children=[
                     html.B('y: ', style=axis_options_text_style),
                     dcc.Dropdown(
                         id='invar_2',
@@ -75,7 +71,7 @@ def init_app(config):
                         style=dropdown_style,
                     ),
                 ]),
-                html.Div(id='outvar-div', style={'display': 'flex', 'align-items': 'baseline'}, children=[
+                html.Div(id='outvar-div', style=axis_options_div_style, children=[
                     html.B('output: ', style=axis_options_text_style),
                     dcc.Dropdown(
                         id='outvar',
@@ -84,8 +80,13 @@ def init_app(config):
                         style=dropdown_style,
                     ),
                 ]),
-                html.Div(id='color-div', style={'display': 'flex', 'align-items': 'baseline'}, children=[
-                    html.B("color: ", style=axis_options_text_style),
+                html.Div(id='color-div', style=axis_options_div_style, children=[
+                    html.B("color: ", style={'width': 50}),
+                    dcc.Checklist(
+                        id='color-use',
+                        options=[{'label': '', 'value': 'true'}],
+                        style={'width': 50},
+                    ),
                     dcc.Dropdown(
                         id='color-dropdown',
                         options=dropdown_opts_in,
@@ -93,32 +94,32 @@ def init_app(config):
                         style=dropdown_style,
                     ),
                 ]),
-                html.Div(id='color-use-div', style={'display': 'flex', 'align-items': 'baseline'}, children=[
-                    html.B("use color:", style=axis_options_text_style),
-                    dcc.RadioItems(
-                        id='color-use',
-                        value='false',
-                        options=[
-                            {'label': 'True', 'value': 'true'},
-                            {'label': 'False', 'value': 'false'}
-                        ],
-                        labelStyle={'display': 'inline-block'},
-                    ),
-                    html.I("(for scatter plot only)", style={'width': 150, 'text-align': 'right'})
-                ]),
             ]),
             html.Td(id='fit-options', style={'vertical-align': 'top'}, children=[
-                html.Div(id='fit-use-div', style={'display': 'flex', 'align-items': 'baseline'}, children=[
-                    html.B("use fit:", style=axis_options_text_style),
-                    dcc.RadioItems(
+                html.Div(id='fit-use-div', style=axis_options_div_style, children=[
+                    html.B("display fit:", style=fit_options_text_style),
+                    dcc.Checklist(
                         id='fit-use',
-                        value='false',
-                        options=[
-                            {'label': 'True', 'value': 'true'},
-                            {'label': 'False', 'value': 'false'}
-                        ],
+                        options=[{'label': '', 'value': 'show'}],
                         labelStyle={'display': 'inline-block'},
                     ),
+                ]),
+                html.Div(id='fit-multiinput-div', style=axis_options_div_style, children=[
+                    html.B("variable for multi-fit:", style=fit_options_text_style),
+                    dcc.Dropdown(
+                        id='fit-multiinput-dropdown',
+                        options=dropdown_opts_in,
+                        value=invars[1] if len(invars) > 1 else invars[0],
+                        style=dropdown_style,
+                    ),
+                ]),
+                html.Div(id='fit-number-div', style=axis_options_div_style, children=[
+                    html.B("number of fits:", style=fit_options_text_style),
+                    dcc.Input(id='fit-number', type='number', value=1),
+                ]),
+                html.Div(id='fit-conf-div', style=axis_options_div_style, children=[
+                    html.B("\u03c3-confidence:", style=fit_options_text_style),
+                    dcc.Input(id='fit-conf', type='number', value=2, min=0),
                 ]),
             ]),
         ])]),
@@ -349,10 +350,14 @@ def init_app(config):
          Input('color-use', 'value'),
          Input('color-dropdown', 'value'),
          Input({'type': 'param-active', 'index': ALL}, 'value'),
-         Input('fit-use', 'value')],
-        [State({'type': 'param-slider', 'index': ALL}, 'id'), ],
+         Input('fit-use', 'value'),
+         Input('fit-multiinput-dropdown', 'value'),
+         Input('fit-number', 'value'),
+         Input('fit-conf', 'value'), ],
+        [State({'type': 'param-slider', 'index': ALL}, 'id'),
+         State({'type': 'param-center', 'index': ALL}, 'value')],
     )
-    def update_figure(invar, invar_2, outvar, param_slider, graph_type, color_use, color_dd, filter_active, fit_use, id_type):
+    def update_figure(invar, invar_2, outvar, param_slider, graph_type, color_use, color_dd, filter_active, fit_use, fit_dd, fit_num, fit_conf, id_type, param_center):
         if invar is None:
             return go.Figure()
         sel_y = np.full((len(outdata),), True)
@@ -366,7 +371,7 @@ def init_app(config):
             if filter_active != [[]]:
                 if filter_active[iteration] == ['act']:
                     sel_y = sel_y_min & sel_y_max & sel_y
-        if graph_type == '1D scatter':
+        if graph_type == '1D':
             fig = go.Figure(
                 data=[go.Scatter(
                     x=indata[invar][sel_y],
@@ -375,55 +380,112 @@ def init_app(config):
                     name='data',
                 )],
             )
+            fig.update_layout(height=600)
             fig.update_xaxes(rangeslider=dict(visible=True), title=invar)
             fig.update_yaxes(dict(title=outvar))
-            if fit_use == 'true':
-                fit_params = [(max(indata[var_invar])+min(indata[var_invar]))/2 for var_invar in invars]
-                num_samples = 10
-                fit_params[invars.index(invar)] = np.linspace(min(indata[invar]), max(indata[invar]), num_samples)
-                grid = np.meshgrid(*fit_params)
-                # print('grid', grid, type(grid))
-                x_pred = np.vstack([g.flatten() for g in grid]).T # extract vector for predict
-                sur = Surrogate.load_model(config['fit']['save'])
-                fit_data, fit_var = sur.predict(x_pred)
-                # print('x', grid[invars.index(invar)], type(grid[invars.index(invar)]), grid[invars.index(invar)].shape)
-                # print('y', fit_data[:, outvars.index(outvar)], type(fit_data[:, outvars.index(outvar)]), fit_data[:, outvars.index(outvar)].shape)
-                fig.add_trace(go.Scatter(
-                    x=grid[invars.index(invar)].flatten(),
-                    y=fit_data[:, outvars.index(outvar)],
-                    mode='lines',
-                    name='fit'
-                ))
-        elif graph_type == '2D scatter':
+            print(fit_use)
+            if fit_use == ['show']:
+                try: # collecting min/max of slider in filter section
+                    fit_dd_min, fit_dd_max = param_slider[[i['index'] for i in id_type].index(invars.index(fit_dd))]
+                except ValueError:
+                    fit_dd_min = min(indata[fit_dd])
+                    fit_dd_max = max(indata[fit_dd])
+                if fit_num == 1:
+                    fit_dd_values = np.array([(fit_dd_max+fit_dd_min)/2])
+                else:
+                    fit_dd_values = np.linspace(fit_dd_min, fit_dd_max, fit_num)
+                for fit_dd_value in fit_dd_values:
+                    fit_params = [(max(indata[var_invar])+min(indata[var_invar]))/2 for var_invar in invars]
+                    for iteration, center_values in enumerate(param_center):
+                        ind = id_type[iteration]['index']
+                        fit_params[ind] = param_center[iteration]
+                    fit_params[invars.index(fit_dd)] = fit_dd_value
+                    num_samples = 20
+                    fit_params[invars.index(invar)] = np.linspace(min(indata[invar]), max(indata[invar]), num_samples)
+                    grid = np.meshgrid(*fit_params)
+                    x_pred = np.vstack([g.flatten() for g in grid]).T # extract vector for predict
+                    sur = Surrogate.load_model(config['fit']['save'])
+                    fit_data, fit_var = sur.predict(x_pred)
+                    # generated data
+                    in_data = grid[invars.index(invar)].flatten()
+                    out_data = fit_data[:, outvars.index(outvar)]
+                    out_std = np.sqrt(fit_var[:, outvars.index(outvar)])
+                    fig.add_trace(go.Scatter(
+                        x=grid[invars.index(invar)].flatten(),
+                        y=fit_data[:, outvars.index(outvar)],
+                        mode='lines',
+                        name=f'fit: {fit_dd}={fit_dd_value:.2f}',
+                        line_color=colormap(fit_dd_values[0], fit_dd_values[-1], fit_dd_value),
+                    ))
+                    fig.add_trace(go.Scatter(
+                        x=np.hstack((in_data, in_data[::-1])),
+                        y=np.hstack((out_data + fit_conf * out_std, out_data[::-1] - fit_conf * out_std[::-1])),
+                        showlegend=False,
+                        fill='toself',
+                        line_color=colormap(fit_dd_values[0], fit_dd_values[-1], fit_dd_value),
+                    ))
+        elif graph_type == '2D':
             fig = go.Figure(
                 data=[go.Scatter3d(
                     x=indata[invar][sel_y],
                     y=indata[invar_2][sel_y],
                     z=outdata[outvar][sel_y],
                     mode='markers',
+                    name='Data',
                 )],
                 layout=go.Layout(scene=dict(xaxis_title=invar, yaxis_title=invar_2, zaxis_title=outvar))
             )
             fig.update_layout(height=700)
-            if fit_use == 'true' and invar != invar_2:
-                fit_params = [(max(indata[var_invar])+min(indata[var_invar]))/2 for var_invar in invars]
-                num_samples = 10
-                fit_params[invars.index(invar)] = np.linspace(min(indata[invar]), max(indata[invar]), num_samples)
-                fit_params[invars.index(invar_2)] = np.linspace(min(indata[invar_2]), max(indata[invar_2]), num_samples)
-                grid = np.meshgrid(*fit_params)
-                # print('grid', grid, type(grid))
-                x_pred = np.vstack([g.flatten() for g in grid]).T # extract vector for predict
-                sur = Surrogate.load_model(config['fit']['save'])
-                fit_data, fit_var = sur.predict(x_pred)
-                # print('x', grid[invars.index(invar)], type(grid[invars.index(invar)]), grid[invars.index(invar)].shape)
-                # print('y', grid[invars.index(invar_2)], type(grid[invars.index(invar_2)]), grid[invars.index(invar_2)].shape)
-                # print('z', fit_data[:, outvars.index(outvar)], type(fit_data[:, outvars.index(outvar)]), fit_data[:, outvars.index(outvar)].shape)
-                fig.add_trace(go.Surface(
-                    x=grid[invars.index(invar)].flatten().reshape((num_samples, num_samples)),
-                    y=grid[invars.index(invar_2)].flatten().reshape((num_samples, num_samples)),
-                    z=fit_data[:, outvars.index(outvar)].reshape((num_samples, num_samples)),
-                    name='fit'
-                ))
+            if fit_use == ['show'] and invar != invar_2:
+                try: # collecting min/max of slider in filter section
+                    fit_dd_min, fit_dd_max = param_slider[[i['index'] for i in id_type].index(invars.index(fit_dd))]
+                except ValueError:
+                    fit_dd_min = min(indata[fit_dd])
+                    fit_dd_max = max(indata[fit_dd])
+                if fit_num == 1:
+                    fit_dd_values = np.array([(fit_dd_max+fit_dd_min)/2])
+                else:
+                    fit_dd_values = np.linspace(fit_dd_min, fit_dd_max, fit_num)
+                for fit_dd_value in fit_dd_values:
+                    fit_params = [(max(indata[var_invar])+min(indata[var_invar]))/2 for var_invar in invars]
+                    for iteration, center_values in enumerate(param_center):
+                        ind = id_type[iteration]['index']
+                        fit_params[ind] = param_center[iteration]
+                    fit_params[invars.index(fit_dd)] = fit_dd_value
+                    num_samples = 20
+                    fit_params[invars.index(invar)] = np.linspace(min(indata[invar]), max(indata[invar]), num_samples)
+                    fit_params[invars.index(invar_2)] = np.linspace(min(indata[invar_2]), max(indata[invar_2]), num_samples)
+                    grid = np.meshgrid(*fit_params)
+                    x_pred = np.vstack([g.flatten() for g in grid]).T # extract vector for predict
+                    sur = Surrogate.load_model(config['fit']['save'])
+                    fit_data, fit_var = sur.predict(x_pred)
+                    # generated data
+                    in_data = grid[invars.index(invar)].flatten().reshape((num_samples, num_samples))
+                    in2_data = grid[invars.index(invar_2)].flatten().reshape((num_samples, num_samples))
+                    out_data = fit_data[:, outvars.index(outvar)].reshape((num_samples, num_samples))
+                    out_std = np.sqrt(fit_var[:, outvars.index(outvar)].reshape((num_samples, num_samples)))
+                    fig.add_trace(go.Surface(
+                        x=in_data,
+                        y=in2_data,
+                        z=out_data,
+                        name=f'fit: {fit_dd}={fit_dd_value:.2f}',
+                    ))
+                    fig.add_trace(go.Surface(
+                        x=in_data,
+                        y=in2_data,
+                        z=out_data + fit_conf * out_std,
+                        showlegend=False,
+                        name=f'fit+var: {fit_dd}={fit_dd_value:.2f}',
+                        opacity=0.25,
+                    ))
+                    fig.add_trace(go.Surface(
+                        x=in_data,
+                        y=in2_data,
+                        z=out_data - fit_conf * out_std,
+                        showlegend=False,
+                        name=f'fit-var: {fit_dd}={fit_dd_value:.2f}',
+                        opacity=0.5,
+                    ))
         elif graph_type == '2D contour':
             fig = go.Figure(
                 data=go.Contour(
@@ -435,16 +497,8 @@ def init_app(config):
             fig.update_xaxes(title=invar)
             fig.update_yaxes(title=invar_2)
         else:
-            fig = go.Figure(
-                data=go.Surface(
-                    x=indata[invar][sel_y],
-                    y=indata[invar_2][sel_y],
-                    z=outdata[outvar][sel_y],
-                ),
-            )
-            fig.update_xaxes(title=invar)
-            fig.update_yaxes(title=invar_2)
-        if color_use == 'true': # TODO: trigger-detection no new fig just update
+            fig = go.Figure()
+        if color_use == ['true']: # TODO: trigger-detection no new fig just update
             fig.update_traces(
                 marker=dict(
                     color=indata[color_dd][sel_y],
@@ -476,7 +530,7 @@ def init_app(config):
     #     Input('graph-type', 'value')
     # )
     # def update_dropdown_visability(graph_type):
-    #     if graph_type == '1D scatter':
+    #     if graph_type == '1D':
     #         return {'visibility': 'hidden'}
     #     else:
     #         return {'visibility': 'visible'}
