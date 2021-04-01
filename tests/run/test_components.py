@@ -4,14 +4,23 @@ Testcases for run components
 """
 
 from profit.config import Config
+from pytest import fixture
 
-BASE_CONFIG = Config.from_file('numpy.yaml')
-MAX_IDS = BASE_CONFIG['ntrain']
+CONFIG_FILE = 'numpy.yaml'
 RUN_ID = 1
 VALUE_U = -1
 VALUE_V = 2
 VALUE_F = 3
 VALUE_T = 4
+
+
+@fixture(autouse=True)
+def chdir_pytest():
+    from os import getcwd, chdir, path
+    pytest_root_dir = getcwd()
+    chdir(path.dirname(path.abspath(__file__)))
+    yield
+    chdir(pytest_root_dir)
 
 
 def assert_wif(wif):
@@ -26,6 +35,9 @@ def assert_wif(wif):
 def test_memmap():
     from profit.run.default import MemmapInterface, MemmapRunnerInterface
     import os
+
+    BASE_CONFIG = Config.from_file('numpy.yaml')
+    MAX_IDS = BASE_CONFIG['ntrain']
     config = {'class': 'memmap'}
     try:
         MemmapRunnerInterface.handle_config(config, BASE_CONFIG)
@@ -50,6 +62,8 @@ def test_zeromq():
     from time import sleep
     from profit.run.zeromq import ZeroMQInterface, ZeroMQRunnerInterface
 
+    BASE_CONFIG = Config.from_file('numpy.yaml')
+    MAX_IDS = BASE_CONFIG['ntrain']
     config = {'class': 'zeromq'}
     ZeroMQRunnerInterface.handle_config(config, BASE_CONFIG)
 

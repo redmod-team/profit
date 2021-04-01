@@ -28,12 +28,13 @@ class SlurmRunner(Runner):
         super().spawn_run(params, wait)  # fill data with params
         env = self.env.copy()
         env['PROFIT_RUN_ID'] = str(self.next_run_id)
-        submit = subprocess.run(['sbatch', self.config['path'], '--parsable'],
+        submit = subprocess.run(['sbatch', '--parsable', self.config['path']],
                                 cwd=self.base_config['run_dir'], env=env, capture_output=True, text=True, check=True)
         job_id = submit.stdout.split(';')[0].strip()
         self.runs[self.next_run_id] = job_id
         if wait:
             self.wait_for(self.next_run_id)
+        self.next_run_id += 1
 
     def wait_for(self, run_id):
         poll_time = time()
@@ -56,10 +57,17 @@ class SlurmRunner(Runner):
                                   capture_output=True, text=True, check=True)
             lookup = {job: run for run, job in self.runs.items()}
             for line in acct.stdout.split('\n'):
+                if len(line) < 2:
+                    continue
                 job_id, state = line.split('|')[:2]
                 if job_id in lookup:
                     if not (state.startswith('RUNNING') or state.startswith('PENDING')):
                         del self.runs[lookup[job_id]]
+
+    def clean(self):
+        super().clean()
+        if not self.config['custom']:
+            os.remove(self.config['path'])
 
     @classmethod
     def handle_config(cls, config, base_config):
