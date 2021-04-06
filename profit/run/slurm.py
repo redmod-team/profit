@@ -11,6 +11,7 @@ from .runner import Runner
 import subprocess
 from time import sleep, time
 import os
+from tqdm import tqdm
 
 
 @Runner.register('slurm')
@@ -43,18 +44,18 @@ class SlurmRunner(Runner):
         self.next_run_id += 1
 
     def spawn_array(self, params_array, blocking=True):
-        self.logger.info(f'schedule array {self.next_run_id} - {self.next_run_id + len(params_array)} via slurm')
+        self.logger.info(f'schedule array {self.next_run_id} - {self.next_run_id + len(params_array) - 1} via slurm')
         self.fill(params_array, offset=self.next_run_id)
         env = self.env.copy()
         env['PROFIT_RUN_ID'] = str(self.next_run_id)
-        submit = subprocess.run(['sbatch', '--parsable', f'--array=0-{len(params_array)}%{self.config["parallel"]}',
+        submit = subprocess.run(['sbatch', '--parsable', f'--array=0-{len(params_array) - 1}%{self.config["parallel"]}',
                                  self.config['path']],
                                 cwd=self.base_config['run_dir'], env=env, capture_output=True, text=True, check=True)
         job_id = submit.stdout.split(';')[0].strip()
         for i in range(len(params_array)):
             self.runs[self.next_run_id + i] = f'{job_id}_{i}'
         if blocking:
-            for i in range(len(params_array)):
+            for i in tqdm(range(len(params_array))):
                 self.wait_for(self.next_run_id + i)
         self.next_run_id += len(params_array)
 

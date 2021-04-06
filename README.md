@@ -40,12 +40,23 @@ Currently the code is under heavy development so it should be cloned
 from GitHub via Git and pulled regularily. 
 
 ### Dependencies
-* PyYAML
-* ChaosPy
-* GPFlow 2.0
-* pyccel
+* numpy, scipy, matplotlib, sympy, pandas
+* [ChaosPy](https://github.com/jonathf/chaospy)
+* GPy
+* scikit-learn
+* h5py
+* [plotly/dash](https://github.com/plotly/dash) - for the UI
+* [ZeroMQ](https://github.com/zeromq/pyzmq) - for messaging
+* sphinx - for documentation, only needed when `docs` is specified
+* torch, GPyTorch - only needed when `gpu` is specified
 
-All dependencies should be installed automatically when using `pip`.
+All dependencies are configured in `setup.cfg` and should be installed automatically when using `pip`.
+
+Automatic tests use `pytest`.
+
+### Windows
+To install proFit under Windows it is recommended to use the *Windows Subsystem for Linux (WSL2)* (see `INSTALL.md` 
+for an example).
 
 ### Installation from Git
 To install proFit for the current user (`--user`) in development-mode (`-e`) use:
@@ -56,14 +67,15 @@ cd profit
 pip install -e . --user
 ```
 
-### Options
-* Enable compilation of the fortran modules
+### Fortran
+Certain surrogates require a compiled fortran backend. To enable compilation of the fortran modules during install:
 
-        USE_FORTRAN=1 pip install .
+    USE_FORTRAN=1 pip install .
 
-* Install requirements for building the documentation using `sphinx`
+### Documentation using *Sphinx*
+Install requirements for building the documentation using `sphinx`
 
-        pip install .[docs]        
+    pip install .[docs] 
 
 ## HowTo
 
@@ -72,45 +84,50 @@ Examples for different model codes are available under `examples/`:
 * `mockup`: Simple model called by console command based on template directory.
 
 
-1. Create and enter a directory `study` containing `profit.yaml` for your run.
-   If your code is based on text configuration files for each run, copy the according directory to `template` and replace values of parameters to be varied within UQ/surrogate models by placeholders `{param}`.
-   
-2. Preprocessing:  
-   ```
-   profit pre
-   ```
-   to generate points where model is evaluated, and possibly run directories based on `template`.
-   Evaluation points are stored inside `input.txt`
+1. Create and enter a directory (e.g. `study`) containing `profit.yaml` for your run.
+    If your code is based on text configuration files for each run, copy the according directory to `template` and 
+    replace values of parameters to be varied within UQ/surrogate models by placeholders `{param}`.
   
-3. Running model: 
-   ```
+2. Running the simulations: 
+   ```bash
    profit run
    ```
-   to start simulations at all the points. If `run.backend` is of type `PythonFunction`, results
-   of model runs are stored in `output.txt` already here. Otherwise output is stored in model code-specific format.
-  
-4. Collect results: 
-   ```
-   profit collect
-   ```
-   to collect output from the runs into `output.txt`.
+   to start simulations at all the points. Per default the generated input variables are written to `input.txt` and the 
+   output data is collected in `output.txt`.
    
+   For each run of the simulation, proFit creates a run directory, fills the templates with the generated input data and
+   collects the results. Each step can be customized with the 
+   [configuration file](https://profit.readthedocs.io/en/latest/config.html).
 
-5. Explore data graphically: 
+3. To fit the model:
+   ```bash
+   profit fit
    ```
+   Customization can be done with `profit.yaml` again.
+   
+4. Explore data graphically: 
+   ```bash
    profit ui
    ```
    starts a Dash-based browser UI
 
-Fitting and UQ routines are currently being refactored and available via the Python API.
+### Cluster
+proFit supports scheduling the runs on a cluster using *slurm*. This is done entirely via the configuration files and
+the usage doesn't change.
+
+`profit ui` starts a *dash* server and it is possible to remotely connect to it (e.g. via *ssh port forwarding*)
   
 ## User-supplied files
 
-* `profit.yaml`
-  * Add parameters and their distributions via `input`
-  * Specify names of outputs in `output`
-  * Set `run.backend` to a class available inside `profit.run`
+* a [configuration file](https://profit.readthedocs.io/en/latest/config.html): (default: `profit.yaml`)
+  * Add parameters and their distributions via `variables`
+  * Set paths and filenames
+  * Configure the run backend (how to interact with the simulation)
+  * Configure the fit / surrogate model
   
-* `interface.py`
-  * `get_output()` should return model output as a numpy array in the order and shape specified in `profit.yaml`.
-    The current path is the respective run directory. Can be skipped if `run.backend` is of type `PythonFunction`.
+* the `template` directory
+  * containing everything a simulation run needs (scripts, links to executables, input files, etc)
+  * input files use a template format where `{variable_name}` is substituted with the generated values
+
+* a custom *Postprocessor* (optional)
+  * if the default postprocessors don't work with the simulation a custom one can be specified

@@ -1,3 +1,4 @@
+# same as profit.yaml but using the SlurmRunner
 ntrain: 30
 variables:
     u: Uniform(4.7, 5.3)
@@ -6,13 +7,12 @@ variables:
     f: Output
 run:
     runner:
-        class: local
-        parallel: 4
-        sleep: 0
+        class: slurm
+        parallel: 10
     interface:
         class: zeromq
         bind: tcp://*:9000
-        connect: tcp://localhost:9000
+        connect: tcp://acluster:9000
     post:
         class: numpytxt
         path: mockup.out
