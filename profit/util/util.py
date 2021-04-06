@@ -210,7 +210,9 @@ def spread_struct_horizontal(struct_array: np.ndarray, variable_config: Mapping)
 
 def flatten_struct(struct_array: np.ndarray):
     # per default vector entries are spread across several columns
-    return np.array([[row[key].flatten() for key in struct_array.dtype.names] for row in struct_array])
+    if not struct_array.size:
+        return np.array([[]])
+    return np.vstack([np.hstack([row[key].flatten() for key in struct_array.dtype.names]) for row in struct_array])
 
 
 def load_includes(paths):

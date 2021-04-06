@@ -15,7 +15,7 @@ def f(u):
 
 class MockupWorker(Worker):
     def main(self):
-        self.data['f'] = f(self.data['u'])
+        self.interface.output['f'] = f(self.interface.input['u'])
         self.interface.done()
 
 

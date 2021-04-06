@@ -5,6 +5,7 @@ Goal: a class to manage and deploy runs
 """
 
 import os
+import shutil
 import logging
 from abc import ABC, abstractmethod  # Abstract Base Class
 from collections.abc import MutableMapping
@@ -113,6 +114,10 @@ class Runner(ABC):
 
     def clean(self):
         self.interface.clean()
+        try:
+            shutil.rmtree(os.path.join(self.base_config['run_dir'], 'log'))
+        except FileNotFoundError:
+            pass
 
     @property
     def input_data(self):
