@@ -46,7 +46,8 @@ def init_app(config):
             id='graph-type',
             options=[{'label': i, 'value': i} for i in ['1D',
                                                         '2D',
-                                                        '2D contour']
+                                                        '2D contour',
+                                                        '3D isosurface']
                      ],
             value='1D',
             labelStyle={'display': 'inline-block'})),
@@ -70,6 +71,15 @@ def init_app(config):
                         style=dropdown_style,
                     ),
                 ]),
+                html.Div(id='invar-3-div', style=axis_options_div_style, children=[
+                    html.B('z: ', style=axis_options_text_style),
+                    dcc.Dropdown(
+                        id='invar_3',
+                        options=dropdown_opts_in,
+                        value=invars[2] if len(invars) > 2 else invars[0],
+                        style=dropdown_style,
+                    ),
+                ]),
                 html.Div(id='outvar-div', style=axis_options_div_style, children=[
                     html.B('output: ', style=axis_options_text_style),
                     dcc.Dropdown(
@@ -88,7 +98,7 @@ def init_app(config):
                     ),
                     dcc.Dropdown(
                         id='color-dropdown',
-                        options=dropdown_opts_in,
+                        options=dropdown_opts_in + dropdown_opts_out,
                         value=invars[2] if len(invars) > 2 else invars[0],
                         style=dropdown_style,
                     ),
@@ -325,9 +335,29 @@ def init_app(config):
 
 
     @app.callback(
+        [Output('invar-3-div', 'style'),
+         Output('color-div', 'style'),
+         Output('fit-multiinput-div', 'style'),
+         Output('fit-conf-div', 'style'), ],
+        Input('graph-type', 'value')
+    )
+    def div_visibility(graph_type):
+        hidden_div_style = axis_options_div_style.copy()
+        show_div_style = axis_options_div_style.copy()
+        if graph_type == '3D isosurface':
+            hidden_div_style['visibility'] = 'hidden'
+            show_div_style['visibility'] = 'visible'
+        else:
+            hidden_div_style['visibility'] = 'visible'
+            show_div_style['visibility'] = 'hidden'
+        return show_div_style, hidden_div_style, hidden_div_style, hidden_div_style
+
+
+    @app.callback(
         Output('graph1', 'figure'),
         [Input('invar', 'value'),
          Input('invar_2', 'value'),
+         Input('invar_3', 'value'),
          Input('outvar', 'value'),
          Input({'type': 'param-slider', 'index': ALL}, 'value'),
          Input('graph-type', 'value'),
@@ -341,7 +371,7 @@ def init_app(config):
         [State({'type': 'param-slider', 'index': ALL}, 'id'),
          State({'type': 'param-center', 'index': ALL}, 'value')],
     )
-    def update_figure(invar, invar_2, outvar, param_slider, graph_type, color_use, color_dd, filter_active, fit_use, fit_dd, fit_num, fit_conf, id_type, param_center):
+    def update_figure(invar, invar_2, invar_3, outvar, param_slider, graph_type, color_use, color_dd, filter_active, fit_use, fit_dd, fit_num, fit_conf, id_type, param_center):
         if invar is None:
             return go.Figure()
         sel_y = np.full((len(outdata),), True)
@@ -391,9 +421,9 @@ def init_app(config):
                     sur = Surrogate.load_model(config['fit']['save'])
                     fit_data, fit_var = sur.predict(x_pred)
                     # generated data
-                    in_data = grid[invars.index(invar)].flatten()
-                    out_data = fit_data[:, outvars.index(outvar)]
-                    out_std = np.sqrt(fit_var[:, outvars.index(outvar)])
+                    mesh_in1 = grid[invars.index(invar)].flatten()
+                    mesh_out = fit_data[:, outvars.index(outvar)]
+                    mesh_out_std = np.sqrt(fit_var[:, outvars.index(outvar)])
                     fig.add_trace(go.Scatter(
                         x=grid[invars.index(invar)].flatten(),
                         y=fit_data[:, outvars.index(outvar)],
@@ -402,8 +432,8 @@ def init_app(config):
                         line_color=colormap(fit_dd_values[0], fit_dd_values[-1], fit_dd_value),
                     ))
                     fig.add_trace(go.Scatter(
-                        x=np.hstack((in_data, in_data[::-1])),
-                        y=np.hstack((out_data + fit_conf * out_std, out_data[::-1] - fit_conf * out_std[::-1])),
+                        x=np.hstack((mesh_in1, mesh_in1[::-1])),
+                        y=np.hstack((mesh_out + fit_conf * mesh_out_std, mesh_out[::-1] - fit_conf * mesh_out_std[::-1])),
                         showlegend=False,
                         fill='toself',
                         line_color=colormap(fit_dd_values[0], fit_dd_values[-1], fit_dd_value),
@@ -444,28 +474,28 @@ def init_app(config):
                     sur = Surrogate.load_model(config['fit']['save'])
                     fit_data, fit_var = sur.predict(x_pred)
                     # generated data
-                    in_data = grid[invars.index(invar)].flatten().reshape((num_samples, num_samples))
-                    in2_data = grid[invars.index(invar_2)].flatten().reshape((num_samples, num_samples))
-                    out_data = fit_data[:, outvars.index(outvar)].reshape((num_samples, num_samples))
-                    out_std = np.sqrt(fit_var[:, outvars.index(outvar)].reshape((num_samples, num_samples)))
+                    mesh_in1 = grid[invars.index(invar)].flatten().reshape((num_samples, num_samples))
+                    mesh_in2 = grid[invars.index(invar_2)].flatten().reshape((num_samples, num_samples))
+                    mesh_out = fit_data[:, outvars.index(outvar)].reshape((num_samples, num_samples))
+                    mesh_out_std = np.sqrt(fit_var[:, outvars.index(outvar)].reshape((num_samples, num_samples)))
                     fig.add_trace(go.Surface(
-                        x=in_data,
-                        y=in2_data,
-                        z=out_data,
+                        x=mesh_in1,
+                        y=mesh_in2,
+                        z=mesh_out,
                         name=f'fit: {fit_dd}={fit_dd_value:.2f}',
                     ))
                     fig.add_trace(go.Surface(
-                        x=in_data,
-                        y=in2_data,
-                        z=out_data + fit_conf * out_std,
+                        x=mesh_in1,
+                        y=mesh_in2,
+                        z=mesh_out + fit_conf * mesh_out_std,
                         showlegend=False,
                         name=f'fit+var: {fit_dd}={fit_dd_value:.2f}',
                         opacity=0.25,
                     ))
                     fig.add_trace(go.Surface(
-                        x=in_data,
-                        y=in2_data,
-                        z=out_data - fit_conf * out_std,
+                        x=mesh_in1,
+                        y=mesh_in2,
+                        z=mesh_out - fit_conf * mesh_out_std,
                         showlegend=False,
                         name=f'fit-var: {fit_dd}={fit_dd_value:.2f}',
                         opacity=0.5,
@@ -480,13 +510,72 @@ def init_app(config):
             )
             fig.update_xaxes(title=invar)
             fig.update_yaxes(title=invar_2)
+        elif graph_type == '3D isosurface':
+            fig = go.Figure(
+                data=go.Scatter3d(
+                    x=indata[invar][sel_y],
+                    y=indata[invar_2][sel_y],
+                    z=indata[invar_3][sel_y],
+                    mode='markers',
+                    marker=dict(
+                            color=outdata[outvar][sel_y],
+                            coloraxis="coloraxis",
+                        ),
+                ),
+                layout=go.Layout(scene=dict(xaxis_title=invar, yaxis_title=invar_2, zaxis_title=invar_3)),
+            )
+            if fit_use == ['show'] and len({invar, invar_2, invar_3}) == 3:
+                try: # collecting min/max of slider in filter section
+                    fit_dd_min, fit_dd_max = param_slider[[i['index'] for i in id_type].index(invars.index(fit_dd))]
+                except ValueError:
+                    fit_dd_min = min(indata[fit_dd])
+                    fit_dd_max = max(indata[fit_dd])
+                if fit_num == 1:
+                    fit_dd_values = np.array([(fit_dd_max+fit_dd_min)/2])
+                else:
+                    fit_dd_values = np.linspace(fit_dd_min, fit_dd_max, fit_num)
+                for fit_dd_value in fit_dd_values:
+                    fit_params = [(max(indata[var_invar])+min(indata[var_invar]))/2 for var_invar in invars]
+                    for iteration, center_values in enumerate(param_center):
+                        ind = id_type[iteration]['index']
+                        fit_params[ind] = param_center[iteration]
+                    fit_params[invars.index(fit_dd)] = fit_dd_value
+                    num_samples = 20
+                    fit_params[invars.index(invar)] = np.linspace(min(indata[invar]), max(indata[invar]), num_samples)
+                    fit_params[invars.index(invar_2)] = np.linspace(min(indata[invar_2]), max(indata[invar_2]), num_samples)
+                    fit_params[invars.index(invar_3)] = np.linspace(min(indata[invar_3]), max(indata[invar_3]),
+                                                                    num_samples)
+                    grid = np.meshgrid(*fit_params)
+                    print(grid, type(grid))
+                    x_pred = np.vstack([g.flatten() for g in grid]).T # extract vector for predict
+                    sur = Surrogate.load_model(config['fit']['save'])
+                    fit_data, fit_var = sur.predict(x_pred)
+                    # generated data
+                    mesh_in1 = grid[invars.index(invar)].flatten()
+                    mesh_in2 = grid[invars.index(invar_2)].flatten()
+                    mesh_in3 = grid[invars.index(invar_3)].flatten()
+                    mesh_out = fit_data[:, outvars.index(outvar)].flatten()
+                    fig.add_trace(
+                        go.Isosurface(
+                            x=mesh_in1, # [0, 0, 0, 0, 1, 1, 1, 1],
+                            y=mesh_in2, # [1, 0, 1, 0, 1, 0, 1, 0],
+                            z=mesh_in3, # [1, 1, 0, 0, 1, 1, 0, 0],
+                            value=mesh_out, # [1, 2, 3, 4, 5, 6, 7, 8],
+                            surface_count=fit_num,
+                            coloraxis="coloraxis",
+                            isomin=mesh_out.min() * 1.1,
+                            isomax=mesh_out.max() * 0.9,
+                            caps=dict(x_show=False, y_show=False, z_show=False),
+                        ),
+                    )
         else:
+            print(graph_type)
             fig = go.Figure()
         if color_use == ['true']: # TODO: trigger-detection no new fig just update
             fig.update_traces(
                 marker=dict(
-                    color=indata[color_dd][sel_y],
-                    colorscale='Viridis',
+                    color=indata[color_dd][sel_y] if color_dd in indata.dtype.names else outdata[color_dd][sel_y],
+                    colorscale='viridis',
                     colorbar=dict(thickness=20, title=color_dd),
                 ),
                 selector=dict(mode='markers'),
