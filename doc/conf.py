@@ -47,7 +47,8 @@ extensions = [
     'sphinx.ext.mathjax',
     'sphinx.ext.ifconfig',
     'sphinx.ext.viewcode',
-    'sphinx.ext.githubpages'
+    'sphinx.ext.githubpages',
+    'sphinx.ext.napoleon'
 ]
 
 # Custom variables
@@ -125,7 +126,7 @@ html_static_path = ['_static']
 # -- Options for HTMLHelp output ---------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'SurUQdoc'
+htmlhelp_basename = 'profitdoc'
 
 
 # -- Options for LaTeX output ------------------------------------------------
