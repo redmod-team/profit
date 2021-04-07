@@ -21,6 +21,15 @@ profit.sur.sur module
    :show-inheritance:
 
 
+profit.sur.linear_reduction module
+---------------------
+
+.. automodule:: profit.sur.linear_reduction
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
 Module contents
 ---------------
 
