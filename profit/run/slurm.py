@@ -11,7 +11,7 @@ from .runner import Runner
 import subprocess
 from time import sleep, time
 import os
-from tqdm import tqdm
+from tqdm import trange
 
 
 @Runner.register('slurm')
@@ -55,14 +55,15 @@ class SlurmRunner(Runner):
         for i in range(len(params_array)):
             self.runs[self.next_run_id + i] = f'{job_id}_{i}'
         if blocking:
-            for i in tqdm(range(len(params_array))):
-                self.wait_for(self.next_run_id + i)
+            self.wait_for_all([self.next_run_id + i for i in range(len(params_array))])
         self.next_run_id += len(params_array)
 
-    def wait_for(self, run_id: int):
-        """wait until the specified run has completed"""
+    def wait_for_all(self, run_ids, show_tqdm=False):
+        """wait until all specified runs have completed"""
         poll_time = time()
-        while run_id in self.runs:
+        if show_tqdm:
+            progress = trange(len(run_ids))
+        while len([i for i in run_ids if i in self.runs]):
             self.check_runs()
             sleep(self.config['sleep'])
             # poll the scheduler after a longer period
@@ -70,6 +71,12 @@ class SlurmRunner(Runner):
                 self.check_runs(poll=True)
                 poll_time = time()
                 sleep(self.config['sleep'])
+            if show_tqdm:
+                progress.update(progress.n - (len(run_ids) - len([i for i in run_ids if i in self.runs])))
+
+    def wait_for(self, run_id: int):
+        """wait until the specified run has completed"""
+        self.wait_for_all([run_id])
 
     def check_runs(self, poll: bool = False):
         """check the status of runs via the interface, poll only when specified"""
@@ -156,7 +163,7 @@ class SlurmRunner(Runner):
 
 #SBATCH --job-name={self.config['job_name']}"""
 
-        if self.config['cpus'] is 'all':
+        if self.config['cpus'] == 'all':
             text += """
 #SBATCH --nodes=1
 #SBATCH --exclusive"""
