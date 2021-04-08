@@ -2,7 +2,6 @@ from . import runner
 from . import worker
 
 from . import default
-from . import test
 from . import zeromq
 from . import slurm
 
