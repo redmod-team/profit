@@ -123,6 +123,8 @@ class SlurmRunner(Runner):
         path: slurm.bash    # the path to the generated batch script (relative to the base directory)
         custom: false       # whether a custom batch script is already provided at 'path'
         job_name: profit    # the name of the submitted jobs
+        OpenMP: false       # whether to set OMP_NUM_THREADS and OMP_PLACES
+        cpus: 1             # number of cpus (including hardware threads) to use (may specify 'all')
         """
         if 'parallel' not in config:
             config['parallel'] = 1
@@ -139,6 +141,12 @@ class SlurmRunner(Runner):
             config['custom'] = False
         if 'job_name' not in config:
             config['job_name'] = 'profit'
+        if 'cpus' not in config:
+            config['cpus'] = 1
+        if 'OpenMP' not in config:
+            config['OpenMP'] = False
+        if (type(config['cpus']) is not int or config['cpus'] < 1) and config['cpus'] != 'all':
+            raise ValueError(f'config option "cpus" may only be a positive integer or "all" and not {config["cpus"]}')
 
     def generate_script(self):
         text = f"""\
@@ -146,8 +154,23 @@ class SlurmRunner(Runner):
 # automatically generated SLURM batch script for running simulations with proFit
 # see https://github.com/redmod-team/profit
 
-#SBATCH --job-name={self.config['job_name']}
+#SBATCH --job-name={self.config['job_name']}"""
 
+        if self.config['cpus'] is 'all':
+            text += """
+#SBATCH --nodes=1
+#SBATCH --exclusive"""
+        elif self.config['cpus'] > 1:
+            text += f"""
+#SBATCH --nodes=1
+#SBATCH --cpus-per-task={self.config['cpus']}"""
+
+        if self.config['OpenMP']:
+            text += """
+export OMP_NUM_THREADS=$SLURM_CPUS_ON_NODE
+export OMP_PLACES=threads"""
+
+        text += f"""
 if [[ -n $SLURM_ARRAY_TASK_ID ]]; then
     export PROFIT_ARRAY_ID=$SLURM_ARRAY_TASK_ID
 fi

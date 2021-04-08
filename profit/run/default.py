@@ -231,7 +231,8 @@ class NumpytxtPostprocessor(Postprocessor):
             self.logger.info(f'ls {dirname} = {os.listdir(dirname)}')
             raise
         for k, key in enumerate(self.config['names'].split()):
-            data[key] = raw[k] if len(raw.shape) else raw
+            if key in data.dtype.names:
+                data[key] = raw[k] if len(raw.shape) else raw
 
     @classmethod
     def handle_config(cls, config, base_config):
