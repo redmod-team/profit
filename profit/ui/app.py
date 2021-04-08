@@ -30,6 +30,7 @@ def init_app(config):
     dropdown_opts_out = [{'label': outvar, 'value': outvar} for outvar in outvars]
     dropdown_style = {'width': 500}
     axis_options_text_style = {'width':100}
+    axis_options_log_style = {'width': 50}
     axis_options_div_style = {'display': 'flex', 'align-items': 'baseline'}
     fit_options_text_style = {'width': 150}
 
@@ -47,7 +48,7 @@ def init_app(config):
             options=[{'label': i, 'value': i} for i in ['1D',
                                                         '2D',
                                                         '2D contour',
-                                                        '3D isosurface']
+                                                        '3D']
                      ],
             value='1D',
             labelStyle={'display': 'inline-block'})),
@@ -61,6 +62,11 @@ def init_app(config):
                         value=invars[0],
                         style=dropdown_style,
                     ),
+                    dcc.Checklist(
+                        id='invar-1-log',
+                        options=[{'label': 'log', 'value': 'log'}],
+                        style=axis_options_log_style,
+                    ),
                 ]),
                 html.Div(id='invar-2-div', style=axis_options_div_style, children=[
                     html.B('y: ', style=axis_options_text_style),
@@ -69,6 +75,11 @@ def init_app(config):
                         options=dropdown_opts_in,
                         value=invars[1] if len(invars) > 1 else invars[0],
                         style=dropdown_style,
+                    ),
+                    dcc.Checklist(
+                        id='invar-2-log',
+                        options=[{'label': 'log', 'value': 'log'}],
+                        style=axis_options_log_style,
                     ),
                 ]),
                 html.Div(id='invar-3-div', style=axis_options_div_style, children=[
@@ -79,6 +90,11 @@ def init_app(config):
                         value=invars[2] if len(invars) > 2 else invars[0],
                         style=dropdown_style,
                     ),
+                    dcc.Checklist(
+                        id='invar-3-log',
+                        options=[{'label': 'log', 'value': 'log'}],
+                        style=axis_options_log_style,
+                    ),
                 ]),
                 html.Div(id='outvar-div', style=axis_options_div_style, children=[
                     html.B('output: ', style=axis_options_text_style),
@@ -87,6 +103,11 @@ def init_app(config):
                         options=dropdown_opts_out,
                         value=outvars[0],
                         style=dropdown_style,
+                    ),
+                    dcc.Checklist(
+                        id='outvar-log',
+                        options=[{'label': 'log', 'value': 'log'}],
+                        style=axis_options_log_style,
                     ),
                 ]),
                 html.Div(id='color-div', style=axis_options_div_style, children=[
@@ -344,7 +365,7 @@ def init_app(config):
     def div_visibility(graph_type):
         hidden_div_style = axis_options_div_style.copy()
         show_div_style = axis_options_div_style.copy()
-        if graph_type == '3D isosurface':
+        if graph_type == '3D':
             hidden_div_style['visibility'] = 'hidden'
             show_div_style['visibility'] = 'visible'
         else:
@@ -359,6 +380,10 @@ def init_app(config):
          Input('invar_2', 'value'),
          Input('invar_3', 'value'),
          Input('outvar', 'value'),
+         Input('invar-1-log', 'value'),
+         Input('invar-2-log', 'value'),
+         Input('invar-3-log', 'value'),
+         Input('outvar-log', 'value'),
          Input({'type': 'param-slider', 'index': ALL}, 'value'),
          Input('graph-type', 'value'),
          Input('color-use', 'value'),
@@ -371,7 +396,7 @@ def init_app(config):
         [State({'type': 'param-slider', 'index': ALL}, 'id'),
          State({'type': 'param-center', 'index': ALL}, 'value')],
     )
-    def update_figure(invar, invar_2, invar_3, outvar, param_slider, graph_type, color_use, color_dd, filter_active, fit_use, fit_dd, fit_num, fit_conf, id_type, param_center):
+    def update_figure(invar, invar_2, invar_3, outvar, invar1_log, invar2_log, invar3_log, outvar_log, param_slider, graph_type, color_use, color_dd, filter_active, fit_use, fit_dd, fit_num, fit_conf, id_type, param_center):
         if invar is None:
             return go.Figure()
         sel_y = np.full((len(outdata),), True)
@@ -393,50 +418,26 @@ def init_app(config):
                     mode='markers',
                     name='data',
                 )],
+                layout=go.Layout(height=600, xaxis=dict(title=invar, rangeslider=dict(visible=True)), yaxis=dict(title=outvar))
             )
-            fig.update_layout(height=600)
-            fig.update_xaxes(rangeslider=dict(visible=True), title=invar)
-            fig.update_yaxes(dict(title=outvar))
-            print(fit_use)
             if fit_use == ['show']:
-                try: # collecting min/max of slider in filter section
-                    fit_dd_min, fit_dd_max = param_slider[[i['index'] for i in id_type].index(invars.index(fit_dd))]
-                except ValueError:
-                    fit_dd_min = min(indata[fit_dd])
-                    fit_dd_max = max(indata[fit_dd])
-                if fit_num == 1:
-                    fit_dd_values = np.array([(fit_dd_max+fit_dd_min)/2])
-                else:
-                    fit_dd_values = np.linspace(fit_dd_min, fit_dd_max, fit_num)
-                for fit_dd_value in fit_dd_values:
-                    fit_params = [(max(indata[var_invar])+min(indata[var_invar]))/2 for var_invar in invars]
-                    for iteration, center_values in enumerate(param_center):
-                        ind = id_type[iteration]['index']
-                        fit_params[ind] = param_center[iteration]
-                    fit_params[invars.index(fit_dd)] = fit_dd_value
-                    num_samples = 20
-                    fit_params[invars.index(invar)] = np.linspace(min(indata[invar]), max(indata[invar]), num_samples)
-                    grid = np.meshgrid(*fit_params)
-                    x_pred = np.vstack([g.flatten() for g in grid]).T # extract vector for predict
-                    sur = Surrogate.load_model(config['fit']['save'])
-                    fit_data, fit_var = sur.predict(x_pred)
-                    # generated data
-                    mesh_in1 = grid[invars.index(invar)].flatten()
-                    mesh_out = fit_data[:, outvars.index(outvar)]
-                    mesh_out_std = np.sqrt(fit_var[:, outvars.index(outvar)])
+                num_samples = 20
+                mesh_in, mesh_out, mesh_out_std, fit_dd_values = mesh_fit(param_slider, id_type, fit_dd, fit_num,
+                                                                          param_center, [invar], outvar, num_samples)
+                for i in range(len(fit_dd_values)):
                     fig.add_trace(go.Scatter(
-                        x=grid[invars.index(invar)].flatten(),
-                        y=fit_data[:, outvars.index(outvar)],
+                        x=mesh_in[i][0],
+                        y=mesh_out[i],
                         mode='lines',
-                        name=f'fit: {fit_dd}={fit_dd_value:.2f}',
-                        line_color=colormap(fit_dd_values[0], fit_dd_values[-1], fit_dd_value),
+                        name=f'fit: {fit_dd}={fit_dd_values[i]:.2f}',
+                        line_color=colormap(fit_dd_values[0], fit_dd_values[-1], fit_dd_values[i]),
                     ))
                     fig.add_trace(go.Scatter(
-                        x=np.hstack((mesh_in1, mesh_in1[::-1])),
-                        y=np.hstack((mesh_out + fit_conf * mesh_out_std, mesh_out[::-1] - fit_conf * mesh_out_std[::-1])),
+                        x=np.hstack((mesh_in[i][0], mesh_in[i][0][::-1])),
+                        y=np.hstack((mesh_out[i] + fit_conf * mesh_out_std[i], mesh_out[i][::-1] - fit_conf * mesh_out_std[i][::-1])),
                         showlegend=False,
                         fill='toself',
-                        line_color=colormap(fit_dd_values[0], fit_dd_values[-1], fit_dd_value),
+                        line_color=colormap(fit_dd_values[0], fit_dd_values[-1], fit_dd_values[i]),
                     ))
         elif graph_type == '2D':
             fig = go.Figure(
@@ -451,55 +452,37 @@ def init_app(config):
             )
             fig.update_layout(height=700)
             if fit_use == ['show'] and invar != invar_2:
-                try: # collecting min/max of slider in filter section
-                    fit_dd_min, fit_dd_max = param_slider[[i['index'] for i in id_type].index(invars.index(fit_dd))]
-                except ValueError:
-                    fit_dd_min = min(indata[fit_dd])
-                    fit_dd_max = max(indata[fit_dd])
-                if fit_num == 1:
-                    fit_dd_values = np.array([(fit_dd_max+fit_dd_min)/2])
-                else:
-                    fit_dd_values = np.linspace(fit_dd_min, fit_dd_max, fit_num)
-                for fit_dd_value in fit_dd_values:
-                    fit_params = [(max(indata[var_invar])+min(indata[var_invar]))/2 for var_invar in invars]
-                    for iteration, center_values in enumerate(param_center):
-                        ind = id_type[iteration]['index']
-                        fit_params[ind] = param_center[iteration]
-                    fit_params[invars.index(fit_dd)] = fit_dd_value
-                    num_samples = 20
-                    fit_params[invars.index(invar)] = np.linspace(min(indata[invar]), max(indata[invar]), num_samples)
-                    fit_params[invars.index(invar_2)] = np.linspace(min(indata[invar_2]), max(indata[invar_2]), num_samples)
-                    grid = np.meshgrid(*fit_params)
-                    x_pred = np.vstack([g.flatten() for g in grid]).T # extract vector for predict
-                    sur = Surrogate.load_model(config['fit']['save'])
-                    fit_data, fit_var = sur.predict(x_pred)
-                    # generated data
-                    mesh_in1 = grid[invars.index(invar)].flatten().reshape((num_samples, num_samples))
-                    mesh_in2 = grid[invars.index(invar_2)].flatten().reshape((num_samples, num_samples))
-                    mesh_out = fit_data[:, outvars.index(outvar)].reshape((num_samples, num_samples))
-                    mesh_out_std = np.sqrt(fit_var[:, outvars.index(outvar)].reshape((num_samples, num_samples)))
+                num_samples = 20
+                mesh_in, mesh_out, mesh_out_std, fit_dd_values = mesh_fit(param_slider, id_type, fit_dd, fit_num,
+                                                                          param_center, [invar, invar_2], outvar,
+                                                                          num_samples)
+                for i in range(len(fit_dd_values)):
                     fig.add_trace(go.Surface(
-                        x=mesh_in1,
-                        y=mesh_in2,
-                        z=mesh_out,
-                        name=f'fit: {fit_dd}={fit_dd_value:.2f}',
+                        x=mesh_in[i][0].reshape((num_samples, num_samples)),
+                        y=mesh_in[i][1].reshape((num_samples, num_samples)),
+                        z=mesh_out[i].reshape((num_samples, num_samples)),
+                        name=f'fit: {fit_dd}={fit_dd_values[i]:.2f}',
+                        coloraxis="coloraxis",
                     ))
-                    fig.add_trace(go.Surface(
-                        x=mesh_in1,
-                        y=mesh_in2,
-                        z=mesh_out + fit_conf * mesh_out_std,
-                        showlegend=False,
-                        name=f'fit+var: {fit_dd}={fit_dd_value:.2f}',
-                        opacity=0.25,
-                    ))
-                    fig.add_trace(go.Surface(
-                        x=mesh_in1,
-                        y=mesh_in2,
-                        z=mesh_out - fit_conf * mesh_out_std,
-                        showlegend=False,
-                        name=f'fit-var: {fit_dd}={fit_dd_value:.2f}',
-                        opacity=0.5,
-                    ))
+                    if fit_conf > 0:
+                        fig.add_trace(go.Surface(
+                            x=mesh_in[i][0].reshape((num_samples, num_samples)),
+                            y=mesh_in[i][1].reshape((num_samples, num_samples)),
+                            z=mesh_out[i].reshape((num_samples, num_samples)) + fit_conf * mesh_out_std[i].reshape((num_samples, num_samples)),
+                            showlegend=False,
+                            name=f'fit+var: {fit_dd}={fit_dd_values[i]:.2f}',
+                            opacity=0.25,
+                            coloraxis="coloraxis",
+                        ))
+                        fig.add_trace(go.Surface(
+                            x=mesh_in[i][0].reshape((num_samples, num_samples)),
+                            y=mesh_in[i][1].reshape((num_samples, num_samples)),
+                            z=mesh_out[i].reshape((num_samples, num_samples)) - fit_conf * mesh_out_std[i].reshape((num_samples, num_samples)),
+                            showlegend=False,
+                            name=f'fit-var: {fit_dd}={fit_dd_values[i]:.2f}',
+                            opacity=0.5,
+                            coloraxis="coloraxis",
+                        ))
         elif graph_type == '2D contour':
             fig = go.Figure(
                 data=go.Contour(
@@ -507,10 +490,9 @@ def init_app(config):
                     y=indata[invar_2][sel_y],
                     z=outdata[outvar][sel_y],
                 ),
+                layout=go.Layout(xaxis=dict(title=invar), yaxis=dict(title=invar_2))
             )
-            fig.update_xaxes(title=invar)
-            fig.update_yaxes(title=invar_2)
-        elif graph_type == '3D isosurface':
+        elif graph_type == '3D':
             fig = go.Figure(
                 data=go.Scatter3d(
                     x=indata[invar][sel_y],
@@ -525,63 +507,92 @@ def init_app(config):
                 layout=go.Layout(scene=dict(xaxis_title=invar, yaxis_title=invar_2, zaxis_title=invar_3)),
             )
             if fit_use == ['show'] and len({invar, invar_2, invar_3}) == 3:
-                try: # collecting min/max of slider in filter section
-                    fit_dd_min, fit_dd_max = param_slider[[i['index'] for i in id_type].index(invars.index(fit_dd))]
-                except ValueError:
-                    fit_dd_min = min(indata[fit_dd])
-                    fit_dd_max = max(indata[fit_dd])
-                if fit_num == 1:
-                    fit_dd_values = np.array([(fit_dd_max+fit_dd_min)/2])
-                else:
-                    fit_dd_values = np.linspace(fit_dd_min, fit_dd_max, fit_num)
-                for fit_dd_value in fit_dd_values:
-                    fit_params = [(max(indata[var_invar])+min(indata[var_invar]))/2 for var_invar in invars]
-                    for iteration, center_values in enumerate(param_center):
-                        ind = id_type[iteration]['index']
-                        fit_params[ind] = param_center[iteration]
-                    fit_params[invars.index(fit_dd)] = fit_dd_value
-                    num_samples = 20
-                    fit_params[invars.index(invar)] = np.linspace(min(indata[invar]), max(indata[invar]), num_samples)
-                    fit_params[invars.index(invar_2)] = np.linspace(min(indata[invar_2]), max(indata[invar_2]), num_samples)
-                    fit_params[invars.index(invar_3)] = np.linspace(min(indata[invar_3]), max(indata[invar_3]),
-                                                                    num_samples)
-                    grid = np.meshgrid(*fit_params)
-                    print(grid, type(grid))
-                    x_pred = np.vstack([g.flatten() for g in grid]).T # extract vector for predict
-                    sur = Surrogate.load_model(config['fit']['save'])
-                    fit_data, fit_var = sur.predict(x_pred)
-                    # generated data
-                    mesh_in1 = grid[invars.index(invar)].flatten()
-                    mesh_in2 = grid[invars.index(invar_2)].flatten()
-                    mesh_in3 = grid[invars.index(invar_3)].flatten()
-                    mesh_out = fit_data[:, outvars.index(outvar)].flatten()
+                num_samples = 20
+                mesh_in, mesh_out, mesh_out_std, fit_dd_values = mesh_fit(param_slider, id_type, fit_dd, fit_num,
+                                                                          param_center, [invar, invar_2, invar_3], outvar,
+                                                                          num_samples)
+                for i in range(len(fit_dd_values)):
+                    print(mesh_in.shape)
+                    print(mesh_in[0][0].shape)
+                    print(mesh_in[0][0].flatten().shape)
+                    print(type(mesh_out[i]))
+                    print('min', mesh_out[i].min())
                     fig.add_trace(
                         go.Isosurface(
-                            x=mesh_in1, # [0, 0, 0, 0, 1, 1, 1, 1],
-                            y=mesh_in2, # [1, 0, 1, 0, 1, 0, 1, 0],
-                            z=mesh_in3, # [1, 1, 0, 0, 1, 1, 0, 0],
-                            value=mesh_out, # [1, 2, 3, 4, 5, 6, 7, 8],
+                            x=mesh_in[i][0],
+                            y=mesh_in[i][1],
+                            z=mesh_in[i][2],
+                            value=mesh_out[i],
                             surface_count=fit_num,
                             coloraxis="coloraxis",
-                            isomin=mesh_out.min() * 1.1,
-                            isomax=mesh_out.max() * 0.9,
+                            isomin=mesh_out[i].min() * 1.1,
+                            isomax=mesh_out[i].max() * 0.9,
                             caps=dict(x_show=False, y_show=False, z_show=False),
                         ),
                     )
         else:
-            print(graph_type)
             fig = go.Figure()
         if color_use == ['true']: # TODO: trigger-detection no new fig just update
             fig.update_traces(
                 marker=dict(
                     color=indata[color_dd][sel_y] if color_dd in indata.dtype.names else outdata[color_dd][sel_y],
-                    colorscale='viridis',
+                    coloraxis="coloraxis" if graph_type == '2D' and color_dd == outvar else None,
                     colorbar=dict(thickness=20, title=color_dd),
                 ),
                 selector=dict(mode='markers'),
             )
+        # log scale
+        log_dict = {'1D': (invar1_log, outvar_log),
+                    '2D': (invar1_log, invar2_log, outvar_log),
+                    '2D contour': (invar1_log, invar2_log),
+                    '3D': (invar1_log, invar2_log, invar3_log),}
+        log_list = ['linear' if log is None or len(log) == 0 else log[0] for log in log_dict[graph_type]]
+        log_key = ['xaxis', 'yaxis', 'zaxis']
+        comb_dict = dict(zip(log_key, [{'type': log} for log in log_list]))
+        if len(log_list) < 3 :
+            fig.update_layout(**comb_dict)
+        else:
+            fig.update_scenes(**comb_dict)
         return fig
 
+
+    def mesh_fit(param_slider, id_type, fit_dd, fit_num, param_center, invar_list, outvar, num_samples):
+        try:  # collecting min/max of slider in filter section
+            fit_dd_min, fit_dd_max = param_slider[[i['index'] for i in id_type].index(invars.index(fit_dd))]
+        except ValueError:
+            fit_dd_min = min(indata[fit_dd])
+            fit_dd_max = max(indata[fit_dd])
+        if fit_num == 1:
+            fit_dd_values = np.array([(fit_dd_max + fit_dd_min) / 2])
+        else:
+            fit_dd_values = np.linspace(fit_dd_min, fit_dd_max, fit_num)
+        mesh_out = tuple()
+        mesh_out_std = tuple()
+        for iteration, fit_dd_value in enumerate(fit_dd_values):
+            fit_params = [(max(indata[var_invar]) + min(indata[var_invar])) / 2 for var_invar in invars]
+            for iteration, center_values in enumerate(param_center):
+                ind = id_type[iteration]['index']
+                fit_params[ind] = param_center[iteration]
+            fit_params[invars.index(fit_dd)] = fit_dd_value
+            for invar in invar_list:
+                fit_params[invars.index(invar)] = np.linspace(min(indata[invar]), max(indata[invar]), num_samples)
+            grid = np.meshgrid(*fit_params)
+            x_pred = np.vstack([g.flatten() for g in grid]).T  # extract vector for predict
+            sur = Surrogate.load_model(config['fit']['save']) # load surrogate
+            fit_data, fit_var = sur.predict(x_pred)
+            # generated data
+            new_mesh_in = np.array([[grid[invars.index(invar)].flatten() for invar in invars]])
+            new_mesh_out = np.array([fit_data[:, outvars.index(outvar)]])
+            new_mesh_out_std = np.array([np.sqrt(fit_var[:, outvars.index(outvar)])])
+            if iteration == 0:
+                mesh_in = new_mesh_in
+                mesh_out = new_mesh_out
+                mesh_out_std = new_mesh_out_std
+            else:
+                mesh_in = np.vstack((mesh_in, new_mesh_in))
+                mesh_out = np.vstack((mesh_out, new_mesh_out))
+                mesh_out_std = np.vstack((mesh_out_std, new_mesh_out_std))
+        return mesh_in, mesh_out, mesh_out_std, fit_dd_values
 
     @app.callback(
         Output('data-table-div', 'style'),
