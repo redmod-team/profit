@@ -40,6 +40,8 @@ release = ''
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
+    'autoapi.extension',
+    'sphinx_toolbox.confval',
     'sphinx.ext.doctest',
     'sphinx.ext.todo',
     'sphinx.ext.coverage',
@@ -51,6 +53,7 @@ extensions = [
     'sphinx.ext.napoleon'
 ]
 
+
 # Custom variables
 def setup(app):
     app.add_config_value('recommonmark_config', {
@@ -59,6 +62,11 @@ def setup(app):
         'enable_inline_math': True,
         'enable_eval_rst': True
         }, True)
+
+
+autoapi_type = 'python'
+autoapi_dirs = ['../profit']
+
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
