@@ -70,11 +70,10 @@ class LocalRunner(Runner):
         parallel: 1     # maximum number of simultaneous runs (for spawn array)
         sleep: 0        # number of seconds to sleep while polling
         """
-        from profit.defaults import RUN_RUNNER_LOCAL_PARALLEL, RUN_RUNNER_LOCAL_SLEEP
         if 'parallel' not in config:
-            config['parallel'] = RUN_RUNNER_LOCAL_PARALLEL
+            config['parallel'] = 1
         if 'sleep' not in config:
-            config['sleep'] = RUN_RUNNER_LOCAL_SLEEP
+            config['sleep'] = 0
 
 
 # === Numpy Memmap Inerface === #

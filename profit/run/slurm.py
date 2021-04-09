@@ -55,7 +55,7 @@ class SlurmRunner(Runner):
         for i in range(len(params_array)):
             self.runs[self.next_run_id + i] = f'{job_id}_{i}'
         if blocking:
-            self.wait_for_all([self.next_run_id + i for i in range(len(params_array))])
+            self.wait_for_all([self.next_run_id + i for i in range(len(params_array))], show_tqdm=True)
         self.next_run_id += len(params_array)
 
     def wait_for_all(self, run_ids, show_tqdm=False):
@@ -72,7 +72,7 @@ class SlurmRunner(Runner):
                 poll_time = time()
                 sleep(self.config['sleep'])
             if show_tqdm:
-                progress.update(progress.n - (len(run_ids) - len([i for i in run_ids if i in self.runs])))
+                progress.update(len([i for i in run_ids if i not in self.runs]) - progress.n)
 
     def wait_for(self, run_id: int):
         """wait until the specified run has completed"""
@@ -103,7 +103,7 @@ class SlurmRunner(Runner):
 
         :param run_id: which run to delete, is a key in ``self.runs``
         """
-        if self.run_config['clean']:
+        if self.run_config['clean'] and self.interface.internal['DONE'][run_id]:
             path = os.path.join(self.base_config['run_dir'], f'slurm-{self.runs[run_id]}.out')
             try:
                 os.remove(path)
