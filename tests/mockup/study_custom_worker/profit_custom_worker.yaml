@@ -5,7 +5,7 @@ variables:
     f: Output
 
 run:
-    command: python3 ../mockup_custom_worker.py
+    command: python3 ./mockup_custom_worker.py
     custom: true
 
 files:

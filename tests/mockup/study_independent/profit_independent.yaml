@@ -5,6 +5,9 @@ variables:
     n_f: Output(E)
 
 run:
+    pre:
+        class: template
+        path: ../template_independent
     post:
         class: hdf5
         path: mockup.hdf5

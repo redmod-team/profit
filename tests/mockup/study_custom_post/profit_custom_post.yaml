@@ -5,6 +5,9 @@ variables:
     f: Output
 
 run:
+    pre:
+        class: template
+        path: ../template_1D
     post: mockup
     command: python3 mockup_1D.py
     include: custom_post.py
