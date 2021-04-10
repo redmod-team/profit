@@ -36,7 +36,7 @@ class Surrogate(ABC):
         pass
 
     @abstractmethod
-    def predict(self, Xpred):
+    def predict(self, Xpred, add_data_variance=False):
         """Predicts model output y for input X based on surrogate."""
         pass
 
@@ -91,17 +91,18 @@ class Surrogate(ABC):
 
     @classmethod
     def get_label(cls):
+        """Return label of a surrogate class object."""
         for label, item in cls._surrogates.items():
             if item == cls:
                 return label
-        raise NotImplementedError("Class {} is not implemented.".format(class_to_label))
+        raise NotImplementedError("Class {} is not implemented.".format(cls))
 
-    def plot(self, Xpred=None, independent=None, show=False, ref=None):
+    def plot(self, Xpred=None, independent=None, show=False, ref=None, add_data_variance=True):
         """Simple plotting for dimensions <= 2."""
         import matplotlib.pyplot as plt
         if Xpred is None:
             Xpred = self.default_Xpred()
-        ypred, yvarpred = self.predict(Xpred)
+        ypred, yvarpred = self.predict(Xpred, add_data_variance=add_data_variance)
         ystd_pred = np.sqrt(yvarpred)
         if independent:
             # 2D with one input parameter and one independent variable.

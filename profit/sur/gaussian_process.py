@@ -44,7 +44,7 @@ class GaussianProcess(Surrogate, ABC):
         if isinstance(self.kernel, str):
             self.kernel = self.select_kernel(self.kernel)
 
-    def predict(self, Xpred):
+    def predict(self, Xpred, add_data_variance=False):
         """Predict the output for prediction points Xpred."""
         if not self.trained:
             raise RuntimeError("Need to train() before predict()!")
@@ -53,6 +53,8 @@ class GaussianProcess(Surrogate, ABC):
             Xpred = self.default_Xpred()
         Xpred = check_ndim(Xpred)
         ymean, yvar = self.model.predict(Xpred)
+        if add_data_variance:
+            yvar = yvar + self.hyperparameters['sigma_n']**2
         return ymean, yvar
 
     def optimize(self, **opt_kwargs):
@@ -123,7 +125,7 @@ class GPSurrogate(GaussianProcess):
         self.optimize(**opt_kwargs)  # Find best hyperparameters
         self.trained = True
 
-    def predict(self, Xpred):
+    def predict(self, Xpred, add_data_variance=False):
         """Predict output from prediction points Xpred."""
         if not self.trained:
             raise RuntimeError('Need to train() before predict()')
@@ -138,6 +140,8 @@ class GPSurrogate(GaussianProcess):
         Kstarstar = self.kernel(Xpred, Xpred, **prediction_hyperparameters)
         fstar = Kstar.T.dot(self.alpha)
         vstar = Kstarstar - (Kstar.T @ (GPFunctions.invert(self.Ky) @ Kstar))
+        if add_data_variance:
+            vstar = vstar + self.hyperparameters['sigma_n']**2
         return fstar, np.diag(vstar)  # Return predictive mean and variance
 
     def add_training_data(self, X, y):
@@ -236,6 +240,15 @@ class GPySurrogate(GaussianProcess):
         self.ytrain = np.concatenate([self.ytrain, y], axis=0)
         self.model.set_XY(self.Xtrain, self.ytrain)
 
+    def predict(self, Xpred, add_data_variance=False):
+        if not self.trained:
+            raise RuntimeError("Need to train() before predict()!")
+        if Xpred is None:
+            Xpred = self.default_Xpred()
+        Xpred = check_ndim(Xpred)
+        ymean, yvar = self.model.predict(Xpred, include_likelihood=add_data_variance)
+        return ymean, yvar
+
     def get_marginal_variance(self, Xpred):
         """Calculate the marginal variance to infer the next point in active learning.
         Currently only the predictive variance is taken into account."""
@@ -314,16 +327,17 @@ class SklearnGPSurrogate(GaussianProcess):
         self.Xtrain = np.concatenate([self.Xtrain, X], axis=0)
         self.ytrain = np.concatenate([self.ytrain, y], axis=0)
 
-    def predict(self, Xpred):
+    def predict(self, Xpred, add_data_variance=False):
+        if not self.trained:
+            raise RuntimeError("Need to train() before predict()!")
         if Xpred is None:
             Xpred = self.default_xpred()
 
-        if self.trained:
-            ymean, ystd = self.m.predict(Xpred, return_std=True)
-            yvar = ystd.reshape(-1, 1)**2
-            return ymean, yvar
-        else:
-            raise RuntimeError("Need to train() before predict()!")
+        ymean, ystd = self.model.predict(Xpred, return_std=True)
+        yvar = ystd.reshape(-1, 1)**2
+        if add_data_variance:
+            yvar = yvar + self.hyperparameters['sigma_n'] ** 2
+        return ymean, yvar
 
     def get_marginal_variance(self, Xpred):
         mtilde, vhat = self.predict(Xpred)
