@@ -50,7 +50,7 @@ def init_app(config):
                                                         '2D contour',
                                                         '3D']
                      ],
-            value='2D',
+            value='1D',
             labelStyle={'display': 'inline-block'})),
         html.Table(children=[html.Tr(children=[
             html.Td(id='axis-options', style={'width': 650}, children=[
@@ -369,24 +369,28 @@ def init_app(config):
         [Output('invar-2-div', 'style'),
          Output('invar-3-div', 'style'),
          Output('color-div', 'style'),
+         Output('fit-use-div', 'style'),
          Output('fit-multiinput-div', 'style'),
+         Output('fit-number-div', 'style'),
          Output('fit-conf-div', 'style'),
          Output('fit-color-div', 'style'), ],
         Input('graph-type', 'value')
     )
     def div_visibility(graph_type):
-        hidden_div_style = axis_options_div_style.copy()
-        hidden_div_style['visibility'] = 'hidden'
+        hide_div_style = axis_options_div_style.copy()
+        hide_div_style['visibility'] = 'hidden'
         show_div_style = axis_options_div_style.copy()
         show_div_style['visibility'] = 'visible'
         if graph_type == '1D':
-            return hidden_div_style, hidden_div_style, show_div_style, show_div_style, show_div_style, hidden_div_style
+            return hide_div_style, hide_div_style, show_div_style, show_div_style, show_div_style, show_div_style, show_div_style, hide_div_style
         if graph_type == '2D':
-            return show_div_style, hidden_div_style, show_div_style, show_div_style, show_div_style, show_div_style
+            return show_div_style, hide_div_style, show_div_style, show_div_style, show_div_style, show_div_style, show_div_style, show_div_style
+        if graph_type == '2D contour':
+            return show_div_style, hide_div_style, show_div_style, hide_div_style, hide_div_style, hide_div_style, hide_div_style, hide_div_style
         if graph_type == '3D':
-            return show_div_style, show_div_style, hidden_div_style, hidden_div_style, hidden_div_style, hidden_div_style
+            return show_div_style, show_div_style, hide_div_style, show_div_style, hide_div_style, show_div_style, hide_div_style, hide_div_style
         else:
-            return show_div_style, show_div_style, show_div_style, show_div_style, show_div_style, show_div_style
+            return show_div_style, show_div_style, show_div_style, show_div_style, show_div_style, show_div_style, show_div_style, show_div_style
 
 
     @app.callback(
@@ -459,7 +463,6 @@ def init_app(config):
                         line_color=colormap(indata[fit_dd].min(), indata[fit_dd].max(), fit_dd_values[i]),
                         marker_line=dict(coloraxis="coloraxis2")
                     ))
-                fig.update_layout(coloraxis2=dict(showscale=True)),
         elif graph_type == '2D':
             fig = go.Figure(
                 data=[go.Scatter3d(
@@ -515,14 +518,24 @@ def init_app(config):
                     colorbar=dict(title=outvar if fit_color == 'output' else fit_dd)
                 ))
         elif graph_type == '2D contour':
-            fig = go.Figure(
-                data=go.Contour(
-                    x=indata[invar][sel_y],
-                    y=indata[invar_2][sel_y],
-                    z=outdata[outvar][sel_y],
-                ),
-                layout=go.Layout(xaxis=dict(title=invar), yaxis=dict(title=invar_2))
-            )
+            num_samples = 20
+            mesh_in, mesh_out, mesh_out_std, fit_dd_values = mesh_fit(param_slider, id_type, fit_dd, fit_num,
+                                                                      param_center, [invar, invar_2], outvar,
+                                                                      num_samples)
+            fig= go.Figure()
+            fig.add_trace(go.Scatter(
+                x=indata[invar][sel_y],
+                y=indata[invar_2][sel_y],
+                mode='markers',
+            ))
+            fig.add_trace(go.Contour(
+                x=mesh_in[0][invars.index(invar)],
+                y=mesh_in[0][invars.index(invar_2)],
+                z=mesh_out[0],
+                coloraxis='coloraxis2',
+                name='fit',
+            ))
+            fig.update_layout(xaxis_title=invar, yaxis_title=invar_2, coloraxis2=dict(colorbar=dict(title=outvar)))
         elif graph_type == '3D':
             fig = go.Figure(
                 data=go.Scatter3d(
@@ -583,6 +596,17 @@ def init_app(config):
                     selector=dict(mode='markers'),
                 )
                 fig.update_layout(coloraxis2=dict(colorscale='plasma', colorbar=dict(title=fit_dd)))
+            elif graph_type =='2D contour':
+                fig.update_traces(
+                    marker=dict(
+                        coloraxis="coloraxis",
+                        color=indata[color_dd][sel_y] if color_dd in indata.dtype.names else outdata[color_dd][sel_y],
+                    ),
+                    selector=dict(mode='markers'),
+                )
+                fig.update_layout(coloraxis=dict(colorbar=dict(title=color_dd, x=1.1)))
+                if color_dd != outvar:
+                    fig.update_layout(coloraxis=dict(colorscale='viridis'))
             else:
                 fig.update_traces(
                     marker=dict(
@@ -595,7 +619,6 @@ def init_app(config):
                     colorbar=dict(title=color_dd, x=1.1),
                     colorscale='viridis',
                 ))
-                print(color_dd)
         # log scale
         log_dict = {'1D': (invar1_log, outvar_log),
                     '2D': (invar1_log, invar2_log, outvar_log),
