@@ -7,9 +7,9 @@ import numpy as np
 @Postprocessor.register('mockup')
 class MockupPostprocessor(Postprocessor):
     """ almost identical copy of NumpytxtPostprocessor """
-    def post(self):
+    def post(self, data):
         raw = np.loadtxt('mockup.out')
-        self.worker.data['f'] = raw
+        data['f'] = raw
 
     @classmethod
     def handle_config(cls, config, base_config):

@@ -4,6 +4,8 @@ Local Runner
 Memmap Interface (numpy)
 Template Preprocessor
 JSON Postprocessor
+NumpytxtPostprocessor
+HDF5Postprocessor
 """
 
 from .runner import Runner, RunnerInterface
@@ -11,6 +13,7 @@ from .worker import Interface, Preprocessor, Postprocessor
 
 import subprocess
 from time import sleep
+import logging
 
 import numpy as np
 import os
@@ -27,13 +30,11 @@ class LocalRunner(Runner):
         super().spawn_run(params, wait)
         env = self.env.copy()
         env['PROFIT_RUN_ID'] = str(self.next_run_id)
-        if self.config['custom']:
-            cmd = self.config['command']
-            shell = True
+        if self.run_config['custom']:
+            cmd = self.run_config['command']
         else:
-            cmd = ['profit-worker']
-            shell = False
-        self.runs[self.next_run_id] = subprocess.Popen(cmd, shell=shell, env=env, cwd=self.base_config['run_dir'])
+            cmd = 'profit-worker'
+        self.runs[self.next_run_id] = subprocess.Popen(cmd, shell=True, env=env, cwd=self.base_config['run_dir'])
         if wait:
             self.runs[self.next_run_id].wait()
             del self.runs[self.next_run_id]
@@ -45,34 +46,34 @@ class LocalRunner(Runner):
             raise NotImplementedError
         for params in params_array:
             self.spawn_run(params)
-            while len(self.runs) >= self.config['runner']['parallel']:
-                sleep(self.config['runner']['sleep'])
+            while len(self.runs) >= self.config['parallel']:
+                sleep(self.config['sleep'])
                 self.check_runs(poll=True)
         while len(self.runs):
-            sleep(self.config['runner']['sleep'])
+            sleep(self.config['sleep'])
             self.check_runs(poll=True)
 
     def check_runs(self, poll=False):
         """ check the status of runs via the interface """
+        self.interface.poll()
         for run_id, process in list(self.runs.items()):  # preserve state before deletions
-            if self.interface.data['DONE'][run_id]:
+            if self.interface.internal['DONE'][run_id]:
                 process.wait()  # just to make sure
                 del self.runs[run_id]
             elif poll and process.poll() is not None:
                 del self.runs[run_id]
 
     @classmethod
-    def handle_subconfig(cls, subconfig, base_config):
+    def handle_config(cls, config, base_config):
         """
         class: local
         parallel: 1     # maximum number of simultaneous runs (for spawn array)
         sleep: 0        # number of seconds to sleep while polling
         """
-        from profit.defaults import RUN_RUNNER_LOCAL_PARALLEL, RUN_RUNNER_LOCAL_SLEEP
-        if 'parallel' not in subconfig:
-            subconfig['parallel'] = RUN_RUNNER_LOCAL_PARALLEL
-        if 'sleep' not in subconfig:
-            subconfig['sleep'] = RUN_RUNNER_LOCAL_SLEEP
+        if 'parallel' not in config:
+            config['parallel'] = 1
+        if 'sleep' not in config:
+            config['sleep'] = 0
 
 
 # === Numpy Memmap Inerface === #
@@ -80,20 +81,10 @@ class LocalRunner(Runner):
 
 @RunnerInterface.register('memmap')
 class MemmapRunnerInterface(RunnerInterface):
-    def __init__(self, *args):
-        super().__init__(*args)
-        self._memmap = None
+    def __init__(self, config, size, input_config, output_config, *, logger_parent: logging.Logger = None):
+        super().__init__(config, size, input_config, output_config, logger_parent=logger_parent)
 
-    @property
-    def data(self):
-        if self._memmap is None:
-            raise RuntimeError('no preparation done done')
-        return self._memmap
-
-    def prepare(self):
-        """ create & load interface file """
-        super().prepare()
-        init_data = np.zeros(self.config['max-size'], dtype=self.dtype)
+        init_data = np.zeros(size, dtype=self.input_vars + self.internal_vars + self.output_vars)
         np.save(self.config['path'], init_data)
 
         try:
@@ -102,6 +93,11 @@ class MemmapRunnerInterface(RunnerInterface):
             self.runner.logger.error(
                 f'{self.__class__.__name__} could not load {self.config["path"]} (cwd: {os.getcwd()})')
             raise
+
+        # should return views on memmap
+        self.input = self._memmap[[v[0] for v in self.input_vars]]
+        self.output = self._memmap[[v[0] for v in self.output_vars]]
+        self.internal = self._memmap[[v[0] for v in self.internal_vars]]
 
     def clean(self):
         if os.path.exists(self.config['path']):
@@ -112,15 +108,12 @@ class MemmapRunnerInterface(RunnerInterface):
         """
         class: memmap
         path: interface.npy     # memory mapped interface file, relative to base directory
-        max-size: null          # maximum number of runs, determines size of the interface file (default = ntrain)
         """
         if 'path' not in config:
             config['path'] = 'interface.npy'
         # 'path' is relative to base_dir, convert to absolute path
         if not os.path.isabs(config['path'][0]):
             config['path'] = os.path.abspath(os.path.join(base_config['base_dir'], config['path']))
-        if 'max-size' not in config:
-            config['max-size'] = base_config['ntrain']
 
 
 @Interface.register('memmap')
@@ -134,8 +127,9 @@ class MemmapInterface(Interface):
         path: $BASE_DIR/interface.npy  -  path to memmap file (relative to calling directory [~base_dir])
     ```
     """
-    def __init__(self, *args):
-        super().__init__(*args)
+    def __init__(self, config, run_id: int, *, logger_parent: logging.Logger = None):
+        super().__init__(config, run_id, logger_parent=logger_parent)
+        # ToDo: multiple arrays after another to allow extending the file dynamically
         try:
             self._memmap = np.load(self.config['path'], mmap_mode='r+')
         except FileNotFoundError:
@@ -143,13 +137,28 @@ class MemmapInterface(Interface):
                 f'{self.__class__.__name__} could not load {self.config["path"]} (cwd: {os.getcwd()})')
             raise
 
-    @property
-    def data(self):
-        return self._memmap[self.worker.run_id]
+        # should return views on memmap
+        inputs, outputs = [], []
+        k = 0
+        for k, key in enumerate(self._memmap.dtype.names):
+            if key == 'DONE':
+                break
+            inputs.append(key)
+        for key in self._memmap.dtype.names[k:]:
+            if key not in ['DONE', 'TIME']:
+                outputs.append(key)
+        self.input = self._memmap[inputs][run_id]
+        self.output = self._memmap[outputs][run_id]
+        self._data = self._memmap[run_id]
 
     def done(self):
-        self.data['DONE'] = True
+        self._memmap['TIME'] = self.time
+        self._memmap['DONE'] = True
         self._memmap.flush()
+
+    def clean(self):
+        if os.path.exists(self.config['path']):
+            os.remove(self.config['path'])
 
 
 # === Template Preprocessor === #
@@ -157,14 +166,14 @@ class MemmapInterface(Interface):
 
 @Preprocessor.register('template')
 class TemplatePreprocessor(Preprocessor):
-    def pre(self):
+    def pre(self, data, run_dir):
         # No call to super()! replaces the default preprocessing
         from profit.pre import fill_run_dir_single
-        if os.path.exists(self.worker.run_dir):
-            rmtree(self.worker.run_dir)
-        fill_run_dir_single(self.worker.data, self.config['path'], self.worker.run_dir, ignore_path_exists=True,
+        if os.path.exists(run_dir):
+            rmtree(run_dir)
+        fill_run_dir_single(data, self.config['path'], run_dir, ignore_path_exists=True,
                             param_files=self.config['param_files'])
-        os.chdir(self.worker.run_dir)
+        os.chdir(run_dir)
 
     @classmethod
     def handle_config(cls, config, base_config):
@@ -189,12 +198,12 @@ class TemplatePreprocessor(Preprocessor):
 
 @Postprocessor.register('json')
 class JSONPostprocessor(Postprocessor):
-    def post(self):
+    def post(self, data):
         import json
         with open(self.config['path']) as f:
             output = json.load(f)
         for key, value in output.items():
-            self.worker.data[key] = value
+            data[key] = value
 
     @classmethod
     def handle_config(cls, config, base_config):
@@ -211,10 +220,18 @@ class JSONPostprocessor(Postprocessor):
 
 @Postprocessor.register('numpytxt')
 class NumpytxtPostprocessor(Postprocessor):
-    def post(self):
-        raw = np.loadtxt(self.config['path'])
+    def post(self, data):
+        try:
+            raw = np.loadtxt(self.config['path'])
+        except OSError:
+            self.logger.error(f'output file {self.config["path"]} not found')
+            self.logger.info(f'cwd = {os.getcwd()}')
+            dirname = os.path.dirname(self.config['path']) or '.'
+            self.logger.info(f'ls {dirname} = {os.listdir(dirname)}')
+            raise
         for k, key in enumerate(self.config['names'].split()):
-            self.worker.data[key] = raw[k] if len(raw.shape) else raw
+            if key in data.dtype.names:
+                data[key] = raw[k] if len(raw.shape) else raw
 
     @classmethod
     def handle_config(cls, config, base_config):
@@ -234,11 +251,11 @@ class NumpytxtPostprocessor(Postprocessor):
 
 @Postprocessor.register('hdf5')
 class HDF5Postprocessor(Postprocessor):
-    def post(self):
+    def post(self, data):
         import h5py
         with h5py.File(self.config['path'], 'r') as f:
             for key in f.keys():
-                self.worker.data[key] = f[key]
+                data[key] = f[key]
 
     @classmethod
     def handle_config(cls, config, base_config):

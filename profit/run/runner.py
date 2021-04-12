@@ -5,52 +5,41 @@ Goal: a class to manage and deploy runs
 """
 
 import os
+import shutil
 import logging
 from abc import ABC, abstractmethod  # Abstract Base Class
 from collections.abc import MutableMapping
 
-from .worker import Worker, Preprocessor
-from profit.util import load_includes, params2map
+from .worker import Worker
+from profit.util import load_includes, params2map, spread_struct_horizontal, flatten_struct
 
 import numpy as np
 
 
-class RunnerInterface(ABC):
+class RunnerInterface:
     interfaces = {}  # ToDo: rename to registry?
+    internal_vars = [('DONE', np.bool8), ('TIME', np.uint32)]
 
-    def __init__(self, runner, config, base_config):
-        self.runner = runner
-        self.config = config  # base_config['run']
-        self.base_config = base_config
+    def __init__(self, config, size, input_config, output_config, *, logger_parent: logging.Logger = None):
+        self.config = config  # base_config['run']['interface']
+        self.logger = logging.getLogger('Runner Interface')
+        if logger_parent is not None:
+            self.logger.parent = logger_parent
 
-        self.dtype = []
+        self.input_vars = [(variable, spec['dtype']) for variable, spec in input_config.items()]
+        self.output_vars = [(variable, spec['dtype'], spec['shape']) for variable, spec in output_config.items()]
 
-    def construct_dtype(self):
-        self.dtype = []
-        for variable, spec in self.base_config['input'].items():
-            self.dtype.append((variable, spec['dtype']))
-        self.dtype += [('DONE', np.bool8)]
-        if self.runner.config['time']:
-            self.dtype += [('TIME', np.uint32)]
-        for variable, spec in self.base_config['output'].items():
-            if len(spec['shape']) > 0:  # vector output
-                self.dtype.append((variable, (spec['dtype'], spec['shape'])))
-            else:
-                self.dtype.append((variable, spec['dtype']))
+        self.input = np.zeros(size, dtype=self.input_vars)
+        self.output = np.zeros(size, dtype=self.output_vars)
+        self.internal = np.zeros(size, dtype=self.internal_vars)
 
-    @property
-    @abstractmethod
-    def data(self):
-        pass
-
-    def prepare(self):
-        self.construct_dtype()
+    def poll(self):
+        self.logger.debug('polling')
 
     def clean(self):
-        pass
+        self.logger.debug('cleaning')
 
     @classmethod
-    @abstractmethod
     def handle_config(cls, config, base_config):
         pass
 
@@ -75,15 +64,17 @@ class Runner(ABC):
 
     # for now, implement the runner straightforward with less overhead
     # restructuring is always possible
-    def __init__(self, interface_class, config, base_config):
+    def __init__(self, interface_class, run_config, base_config):
         self.base_config = base_config
-        self.config = config
-        self.logger = logging.getLogger(f'{__name__}.{self.__class__.__name__}')
+        self.run_config = run_config
+        self.config = self.run_config['runner']
+        self.logger = logging.getLogger('Runner')
+        self.interface: RunnerInterface = interface_class(self.run_config['interface'], self.base_config['ntrain'],
+                                                          self.base_config['input'], self.base_config['output'],
+                                                          logger_parent=self.logger)
 
-        self.interface = interface_class(self, config['interface'], base_config)
         self.runs = {}  # run_id: (whatever data the system tracks)
         self.next_run_id = 0
-
         self.env = os.environ.copy()
         self.env['PROFIT_BASE_DIR'] = self.base_config['base_dir']
         self.env['PROFIT_CONFIG_PATH'] = base_config['config_path']  # ToDo better way to pass this?
@@ -94,17 +85,11 @@ class Runner(ABC):
         interface_class = RunnerInterface[config['interface']['class']]
         return child(interface_class, config, base_config)
 
-    def prepare(self):
-        # prepare running
-        # e.g. create script
-        self.interface.prepare()
-        Preprocessor[self.config['pre']['class']].runner_init(self.config['pre'])
-
     def fill(self, params_array, offset=0):
         for r, row in enumerate(params_array):
             mapping = params2map(row)
             for key, value in mapping.items():
-                self.interface.data[key][r + offset] = value
+                self.interface.input[key][r + offset] = value
 
     @abstractmethod
     def spawn_run(self, params=None, wait=False):
@@ -115,111 +100,80 @@ class Runner(ABC):
         """
         mapping = params2map(params)
         for key, value in mapping.items():
-            self.interface.data[key][self.next_run_id] = value
+            self.interface.input[key][self.next_run_id] = value
 
-    @abstractmethod
     def spawn_array(self, params_array, blocking=True):
-        pass
+        if not blocking:
+            raise NotImplementedError
+        for params in params_array:
+            self.spawn_run(params, wait=True)
 
     @abstractmethod
     def check_runs(self):
         pass
 
+    def clean(self):
+        self.interface.clean()
+        try:
+            shutil.rmtree(os.path.join(self.base_config['run_dir'], 'log'))
+        except FileNotFoundError:
+            pass
+
     @property
-    def data(self):
-        """ view on internal data (only completed runs, structured array) """
-        return self.interface.data[self.interface.data['DONE']]  # only completed runs
+    def input_data(self):
+        return self.interface.input[self.interface.internal['DONE']]
 
     @property
     def flat_input_data(self):
-        """ flattened data (copied, dtype converted)
-        very likely very inefficient """
-        return np.vstack([np.hstack([row[key].flatten() for key in self.base_config['input'].keys()])
-                          for row in self.interface.data])
+        return flatten_struct(self.input_data)
 
     @property
     def output_data(self):
-        return self.data[list(self.base_config['output'].keys())]
+        return self.interface.output[self.interface.internal['DONE']]
 
     @property
     def structured_output_data(self):
-        """ flattened data (copied, new column names, only completed runs)
-        very likely very inefficient """
-        dtype = []
-        columns = {}
-        for variable, spec in self.base_config['output'].items():
-            if len(spec['shape']) == 0:
-                dtype.append((variable, spec['dtype']))
-                columns[variable] = [variable]
-            else:
-                from numpy import meshgrid
-                ranges = []
-                columns[variable] = []
-                for dep in spec['depend']:
-                    ranges.append(spec['range'][dep])
-                meshes = [m.flatten() for m in meshgrid(*ranges)]
-                for i in range(meshes[0].size):
-                    name = variable + '(' + ', '.join([f'{m[i]}' for m in meshes]) + ')'
-                    dtype.append((name, spec['dtype']))
-                    columns[variable].append(name)
-
-        output = np.zeros(self.data.shape, dtype=dtype)
-        for variable, spec in self.base_config['output'].items():
-            if len(spec['shape']) == 0:
-                output[variable] = self.data[variable]
-            else:
-                for i in range(self.data.size):
-                    output[columns[variable]][i] = tuple(self.data[variable][i])
-
-        return output
+        return spread_struct_horizontal(self.output_data, self.base_config['output'])
 
     @property
     def flat_output_data(self):
-        """ flattened data (copied, dtype converted, only completed runs)
-        very likely very inefficient """
-        if self.data.size == 0:
-            return np.array([])
-        return np.vstack([np.hstack([row[key].flatten() for key in self.base_config['output'].keys()])
-                          for row in self.data])
-
-    def clean(self):
-        self.interface.clean()
+        return flatten_struct(self.output_data)
 
     @classmethod
-    def handle_config(cls, config, base_config):
+    def handle_run_config(cls, base_config, run_config=None):
         """ handle the config dict, fill in defaults & delegate to the children
 
-        :param config: dict read from config file, ~base_config['run'] usually
+        :param run_config: dict read from config file, ~base_config['run'] usually
         :param base_config: base dict read from config file
 
         ToDo: check for correct types & valid paths
         ToDo: give warnings
         """
-        if 'include' not in config:
-            config['include'] = []
-        elif isinstance(config['include'], str):
-            config['include'] = [config['include']]
-        for p, path in enumerate(config['include']):
+        run_config = run_config or base_config['run']
+        if 'include' not in run_config:
+            run_config['include'] = []
+        elif isinstance(run_config['include'], str):
+            run_config['include'] = [run_config['include']]
+        for p, path in enumerate(run_config['include']):
             if not os.path.isabs(path):
-                config['include'][p] = os.path.abspath(os.path.join(base_config['base_dir'], path))
-        load_includes(config['include'])
+                run_config['include'][p] = os.path.abspath(os.path.join(base_config['base_dir'], path))
+        load_includes(run_config['include'])
 
         defaults = {'runner': 'local', 'interface': 'memmap', 'custom': False}
         for key, default in defaults.items():
-            if key not in config:
-                config[key] = default
+            if key not in run_config:
+                run_config[key] = default
 
-        if not isinstance(config['runner'], MutableMapping):
-            config['runner'] = {'class': config['runner']}
-        Runner[config['runner']['class']].handle_subconfig(config['runner'], base_config)
-        if not isinstance(config['interface'], MutableMapping):
-            config['interface'] = {'class': config['interface']}
-        RunnerInterface[config['interface']['class']].handle_config(config['interface'], base_config)
-        Worker.handle_config(config, base_config)
+        if not isinstance(run_config['runner'], MutableMapping):
+            run_config['runner'] = {'class': run_config['runner']}
+        Runner[run_config['runner']['class']].handle_config(run_config['runner'], base_config)
+        if not isinstance(run_config['interface'], MutableMapping):
+            run_config['interface'] = {'class': run_config['interface']}
+        RunnerInterface[run_config['interface']['class']].handle_config(run_config['interface'], base_config)
+        Worker.handle_config(run_config, base_config)
 
     @classmethod
-    @abstractmethod
-    def handle_subconfig(cls, config, base_config):
+    def handle_config(cls, config, base_config):
         pass
 
     @classmethod

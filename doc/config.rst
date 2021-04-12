@@ -1,7 +1,7 @@
 Configuration
 =============
 
-The main configuration file is called 'profit.yaml' by default and lies in the base directory,
+The main configuration file is called ``profit.yaml`` by default and lies in the base directory,
 which is either the current working directory or specified when calling profit. It provides a Python dictionary with configuration parameters for simulation, fitting and uncertainty quantification.
 
 The format can either be a '.yaml' or a '.py' file.
@@ -11,85 +11,104 @@ Possible parameters
 
 The following gives an overview of all possible parameters
 
-* base_dir:
+.. confval:: base_dir
+    :default: .
+
     | Directory where the 'profit.yaml' file is located.
-    | Default: .
 
-* run_dir:
+.. confval:: run_dir
+    :default: .
+
     | Directory where the single runs are generated.
-    | Default: .
 
-* uq:
+.. confval:: uq
+
     | Not implemented yet.
 
-* files:
+.. confval:: files
 
-    * input:
+    .. confval:: input
+        :default: ./input.txt
+
         | Input variables of all runs.
-        | Default: ./input.txt
 
-    * output:
+    .. confval:: output
+        :default: ./output.txt
+
         | Collected output from single runs.
-        | Default: ./output.txt
 
-* ntrain:
+.. confval:: ntrain
+    :required: true
+
     | Number of training runs.
-    | Mandatory
 
-* variables:
+.. confval:: variables
 
-    * input1:
+    .. confval:: input1
+
         | Name of the variable
 
-        * kind:
+        .. confval:: kind
+            :required: true
+
             | Distribution of the input variable. (See below.)
-            | Mandatory
 
-        * range:
+        .. confval:: range
+            :default: (0, 1)
+
             | Range of the input variable. (See below for specific inputs of different variable kinds.)
-            | Default: (0, 1)
 
-        * dtype:
+        .. confval:: dtype
+            :default: float
+
             | Optionally specify the data type.
-            | Default: float
 
-    * independent1:
+    .. confval:: independent1
+
         | Declare independent variables, if the simulation gives a vector output.
 
-        * kind:
-            | 'Independent'.
+        .. confval:: kind
 
-        * range:
+            | ``Independent``
+
+        .. confval:: range
+
             | Range of independent variables is linear. Format is (start, end, step).
             | E.g. (0, 10, 1)
 
-        * dtype:
+        .. confval:: dtype
 
-    * output1:
+    .. confval:: output1
+
         | Declare output variable name.
 
-        * kind:
-            | 'Output'.
+        .. confval:: kind
 
-        * range:
+            | ``Output``
+
+        .. confval:: range
+
             | If it is a vector output, provide the name of the variable the output depends on.
             | E.g. independent1
 
-        * dtype: float
+        .. confval:: dtype
+            :default: float
 
-* run:
-    | a command (string) -> shortcut for run/command + default values
+.. confval:: run
 
-    * runner:
-        | the run system to use
-        | an identifier (string) -> shortcut for runner/class + default values
+    | toplevel dictionary, specifying the handling of runs
+    | *or*: a command (string) -> shortcut for run/command + default values
 
-        * class: the identifier for the run system
-            | identifier (string)
-            | default: :code:`local`
-            | choices: detailed below + user defined choices from run/include
+    .. confval:: runner
 
-        | other options depend on the class
+        | dictionary, specifying the run system to use
+        | *or*: an identifier (string) -> shortcut for runner/class + default values
+
+        .. confval:: class
+            :type: identifier (string)
+            :default: ``local``
+
+        | other options depend on the class (see some of the choices below)
 
         .. code-block:: yaml
 
@@ -97,16 +116,28 @@ The following gives an overview of all possible parameters
             parallel: 1     # maximum number of simultaneous runs (for spawn array)
             sleep: 0        # number of seconds to sleep while polling
 
-    * interface:
-        | the runner-worker interface
-        | an identifier (string) -> shortcut for interface/class + default values
+        .. code-block:: yaml
 
-        * class: the identifier for the interface
-            | identifier (string)
-            | default: :code:`memmap`
-            | choices: detailed below + user defined choices from run/include
+            class: slurm
+            parallel: 1         # maximum number of simultaneous runs (for spawn array)
+            sleep: 0            # number of seconds to sleep while (internally) polling
+            poll: 60            # number of seconds between external polls (to catch failed runs), use with care!
+            path: slurm.bash    # the path to the generated batch script (relative to the base directory)
+            custom: false       # whether a custom batch script is already provided at 'path'
+            job_name: profit    # the name of the submitted jobs
+            OpenMP: false       # whether to set OMP_NUM_THREADS and OMP_PLACES
+            cpus: 1             # number of cpus (including hardware threads) to use (may specify 'all')
 
-        | other options depend on the class
+    .. confval:: interface
+
+        | dictionary, specifying the runner-worker interface
+        | *or*: an identifier (string) -> shortcut for interface/class + default values
+
+        .. confval:: class
+            :type: identifier (string)
+            :default: ``memmap``
+
+        | other options depend on the class (see some of the choices below)
 
         .. code-block:: yaml
 
@@ -114,16 +145,25 @@ The following gives an overview of all possible parameters
             path: interface.npy     # memory mapped interface file, relative to base directory
             max-size: null          # maximum number of runs, determines size of the interface file (default = ntrain)
 
-    * pre:
-        | the worker preprocessor
-        | an identifier (string) -> shortcut for pre/class + default values
+        .. code-block:: yaml
 
-        * class: the identifier for the preprocessor
-            | identifier (string)
-            | default: :code:`template`
-            | choices: detailed below + user defined choices from run/include
+            class: zeromq
+            bind: tcp://*:9000              # address the runner binds to
+            connect: tcp://localhost:9000   # address the workers connect to
+            timeout: 2500                   # zeromq polling timeout, in ms
+            retries: 3                      # number of zeromq connection retries
+            retry-sleep: 1                  # sleep between retries, in s
 
-        | other options depend on the class
+    .. confval:: pre
+
+        | dictionary, specifying the worker preprocessor
+        | *or*: an identifier (string) -> shortcut for pre/class + default values
+
+        .. confval:: class
+            :type: identifier (string)
+            :default: ``template``
+
+        | other options depend on the class (see some of the choices below)
 
         .. code-block:: yaml
 
@@ -131,16 +171,16 @@ The following gives an overview of all possible parameters
             path: template      # directory to copy from, relative to base directory
             param_files: null   # on which files template substitution should be applied, null means all files
 
-    * post:
-        | the worker postprocessor
-        | an identifier (string) -> shortcut for post/class + default values
+    .. confval:: post
 
-        * class: the identifier for the postprocessor
-            | identifier (string)
-            | default: :code:`json`
-            | choices: detailed below + user defined choices from run/include
+        | dictionary, specifying the worker postprocessor
+        | *or*: an identifier (string) -> shortcut for post/class + default values
 
-        | other options depend on the class
+        .. confval:: class
+            :type: identifier (string)
+            :default: ``json``
+
+        | other options depend on the class (see some of the choices below)
 
         .. code-block:: yaml
 
@@ -158,85 +198,107 @@ The following gives an overview of all possible parameters
             class: hdf5
             path: output.hdf5   # file to read from, relative to the run directory
 
-    * command:
-        | shell/bash command
-        | default: :code:`./simulation`
+    .. confval:: command
+        :type: shell/bash command
+        :default: ``./simulation``
+
         | the command which starts the simulation
 
-    * stdout:
-        | :code:`null` or path
-        | default: :code:`stdout`
+    .. confval:: stdout
+        :type: ``null`` or path
+        :default: ``stdout``
+
         | where the simulation's stdout should be redirected to (relative to run directory)
-        | :code:`null` means insertion into the worker's stdout
+        | ``null`` means insertion into the worker's stdout
 
-    * stderr:
-        | :code:`null` or path
-        | default: :code:`null`
+    .. confval:: stderr
+        :type: ``null`` or path
+        :default: ``null``
+
         | where the simulation's stderr should be redirected to (relative to run directory)
-        | :code:`null` means insertion into the worker's stderr
+        | ``null`` means insertion into the worker's stderr
 
-    * clean:
-        | boolean
-        | default: :code:`true`
+    .. confval:: clean
+        :type: boolean
+        :default: ``true``
+
         | whether to clean the run directory after execution
 
-    * time:
-        | boolean
-        | default: :code:`false`
-        | whether to record the computation time and add it to the output data (using the name :code:`TIME`)
+    .. confval:: time
+        :type: boolean
+        :default: ``false``
 
-    * include:
-        | path or list of paths
-        | default: empty
-        | paths to files containing custom workers (relative to the base directory or absolute)
-        | if the custom worker & runner components register themselves, their identifiers are automatically available
+        | whether to record the computation time (using the key ``TIME``)
+        | currently this information is not added to the output data
 
-    * custom:
-        | boolean
-        | default: :code:`false`
-        | whether to spawn the simulation directly without worker, the simulation integrates it's own interface or worker
+    .. confval:: include
+        :type: path or list of paths
+        :default: empty list
 
-* fit:
+        | paths to files containing custom components (relative to the base directory or absolute)
+        | if the custom worker & runner components register themselves properly, they can be selected from within the
+          configuration file by their identifiers
 
-    * surrogate:
+    .. confval:: custom
+        :type: boolean
+        :default: ``false``
+
+        | whether to spawn the simulation directly without worker
+        | the simulation is assumed to integrate it's own interface or worker compliant with the other specified options
+
+.. confval:: fit
+
+    .. confval:: surrogate
+        :default: GPy
+
         | Decide which surrogate model is used to fit the data.
-        | Default: GPy
 
-    * kernel:
+    .. confval:: kernel
+        :default: RBF
+
         | Set the kernel to use. Also sum and product kernels are possible.
-        | Default: RBF
 
-    * sigma_n:
+    .. confval:: sigma_n
+        :default: None
+
         | Data noise
-        | Default: None
 
-    * sigma_f:
+    .. confval:: sigma_f
+        :default: 1e-6
+
         | Data scale
-        | Default: 1e-6
 
-    * save:
+    .. confval:: save
+        :default: /model.hdf5
+
         | Save the trained model.
-        | Default: ./model.hdf5
 
-    * load:
+    .. confval:: load
+        :default: ./model.hdf5
+
         | Load an already saved model.
-        | Default: ./model.hdf5
 
-    * plot:
-        | Plot the results. Only possible for 'simple' data. For more sophisticated plots use 'ui'.
-        | Default: False
+    .. confval:: plot
+        :default: False
 
-        * xpred:
+        | Plot the results. Only possible for 'simple' data. For more sophisticated plots use ``profit ui``.
+
+        .. confval:: xpred
+
             | Specify the range of the plot for every dimension as (start, end, step)
             | E.g. for a parameter and an independent variable: ((0, 1, 0.01), (0, 10, 0.1))
 
-    * plot_searching_phase:
+    .. confval:: plot_searching_phase
+        :default: False
+
         | Not implemented yet.
-        | Default: False
 
-The variables can also be declared directly as string. E.g:
+Declaring variables as strings
+------------------------------
 
-.. code-block::
+The variables can also be declared directly as strings. E.g:
+
+.. code-block:: yaml
 
     variables:
         u: Uniform(0, 1)
@@ -261,5 +323,5 @@ Possible variable distributions
     Like linear.
 * Output
     Also several outputs are possible.
-* ActiveLearning (not implemented yet)
+* ActiveLearning
     Initialized as NaN and filled during training.

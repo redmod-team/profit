@@ -4,7 +4,9 @@ This file contains functions for loading and saving,
 string processing as well as random sampling.
 """
 from os import path
-
+from typing import Union
+from collections.abc import MutableMapping, Mapping
+import numpy as np
 
 def save(filename, data, header=None, fmt=None):
 
@@ -159,8 +161,7 @@ class SafeDict(dict):
         return self.pre + key + self.post
 
 
-def params2map(params):
-    from collections.abc import MutableMapping
+def params2map(params: Union[None, MutableMapping, np.ndarray, np.void]):
     if params is None:
         return {}
     if isinstance(params, MutableMapping):
@@ -170,6 +171,48 @@ def params2map(params):
     except AttributeError:
         pass
     raise TypeError('params are not a Mapping')
+
+
+def spread_struct_horizontal(struct_array: np.ndarray, variable_config: Mapping):
+    dtype = []
+    columns = {}
+    # prepare dtype
+    for variable in struct_array.dtype.names:
+        spec = variable_config[variable]
+        if len(spec['shape']) == 0:
+            dtype.append((variable, spec['dtype']))
+            columns[variable] = [variable]
+        else:
+            ranges = []
+            columns[variable] = []
+            for dep in spec['depend']:
+                ranges.append(spec['range'][dep])
+            meshes = [m.flatten() for m in np.meshgrid(*ranges)]
+            for i in range(meshes[0].size):
+                name = variable + '(' + ', '.join([f'{m[i]}' for m in meshes]) + ')'
+                dtype.append((name, spec['dtype']))
+                columns[variable].append(name)
+    # fill data
+    output = np.zeros(struct_array.shape, dtype=dtype)
+    for variable, spec in variable_config.items():
+        if len(spec['shape']) == 0:
+            output[variable] = struct_array[variable]
+        else:
+            for i in range(struct_array.size):
+                output[columns[variable]][i] = tuple(struct_array[variable][i])
+    return output
+
+
+# ToDo: spread struct vertical
+#  -> independent variables get new columns
+#  -> 1 original row gets spread across several (with duplicate entries)
+
+
+def flatten_struct(struct_array: np.ndarray):
+    # per default vector entries are spread across several columns
+    if not struct_array.size:
+        return np.array([[]])
+    return np.vstack([np.hstack([row[key].flatten() for key in struct_array.dtype.names]) for row in struct_array])
 
 
 def load_includes(paths):

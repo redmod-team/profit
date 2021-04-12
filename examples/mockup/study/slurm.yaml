@@ -1,0 +1,19 @@
+# same as profit.yaml but using the SlurmRunner
+ntrain: 30
+variables:
+    u: Uniform(4.7, 5.3)
+    v: Uniform(0.55, 0.6)
+    r: Independent
+    f: Output
+run:
+    runner:
+        class: slurm
+        parallel: 10
+    interface:
+        class: zeromq
+        bind: tcp://*:9000
+        connect: tcp://acluster:9000
+    post:
+        class: numpytxt
+        path: mockup.out
+    command: python3 mockup.py
