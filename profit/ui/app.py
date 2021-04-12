@@ -124,6 +124,9 @@ def init_app(config):
                         style=dropdown_style,
                     ),
                 ]),
+                html.Div(id='placeholder', style=axis_options_div_style, children=[
+                    # just a placeholder
+                ]),
             ]),
             html.Td(id='fit-options', style={'vertical-align': 'top'}, children=[
                 html.Div(id='fit-use-div', style=axis_options_div_style, children=[
@@ -150,6 +153,13 @@ def init_app(config):
                 html.Div(id='fit-conf-div', style=axis_options_div_style, children=[
                     html.B("\u03c3-confidence:", style=fit_options_text_style),
                     dcc.Input(id='fit-conf', type='number', value=2, min=0),
+                    dcc.RadioItems(
+                        id='fit-var',
+                        options=[{'label': 'variance', 'value': 'variance'},
+                                 {'label': 'marginal variance', 'value': 'marginal'}],
+                        value='variance',
+                        labelStyle={'display': 'inline-block'},
+                    )
                 ]),
                 html.Div(id='fit-color-div', style=axis_options_div_style, children=[
                     html.B("fit-color:", style=fit_options_text_style),
@@ -160,6 +170,19 @@ def init_app(config):
                         value='output',
                         labelStyle={'display': 'inline-block'},
                     ),
+                ]),
+                html.Div(id='fit-opacity-div', style=axis_options_div_style, children=[
+                    html.B("fit-opacity:", style=fit_options_text_style),
+                    html.Div(style=dropdown_style, children=[
+                        dcc.Slider(
+                            id='fit-opacity',
+                            min=0,
+                            max=1,
+                            step=0.1,
+                            value=0.5,
+                            marks={i: {'label': f'{100*i:.0f}%'} for i in [0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1]},
+                        ),
+                    ]),
                 ]),
             ]),
         ])]),
@@ -208,7 +231,7 @@ def init_app(config):
                 html.B("Show table of data:"),
                 html.Button("show table", id='show-table', n_clicks=0),
                 html.Button("hide table", id='hide-table', n_clicks=0),
-            ]),
+            ], style={'visibility': 'hidden'}),
             html.Div(id='data-table-div', style={'visibility': 'hidden'}, children=[
                 # dash_table.DataTable(
                 #     id='data-table',
@@ -373,7 +396,8 @@ def init_app(config):
          Output('fit-multiinput-div', 'style'),
          Output('fit-number-div', 'style'),
          Output('fit-conf-div', 'style'),
-         Output('fit-color-div', 'style'), ],
+         Output('fit-color-div', 'style'),
+         Output('fit-opacity-div', 'style'), ],
         Input('graph-type', 'value')
     )
     def div_visibility(graph_type):
@@ -382,15 +406,15 @@ def init_app(config):
         show_div_style = axis_options_div_style.copy()
         show_div_style['visibility'] = 'visible'
         if graph_type == '1D':
-            return hide_div_style, hide_div_style, show_div_style, show_div_style, show_div_style, show_div_style, show_div_style, hide_div_style
+            return hide_div_style, hide_div_style, show_div_style, show_div_style, show_div_style, show_div_style, show_div_style, hide_div_style, hide_div_style
         if graph_type == '2D':
-            return show_div_style, hide_div_style, show_div_style, show_div_style, show_div_style, show_div_style, show_div_style, show_div_style
+            return show_div_style, hide_div_style, show_div_style, show_div_style, show_div_style, show_div_style, show_div_style, show_div_style, show_div_style
         if graph_type == '2D contour':
-            return show_div_style, hide_div_style, show_div_style, hide_div_style, hide_div_style, hide_div_style, hide_div_style, hide_div_style
+            return show_div_style, hide_div_style, show_div_style, hide_div_style, hide_div_style, hide_div_style, hide_div_style, hide_div_style, hide_div_style
         if graph_type == '3D':
-            return show_div_style, show_div_style, hide_div_style, show_div_style, hide_div_style, show_div_style, hide_div_style, hide_div_style
+            return show_div_style, show_div_style, hide_div_style, show_div_style, hide_div_style, show_div_style, hide_div_style, hide_div_style, show_div_style
         else:
-            return show_div_style, show_div_style, show_div_style, show_div_style, show_div_style, show_div_style, show_div_style, show_div_style
+            return show_div_style, show_div_style, show_div_style, show_div_style, show_div_style, show_div_style, show_div_style, show_div_style, show_div_style
 
 
     @app.callback(
@@ -412,13 +436,15 @@ def init_app(config):
          Input('fit-multiinput-dropdown', 'value'),
          Input('fit-number', 'value'),
          Input('fit-conf', 'value'),
-         Input('fit-color', 'value'), ],
+         Input('fit-var', 'value'),
+         Input('fit-color', 'value'),
+         Input('fit-opacity', 'value'), ],
         [State({'type': 'param-slider', 'index': ALL}, 'id'),
          State({'type': 'param-center', 'index': ALL}, 'value')],
     )
     def update_figure(invar, invar_2, invar_3, outvar, invar1_log, invar2_log, invar3_log, outvar_log, param_slider,
-                      graph_type, color_use, color_dd, filter_active, fit_use, fit_dd, fit_num, fit_conf, fit_color,
-                      id_type, param_center):
+                      graph_type, color_use, color_dd, filter_active, fit_use, fit_dd, fit_num, fit_conf, fit_var, fit_color,
+                      fit_opacity, id_type, param_center):
         if invar is None:
             return go.Figure()
         sel_y = np.full((len(outdata),), True)
@@ -444,7 +470,7 @@ def init_app(config):
             )
             if fit_use == ['show']:
                 num_samples = 20
-                mesh_in, mesh_out, mesh_out_std, fit_dd_values = mesh_fit(param_slider, id_type, fit_dd, fit_num,
+                mesh_in, mesh_out, mesh_out_std, fit_dd_values, mesh_mar_std = mesh_fit(param_slider, id_type, fit_dd, fit_num,
                                                                           param_center, [invar], outvar, num_samples)
                 for i in range(len(fit_dd_values)):
                     fig.add_trace(go.Scatter(
@@ -457,7 +483,9 @@ def init_app(config):
                     ))
                     fig.add_trace(go.Scatter(
                         x=np.hstack((mesh_in[i][0], mesh_in[i][0][::-1])),
-                        y=np.hstack((mesh_out[i] + fit_conf * mesh_out_std[i], mesh_out[i][::-1] - fit_conf * mesh_out_std[i][::-1])),
+                        y=np.hstack((mesh_out[i] + fit_conf * mesh_out_std[i], mesh_out[i][::-1] - fit_conf * mesh_out_std[i][::-1])
+                                    if fit_var == 'variance' else
+                                    (mesh_out[i] + fit_conf * mesh_mar_std[i], mesh_out[i][::-1] - fit_conf * mesh_mar_std[i][::-1])),
                         showlegend=False,
                         fill='toself',
                         line_color=colormap(indata[fit_dd].min(), indata[fit_dd].max(), fit_dd_values[i]),
@@ -477,7 +505,7 @@ def init_app(config):
             fig.update_layout(height=700)
             if fit_use == ['show'] and invar != invar_2:
                 num_samples = 20
-                mesh_in, mesh_out, mesh_out_std, fit_dd_values = mesh_fit(param_slider, id_type, fit_dd, fit_num,
+                mesh_in, mesh_out, mesh_out_std, fit_dd_values, mesh_mar_std = mesh_fit(param_slider, id_type, fit_dd, fit_num,
                                                                           param_center, [invar, invar_2], outvar,
                                                                           num_samples)
                 for i in range(len(fit_dd_values)):
@@ -495,23 +523,27 @@ def init_app(config):
                         fig.add_trace(go.Surface(
                             x=mesh_in[i][invars.index(invar)].reshape((num_samples, num_samples)),
                             y=mesh_in[i][invars.index(invar_2)].reshape((num_samples, num_samples)),
-                            z=mesh_out[i].reshape((num_samples, num_samples)) + fit_conf * mesh_out_std[i].reshape((num_samples, num_samples)),
+                            z=mesh_out[i].reshape((num_samples, num_samples)) + fit_conf * mesh_out_std[i].reshape((num_samples, num_samples))
+                            if fit_var == 'variance' else
+                            mesh_out[i].reshape((num_samples, num_samples)) + fit_conf * mesh_mar_std[i].reshape((num_samples, num_samples)),
                             showlegend=False,
                             name=f'fit+v: {fit_dd}={fit_dd_values[i]:.2f}',
                             surfacecolor=mesh_out[i].reshape((num_samples, num_samples)) if fit_color == 'output' else
                             fit_dd_values[i] * np.ones([num_samples, num_samples]),
-                            opacity=0.25,
+                            opacity=fit_opacity,
                             coloraxis="coloraxis2",
                         ))
                         fig.add_trace(go.Surface(
                             x=mesh_in[i][invars.index(invar)].reshape((num_samples, num_samples)),
                             y=mesh_in[i][invars.index(invar_2)].reshape((num_samples, num_samples)),
-                            z=mesh_out[i].reshape((num_samples, num_samples)) - fit_conf * mesh_out_std[i].reshape((num_samples, num_samples)),
+                            z=mesh_out[i].reshape((num_samples, num_samples)) - fit_conf * mesh_out_std[i].reshape((num_samples, num_samples))
+                            if fit_var == 'variance' else
+                            mesh_out[i].reshape((num_samples, num_samples)) - fit_conf * mesh_mar_std[i].reshape((num_samples, num_samples)),
                             showlegend=False,
                             name=f'fit-v: {fit_dd}={fit_dd_values[i]:.2f}',
                             surfacecolor=mesh_out[i].reshape((num_samples, num_samples)) if fit_color == 'output' else
                             fit_dd_values[i] * np.ones([num_samples, num_samples]),
-                            opacity=0.5,
+                            opacity=fit_opacity,
                             coloraxis="coloraxis2",
                         ))
                 fig.update_layout(coloraxis2=dict(
@@ -519,7 +551,7 @@ def init_app(config):
                 ))
         elif graph_type == '2D contour':
             num_samples = 20
-            mesh_in, mesh_out, mesh_out_std, fit_dd_values = mesh_fit(param_slider, id_type, fit_dd, fit_num,
+            mesh_in, mesh_out, mesh_out_std, fit_dd_values, mesh_mar_std = mesh_fit(param_slider, id_type, fit_dd, fit_num,
                                                                       param_center, [invar, invar_2], outvar,
                                                                       num_samples)
             fig= go.Figure()
@@ -556,7 +588,7 @@ def init_app(config):
             ))
             if fit_use == ['show'] and len({invar, invar_2, invar_3}) == 3:
                 num_samples = 20
-                mesh_in, mesh_out, mesh_out_std, fit_dd_values = mesh_fit(param_slider, id_type, fit_dd, fit_num,
+                mesh_in, mesh_out, mesh_out_std, fit_dd_values, mesh_mar_std = mesh_fit(param_slider, id_type, fit_dd, fit_num,
                                                                           param_center, [invar, invar_2, invar_3], outvar,
                                                                           num_samples)
                 for i in range(len(fit_dd_values)):
@@ -571,8 +603,7 @@ def init_app(config):
                             isomin=mesh_out[i].min() * 1.1,
                             isomax=mesh_out[i].max() * 0.9,
                             caps=dict(x_show=False, y_show=False, z_show=False),
-                            # showlegend=True,
-                            # name=f'fit: {fit_dd}={fit_dd_values[i]:.2f}',
+                            opacity=fit_opacity,
                         ),
                     )
         else:
@@ -658,19 +689,23 @@ def init_app(config):
             x_pred = np.vstack([g.flatten() for g in grid]).T  # extract vector for predict
             sur = Surrogate.load_model(config['fit']['save']) # load surrogate
             fit_data, fit_var = sur.predict(x_pred)
+            fit_mar_var = sur.get_marginal_variance(x_pred)
             # generated data
             new_mesh_in = np.array([[grid[invars.index(invar)].flatten() for invar in invars]])
             new_mesh_out = np.array([fit_data[:, outvars.index(outvar)]])
             new_mesh_out_std = np.array([np.sqrt(fit_var[:, outvars.index(outvar)])])
+            new_mesh_mar_std = np.array([np.sqrt(fit_mar_var[:, outvars.index(outvar)])])
             if iteration == 0:
                 mesh_in = new_mesh_in
                 mesh_out = new_mesh_out
                 mesh_out_std = new_mesh_out_std
+                mesh_mar_std = new_mesh_mar_std
             else:
                 mesh_in = np.vstack((mesh_in, new_mesh_in))
                 mesh_out = np.vstack((mesh_out, new_mesh_out))
                 mesh_out_std = np.vstack((mesh_out_std, new_mesh_out_std))
-        return mesh_in, mesh_out, mesh_out_std, fit_dd_values
+                mesh_mar_std = np.vstack((mesh_mar_std, new_mesh_mar_std))
+        return mesh_in, mesh_out, mesh_out_std, fit_dd_values, mesh_mar_std
 
     @app.callback(
         Output('data-table-div', 'style'),
