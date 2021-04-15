@@ -27,6 +27,16 @@ def represent_ordereddict(dumper, data):
     return yaml.nodes.MappingNode(u'tag:yaml.org,2002:map', value)
 
 
+def try_parse(s):
+    funcs = [int, float]
+    for f in funcs:
+        try:
+            return f(s)
+        except ValueError:
+            pass
+    return s
+
+
 def dict_constructor(loader, node):
     return OrderedDict(loader.construct_pairs(node))
 
@@ -151,10 +161,11 @@ class Config(OrderedDict):
         halton_dim = []
         for k, v in self['variables'].items():
             if isinstance(v, str):
-                # match word(int_or_float, int_or_float, int_or_float)
-                mat = match(r'(\w+)\(?(-?\d+(?:\.\d+)?)?,?\s?(-?\d+(?:\.\d+)?)?,?\s?(-?\d+(?:\.\d+)?)?\)?', v)
-                kind = mat.group(1)
-                entries = tuple(float(entry) for entry in mat.groups()[1:] if entry is not None)
+                # match word(comma seperated list of int or float)
+                parsed = split('[()]', v)
+                kind = parsed[0]
+                args = parsed[1] if len(parsed) >= 2 else ''
+                entries = tuple(try_parse(a) for a in args.split(',')) if args != '' else tuple()
 
                 self['variables'][k] = {'kind': kind}
 
