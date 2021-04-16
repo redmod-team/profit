@@ -119,12 +119,13 @@ The following gives an overview of all possible parameters
         .. code-block:: yaml
 
             class: slurm
-            parallel: 1         # maximum number of simultaneous runs (for spawn array)
+            parallel: null      # maximum number of simultaneous runs (for spawn array)
             sleep: 0            # number of seconds to sleep while (internally) polling
             poll: 60            # number of seconds between external polls (to catch failed runs), use with care!
             path: slurm.bash    # the path to the generated batch script (relative to the base directory)
             custom: false       # whether a custom batch script is already provided at 'path'
-            job_name: profit    # the name of the submitted jobs
+            prefix: srun        # prefix for the command
+            job-name: profit    # the name of the submitted jobs
             OpenMP: false       # whether to set OMP_NUM_THREADS and OMP_PLACES
             cpus: 1             # number of cpus (including hardware threads) to use (may specify 'all')
 
@@ -148,11 +149,13 @@ The following gives an overview of all possible parameters
         .. code-block:: yaml
 
             class: zeromq
-            bind: tcp://*:9000              # address the runner binds to
-            connect: tcp://localhost:9000   # address the workers connect to
-            timeout: 2500                   # zeromq polling timeout, in ms
-            retries: 3                      # number of zeromq connection retries
-            retry-sleep: 1                  # sleep between retries, in s
+            transport: tcp      # transport system used by zeromq
+            port: 9000          # port for the interface
+            bind: null          # override bind address used by zeromq
+            connect: null       # override connect address used by zeromq
+            timeout: 2500       # zeromq polling timeout, in ms
+            retries: 3          # number of zeromq connection retries
+            retry-sleep: 1      # sleep between retries, in s
 
     .. confval:: pre
 

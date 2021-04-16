@@ -48,8 +48,10 @@ class SlurmRunner(Runner):
         self.fill(params_array, offset=self.next_run_id)
         env = self.env.copy()
         env['PROFIT_RUN_ID'] = str(self.next_run_id)
-        submit = subprocess.run(['sbatch', '--parsable', f'--array=0-{len(params_array) - 1}%{self.config["parallel"]}',
-                                 self.config['path']],
+        array_str = f'--array=0-{len(params_array) - 1}'
+        if self.config['parallel'] is not None:
+            array_str += f'%{self.config["parallel"]}'
+        submit = subprocess.run(['sbatch', '--parsable', array_str, self.config['path']],
                                 cwd=self.base_config['run_dir'], env=env, capture_output=True, text=True, check=True)
         job_id = submit.stdout.split(';')[0].strip()
         for i in range(len(params_array)):
@@ -123,35 +125,34 @@ class SlurmRunner(Runner):
     @classmethod
     def handle_config(cls, config, base_config):
         """
-        class: slurm
-        parallel: 1         # maximum number of simultaneous runs (for spawn array)
-        sleep: 0            # number of seconds to sleep while (internally) polling
-        poll: 60            # number of seconds between external polls (to catch failed runs), use with care!
-        path: slurm.bash    # the path to the generated batch script (relative to the base directory)
-        custom: false       # whether a custom batch script is already provided at 'path'
-        job_name: profit    # the name of the submitted jobs
-        OpenMP: false       # whether to set OMP_NUM_THREADS and OMP_PLACES
-        cpus: 1             # number of cpus (including hardware threads) to use (may specify 'all')
+        Example:
+            .. code-block:: yaml
+
+                class: slurm
+                parallel: null      # maximum number of simultaneous runs (for spawn array)
+                sleep: 0            # number of seconds to sleep while (internally) polling
+                poll: 60            # number of seconds between external polls (to catch failed runs), use with care!
+                path: slurm.bash    # the path to the generated batch script (relative to the base directory)
+                custom: false       # whether a custom batch script is already provided at 'path'
+                prefix: srun        # prefix for the command
+                job-name: profit    # the name of the submitted jobs
+                OpenMP: false       # whether to set OMP_NUM_THREADS and OMP_PLACES
+                cpus: 1             # number of cpus (including hardware threads) to use (may specify 'all')
+
         """
-        if 'parallel' not in config:
-            config['parallel'] = 1
-        if 'sleep' not in config:
-            config['sleep'] = 0
-        if 'poll' not in config:
-            config['poll'] = 60
-        if 'path' not in config:
-            config['path'] = 'slurm.bash'
+        defaults = dict(parallel=None, sleep=0, poll=60,
+                        path='slurm.bash', custom=False, prefix='srun',
+                        OpenMP=False, cpus=1)
+        defaults.update({'job-name': 'profit'})
+
+        for key, value in defaults:
+            if key not in config:
+                config[key] = value
+
         # convert path to absolute path
         if not os.path.isabs(config['path']):
             config['path'] = os.path.abspath(os.path.join(base_config['base_dir'], config['path']))
-        if 'custom' not in config:
-            config['custom'] = False
-        if 'job_name' not in config:
-            config['job_name'] = 'profit'
-        if 'cpus' not in config:
-            config['cpus'] = 1
-        if 'OpenMP' not in config:
-            config['OpenMP'] = False
+        # check type of 'cpus'
         if (type(config['cpus']) is not int or config['cpus'] < 1) and config['cpus'] != 'all':
             raise ValueError(f'config option "cpus" may only be a positive integer or "all" and not {config["cpus"]}')
 
@@ -161,15 +162,15 @@ class SlurmRunner(Runner):
 # automatically generated SLURM batch script for running simulations with proFit
 # see https://github.com/redmod-team/profit
 
-#SBATCH --job-name={self.config['job_name']}"""
+#SBATCH --job-name={self.config['job-name']}
 
+#SBATCH --ntasks=1"""
         if self.config['cpus'] == 'all':
             text += """
 #SBATCH --nodes=1
 #SBATCH --exclusive"""
         elif self.config['cpus'] > 1:
             text += f"""
-#SBATCH --nodes=1
 #SBATCH --cpus-per-task={self.config['cpus']}"""
 
         if self.config['OpenMP']:
@@ -181,8 +182,9 @@ export OMP_PLACES=threads"""
 if [[ -n $SLURM_ARRAY_TASK_ID ]]; then
     export PROFIT_ARRAY_ID=$SLURM_ARRAY_TASK_ID
 fi
-        
-{'profit-worker' if not self.run_config['custom'] else self.run_config['command']}
+export PROFIT_RUNNER_ADDRESS=$SLURM_SUBMIT_HOST
+
+{self.config["prefix"]} {'profit-worker' if not self.run_config['custom'] else self.run_config['command']}
 """
         with open(self.config['path'], 'w') as file:
             file.write(text)
