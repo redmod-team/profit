@@ -122,8 +122,9 @@ def main():
             sur.plot(xpred, independent=config['independent'], show=True)
 
     elif args.mode == 'ui':
-        from profit.ui import app
-        app.app.run_server(debug=True)
+        from profit.ui import init_app
+        app = init_app(config)
+        app.run_server(debug=True)
 
     elif args.mode == 'clean':
         from shutil import rmtree
