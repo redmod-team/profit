@@ -167,6 +167,10 @@ class Config(OrderedDict):
                 args = parsed[1] if len(parsed) >= 2 else ''
                 entries = tuple(try_parse(a) for a in args.split(',')) if args != '' else tuple()
 
+                if isinstance(try_parse(v), (int, float)):  # PyYaml has problems parsing scientific notation
+                    kind = 'Constant'
+                    entries = (try_parse(v),)
+
                 self['variables'][k] = {'kind': kind}
 
                 if safe_str(kind) == 'output':
@@ -189,9 +193,15 @@ class Config(OrderedDict):
                             self['variables'][k]['al_range'] = entries  # range between active learning should happen
                         else:
                             self['variables'][k]['range'] = func(*entries, size=self['ntrain'])
+                            self['variables'][k]['dtype'] = str(self['variables'][k]['range'].dtype)
                     except AttributeError:
-                        raise RuntimeError("Variable kind not defined.\n"
-                                           "Valid Functions: {}".format(get_class_methods(variable_kinds)))
+                        raise RuntimeError(f"Variable kind {kind} not defined.\n"
+                                           f"Valid Functions: {get_class_methods(variable_kinds)}")
+            elif isinstance(v, (int, float)):
+                self['variables'][k] = {'kind': 'constant', 'range': variable_kinds.constant(v, size=self['ntrain'])}
+                self['variables'][k]['dtype'] = str(self['variables'][k]['range'].dtype)
+            else:
+                raise TypeError(f'cannot interpret variable {k} with value {v}')
 
             # Process data types
             if 'dtype' not in self['variables'][k].keys():

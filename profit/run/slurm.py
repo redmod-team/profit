@@ -143,7 +143,7 @@ class SlurmRunner(Runner):
         defaults = dict(parallel=None, sleep=0, poll=60,
                         path='slurm.bash', custom=False, prefix='srun',
                         OpenMP=False, cpus=1,
-                        account=None, parition=None, qos=None, constraint=None)
+                        account=None, partition=None, qos=None, constraint=None)
         defaults.update({'job-name': 'profit', 'mem-per-cpu': None})
 
         for key, value in defaults.items():
