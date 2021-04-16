@@ -142,10 +142,11 @@ class SlurmRunner(Runner):
         """
         defaults = dict(parallel=None, sleep=0, poll=60,
                         path='slurm.bash', custom=False, prefix='srun',
-                        OpenMP=False, cpus=1)
-        defaults.update({'job-name': 'profit'})
+                        OpenMP=False, cpus=1,
+                        account=None, parition=None, qos=None, constraint=None)
+        defaults.update({'job-name': 'profit', 'mem-per-cpu': None})
 
-        for key, value in defaults:
+        for key, value in defaults.items():
             if key not in config:
                 config[key] = value
 
@@ -162,9 +163,12 @@ class SlurmRunner(Runner):
 # automatically generated SLURM batch script for running simulations with proFit
 # see https://github.com/redmod-team/profit
 
-#SBATCH --job-name={self.config['job-name']}
+"""
+        for key in ['job-name', 'account', 'partition', 'qos', 'constraint', 'mem-per-cpu']:
+            if self.config[key] is not None:
+                text += f"\n#SBATCH --{key}={self.config[key]}"
 
-#SBATCH --ntasks=1"""
+        text += "\n#SBATCH --ntasks=1"
         if self.config['cpus'] == 'all':
             text += """
 #SBATCH --nodes=1
