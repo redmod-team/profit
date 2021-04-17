@@ -39,7 +39,7 @@ def init_app(config):
             c_scal = 0.5
         else:
             c_scal = (c-cmin)/(cmax-cmin)
-        return color2hex(colormaps.plasma(c_scal))
+        return color2hex(colormaps.cividis(c_scal))
 
     app.layout = html.Div(children=[
         html.Div(dcc.Graph(id='graph1')),
@@ -180,6 +180,10 @@ def init_app(config):
                             marks={i: {'label': f'{100*i:.0f}%'} for i in [0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1]},
                         ),
                     ]),
+                ]),
+                html.Div(id='fit-sampling-div', style=axis_options_div_style, children=[
+                    html.B("fit-sampling-points:", style=fit_options_text_style),
+                    dcc.Input(id='fit-sampling', type='number', value=50, min=20, max=100),
                 ]),
             ]),
         ])]),
@@ -395,23 +399,26 @@ def init_app(config):
          Output('fit-conf-div', 'style'),
          Output('fit-color-div', 'style'),
          Output('fit-opacity-div', 'style'), ],
-        Input('graph-type', 'value')
+        [Input('graph-type', 'value'), ]
     )
     def div_visibility(graph_type):
-        hide_div_style = axis_options_div_style.copy()
-        hide_div_style['visibility'] = 'hidden'
-        show_div_style = axis_options_div_style.copy()
-        show_div_style['visibility'] = 'visible'
+        hide = axis_options_div_style.copy()
+        hide['visibility'] = 'hidden'
+        show = axis_options_div_style.copy()
+        show['visibility'] = 'visible'
         if graph_type == '1D':
-            return hide_div_style, hide_div_style, show_div_style, show_div_style, show_div_style, show_div_style, show_div_style, hide_div_style, hide_div_style
+            return hide, hide, show, show, show, show, show, hide, show
         if graph_type == '2D':
-            return show_div_style, hide_div_style, show_div_style, show_div_style, show_div_style, show_div_style, show_div_style, show_div_style, show_div_style
+            if len(invars) <= 2:
+                return show, hide, show, show, hide, hide, show, show, show
+            else:
+                return show, hide, show, show, show, show, show, show, show
         if graph_type == '2D contour':
-            return show_div_style, hide_div_style, show_div_style, hide_div_style, hide_div_style, hide_div_style, hide_div_style, hide_div_style, hide_div_style
+            return show, hide, show, hide, hide, hide, hide, hide, hide
         if graph_type == '3D':
-            return show_div_style, show_div_style, hide_div_style, show_div_style, hide_div_style, show_div_style, hide_div_style, hide_div_style, show_div_style
+            return show, show, hide, show, hide, show, hide, hide, show
         else:
-            return show_div_style, show_div_style, show_div_style, show_div_style, show_div_style, show_div_style, show_div_style, show_div_style, show_div_style
+            return show, show, show, show, show, show, show, show, show
 
 
     @app.callback(
@@ -435,13 +442,14 @@ def init_app(config):
          Input('fit-conf', 'value'),
          Input('fit-var', 'value'),
          Input('fit-color', 'value'),
-         Input('fit-opacity', 'value'), ],
+         Input('fit-opacity', 'value'),
+         Input('fit-sampling', 'value'), ],
         [State({'type': 'param-slider', 'index': ALL}, 'id'),
          State({'type': 'param-center', 'index': ALL}, 'value')],
     )
     def update_figure(invar, invar_2, invar_3, outvar, invar1_log, invar2_log, invar3_log, outvar_log, param_slider,
                       graph_type, color_use, color_dd, filter_active, fit_use, fit_dd, fit_num, fit_conf, add_noise_var, fit_color,
-                      fit_opacity, id_type, param_center):
+                      fit_opacity, fit_sampling, id_type, param_center):
         if invar is None:
             return go.Figure()
         sel_y = np.full((len(outdata),), True)
@@ -466,15 +474,15 @@ def init_app(config):
                 layout=go.Layout(height=600, xaxis=dict(title=invar, rangeslider=dict(visible=True)), yaxis=dict(title=outvar))
             )
             if fit_use == ['show']:
-                num_samples = 20
                 mesh_in, mesh_out, mesh_out_std, fit_dd_values = mesh_fit(param_slider, id_type, fit_dd, fit_num,
-                                                                          param_center, [invar], outvar, num_samples, add_noise_var)
+                                                                          param_center, [invar], [invar1_log],
+                                                                          outvar, fit_sampling, add_noise_var)
                 for i in range(len(fit_dd_values)):
                     fig.add_trace(go.Scatter(
                         x=mesh_in[i][invars.index(invar)],
                         y=mesh_out[i],
                         mode='lines',
-                        name=f'fit: {fit_dd}={fit_dd_values[i]:.2f}',
+                        name=f'fit: {fit_dd}={fit_dd_values[i]:.1e}',
                         line_color=colormap(indata[fit_dd].min(), indata[fit_dd].max(), fit_dd_values[i]),
                         marker_line=dict(coloraxis="coloraxis2"),
                     ))
@@ -484,7 +492,8 @@ def init_app(config):
                         showlegend=False,
                         fill='toself',
                         line_color=colormap(indata[fit_dd].min(), indata[fit_dd].max(), fit_dd_values[i]),
-                        marker_line=dict(coloraxis="coloraxis2")
+                        marker_line=dict(coloraxis="coloraxis2"),
+                        opacity=fit_opacity,
                     ))
         elif graph_type == '2D':
             fig = go.Figure(
@@ -499,42 +508,42 @@ def init_app(config):
             )
             fig.update_layout(height=700)
             if fit_use == ['show'] and invar != invar_2:
-                num_samples = 20
                 mesh_in, mesh_out, mesh_out_std, fit_dd_values = mesh_fit(param_slider, id_type, fit_dd, fit_num,
-                                                                          param_center, [invar, invar_2], outvar,
-                                                                          num_samples, add_noise_var)
+                                                                          param_center, [invar, invar_2],
+                                                                          [invar1_log, invar2_log], outvar,
+                                                                          fit_sampling, add_noise_var)
                 for i in range(len(fit_dd_values)):
                     fig.add_trace(go.Surface(
-                        x=mesh_in[i][invars.index(invar)].reshape((num_samples, num_samples)),
-                        y=mesh_in[i][invars.index(invar_2)].reshape((num_samples, num_samples)),
-                        z=mesh_out[i].reshape((num_samples, num_samples)),
+                        x=mesh_in[i][invars.index(invar)].reshape((fit_sampling, fit_sampling)),
+                        y=mesh_in[i][invars.index(invar_2)].reshape((fit_sampling, fit_sampling)),
+                        z=mesh_out[i].reshape((fit_sampling, fit_sampling)),
                         name=f'fit: {fit_dd}={fit_dd_values[i]:.2f}',
-                        surfacecolor=mesh_out[i].reshape((num_samples, num_samples)) if fit_color == 'output' else
-                        fit_dd_values[i] * np.ones([num_samples, num_samples]),
+                        surfacecolor=mesh_out[i].reshape((fit_sampling, fit_sampling)) if fit_color == 'output' else
+                        fit_dd_values[i] * np.ones([fit_sampling, fit_sampling]),
                         opacity=fit_opacity,
                         coloraxis="coloraxis2",
                         showlegend=True,
                     ))
                     if fit_conf > 0:
                         fig.add_trace(go.Surface(
-                            x=mesh_in[i][invars.index(invar)].reshape((num_samples, num_samples)),
-                            y=mesh_in[i][invars.index(invar_2)].reshape((num_samples, num_samples)),
-                            z=mesh_out[i].reshape((num_samples, num_samples)) + fit_conf * mesh_out_std[i].reshape((num_samples, num_samples)),
+                            x=mesh_in[i][invars.index(invar)].reshape((fit_sampling, fit_sampling)),
+                            y=mesh_in[i][invars.index(invar_2)].reshape((fit_sampling, fit_sampling)),
+                            z=mesh_out[i].reshape((fit_sampling, fit_sampling)) + fit_conf * mesh_out_std[i].reshape((fit_sampling, fit_sampling)),
                             showlegend=False,
                             name=f'fit+v: {fit_dd}={fit_dd_values[i]:.2f}',
-                            surfacecolor=mesh_out[i].reshape((num_samples, num_samples)) if fit_color == 'output' else
-                            fit_dd_values[i] * np.ones([num_samples, num_samples]),
+                            surfacecolor=mesh_out[i].reshape((fit_sampling, fit_sampling)) if fit_color == 'output' else
+                            fit_dd_values[i] * np.ones([fit_sampling, fit_sampling]),
                             opacity=fit_opacity,
                             coloraxis="coloraxis2",
                         ))
                         fig.add_trace(go.Surface(
-                            x=mesh_in[i][invars.index(invar)].reshape((num_samples, num_samples)),
-                            y=mesh_in[i][invars.index(invar_2)].reshape((num_samples, num_samples)),
-                            z=mesh_out[i].reshape((num_samples, num_samples)) - fit_conf * mesh_out_std[i].reshape((num_samples, num_samples)),
+                            x=mesh_in[i][invars.index(invar)].reshape((fit_sampling, fit_sampling)),
+                            y=mesh_in[i][invars.index(invar_2)].reshape((fit_sampling, fit_sampling)),
+                            z=mesh_out[i].reshape((fit_sampling, fit_sampling)) - fit_conf * mesh_out_std[i].reshape((fit_sampling, fit_sampling)),
                             showlegend=False,
                             name=f'fit-v: {fit_dd}={fit_dd_values[i]:.2f}',
-                            surfacecolor=mesh_out[i].reshape((num_samples, num_samples)) if fit_color == 'output' else
-                            fit_dd_values[i] * np.ones([num_samples, num_samples]),
+                            surfacecolor=mesh_out[i].reshape((fit_sampling, fit_sampling)) if fit_color == 'output' else
+                            fit_dd_values[i] * np.ones([fit_sampling, fit_sampling]),
                             opacity=fit_opacity,
                             coloraxis="coloraxis2",
                         ))
@@ -544,10 +553,10 @@ def init_app(config):
                     cmax=max(fit_dd_values) if fit_color == 'multi-fit' else None,
                 ))
         elif graph_type == '2D contour':
-            num_samples = 20
             mesh_in, mesh_out, mesh_out_std, fit_dd_values = mesh_fit(param_slider, id_type, fit_dd, fit_num,
-                                                                      param_center, [invar, invar_2], outvar,
-                                                                      num_samples, add_noise_var)
+                                                                      param_center, [invar, invar_2],
+                                                                      [invar1_log, invar2_log], outvar,
+                                                                      fit_sampling, add_noise_var)
             fig= go.Figure()
             fig.add_trace(go.Scatter(
                 x=indata[invar][sel_y],
@@ -564,13 +573,14 @@ def init_app(config):
                 coloraxis='coloraxis2',
                 name='fit',
             ))
-            print('Xmin', min(fig.data[1]['x']))
-            fig.update_xaxes(range=[min(fig.data[1]['x']), max(fig.data[1]['x'])])
-            fig.update_yaxes(range=[min(fig.data[1]['y']), max(fig.data[1]['y'])])
+            fig.update_xaxes(range=[log10(min(fig.data[1]['x'])), log10(max(fig.data[1]['x']))] if invar1_log == ['log']
+            else [min(fig.data[1]['x']), max(fig.data[1]['x'])])
+            fig.update_yaxes(range=[log10(min(fig.data[1]['y'])), log10(max(fig.data[1]['y']))] if invar2_log == ['log']
+            else [min(fig.data[1]['y']), max(fig.data[1]['y'])])
             fig.update_layout(xaxis_title=invar,
                               yaxis_title=invar_2,
                               coloraxis2=dict(colorbar=dict(title=outvar),
-                                              colorscale='ice',
+                                              colorscale='solar',
                                               cmin=min(fig.data[1]['z']),
                                               cmax=max(fig.data[1]['z'])))
         elif graph_type == '3D':
@@ -592,10 +602,10 @@ def init_app(config):
                 colorbar=dict(title=outvar),
             ))
             if fit_use == ['show'] and len({invar, invar_2, invar_3}) == 3:
-                num_samples = 20
                 mesh_in, mesh_out, mesh_out_std, fit_dd_values = mesh_fit(param_slider, id_type, fit_dd, fit_num,
-                                                                          param_center, [invar, invar_2, invar_3], outvar,
-                                                                          num_samples, add_noise_var)
+                                                                          param_center, [invar, invar_2, invar_3],
+                                                                          [invar1_log, invar2_log, invar3_log], outvar,
+                                                                          fit_sampling, add_noise_var)
                 for i in range(len(fit_dd_values)):
                     fig.add_trace(
                         go.Isosurface(
@@ -614,50 +624,6 @@ def init_app(config):
         else:
             fig = go.Figure()
         fig.update_layout(legend=dict(xanchor="left", x=0.01))
-        if color_use == ['true']: # TODO: trigger-detection no new fig just update
-            if fit_use == ['show'] and (graph_type=='2D' and ((fit_color=='output' and color_dd==outvar) or (fit_color=='multi-fit' and color_dd==fit_dd)) or graph_type=='3D'):
-                fig.update_traces(
-                    marker=dict(
-                        coloraxis="coloraxis2",
-                        color=indata[color_dd][sel_y] if color_dd in indata.dtype.names else outdata[color_dd][sel_y],
-                    ),
-                    selector=dict(mode='markers'),
-                )
-                fig.update_layout(coloraxis2=dict(cauto=True))
-            elif graph_type=='1D' and color_dd==fit_dd:
-                fig.update_traces(
-                    marker=dict(
-                        coloraxis="coloraxis2",
-                        color=indata[color_dd][sel_y] if color_dd in indata.dtype.names else outdata[color_dd][sel_y],
-                    ),
-                    selector=dict(mode='markers'),
-                )
-                fig.update_layout(coloraxis2=dict(colorscale='plasma', colorbar=dict(title=fit_dd)))
-            elif graph_type =='2D contour':
-                fig.update_traces(
-                    marker=dict(
-                        coloraxis="coloraxis",
-                        color=indata[color_dd][sel_y] if color_dd in indata.dtype.names else outdata[color_dd][sel_y],
-                    ),
-                    selector=dict(mode='markers'),
-                )
-                if color_dd == outvar:
-                    fig.update_traces(marker_coloraxis="coloraxis2", selector=dict(mode='markers'))
-                else:
-                    fig.update_layout(coloraxis=dict(colorbar=dict(title=color_dd, x=1.1),
-                                                     colorscale='solar'))
-            else:
-                fig.update_traces(
-                    marker=dict(
-                        coloraxis="coloraxis",
-                        color=indata[color_dd][sel_y] if color_dd in indata.dtype.names else outdata[color_dd][sel_y],
-                    ),
-                    selector=dict(mode='markers'),
-                )
-                fig.update_layout(coloraxis=dict(
-                    colorbar=dict(title=color_dd, x=1.1),
-                    colorscale='viridis',
-                ))
         # log scale
         log_dict = {'1D': (invar1_log, outvar_log),
                     '2D': (invar1_log, invar2_log, outvar_log),
@@ -670,10 +636,57 @@ def init_app(config):
             fig.update_layout(**comb_dict)
         else:
             fig.update_scenes(**comb_dict)
+        # color
+        if color_use == ['true']: # TODO: trigger-detection no new fig just update
+            if fit_use == ['show'] and (graph_type=='2D' and ((fit_color=='output' and color_dd==outvar) or (fit_color=='multi-fit' and color_dd==fit_dd)) or graph_type=='3D'):
+                fig.update_traces(
+                    marker=dict(
+                        coloraxis="coloraxis2",
+                        color=indata[color_dd][sel_y] if color_dd in indata.dtype.names else outdata[color_dd][sel_y],
+                    ),
+                    selector=dict(mode='markers'),
+                )
+            elif graph_type=='1D':
+                fig.update_traces(
+                    marker=dict(
+                        coloraxis="coloraxis2",
+                        color=indata[color_dd][sel_y] if color_dd in indata.dtype.names else outdata[color_dd][sel_y],
+                    ),
+                    selector=dict(mode='markers'),
+                )
+                if color_dd==fit_dd:
+                    fig.update_layout(coloraxis2=dict(colorscale='cividis', colorbar=dict(title=fit_dd)))
+                else:
+                    fig.update_layout(coloraxis2=dict(colorscale='plasma', colorbar=dict(title=color_dd)))
+            elif graph_type =='2D contour':
+                fig.update_traces(
+                    marker=dict(
+                        coloraxis="coloraxis",
+                        color=indata[color_dd][sel_y] if color_dd in indata.dtype.names else outdata[color_dd][sel_y],
+                    ),
+                    selector=dict(mode='markers'),
+                )
+                if color_dd == outvar:
+                    fig.update_traces(marker_coloraxis="coloraxis2", selector=dict(mode='markers'))
+                else:
+                    fig.update_layout(coloraxis=dict(colorbar=dict(title=color_dd, x=1.1),
+                                                     colorscale='ice'))
+            else:
+                fig.update_traces(
+                    marker=dict(
+                        coloraxis="coloraxis",
+                        color=indata[color_dd][sel_y] if color_dd in indata.dtype.names else outdata[color_dd][sel_y],
+                    ),
+                    selector=dict(mode='markers'),
+                )
+                fig.update_layout(coloraxis=dict(
+                    colorbar=dict(title=color_dd, x=1.1),
+                    colorscale='viridis',
+                ))
         return fig
 
 
-    def mesh_fit(param_slider, id_type, fit_dd, fit_num, param_center, invar_list, outvar, num_samples, add_noise_var):
+    def mesh_fit(param_slider, id_type, fit_dd, fit_num, param_center, invar_list, invar_log_list, outvar, num_samples, add_noise_var):
         try:  # collecting min/max of slider in filter section
             fit_dd_min, fit_dd_max = param_slider[[i['index'] for i in id_type].index(invars.index(fit_dd))]
         except ValueError:
@@ -689,20 +702,25 @@ def init_app(config):
                 ind = id_type[iter]['index']
                 fit_params[ind] = center_values
             fit_params[invars.index(fit_dd)] = fit_dd_value
-            for invar in invar_list:
-                fit_params[invars.index(invar)] = np.linspace(min(indata[invar]), max(indata[invar]), num_samples)
+            for iter, invar in enumerate(invar_list):
+                if invar_log_list[iter] == ['log']:
+                    fit_params[invars.index(invar)] = np.logspace(log10(min(indata[invar])), log10(max(indata[invar])),
+                                                                  num_samples)
+                else:
+                    fit_params[invars.index(invar)] = np.linspace(min(indata[invar]), max(indata[invar]), num_samples)
             grid = np.meshgrid(*fit_params)
             x_pred = np.vstack([g.flatten() for g in grid]).T  # extract vector for predict
             sur = Surrogate.load_model(config['fit']['save']) # load surrogate
             try:
-                fit_data, fit_var = sur.predict(x_pred, add_noise_var==['add'])
+                fit_data, fit_var = sur.predict(x_pred, add_noise_var == ['add'])
             except TypeError:
                 fit_data, fit_var = sur.predict(x_pred)
-                print('Warning: full data variance not supported') # TODO: fix after PR from Maximilian
+                if add_noise_var == ['add']:
+                    print('Warning: full data variance not supported') # TODO: fix after PR from Maximilian
             # generated data
             new_mesh_in = np.array([[grid[invars.index(invar)].flatten() for invar in invars]])
             new_mesh_out = np.array([fit_data[:, outvars.index(outvar)]])
-            new_mesh_out_std = np.array([np.sqrt(fit_var[:, outvars.index(outvar)])])
+            new_mesh_out_std = np.array([np.sqrt(fit_var[:, 0])]) # TODO: use second variance if available
             if iteration == 0:
                 mesh_in = new_mesh_in
                 mesh_out = new_mesh_out
