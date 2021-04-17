@@ -124,6 +124,20 @@ def init_app(config):
                         style=dropdown_style,
                     ),
                 ]),
+                html.Div(id='error-div', style=axis_options_div_style, children=[
+                    html.B("error: ", style={'width': 50}),
+                    dcc.Checklist(
+                        id='error-use',
+                        options=[{'label': '', 'value': 'true'}],
+                        style={'width': 50},
+                    ),
+                    dcc.Dropdown(
+                        id='error-dropdown',
+                        options=dropdown_opts_out,
+                        value=outvars[-1],
+                        style=dropdown_style,
+                    ),
+                ]),
                 html.Div(id='placeholder', style=axis_options_div_style, children=[
                     # just a placeholder
                 ]),
@@ -435,6 +449,8 @@ def init_app(config):
          Input('graph-type', 'value'),
          Input('color-use', 'value'),
          Input('color-dropdown', 'value'),
+         Input('error-use', 'value'),
+         Input('error-dropdown', 'value'),
          Input({'type': 'param-active', 'index': ALL}, 'value'),
          Input('fit-use', 'value'),
          Input('fit-multiinput-dropdown', 'value'),
@@ -448,7 +464,7 @@ def init_app(config):
          State({'type': 'param-center', 'index': ALL}, 'value')],
     )
     def update_figure(invar, invar_2, invar_3, outvar, invar1_log, invar2_log, invar3_log, outvar_log, param_slider,
-                      graph_type, color_use, color_dd, filter_active, fit_use, fit_dd, fit_num, fit_conf, add_noise_var, fit_color,
+                      graph_type, color_use, color_dd, error_use, error_dd, filter_active, fit_use, fit_dd, fit_num, fit_conf, add_noise_var, fit_color,
                       fit_opacity, fit_sampling, id_type, param_center):
         if invar is None:
             return go.Figure()
@@ -470,6 +486,7 @@ def init_app(config):
                     y=outdata[outvar][sel_y],
                     mode='markers',
                     name='data',
+                    error_y=dict(type='data', array=outdata[error_dd][sel_y], visible= error_use == ['true'])
                 )],
                 layout=go.Layout(height=600, xaxis=dict(title=invar, rangeslider=dict(visible=True)), yaxis=dict(title=outvar))
             )
@@ -503,6 +520,7 @@ def init_app(config):
                     z=outdata[outvar][sel_y],
                     mode='markers',
                     name='Data',
+                    error_z=dict(type='data', array=outdata[error_dd][sel_y], visible=error_use == ['true'])
                 )],
                 layout=go.Layout(scene=dict(xaxis_title=invar, yaxis_title=invar_2, zaxis_title=outvar))
             )
