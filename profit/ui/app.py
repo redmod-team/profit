@@ -202,7 +202,15 @@ def init_app(config):
             ]),
         ])]),
         html.Div(html.Table(html.Tr([
-            html.Td(html.Button("Add Filter", id='add-filter', n_clicks=0)),
+            html.Td(html.Div([
+                dcc.Dropdown(
+                    id='filter-dropdown',
+                    options=dropdown_opts_in,
+                    value=invars[0],
+                    style={'width': 200, 'margin-right': 10},
+                ),
+                html.Button("Add Filter", id='add-filter', n_clicks=0),
+            ], style={'display': 'flex'})),
             html.Td(html.Button("Clear Filter", id='clear-filter', n_clicks=0)),
             html.Td(html.Button("Clear all Filter", id='clear-all-filter', n_clicks=0)),
             html.Td(dcc.Slider(id='scale-slider',
@@ -268,21 +276,21 @@ def init_app(config):
         [Input('add-filter', 'n_clicks'),
          Input('clear-filter', 'n_clicks'),
          Input('clear-all-filter', 'n_clicks')],
-        [State('invar', 'value'),
+        [State('filter-dropdown', 'value'),
          State('param-text-div', 'children'),
          State('param-slider-div', 'children'),
          State('param-range-div', 'children'),
          State('param-center-div', 'children'),
          State('param-active-div', 'children'), ],
     )
-    def add_filterrow(n_clicks, clear, clear_all, invar, text, slider, range_div, center_div, active_div):
+    def add_filterrow(n_clicks, clear, clear_all, filter_dd, text, slider, range_div, center_div, active_div):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
         if trigger_id == 'clear-all-filter':
             return [], [], [], [], []
         elif trigger_id == 'clear-filter':
             for i, element in enumerate(text):  # TODO: better names
-                if text[i]['props']['children'][0] == invar:
+                if text[i]['props']['children'][0] == filter_dd:
                     text.pop(i)
                     slider.pop(i)
                     range_div.pop(i)
@@ -290,10 +298,10 @@ def init_app(config):
                     active_div.pop(i)
         elif trigger_id == 'add-filter':  # TODO: avoid double usage of filter
             for i, element in enumerate(text):
-                if text[i]['props']['children'][0] == invar:
+                if text[i]['props']['children'][0] == filter_dd:
                     return text, slider, range_div, center_div, active_div
-            ind = invars.index(invar)
-            txt = invar
+            ind = invars.index(filter_dd)
+            txt = filter_dd
             new_text = html.Div(id={'type': 'dyn-text', 'index': ind}, children=[txt], style={'height': 40})
             new_slider = html.Div(id={'type': 'dyn-slider', 'index': ind}, style={'height': 40}, children=[
                 create_slider(txt)], )
