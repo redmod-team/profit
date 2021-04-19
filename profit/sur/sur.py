@@ -18,16 +18,28 @@ import numpy as np
 
 
 class Surrogate(ABC):
-    """Base class for all surrogate models."""
+    """Base class for all surrogate models.
+
+    Attributes:
+        trained (bool): Flag that indicates if the model is already trained and ready to make predictions.
+        fixed_sigma_n (bool/float/ndarray): Indicates if the data noise should be optimized or not.
+            If an ndarray is given, its length must match the training data.
+        Xtrain (ndarray): Input data, at least of shape (ntrain, 1) but can have more dimensions
+        ytrain (ndarray): Observed output data, at least of shape (ntrain, 1).
+            Vector output is supported for independent variables only.
+        ndim (int): Dimension of input data.
+        output_ndim (int): Dimension of output data.
+    """
+
     _surrogates = {}  # All surrogates are registered here
     _defaults = {'surrogate': 'GPy', 'save': False, 'load': False}  # Default surrogate configuration parameters
 
     def __init__(self):
-        """Initialize global attributes of all surrogates."""
-        self.trained = False  # Flag if model is already trained
-        self.Xtrain = None  # Input data, at least of shape (n, 1)
-        self.ytrain = None  # Output data, at least of shape (n, 1)
-        self.ndim = None  # Dimension of input data
+        self.trained = False
+
+        self.Xtrain = None
+        self.ytrain = None
+        self.ndim = None
 
     @abstractmethod
     def train(self, X, y, **kwargs):
