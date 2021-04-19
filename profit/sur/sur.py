@@ -36,13 +36,14 @@ class Surrogate(ABC):
 
     def __init__(self):
         self.trained = False
+        self.fixed_sigma_n = False
 
         self.Xtrain = None
         self.ytrain = None
         self.ndim = None
 
     @abstractmethod
-    def train(self, X, y, **kwargs):
+    def train(self, X, y, fixed_sigma_n=False):
         """Trains the surrogate on input points X and model outputs y.
         Optional arguments e.g. for optimization are possible."""
         pass

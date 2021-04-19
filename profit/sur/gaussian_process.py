@@ -52,7 +52,9 @@ class GaussianProcess(Surrogate, ABC):
         $$
     """
 
-    _defaults = {'surrogate': 'GPy', 'kernel': 'RBF',  # Default parameters for all GP surrogates
+    _defaults = {'surrogate': 'GPy',  # Default parameters for all GP surrogates
+                 'kernel': 'RBF',
+                 'fixed_sigma_n': False,
                  'hyperparameters': {'length_scale': None,  # Hyperparameters are inferred from training data
                                      'sigma_n': None,
                                      'sigma_f': None}}
@@ -82,6 +84,7 @@ class GaussianProcess(Surrogate, ABC):
         self.Xtrain = check_ndim(X)  # Input data must be at least (n, 1)
         self.ytrain = check_ndim(y)  # Same for output data
         self.ndim = self.Xtrain.shape[-1]  # Dimension for input data
+        self.fixed_sigma_n = self.fixed_sigma_n or fixed_sigma_n
 
         # Infer hyperparameters from training data
         inferred_hyperparameters = {'length_scale': np.array([0.5*np.mean(
@@ -94,8 +97,8 @@ class GaussianProcess(Surrogate, ABC):
         for key, value in self.hyperparameters.items():
             if value is None:
                 value = inferred_hyperparameters[key]
-                self.hyperparameters[key] = np.atleast_1d(value)
-        self.print_hyperparameters("Initial")
+            self.hyperparameters[key] = np.atleast_1d(value)
+        self.print_hyperparameters('Initial')
 
         # Set kernel from config, parameter or default and convert a string to the class object
         self.kernel = self.kernel or kernel or self._defaults['kernel']
@@ -177,6 +180,7 @@ class GaussianProcess(Surrogate, ABC):
         self = cls()
         self.kernel = config['kernel']
         self.hyperparameters = config['hyperparameters']
+        self.fixed_sigma_n = config['fixed_sigma_n']
         return self
 
     @classmethod
@@ -261,7 +265,7 @@ class GPSurrogate(GaussianProcess):
         except np.linalg.LinAlgError:
             return np.linalg.lstsq(self.Ky, self.ytrain, rcond=1e-15)[0]
 
-    def train(self, X, y, kernel=None, hyperparameters=None, **opt_kwargs):
+    def train(self, X, y, kernel=None, hyperparameters=None, fixed_sigma_n=False, **opt_kwargs):
         """After initializing the model with a kernel function and initial hyperparameters,
         it can be trained on input data X and observed output data y by optimizing the model's hyperparameters.
         This is done by minimizing the negative log likelihood.
@@ -349,7 +353,7 @@ class GPSurrogate(GaussianProcess):
         """
         from profit.util import save_hdf
         save_dict = {attr: getattr(self, attr)
-                     for attr in ('trained', 'Xtrain', 'ytrain', 'ndim', 'kernel', 'hyperparameters')}
+                     for attr in ('trained', 'fixed_sigma_n', 'Xtrain', 'ytrain', 'ndim', 'kernel', 'hyperparameters')}
 
         # Convert the kernel class object to a string, to be able to save it in the .hdf5 file
         if not isinstance(save_dict['kernel'], str):
@@ -591,12 +595,19 @@ class SklearnGPSurrogate(GaussianProcess):
                 for active learning. Currently, this is setting is ignored.
         """
         super().prepare_train(X, y, kernel, hyperparameters, fixed_sigma_n)
+        numeric_noise = self.hyperparameters['sigma_n'].item() ** 2 if self.fixed_sigma_n else 1e-5
 
-    def train(self, X, y, kernel=None, hyperparameters=None):
-        super().prepare_train(X, y, kernel, hyperparameters)
-        self.model = self.sklearn_gp.GaussianProcessRegressor(kernel=self.kernel,
-                                                              alpha=self.hyperparameters['sigma_n'] ** 2)
+        # Instantiate the model
+        self.model = self.sklearn_gp.GaussianProcessRegressor(kernel=self.kernel, alpha=numeric_noise)
+
+        # Train the model
         self.model.fit(self.Xtrain, self.ytrain)
+        self.kernel = self.model.kernel_
+
+        # Set hyperparameters from model
+        self._set_hyperparameters_from_model()
+        self.print_hyperparameters("Optimized")
+
         self.trained = True
 
     def add_training_data(self, X, y):
@@ -687,17 +698,34 @@ class SklearnGPSurrogate(GaussianProcess):
                 kernel += [key if key in ('+', '*') else
                            getattr(self.sklearn_kernels, key)(length_scale=self.hyperparameters['length_scale'])]
         except AttributeError:
-            hyp = self.hyperparameters['length_scale']
-            kernel = [LinearEmbedding(dims=hyp.shape, length_scale=hyp.flatten())]
-            #raise RuntimeError("Kernel {} is not implemented.".format(kernel))
+            raise RuntimeError("Kernel {} is not implemented.".format(kernel))
+
         if len(kernel) == 1:
-            return kernel[0]
+            kernel = kernel[0]
         else:
             kernel = [str(key) if not isinstance(key, str) else key for key in kernel]
-            return eval(''.join(kernel))
+            kernel = eval(''.join(kernel))
 
-    def optimize(self, **opt_kwargs):
-        self.model.fit(self.xtrain, self.ytrain, **opt_kwargs)
+        # Add scale and noise to kernel
+        kernel *= self.sklearn_kernels.ConstantKernel(constant_value=1/self.hyperparameters['sigma_f'].item() ** 2)
+        if not self.fixed_sigma_n:
+            kernel += self.sklearn_kernels.WhiteKernel(noise_level=self.hyperparameters['sigma_n'].item() ** 2)
+
+        return kernel
+
+    def _set_hyperparameters_from_model(self):
+        """Helper function to set the hyperparameter dict from the model, depending on whether $\sigma_n$ is fixed.
+        Currently only stable for single kernels and not for Sum and Prod kernels.
+        """
+        if self.fixed_sigma_n:
+            self.hyperparameters['length_scale'] = np.atleast_1d(self.model.kernel_.k1.length_scale)
+            self.hyperparameters['sigma_f'] = np.sqrt(np.atleast_1d(1 / self.model.kernel_.k2.constant_value))
+            self.hyperparameters['sigma_n'] = np.sqrt(np.atleast_1d(self.model.alpha))
+        else:
+            self.hyperparameters['length_scale'] = np.atleast_1d(self.model.kernel_.k1.k1.length_scale)
+            self.hyperparameters['sigma_f'] = np.sqrt(np.atleast_1d(1 / self.model.kernel_.k1.k2.constant_value))
+            self.hyperparameters['sigma_n'] = np.sqrt(np.atleast_1d(self.model.kernel_.k2.noise_level))
+
 
 
 # Draft for Scikit-learn implementation of LinearEmbedding kernel of Garnett (2014)
