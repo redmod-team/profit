@@ -53,7 +53,7 @@ class Surrogate(ABC):
         pass
 
     @abstractmethod
-    def predict(self, Xpred, add_data_variance=False):
+    def predict(self, Xpred, add_data_variance=True):
         """Predicts model output y for input X based on surrogate."""
         pass
 

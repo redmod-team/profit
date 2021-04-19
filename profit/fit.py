@@ -103,9 +103,9 @@ class ActiveLearning:
         # Plot first runs
         if self.plot_every:
             def create_fig():
-                projection = '3d' if self.Xpred.shape[-1] > 1 else '2d'
+                subplot_kw = {'projection': '3d'} if self.Xpred.shape[-1] > 1 else None
                 fig, ax = subplots(1 + self.plot_marginal_variance, 1,
-                                   subplot_kw={'projection': projection})
+                                   subplot_kw=subplot_kw)
                 if not self.plot_marginal_variance:
                     ax = [ax]
                 return ax

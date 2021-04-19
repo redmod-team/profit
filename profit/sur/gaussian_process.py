@@ -308,7 +308,7 @@ class GPSurrogate(GaussianProcess):
         self.print_hyperparameters("Optimized")
         self.trained = True
 
-    def predict(self, Xpred, add_data_variance=False):
+    def predict(self, Xpred, add_data_variance=True):
         Xpred = super().prepare_predict(Xpred)
 
         # Skip data noise sigma_n in hyperparameters
@@ -508,7 +508,7 @@ class GPySurrogate(GaussianProcess):
         """
         super().prepare_train(X, y, kernel, hyperparameters, fixed_sigma_n, multi_output)
 
-        if not self.multi_output:
+        if not self.multi_output or self.output_ndim < 2:
             self.model = self.GPy.models.GPRegression(self.Xtrain, self.ytrain, self.kernel,
                                                       noise_var=self.hyperparameters['sigma_n'] ** 2)
         else:
@@ -523,9 +523,10 @@ class GPySurrogate(GaussianProcess):
         # TODO: For Prod/Add kernels we have to do something else.
         #       Nothing happens if the hyperparameters are not written back, it is just inconsistent.
         if hasattr(self.model.kern, 'lengthscale'):
-            self.hyperparameters['length_scale'] = self.model.kern.lengthscale
+            self.hyperparameters['length_scale'] = self.model.kern.lengthscale.values
             self.hyperparameters['sigma_f'] = np.sqrt(self.model.kern.variance)
             self.hyperparameters['sigma_n'] = np.sqrt(self.model.likelihood.variance)
+        self.print_hyperparameters("Optimized")
         self.trained = True
 
     def add_training_data(self, X, y):
@@ -539,7 +540,7 @@ class GPySurrogate(GaussianProcess):
         self.ytrain = np.concatenate([self.ytrain, y], axis=0)
         self.model.set_XY(self.Xtrain, self.ytrain)
 
-    def predict(self, Xpred, add_data_variance=False):
+    def predict(self, Xpred, add_data_variance=True):
         Xpred = super().prepare_predict(Xpred)
         if not self.multi_output:
             ymean, yvar = self.model.predict(Xpred, include_likelihood=add_data_variance)
@@ -615,7 +616,8 @@ class GPySurrogate(GaussianProcess):
             if not any(operator in kernel for operator in ('+', '*')):
                 return getattr(self.GPy.kern, kernel)(self.ndim,
                                                       lengthscale=self.hyperparameters['length_scale'],
-                                                      variance=self.hyperparameters['sigma_f']**2)
+                                                      variance=self.hyperparameters['sigma_f']**2,
+                                                      ARD=len(self.hyperparameters['length_scale']) > 1)
             else:
                 from re import split
                 full_str = split('([+*])', kernel)
@@ -705,7 +707,7 @@ class SklearnGPSurrogate(GaussianProcess):
         self.Xtrain = np.concatenate([self.Xtrain, X], axis=0)
         self.ytrain = np.concatenate([self.ytrain, y], axis=0)
 
-    def predict(self, Xpred, add_data_variance=False):
+    def predict(self, Xpred, add_data_variance=True):
         Xpred = super().prepare_predict(Xpred)
 
         ymean, ystd = self.model.predict(Xpred, return_std=True)
@@ -802,7 +804,7 @@ class SklearnGPSurrogate(GaussianProcess):
         return kernel
 
     def _set_hyperparameters_from_model(self):
-        """Helper function to set the hyperparameter dict from the model, depending on whether $\sigma_n$ is fixed.
+        r"""Helper function to set the hyperparameter dict from the model, depending on whether $\sigma_n$ is fixed.
         Currently only stable for single kernels and not for Sum and Prod kernels.
         """
         if self.fixed_sigma_n:
