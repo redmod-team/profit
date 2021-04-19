@@ -110,7 +110,7 @@ class Surrogate(ABC):
                 return label
         raise NotImplementedError("Class {} is not implemented.".format(cls))
 
-    def plot(self, Xpred=None, independent=None, show=False, ref=None, add_data_variance=True):
+    def plot(self, Xpred=None, independent=None, show=False, ref=None, add_data_variance=True, axes=None):
         """Simple plotting for dimensions <= 2."""
         import matplotlib.pyplot as plt
         if Xpred is None:
@@ -120,7 +120,7 @@ class Surrogate(ABC):
         if independent:
             # 2D with one input parameter and one independent variable.
             if self.ndim == 1 and ypred.ndim == 2:
-                ax = plt.axes(projection='3d')
+                ax = axes or plt.axes(projection='3d')
                 xind = np.hstack([v['range'] for k, v in independent.items()])
                 xtgrid = np.meshgrid(*[xind, self.Xtrain])
                 xgrid = np.meshgrid(*[xind, Xpred])
@@ -134,16 +134,17 @@ class Surrogate(ABC):
         else:
             if self.ndim == 1 and ypred.shape[-1] == 1:
                 # Only one input parameter to plot.
+                ax = axes or plt.axes()
                 if ref:
-                    plt.plot(Xpred, ref(Xpred), color='red')
-                plt.plot(Xpred, ypred)
-                plt.scatter(self.Xtrain, self.ytrain, marker='x', s=50, c='k')
-                plt.fill_between(Xpred.flatten(),
-                                 ypred.flatten() + 2 * ystd_pred.flatten(), ypred.flatten() - 2 * ystd_pred.flatten(),
-                                 color='grey', alpha=0.6)
+                    ax.plot(Xpred, ref(Xpred), color='red')
+                ax.plot(Xpred, ypred)
+                ax.scatter(self.Xtrain, self.ytrain, marker='x', s=50, c='k')
+                ax.fill_between(Xpred.flatten(),
+                                ypred.flatten() + 2 * ystd_pred.flatten(), ypred.flatten() - 2 * ystd_pred.flatten(),
+                                color='grey', alpha=0.6)
             elif self.ndim == 2 and ypred.shape[-1] == 1:
                 # Two fitted input variables.
-                ax = plt.axes(projection='3d')
+                ax = axes or plt.axes(projection='3d')
                 ypred = ypred.flatten()
                 ystd_pred = ystd_pred.flatten()
                 ax.scatter(self.Xtrain[:, 0], self.Xtrain[:, 1], self.ytrain, color='red', alpha=0.8)

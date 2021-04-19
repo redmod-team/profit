@@ -5,7 +5,8 @@ from tqdm import tqdm
 
 class ActiveLearning:
     """Class for active learning of hyperparameters. Needs references to runner and surrogate."""
-    _defaults = {'nrand': 3, 'optimize_every': 1, 'plot_every': False, 'al_range': (0, 1), 'save': False}
+    _defaults = {'nrand': 3, 'optimize_every': 1, 'plot_every': False, 'plot_marginal_variance': False,
+                 'al_range': (0, 1), 'save': False}
 
     def __init__(self, runner, surrogate, inputs):
         """Initialize class with interface to runner and surrogate and create variables for AL parameters."""
@@ -21,6 +22,7 @@ class ActiveLearning:
         self.ntrain = None  # total number of training runs  # TODO: leave this open and specify a convergence criterion instead
         self.optimize_every = None  # nr of AL iterations between hyperparameter optimizations
         self.plot_every = False  # nr of AL iterations between plotting the progress
+        self.plot_marginal_variance = False  # Plot marginal variance
 
     def run_first(self, nrand=3):
         """Run first simulations with random points."""
@@ -57,6 +59,7 @@ class ActiveLearning:
         self.ntrain = base_config['ntrain']
         self.optimize_every = config['optimize_every']
         self.plot_every = config['plot_every']
+        self.plot_marginal_variance = config['plot_marginal_variance']
         self.Xpred = config.get('Xpred')
         return self
 
@@ -83,18 +86,32 @@ class ActiveLearning:
         """ Example for debugging. """
         return np.cos(10 * u) + u
 
-    def learn(self, ntrain=None, Xpred=None, optimize_every=1, plot_every=False):
+    def learn(self, ntrain=None, Xpred=None, optimize_every=1, plot_every=False, plot_marginal_variance=False):
         """Main loop for active learning."""
         self.ntrain = self.ntrain or ntrain  # Set variable either from config or from given parameter
         self.optimize_every = self.optimize_every or optimize_every
         self.plot_every = self.plot_every or plot_every
+        self.plot_marginal_variance = self.plot_marginal_variance or plot_marginal_variance
         if self.plot_every:
-            from matplotlib.pyplot import figure, show
+            from matplotlib.pyplot import subplots, show
 
         self.Xpred = self.Xpred or Xpred or self.sur.default_Xpred()
         if isinstance(self.Xpred, list):  # Create a dense predictive array for each dimension
             xp = [np.arange(minv, maxv, step) for minv, maxv, step in self.Xpred]
             self.Xpred = np.hstack([xi.flatten().reshape(-1, 1) for xi in np.meshgrid(*xp)])
+
+        # Plot first runs
+        if self.plot_every:
+            def create_fig():
+                projection = '3d' if self.Xpred.shape[-1] > 1 else '2d'
+                fig, ax = subplots(1 + self.plot_marginal_variance, 1,
+                                   subplot_kw={'projection': projection})
+                if not self.plot_marginal_variance:
+                    ax = [ax]
+                return ax
+
+            ax = create_fig()
+            self.sur.plot(self.Xpred, ref=self.f, axes=ax[0])
 
         # Main loop
         for krun in tqdm(range(self.nrand, self.ntrain)):
@@ -121,8 +138,8 @@ class ActiveLearning:
             if not (krun+1) % self.optimize_every:
                 self.sur.optimize(return_hess_inv=True)  # Optimize hyperparameters
             if self.plot_every and not (krun+1) % self.plot_every:
-                figure()  # Plot progress in new figure
-                self.sur.plot(self.Xpred, ref=self.f)
+                ax = create_fig()  # Plot progress in new figure
+                self.sur.plot(self.Xpred, ref=self.f, axes=ax[0])
 
         if self.plot_every:
             show()
