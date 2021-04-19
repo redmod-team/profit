@@ -265,7 +265,8 @@ class GPSurrogate(GaussianProcess):
         except np.linalg.LinAlgError:
             return np.linalg.lstsq(self.Ky, self.ytrain, rcond=1e-15)[0]
 
-    def train(self, X, y, kernel=None, hyperparameters=None, fixed_sigma_n=False, **opt_kwargs):
+    def train(self, X, y, kernel=None, hyperparameters=None, fixed_sigma_n=False,
+              eval_gradient=True, return_hess_inv=False):
         """After initializing the model with a kernel function and initial hyperparameters,
         it can be trained on input data X and observed output data y by optimizing the model's hyperparameters.
         This is done by minimizing the negative log likelihood.
@@ -288,7 +289,9 @@ class GPSurrogate(GaussianProcess):
         """
 
         super().prepare_train(X, y, kernel, hyperparameters)
-        self.optimize(**opt_kwargs)  # Find best hyperparameters
+        # Find best hyperparameters
+        self.optimize(fixed_sigma_n=self.fixed_sigma_n, eval_gradient=eval_gradient, return_hess_inv=return_hess_inv)
+        self.print_hyperparameters("Optimized")
         self.trained = True
 
     def predict(self, Xpred, add_data_variance=False):
@@ -299,12 +302,13 @@ class GPSurrogate(GaussianProcess):
 
         # Calculate conditional mean and covariance functions
         Kstar = self.kernel(self.Xtrain, Xpred, **prediction_hyperparameters)
-        Kstarstar = self.kernel(Xpred, Xpred, **prediction_hyperparameters)
-        fstar = Kstar.T.dot(self.alpha)
-        vstar = Kstarstar - (Kstar.T @ (GPFunctions.invert(self.Ky) @ Kstar))
+        Kstarstar_diag = np.diag(self.kernel(Xpred, Xpred, **prediction_hyperparameters))
+        fstar = Kstar.T @ self.alpha
+        vstar = Kstarstar_diag - np.diag((Kstar.T @ (GPFunctions.invert(self.Ky) @ Kstar)))
+        vstar = np.maximum(vstar, 1e-10)  # Assure a positive variance
         if add_data_variance:
             vstar = vstar + self.hyperparameters['sigma_n']**2
-        return fstar, np.diag(vstar)  # Return predictive mean and variance
+        return fstar, vstar.reshape(-1, 1)  # Return predictive mean and variance
 
     def add_training_data(self, X, y):
         """Add training points to existing data. This is important for active learning.
@@ -399,17 +403,32 @@ class GPSurrogate(GaussianProcess):
             except AttributeError:
                 raise RuntimeError("Kernel {} not implemented.".format(kernel))
 
-    def optimize(self, **opt_kwargs):
-        """Optimize length_scale, scale sigma_f and noise sigma_n.
-        Hyperparameter dict must be converted to an array. Beware of the order!"""
+    def optimize(self, fixed_sigma_n=False, eval_gradient=False, return_hess_inv=False):
+        r"""Optimize the hyperparameters length_scale $l$, scale $\sigma_f$ and noise $\sigma_n$.
+        As a backend, the scipy minimize optimizer is used.
+
+        Parameters:
+            fixed_sigma_n (bool/float/ndarray): Indication if the data noise should also be optimized or not.
+            eval_gradient (bool): Flag if the gradients of the kernel and negative log likelihood should be
+                used explicitly or numerically calculated inside the optimizer.
+            return_hess_inv (bool): Whether to set the inverse Hessian attribute hess_inv which is used to calculate the
+                marginal variance in active learning.
+        """
         ordered_hyp_keys = ('length_scale', 'sigma_f', 'sigma_n')
-        a0 = [self.hyperparameters[key] for key in ordered_hyp_keys]
-        opt_hyperparameters = GPFunctions.optimize(self.Xtrain, self.ytrain, a0, self.kernel, **opt_kwargs)
+        a0 = np.concatenate([self.hyperparameters[key] for key in ordered_hyp_keys])
+        # TODO: Add log transformed length_scales and ensure stability.
+        #a0 = np.log(a0)
+        opt_hyperparameters = GPFunctions.optimize(self.Xtrain, self.ytrain, a0, self.kernel,
+                                                   fixed_sigma_n=self.fixed_sigma_n or fixed_sigma_n,
+                                                   eval_gradient=eval_gradient, return_hess_inv=return_hess_inv)
+        if return_hess_inv:
+            self.hess_inv = opt_hyperparameters[1].todense()
+            opt_hyperparameters = opt_hyperparameters[0]
+        #opt_hyperparameters = np.exp(opt_hyperparameters)
+
         # Set optimized hyperparameters
-        for idx, key in enumerate(ordered_hyp_keys):
-            self.hyperparameters[key] = opt_hyperparameters[idx]
-        if opt_kwargs.get('return_inv_hess'):
-            return opt_hyperparameters.inv_hess
+        for idx, hyp_value in enumerate(opt_hyperparameters):
+            self.hyperparameters[ordered_hyp_keys[idx]] = np.atleast_1d(hyp_value)
 
 
 @Surrogate.register('GPy')
@@ -766,23 +785,36 @@ class GPFunctions:
     # TODO: Include in gp_functions?
 
     @classmethod
-    def optimize(cls, xtrain, ytrain, a0, kernel, return_inv_hess=False, **opt_kwargs):
+    def optimize(cls, xtrain, ytrain, a0, kernel, fixed_sigma_n=False, eval_gradient=False, return_hess_inv=False):
         """Find optimal hyperparameters from initial array a0, sorted as [length_scale, scale, noise].
         Loss function is the negative log likelihood.
         Add opt_kwargs to tweak the settings in the scipy.minimize optimizer.
         Optionally return inverse of hessian matrix. This is important for the marginal likelihood calcualtion in active learning"""
         # TODO: add kwargs for negative_log_likelihood
         from scipy.optimize import minimize
+
+        if fixed_sigma_n:
+            sigma_n = a0[-1]
+            a0 = a0[:-1]
+        else:
+            sigma_n = None
+
         # Avoid values too close to zero
-        bounds = [(1e-6, None),
-                  (1e-6 * (np.max(ytrain) - np.min(ytrain)), None),
-                  (1e-6 * (np.max(ytrain) - np.min(ytrain)), None)]
+        dy = ytrain.max() - ytrain.min()
+        bounds = [(1e-6, None)] * len(a0[:-1 if fixed_sigma_n else -2]) + \
+                 [(1e-6 * dy, None)] + \
+                 [(1e-6 * dy, None)] * (1 - fixed_sigma_n)
+
+        args = [xtrain, ytrain, kernel, eval_gradient]
+        if sigma_n is not None:
+            args.append(sigma_n)
 
         opt_result = minimize(cls.negative_log_likelihood, a0,
-                         args=(xtrain, ytrain, kernel),
-                         bounds=bounds, **opt_kwargs)
-        if return_inv_hess:
-            return opt_result.x, opt_result.inv_hess
+                              args=tuple(args),
+                              bounds=bounds,
+                              jac=eval_gradient)
+        if return_hess_inv:
+            return opt_result.x, opt_result.hess_inv
         return opt_result.x
 
     @classmethod
@@ -794,7 +826,7 @@ class GPFunctions:
         return alpha
 
     @classmethod
-    def nll_cholesky(cls, hyp, X, y, kernel):
+    def nll_cholesky(cls, hyp, X, y, kernel, eval_gradient=False, fixed_sigma_n=False):
         """Compute the negative log-likelihood using the Cholesky decomposition of the covariance matrix
          according to Rasmussen&Williams 2006, p. 19, 113-114.
 
@@ -803,15 +835,28 @@ class GPFunctions:
         y: Function values at training points
         kernel: Function to build covariance matrix
         """
-        nx = len(X)
-        Ky = kernel(X, X, *hyp)
+        Ky = kernel(X, X, *hyp, eval_gradient=eval_gradient)
+        if eval_gradient:
+            dKy = Ky[1]
+            Ky = Ky[0]
         L = np.linalg.cholesky(Ky)
         alpha = cls.solve_cholesky(L, y)
-        nll = 0.5 * y.T @ alpha + np.sum(np.log(L.diagonal())) + nx * 0.5*np.log(2.0*np.pi)
-        return nll.item()
+        nll = 0.5 * y.T @ alpha + np.sum(np.log(L.diagonal())) + len(X) * 0.5*np.log(2.0*np.pi)
+        if not eval_gradient:
+            return nll.item()
+        KyinvaaT = cls.invert_cholesky(L)
+        KyinvaaT -= np.outer(alpha, alpha)
+        dnll = np.empty(len(hyp))
+        dnll[0] = 0.5 * np.trace(KyinvaaT @ dKy[..., 0])
+        dnll[-2] = 0.5 * np.einsum('jk,kj', KyinvaaT, Ky)
+        if fixed_sigma_n is not None:
+            dnll = dnll[:-1]
+        else:
+            dnll[-1] = 0.5 * hyp[-2] * np.einsum('jk,kj', KyinvaaT, np.eye(*Ky.shape))
+        return nll.item(), dnll
 
     @classmethod
-    def negative_log_likelihood(cls, hyp, X, y, kernel, neig=0, max_iter=1000):
+    def negative_log_likelihood(cls, hyp, X, y, kernel, eval_gradient=False, fixed_sigma_n=None, neig=0, max_iter=1000):
         """Compute the negative log likelihood of GP either by Cholesky decomposition or
         by finding the first neig eigenvalues. Solving for the eigenvalues is tried at maximum max_iter times.
 
@@ -821,34 +866,53 @@ class GPFunctions:
         kernel: Function to build covariance matrix
         """
         from scipy.sparse.linalg import eigsh
-        Ky = kernel(X, X, *hyp)  # Construct covariance matrix
-        if neig <= 0 or neig > 0.05 * len(X):  # First try with Cholesky decomposition if neig is big
-            try:
-                return cls.nll_cholesky(hyp, X, y, kernel)
-            except np.linalg.LinAlgError:
-                print("Warning! Fallback to eig solver!")
+        if fixed_sigma_n is not None:
+            hyp = np.append(hyp, fixed_sigma_n)
 
-        # Otherwise, calculate first neig eigenvalues and eigenvectors
-        w, Q = eigsh(Ky, neig, tol=max(1e-6 * np.abs(hyp[0]), 1e-15))
-        for iteration in range(max_iter):  # Now iterate until convergence or max_iter is reached
-            if neig > 0.05 * len(X):  # Again, try with Cholesky decomposition
+        #hyp = np.exp(hyp)
+        clip_eig = max(1e-3 * min(abs(hyp[:-2])), 1e-10)
+        Ky = kernel(X, X, hyp[:-2], *hyp[-2:], eval_gradient=eval_gradient)  # Construct covariance matrix
+
+        if eval_gradient:
+            dKy = Ky[1]
+            Ky = Ky[0]
+
+        converged = False
+        iteration = 0
+        neig = max(neig, 1)
+        while not converged:
+            if not neig or neig > 0.05 * len(X):  # First try with Cholesky decomposition if neig is big
                 try:
-                    return cls.nll_cholesky(hyp, X, y, kernel)
+                    return cls.nll_cholesky(hyp, X, y, kernel, eval_gradient=eval_gradient, fixed_sigma_n=fixed_sigma_n)
                 except np.linalg.LinAlgError:
                     print("Warning! Fallback to eig solver!")
-            neig = 2 * neig  # Calculate more eigenvalues
-            w, Q = eigsh(Ky, neig, tol=max(1e-6 * np.abs(hyp[0]), 1e-15))
-
-            # Convergence criterion
-            if np.abs(w[0] - hyp[0]) / hyp[0] <= 1e-6 or neig >= len(X):
+            w, Q = eigsh(Ky, neig, tol=clip_eig)  # Otherwise, calculate the first neig eigenvalues and eigenvectors
+            if iteration >= max_iter:
+                print("Reached max. iterations!")
                 break
-        if iteration == max_iter:
-            print("Tried maximum number of times.")
+            neig *= 2  # Calculate more eigenvalues
+            converged = w[0] <= clip_eig or neig >= len(X)
 
         # Calculate the NLL with these eigenvalues and eigenvectors
+        w = np.maximum(w, 1e-10)
         alpha = Q @ (np.diag(1.0 / w) @ (Q.T @ y))
-        nll = 0.5 * y.T @ alpha + 0.5 * (np.sum(np.log(w)) + (len(X) - neig) * np.log(np.abs(hyp[0])))
-        return nll.item()
+        nll = 0.5 * (y.T @ alpha + np.sum(np.log(w)) + min(neig, len(X)) * np.log(2*np.pi))
+        if not eval_gradient:
+            return nll.item()
+
+        # This is according to Rasmussen&Williams 2006, p. 114, Eq. (5.9).
+        KyinvaaT = cls.invert(Ky)
+        KyinvaaT -= np.outer(alpha, alpha)
+
+        dnll = np.empty(len(hyp))
+        dnll[0] = 0.5 * np.trace(KyinvaaT @ dKy[..., 0])
+        dnll[-2] = 0.5 * np.einsum('jk,kj', KyinvaaT, Ky)
+        if fixed_sigma_n is not None:
+            dnll = dnll[:-1]
+        else:
+            dnll[-1] = 0.5 * hyp[-2] * np.einsum('jk,kj', KyinvaaT, np.eye(*Ky.shape))
+
+        return nll.item(), dnll
 
     @staticmethod
     def invert_cholesky(L):
@@ -956,10 +1020,10 @@ class Kernels:
         x2 = Y / length_scale
         dx = x1[:, np.newaxis, :] - x2[np.newaxis, :, :]
         dx2 = np.linalg.norm(dx, axis=-1) ** 2
-        K = sigma_f ** 2 * np.exp(-0.5 * dx2) + sigma_n ** 2
+        K = sigma_f ** 2 * np.exp(-0.5 * dx2) + sigma_n ** 2 * np.eye(*dx2.shape)
         if eval_gradient:
             dK = np.empty((K.shape[0], K.shape[1], 3))
-            dK[:, :, 0] = np.einsum('ijk,kl', dx **2) / length_scale ** 3 * K[..., np.newaxis]
+            dK[:, :, 0] = np.einsum('ijk->ij', dx ** 2) / length_scale ** 3 * K
             dK[:, :, 1] = 2 * K / sigma_f
             dK[:, :, 2] = 1
             return K, dK
