@@ -19,10 +19,9 @@ class GaussianProcess(Surrogate, ABC):
         self.kernel = None  # Kernel string or Kernel object
         self.hyperparameters = {}  # Dict of hyperparameters
 
-    def train(self, X, y, kernel=None, hyperparameters=None):
-        """Train the model with input data X, observed output y,
-         a given kernel and initial hyperparameters length_scale, sigma_f (scale) and sigma_n (noise)."""
-        self.Xtrain = check_ndim(X)  # Input data must be at least 2D
+    def prepare_train(self, X, y, kernel=None, hyperparameters=None, fixed_sigma_n=False):
+
+        self.Xtrain = check_ndim(X)  # Input data must be at least (n, 1)
         self.ytrain = check_ndim(y)  # Same for output data
         self.ndim = self.Xtrain.shape[-1]  # Dimension for input data
 
@@ -36,26 +35,30 @@ class GaussianProcess(Surrogate, ABC):
         self.hyperparameters = self.hyperparameters or hyperparameters or self._defaults['hyperparameters']
         for key, value in self.hyperparameters.items():
             if value is None:
-                self.hyperparameters[key] = inferred_hyperparameters[key]
-        print("Initial hyperparameters: {}".format(self.hyperparameters))
+                value = inferred_hyperparameters[key]
+                self.hyperparameters[key] = np.atleast_1d(value)
+        self.print_hyperparameters("Initial")
 
         # Set kernel from config, parameter or default and convert a string to the class object
         self.kernel = self.kernel or kernel or self._defaults['kernel']
         if isinstance(self.kernel, str):
             self.kernel = self.select_kernel(self.kernel)
 
-    def predict(self, Xpred, add_data_variance=False):
-        """Predict the output for prediction points Xpred."""
+    def train(self, X, y, kernel=None, hyperparameters=None):
+        pass
+
+    def prepare_predict(self, Xpred):
         if not self.trained:
             raise RuntimeError("Need to train() before predict()!")
 
         if Xpred is None:
             Xpred = self.default_Xpred()
         Xpred = check_ndim(Xpred)
-        ymean, yvar = self.model.predict(Xpred)
-        if add_data_variance:
-            yvar = yvar + self.hyperparameters['sigma_n']**2
-        return ymean, yvar
+        return Xpred
+
+    @abstractmethod
+    def predict(self, Xpred, add_data_variance=True):
+        pass
 
     def optimize(self, **opt_kwargs):
         """Find optimized hyperparameters of the model. Optional kwargs for tweaking optimization."""
@@ -92,6 +95,10 @@ class GaussianProcess(Surrogate, ABC):
         """Convert the name of the kernel as string to the kernel class object of the surrogate."""
         pass
 
+    def print_hyperparameters(self, prefix):
+        print('\n'.join(["{} hyperparameters:".format(prefix)] +
+                        ["{k}: {v}".format(k=key, v=value) for key, value in self.hyperparameters.items()]))
+
 
 @Surrogate.register('Custom')
 class GPSurrogate(GaussianProcess):
@@ -121,16 +128,12 @@ class GPSurrogate(GaussianProcess):
         """Train the model with input data X and output data y.
         Kernel and hyperparameters are set in the base class.
         Optional kwargs for optimization can be added."""
-        super().train(X, y, kernel, hyperparameters)
+        super().prepare_train(X, y, kernel, hyperparameters)
         self.optimize(**opt_kwargs)  # Find best hyperparameters
         self.trained = True
 
     def predict(self, Xpred, add_data_variance=False):
-        """Predict output from prediction points Xpred."""
-        if not self.trained:
-            raise RuntimeError('Need to train() before predict()')
-        if Xpred is None:
-            Xpred = self.default_Xpred()
+        Xpred = super().prepare_predict(Xpred)
 
         # Skip data noise sigma_n in hyperparameters
         prediction_hyperparameters = {key: value for key, value in self.hyperparameters.items() if key != 'sigma_n'}
@@ -221,7 +224,7 @@ class GPySurrogate(GaussianProcess):
     def train(self, X, y, kernel=None, hyperparameters=None, **opt_kwargs):
         """Train surrogate with input data X and output data y.
         As model a GPy Regression is used, with sigma_n as data noise."""
-        super().train(X, y, kernel, hyperparameters)
+        super().prepare_train(X, y, kernel, hyperparameters)
         self.model = self.GPy.models.GPRegression(self.Xtrain, self.ytrain, self.kernel,
                                                   noise_var=self.hyperparameters['sigma_n'] ** 2)
         self.optimize(**opt_kwargs)
@@ -241,11 +244,7 @@ class GPySurrogate(GaussianProcess):
         self.model.set_XY(self.Xtrain, self.ytrain)
 
     def predict(self, Xpred, add_data_variance=False):
-        if not self.trained:
-            raise RuntimeError("Need to train() before predict()!")
-        if Xpred is None:
-            Xpred = self.default_Xpred()
-        Xpred = check_ndim(Xpred)
+        Xpred = super().prepare_predict(Xpred)
         ymean, yvar = self.model.predict(Xpred, include_likelihood=add_data_variance)
         return ymean, yvar
 
@@ -317,7 +316,7 @@ class SklearnGPSurrogate(GaussianProcess):
         self.model = None
 
     def train(self, X, y, kernel=None, hyperparameters=None):
-        super().train(X, y, kernel, hyperparameters)
+        super().prepare_train(X, y, kernel, hyperparameters)
         self.model = self.sklearn_gp.GaussianProcessRegressor(kernel=self.kernel,
                                                               alpha=self.hyperparameters['sigma_n'] ** 2)
         self.model.fit(self.Xtrain, self.ytrain)
@@ -328,10 +327,7 @@ class SklearnGPSurrogate(GaussianProcess):
         self.ytrain = np.concatenate([self.ytrain, y], axis=0)
 
     def predict(self, Xpred, add_data_variance=False):
-        if not self.trained:
-            raise RuntimeError("Need to train() before predict()!")
-        if Xpred is None:
-            Xpred = self.default_xpred()
+        Xpred = super().prepare_predict(Xpred)
 
         ymean, ystd = self.model.predict(Xpred, return_std=True)
         yvar = ystd.reshape(-1, 1)**2
