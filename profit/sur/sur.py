@@ -32,18 +32,22 @@ class Surrogate(ABC):
     """
 
     _surrogates = {}  # All surrogates are registered here
-    _defaults = {'surrogate': 'GPy', 'save': False, 'load': False}  # Default surrogate configuration parameters
+    _defaults = {'surrogate': 'GPy',  # Default surrogate configuration parameters
+                 'save': False, 'load': False,
+                 'multi_output': False}
 
     def __init__(self):
         self.trained = False
         self.fixed_sigma_n = False
+        self.multi_output = False
 
         self.Xtrain = None
         self.ytrain = None
         self.ndim = None
+        self.output_ndim = 1
 
     @abstractmethod
-    def train(self, X, y, fixed_sigma_n=False):
+    def train(self, X, y, fixed_sigma_n=False, multi_output=False):
         """Trains the surrogate on input points X and model outputs y.
         Optional arguments e.g. for optimization are possible."""
         pass
@@ -151,6 +155,15 @@ class Surrogate(ABC):
                 ax.plot_trisurf(Xpred[:, 0], Xpred[:, 1], ypred, color='red', alpha=0.8)
                 ax.plot_trisurf(Xpred[:, 0], Xpred[:, 1], ypred + 2 * ystd_pred, color='grey', alpha=0.6)
                 ax.plot_trisurf(Xpred[:, 0], Xpred[:, 1], ypred - 2 * ystd_pred, color='grey', alpha=0.6)
+            elif self.ndim == 1 and self.output_ndim == 2:
+                # One input variable and two outputs
+                ax = axes or plt.axes()
+                for d in range(self.output_ndim):
+                    yp = ypred[:, d]
+                    ystd_p = ystd_pred[:, d]
+                    ax.scatter(self.Xtrain, self.ytrain[:, d], alpha=0.8)
+                    ax.plot(Xpred, yp)
+                    ax.fill_between(Xpred.flatten(), yp + 2 * ystd_p, yp - 2 * ystd_p, alpha=0.6)
             else:
                 raise NotImplementedError("Plotting is only implemented for dimension <= 2. Use profit ui instead.")
 

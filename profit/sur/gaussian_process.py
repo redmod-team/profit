@@ -64,7 +64,7 @@ class GaussianProcess(Surrogate, ABC):
         self.kernel = None
         self.hyperparameters = {}
 
-    def prepare_train(self, X, y, kernel=None, hyperparameters=None, fixed_sigma_n=False):
+    def prepare_train(self, X, y, kernel=None, hyperparameters=None, fixed_sigma_n=False, multi_output=False):
         """Check the training data, initialize hyperparameters and set the kernel either from the given parameter,
         from config or from the default values.
 
@@ -79,11 +79,15 @@ class GaussianProcess(Surrogate, ABC):
                 a vector of the size of the training data, or for the custom LinearEmbedding kernel a matrix.
             fixed_sigma_n (bool/float/ndarray): Indicates if the data noise should be optimized or not.
                 If an ndarray is given, its length must match the training data.
+            multi_output (bool): Indicates if a multi output is desired if y has more than one dimension.
+                Otherwise the excess dimensions are used as independent variable.
         """
 
         self.Xtrain = check_ndim(X)  # Input data must be at least (n, 1)
         self.ytrain = check_ndim(y)  # Same for output data
         self.ndim = self.Xtrain.shape[-1]  # Dimension for input data
+        self.multi_output = self.multi_output or multi_output  # Flag if multi output is desired
+        self.output_ndim = self.ytrain.shape[-1] if self.multi_output else 1  # Dimension of output data
         self.fixed_sigma_n = self.fixed_sigma_n or fixed_sigma_n
 
         # Infer hyperparameters from training data
@@ -106,7 +110,7 @@ class GaussianProcess(Surrogate, ABC):
             self.kernel = self.select_kernel(self.kernel)
 
     @abstractmethod
-    def train(self, X, y, kernel=None, hyperparameters=None, fixed_sigma_n=False):
+    def train(self, X, y, kernel=None, hyperparameters=None, fixed_sigma_n=False, multi_output=False):
         """After initializing the model with a kernel function and initial hyperparameters,
         it can be trained on input data X and observed output data y by optimizing the model's hyperparameters.
         This is done by minimizing the negative log likelihood.
@@ -122,6 +126,8 @@ class GaussianProcess(Surrogate, ABC):
                 a vector of the size of the training data, or for the custom LinearEmbedding kernel a matrix.
             fixed_sigma_n (bool/float/ndarray): Indicates if the data noise should be optimized or not.
                If an ndarray is given, its length must match the training data.
+            multi_output (bool): Indicates if a multi output is desired if y has more than one dimension.
+                Otherwise the excess dimensions are used as independent variable.
         """
         pass
 
@@ -181,6 +187,7 @@ class GaussianProcess(Surrogate, ABC):
         self.kernel = config['kernel']
         self.hyperparameters = config['hyperparameters']
         self.fixed_sigma_n = config['fixed_sigma_n']
+        self.multi_output = config['multi_output']
         return self
 
     @classmethod
@@ -267,7 +274,7 @@ class GPSurrogate(GaussianProcess):
             return np.linalg.lstsq(self.Ky, self.ytrain, rcond=1e-15)[0]
 
     def train(self, X, y, kernel=None, hyperparameters=None, fixed_sigma_n=False,
-              eval_gradient=True, return_hess_inv=False):
+              eval_gradient=True, return_hess_inv=False, multi_output=False):
         """After initializing the model with a kernel function and initial hyperparameters,
         it can be trained on input data X and observed output data y by optimizing the model's hyperparameters.
         This is done by minimizing the negative log likelihood.
@@ -287,9 +294,15 @@ class GPSurrogate(GaussianProcess):
                 explicitly used in the scipy optimization or numerically calculated inside scipy.
             return_hess_inv (bool): Whether to the attribute hess_inv after optimization. This is important
                 for active learning.
+            multi_output (bool): Indicates if a multi output is desired if y has more than one dimension.
+                Otherwise the excess dimensions are used as independent variable.
         """
 
-        super().prepare_train(X, y, kernel, hyperparameters)
+        super().prepare_train(X, y, kernel, hyperparameters, fixed_sigma_n)
+
+        if self.multi_output:
+            raise NotImplementedError("Multi-Output is not implemented for this surrogate.")
+
         # Find best hyperparameters
         self.optimize(fixed_sigma_n=self.fixed_sigma_n, eval_gradient=eval_gradient, return_hess_inv=return_hess_inv)
         self.print_hyperparameters("Optimized")
@@ -472,7 +485,8 @@ class GPySurrogate(GaussianProcess):
         super().__init__()
         self.model = None  # Initialize GPyRegression model
 
-    def train(self, X, y, kernel=None, hyperparameters=None, fixed_sigma_n=False, return_hess_inv=False):
+    def train(self, X, y, kernel=None, hyperparameters=None, fixed_sigma_n=False, return_hess_inv=False,
+              multi_output=False):
         """After initializing the model with a kernel function and initial hyperparameters,
         it can be trained on input data X and observed output data y by optimizing the model's hyperparameters.
         This is done by minimizing the negative log likelihood.
@@ -489,11 +503,23 @@ class GPySurrogate(GaussianProcess):
             fixed_sigma_n (bool): Currently, this setting is ignored.
             return_hess_inv (bool): Whether to the attribute hess_inv after optimization. This is important
                 for active learning. Currently, this is setting is ignored.
+            multi_output (bool): Indicates if a multi output is desired if y has more than one dimension.
+                Otherwise the excess dimensions are used as independent variable.
         """
-        super().prepare_train(X, y, kernel, hyperparameters)
-        self.model = self.GPy.models.GPRegression(self.Xtrain, self.ytrain, self.kernel,
-                                                  noise_var=self.hyperparameters['sigma_n'] ** 2)
-        self.optimize(**opt_kwargs)
+        super().prepare_train(X, y, kernel, hyperparameters, fixed_sigma_n, multi_output)
+
+        if not self.multi_output:
+            self.model = self.GPy.models.GPRegression(self.Xtrain, self.ytrain, self.kernel,
+                                                      noise_var=self.hyperparameters['sigma_n'] ** 2)
+        else:
+            print("{}-D output detected. Using Coregionalization.".format(self.output_ndim))
+            icm = self.GPy.util.multioutput.ICM(input_dim=self.ndim, num_outputs=self.output_ndim, kernel=self.kernel)
+            self.model = self.GPy.models.GPCoregionalizedRegression(self.output_ndim * [self.Xtrain],
+                                                                    [self.ytrain[:, d].reshape(-1, 1)
+                                                                     for d in range(self.output_ndim)],
+                                                                    kernel=icm)
+
+        self.optimize()
         # TODO: For Prod/Add kernels we have to do something else.
         #       Nothing happens if the hyperparameters are not written back, it is just inconsistent.
         if hasattr(self.model.kern, 'lengthscale'):
@@ -515,7 +541,16 @@ class GPySurrogate(GaussianProcess):
 
     def predict(self, Xpred, add_data_variance=False):
         Xpred = super().prepare_predict(Xpred)
-        ymean, yvar = self.model.predict(Xpred, include_likelihood=add_data_variance)
+        if not self.multi_output:
+            ymean, yvar = self.model.predict(Xpred, include_likelihood=add_data_variance)
+        else:
+            ymean = np.empty((Xpred.shape[0], self.output_ndim))
+            yvar = ymean.copy()
+            for d in range(self.output_ndim):
+                newX = np.hstack([Xpred, np.ones((Xpred.shape[0], 1)) * d])
+                noise_dict = {'output_index': newX[:, self.ndim:].astype(int)}
+                ym, yv = self.model.predict(newX, Y_metadata=noise_dict)
+                ymean[:, d], yvar[:, d] = ym.flatten(), yv.flatten()
         return ymean, yvar
 
     def get_marginal_variance(self, Xpred):
@@ -639,7 +674,12 @@ class SklearnGPSurrogate(GaussianProcess):
             return_hess_inv (bool): Whether to the attribute hess_inv after optimization. This is important
                 for active learning. Currently, this is setting is ignored.
         """
+
         super().prepare_train(X, y, kernel, hyperparameters, fixed_sigma_n)
+
+        if self.multi_output:
+            raise NotImplementedError("Multi-Output is not implemented for this surrogate.")
+
         numeric_noise = self.hyperparameters['sigma_n'].item() ** 2 if self.fixed_sigma_n else 1e-5
 
         # Instantiate the model
