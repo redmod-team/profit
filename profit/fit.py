@@ -34,7 +34,7 @@ class ActiveLearning:
         self.runner.spawn_array(params_array, blocking=True)
         self.X = self.runner.flat_input_data
         self.y = self.runner.flat_output_data
-        self.sur.train(self.X[:self.nrand], self.y[:self.nrand])
+        self.sur.train(self.X[:self.nrand], self.y[:self.nrand], return_hess_inv=True)
 
     def update_run(self, krun, al_value):
         """Update input and execute a single run."""
@@ -105,15 +105,21 @@ class ActiveLearning:
                 raise RuntimeError("Surrogate {} is not suited for Active Learning!".format(self.sur.__class__.__name__))
 
             # Find next candidate
-            if np.max(marginal_variance.max(axis=0) - marginal_variance.min(axis=0)) >= 1e-3:
-                loss = marginal_variance + self.additional_loss(self.X[krun - 1].reshape(1, -1))
+            if np.max(marginal_variance.max(axis=0) - marginal_variance.min(axis=0)) >= 1e-5:
+                loss = marginal_variance / marginal_variance.max() + self.additional_loss(self.X[krun - 1].reshape(1, -1))
+                loss /= loss.max()
+                if self.plot_every and not (krun+1) % self.plot_every and self.plot_marginal_variance:
+                    if self.Xpred.shape[-1] > 1:
+                        ax[1].plot_trisurf(self.Xpred[:, 0], self.Xpred[:, 1], loss.flatten())
+                    else:
+                        ax[1].plot(self.Xpred, loss)
                 al_value = self.Xpred[np.argmax(loss)]
             else:
                 al_value = self.Xpred[np.random.randint(self.Xpred.shape[0])]
             self.update_run(krun, al_value)
             self.sur.add_training_data(self.X[krun].reshape(1, -1), self.y[krun].reshape(1, -1))
             if not (krun+1) % self.optimize_every:
-                self.sur.optimize()  # Optimize hyperparameters
+                self.sur.optimize(return_hess_inv=True)  # Optimize hyperparameters
             if self.plot_every and not (krun+1) % self.plot_every:
                 figure()  # Plot progress in new figure
                 self.sur.plot(self.Xpred, ref=self.f)
@@ -123,87 +129,7 @@ class ActiveLearning:
 
     def additional_loss(self, last_point):
         """Penalize candidates which are near to the previous point."""
-        return 0.3 * (1 - np.exp(-10 * np.linalg.norm(self.Xpred - last_point)))
+        return 1.0 - np.exp(-0.5 * np.linalg.norm(self.Xpred - last_point, axis=1).reshape(-1, 1))
 
     def save(self, path):
         self.sur.save_model(path)
-
-
-class ActiveLearning2:
-
-    def __init__(self, config, runner):
-        self.config = config
-
-        self.runner = runner
-
-        self.sur = get_surrogate(config['fit']['surrogate'])
-
-        self.x = self.runner.flat_input_data
-        self.y = None
-
-    def update_run(self, krun, al_value):
-        # Update input for single run
-        params = {}
-        for pos, key in enumerate(self.config['input']):
-            if self.config['input'][key]['kind'] == 'ActiveLearning':
-                params[key] = al_value[pos]
-                self.x[krun, pos] = al_value[pos]
-        # Start single run
-        self.runner.spawn_run(params, wait=True)
-        # Read output (all available data)
-        self.y = self.runner.flat_output_data
-
-    def first_runs(self, nfirst):
-        al_keys = [key for key in self.config['input'] if self.config['input'][key]['kind'] == 'ActiveLearning']
-        params_array = [{} for _ in range(nfirst)]
-        for key in al_keys:
-            for n in range(nfirst):
-                params_array[n][key] = np.random.random()
-        self.runner.spawn_array(params_array, blocking=True)
-        self.x = self.runner.flat_input_data
-        self.y = self.runner.flat_output_data
-
-    @staticmethod
-    def f(u):
-        """ Example for debugging. """
-        return np.cos(10 * u) + u
-
-    def learn(self, plot_searching_phase=True):
-        from matplotlib.pyplot import show, plot
-        #np.random.seed(1)
-
-        # First runs
-        nfirst = 3
-        if nfirst > self.config['ntrain']:
-            nfirst = self.config['ntrain']
-        self.first_runs(nfirst)
-
-        self.sur.train(self.x[:nfirst], self.y[:nfirst], kernel=self.config['fit'].get('kernel'))
-        #self.sur.plot(ref=self.f)
-
-        xpred = np.hstack([np.arange(0, 1, 0.01).reshape(-1, 1)]*self.sur.xtrain.shape[-1])
-
-        # Now learn
-        for krun in range(nfirst, self.config['ntrain']):
-            marginal_variance = self.sur.get_marginal_variance(xpred)
-
-            # Next candidate
-            if np.max(marginal_variance.max(axis=0) - marginal_variance.min(axis=0)) >= 1e-3:
-                loss = marginal_variance + 0.3 * (1 - np.exp(-10 * np.abs(xpred - self.x[krun-1])))
-                #plot(xpred, loss)
-                al_value = xpred[np.argmax(loss)]
-            else:
-                al_value = xpred[np.random.randint(xpred.shape[0])]
-            self.update_run(krun, al_value)
-            self.sur.add_training_data(self.x[krun].reshape(-1, 1), self.y[krun].reshape(-1, 1))
-            if not (krun+1) % 1:
-                self.sur.m.optimize()
-                if plot_searching_phase:
-                    self.sur.plot(xpred, ref=self.f)
-
-        #xtrain_rand = np.random.random(self.x.shape)
-        #self.sur.train(xtrain_rand, self.f(xtrain_rand), kernel=self.config['fit']['kernel'])
-        #self.sur.plot(xpred, ref=self.f)
-
-        if plot_searching_phase:
-            show()

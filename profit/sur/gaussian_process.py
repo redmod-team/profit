@@ -243,6 +243,7 @@ class GPSurrogate(GaussianProcess):
 
     def __init__(self):
         super().__init__()
+        self.hess_inv = None
 
     @property
     def Ky(self):
@@ -346,8 +347,33 @@ class GPSurrogate(GaussianProcess):
         """
         # TODO: Add full derivatives as in Osborne (2021) and Garnett (2014)
         mtilde, vhat = self.predict(Xpred)
-        vtilde = GPFunctions.get_marginal_variance_BBQ()
-        return vhat.reshape(-1, 1)
+
+        ordered_hyperparameters = [self.hyperparameters[key] for key in ('length_scale', 'sigma_f', 'sigma_n')]
+
+        # If no Hessian is available, use only the predictive variance.
+        if self.hess_inv is None:
+            return vhat.reshape(-1, 1)
+        if self.fixed_sigma_n is not False:
+            padding = np.zeros((len(ordered_hyperparameters), 1))
+            self.hess_inv = np.hstack([np.vstack([self.hess_inv, padding[:-1].T]), padding])
+
+        # Kernels and their derivatives
+        Ky, dKy = self.kernel(self.Xtrain, self.Xtrain, *ordered_hyperparameters, eval_gradient=True)
+        Kstar, dKstar = self.kernel(Xpred, self.Xtrain, *ordered_hyperparameters[:-1], eval_gradient=True)
+        Kyinv = GPFunctions.invert(Ky)
+        dalpha_dl = -Kyinv @ (dKy[..., 0] @ self.alpha)
+        dalpha_ds = -Kyinv @ (np.eye(self.Xtrain.shape[0]) @ self.alpha)
+
+        dm = np.empty((Xpred.shape[0], len(ordered_hyperparameters), 1))
+        dm[:, 0, :] = dKstar[..., 0] @ self.alpha - Kstar @ dalpha_dl
+        dm[:, 1, :] = Kstar @ dalpha_ds
+        dm[:, 2, :] = Kstar @ dalpha_ds
+        dm = dm.squeeze()
+
+        marginal_variance = dm @ self.hess_inv @ dm.T
+        marginal_variance = np.diag(marginal_variance).reshape(-1, 1) + vhat
+
+        return marginal_variance
 
     def save_model(self, path):
         """Save the model as dict to a .hdf5 file.
@@ -698,6 +724,9 @@ class SklearnGPSurrogate(GaussianProcess):
         self.hyperparameters['sigma_n'] = self.model.alpha
 
         return self
+
+    def optimize(self, return_hess_inv=False, **opt_kwargs):
+        self.model.fit(self.Xtrain, self.ytrain, **opt_kwargs)
 
     def select_kernel(self, kernel):
         """Get the sklearn.gaussian_process.kernel kernel by matching the given kernel identifier.
