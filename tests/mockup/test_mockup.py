@@ -3,6 +3,7 @@ Testcases for mockup simulations:
 - all input variables are Halton sequences to ensure reproducibility
 - 1D function
     - .hdf5 input/output
+    - multi output
 - 2D function (Rosenbrock)
     - .txt input/output
 - 2D function (Fermi)
@@ -101,6 +102,31 @@ def test_custom_worker():
                    < 1e-4)
     finally:
         clean(config)
+
+
+def test_multi_output():
+    """Test a 1D function with two outputs."""
+    config_file = 'study_multi_output/profit_multi_output.yaml'
+    config = Config.from_file(config_file)
+    model_file = config['fit'].get('save')
+    try:
+        run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
+        run(f"profit fit {config_file}", shell=True, timeout=TIMEOUT)
+        sur = Surrogate.load_model(model_file)
+        assert sur.get_label() == 'GPy'
+        assert sur.trained
+        assert sur.model.kern.name == 'ICM'
+        assert allclose(sur.model.likelihood.likelihoods_list[0].variance[0], 0.00032075301845035454, atol=NLL_ATOL)
+        assert allclose(sur.model.likelihood.likelihoods_list[0].variance[0], 3.773865299540149e-09, atol=NLL_ATOL)
+        assert allclose(sur.model.kern.rbf.variance[0], 0.52218353, rtol=PARAM_RTOL)
+        assert allclose(sur.model.kern.rbf.lengthscale, 0.20184872, rtol=PARAM_RTOL)
+    finally:
+        clean(config)
+        from os.path import splitext
+        # .hdf5 is not yet supported for multi output model, so it is saved as .pkl instead.
+        model_file = splitext(model_file)[0] + '.pkl'
+        if path.exists(model_file):
+            remove(model_file)
 
 
 def test_2D():
