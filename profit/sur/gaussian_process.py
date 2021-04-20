@@ -419,6 +419,7 @@ class GPSurrogate(GaussianProcess):
         for attr, value in sur_dict.items():
             setattr(self, attr, value)
         self.kernel = self.select_kernel(self.kernel)  # Convert the kernel string back to the class object
+        self.print_hyperparameters("Loaded")
         return self
 
     def select_kernel(self, kernel):
@@ -520,12 +521,7 @@ class GPySurrogate(GaussianProcess):
                                                                     kernel=icm)
 
         self.optimize()
-        # TODO: For Prod/Add kernels we have to do something else.
-        #       Nothing happens if the hyperparameters are not written back, it is just inconsistent.
-        if hasattr(self.model.kern, 'lengthscale'):
-            self.hyperparameters['length_scale'] = self.model.kern.lengthscale.values
-            self.hyperparameters['sigma_f'] = np.sqrt(self.model.kern.variance)
-            self.hyperparameters['sigma_n'] = np.sqrt(self.model.likelihood.variance)
+        self._set_hyperparameters_from_model()
         self.print_hyperparameters("Optimized")
         self.trained = True
 
@@ -567,19 +563,26 @@ class GPySurrogate(GaussianProcess):
         return vhat.reshape(-1, 1)
 
     def save_model(self, path):
-        """Save the model as dict to a .hdf5 file.
+        """Save the model as dict to a .hdf5 file. GPy does not support to_dict method for Coregionalization
+        (multi-output) models yet. It is then saved as pickle file.
 
         Parameters:
             path (str): Path including the file name, where the model should be saved.
         """
         from profit.util import save_hdf
-        save_dict = {attr: getattr(self, attr) for attr in ('trained', 'ndim')}
-        save_dict['model'] = self.model.to_dict()
-        save_hdf(path, save_dict)
+        try:
+            save_hdf(path, self.model.to_dict())
+        except NotImplementedError:
+            # GPy does not support to_dict method for Coregionalization kernel yet.
+            from pickle import dump
+            from os.path import splitext
+            print("Saving to .hdf5 not implemented yet for multi-output models. Saving to .pkl file instead.")
+            dump(self.model, open(splitext(path)[0] + '.pkl', 'wb'))
 
     @classmethod
     def load_model(cls, path):
-        """Load a saved model from a .hdf5 file and update its attributes.
+        """Load a saved model from a .hdf5 file and update its attributes. In case of a multi-output model, the .pkl
+        file is loaded, since .hdf5 is not supported yet.
 
         Parameters:
             path (str): Path including the file name, from where the model should be loaded.
@@ -587,19 +590,28 @@ class GPySurrogate(GaussianProcess):
             object: Instantiated surrogate model.
         """
         from profit.util import load
-        load_dict = load(path, as_type='dict')
+
         self = cls()
-        self.model = cls.GPy.models.GPRegression.from_dict(load_dict['model'])
-        self.Xtrain = self.model.X
-        self.ytrain = self.model.Y
+        try:
+            model_dict = load(path, as_type='dict')
+            self.model = cls.GPy.models.GPRegression.from_dict(model_dict)
+            self.Xtrain = self.model.X
+            self.ytrain = self.model.Y
+        except FileNotFoundError:
+            from pickle import load as pload
+            from os.path import splitext
+            # Load multi-output model from pickle file
+            self.model = pload(open(splitext(path)[0] + '.pkl', 'rb'))
+            self.output_ndim = int(max(self.model.X[:, -1])) + 1
+            self.Xtrain = self.model.X[:len(self.model.X) // self.output_ndim, :-1]
+            self.ytrain = self.model.Y.reshape(-1, self.output_ndim, order='F')
+            self.multi_output = True
+
         self.kernel = self.model.kern
-        # TODO: see issue with Prod/Add kernels in train().
-        if hasattr(self.model.kern, 'lengthscale'):
-            self.hyperparameters['length_scale'] = self.model.kern.lengthscale
-            self.hyperparameters['sigma_f'] = np.sqrt(self.model.kern.variance)
-            self.hyperparameters['sigma_n'] = np.sqrt(self.model.likelihood.variance)
-        self.ndim = load_dict['ndim']
-        self.trained = load_dict['trained']
+        self._set_hyperparameters_from_model()
+        self.ndim = self.Xtrain.shape[-1]
+        self.trained = True
+        self.print_hyperparameters("Loaded")
         return self
 
     def select_kernel(self, kernel):
@@ -641,6 +653,29 @@ class GPySurrogate(GaussianProcess):
             opt_kwargs: Keyword arguments used directly in the GPy base optimization.
         """
         self.model.optimize(**opt_kwargs)
+        self._set_hyperparameters_from_model()
+
+    def _set_hyperparameters_from_model(self):
+        r"""Helper function to set the hyperparameter dict from the model, depending on whether it is a single kernel
+        or a combined one.
+        """
+        if hasattr(self.model.kern, 'lengthscale'):
+            self.hyperparameters['length_scale'] = self.model.kern.lengthscale.values
+            self.hyperparameters['sigma_f'] = np.sqrt(self.model.kern.variance)
+            self.hyperparameters['sigma_n'] = np.sqrt(self.model.likelihood.variance)
+        elif hasattr(self.model.kern, 'parts'):
+            for part in self.model.kern.parts:
+                for key, value in zip(part.parameter_names(), part.param_array):
+                    value = np.atleast_1d(value)
+                    if key == 'lengthscale':
+                        self.hyperparameters['length_scale'] = value
+                    elif key == 'variance':
+                        self.hyperparameters['sigma_f'] = np.sqrt(value)
+                    else:
+                        self.hyperparameters[key] = value
+            noise_var = self.model.likelihood.gaussian_variance(
+                self.model.Y_metadata).reshape(-1, self.output_ndim, order='F')
+            self.hyperparameters['sigma_n'] = np.sqrt(np.max(noise_var, axis=0))
 
 
 @Surrogate.register('Sklearn')
@@ -729,18 +764,14 @@ class SklearnGPSurrogate(GaussianProcess):
         return vhat.reshape(-1, 1)
 
     def save_model(self, path):
-        """Save the SklGPSurrogate class object with all attributes to a pickle file.
+        """Save the SklGPSurrogate model to a pickle file. All attributes of the surrogate are loaded directly from the
+        model.
 
         Parameters:
             path (str): Path including the file name, where the model should be saved.
         """
-        from profit.util import get_class_attribs
         from pickle import dump
-        attribs = [a for a in get_class_attribs(self)
-                   if a not in ('Xtrain', 'ytrain', 'kernel')]
-        sur_dict = {attr: getattr(self, attr) for attr in attribs if attr != 'model'}
-        sur_dict['model'] = self.model
-        dump(sur_dict, open(path, 'wb'))
+        dump(self.model, open(path, 'wb'))
 
     @classmethod
     def load_model(cls, path):
@@ -752,23 +783,22 @@ class SklearnGPSurrogate(GaussianProcess):
             object: Instantiated surrogate model.
         """
         from pickle import load
-        sur_dict = load(open(path, 'rb'))
-        self = cls()
 
-        for attr, value in sur_dict.items():
-            setattr(self, attr, value)
-        self.xtrain = self.model.X_train_
+        self = cls()
+        self.model = load(open(path, 'rb'))
+        self.Xtrain = self.model.X_train_
         self.ytrain = self.model.y_train_
         self.kernel = self.model.kernel_
-
-        self.hyperparameters['length_scale'] = self.model.length_scale
-        self.hyperparameters['sigma_f'] = self.model.scale
-        self.hyperparameters['sigma_n'] = self.model.alpha
-
+        self.ndim = self.Xtrain.shape[-1]
+        self.fixed_sigma_n = self.model.alpha != 1e-5
+        self.trained = True
+        self._set_hyperparameters_from_model()
+        self.print_hyperparameters("Loaded")
         return self
 
     def optimize(self, return_hess_inv=False, **opt_kwargs):
         self.model.fit(self.Xtrain, self.ytrain, **opt_kwargs)
+        self._set_hyperparameters_from_model()
 
     def select_kernel(self, kernel):
         """Get the sklearn.gaussian_process.kernel kernel by matching the given kernel identifier.

@@ -76,7 +76,12 @@ class Surrogate(ABC):
         """Instantiate a surrogate based on the parameters given in the configuration file and delegate to child."""
         child = cls[config['surrogate']]
         if config.get('load'):
-            return child.load_model(config['load'])
+            from os.path import isfile
+            if isfile(config['load']):
+                return child.load_model(config['load'])
+            else:
+                file = f'_{child.get_label()}.'.join(config['load'].split('.'))
+                return child.load_model(file)
         return child.from_config(config, base_config)
 
     @classmethod
