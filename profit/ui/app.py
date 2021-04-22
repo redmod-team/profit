@@ -26,13 +26,23 @@ def init_app(config):
 
     invars = indata.dtype.names
     outvars = outdata.dtype.names
-    dropdown_opts_in = [{'label': invar, 'value': invar} for invar in invars]
-    dropdown_opts_out = [{'label': outvar, 'value': outvar} for outvar in outvars]
-    dropdown_style = {'width': 500}
-    axis_options_text_style = {'width':100}
-    axis_options_log_style = {'width': 50}
-    axis_options_div_style = {'display': 'flex', 'align-items': 'center', 'height':36, 'padding':1, 'margin-left':5}
-    fit_options_text_style = {'width': 150}
+    dd_opts_in = [{'label': invar, 'value': invar} for invar in invars]
+    dd_opts_out = [{'label': outvar, 'value': outvar} for outvar in outvars]
+
+    col_width = 400
+    txt_width = 100
+    dd_width = 250
+    log_width = 50
+    graph_height = 620
+    txt_check_width = 50
+    check_txt_width = txt_width-txt_check_width
+    ax_opt_tit_sty = {'width': col_width}
+    ax_opt_txt_sty = {'width': txt_width}
+    ax_opt_log_sty = {'width': log_width}
+    dd_sty = {'width': dd_width}
+    axis_options_div_style = {'display': 'flex', 'align-items': 'center', 'height':36, 'padding': 1}
+    fit_opt_txt_sty = {'width': txt_width}
+    headline_sty = {'text-align': 'center', 'display': 'block', 'width': col_width-25}
 
     def colormap(cmin, cmax, c):
         if cmin == cmax:
@@ -42,170 +52,146 @@ def init_app(config):
         return color2hex(colormaps.cividis(c_scal))
 
     app.layout = html.Div(children=[
-        html.Div(dcc.Graph(id='graph1')),
-        html.Div(dcc.RadioItems(
-            id='graph-type',
-            options=[{'label': i, 'value': i} for i in ['1D',
-                                                        '2D',
-                                                        '2D contour',
-                                                        '3D']
-                     ],
-            value='1D',
-            labelStyle={'display': 'inline-block'})),
         html.Table(children=[html.Tr(children=[
-            html.Td(id='axis-options', style={'width': 650}, children=[
+            html.Td(id='axis-options', style={'width': '20%'}, children=[
+                html.Div(dcc.RadioItems(
+                    id='graph-type',
+                    options=[{'label': i, 'value': i} for i in ['1D', '2D', '2D contour', '3D']],
+                    value='1D',
+                    labelStyle={'display': 'inline-block'})),
+                html.Div(id='header-opt', children=[html.B("Axis options:", style=headline_sty)], style=ax_opt_tit_sty),
                 html.Div(id='invar-1-div', style=axis_options_div_style, children=[
-                    html.B('x: ', style=axis_options_text_style),
-                    dcc.Dropdown(
-                        id='invar',
-                        options=dropdown_opts_in,
-                        value=invars[0],
-                        style=dropdown_style,
-                    ),
-                    dcc.Checklist(
-                        id='invar-1-log',
-                        options=[{'label': 'log', 'value': 'log'}],
-                        style=axis_options_log_style,
-                    ),
+                    html.B('x: ', style=ax_opt_txt_sty),
+                    dcc.Dropdown(id='invar', options=dd_opts_in, value=invars[0], style=dd_sty),
+                    dcc.Checklist(id='invar-1-log', options=[{'label': 'log', 'value': 'log'}], style=ax_opt_log_sty),
                 ]),
                 html.Div(id='invar-2-div', style=axis_options_div_style, children=[
-                    html.B('y: ', style=axis_options_text_style),
+                    html.B('y: ', style=ax_opt_txt_sty),
                     dcc.Dropdown(
                         id='invar_2',
-                        options=dropdown_opts_in,
+                        options=dd_opts_in,
                         value=invars[1] if len(invars) > 1 else invars[0],
-                        style=dropdown_style,
-                    ),
+                        style=dd_sty, ),
                     dcc.Checklist(
                         id='invar-2-log',
                         options=[{'label': 'log', 'value': 'log'}],
-                        style=axis_options_log_style,
-                    ),
+                        style=ax_opt_log_sty, ),
                 ]),
                 html.Div(id='invar-3-div', style=axis_options_div_style, children=[
-                    html.B('z: ', style=axis_options_text_style),
+                    html.B('z: ', style=ax_opt_txt_sty),
                     dcc.Dropdown(
                         id='invar_3',
-                        options=dropdown_opts_in,
+                        options=dd_opts_in,
                         value=invars[2] if len(invars) > 2 else invars[0],
-                        style=dropdown_style,
+                        style=dd_sty,
                     ),
                     dcc.Checklist(
                         id='invar-3-log',
                         options=[{'label': 'log', 'value': 'log'}],
-                        style=axis_options_log_style,
+                        style=ax_opt_log_sty,
                     ),
                 ]),
                 html.Div(id='outvar-div', style=axis_options_div_style, children=[
-                    html.B('output: ', style=axis_options_text_style),
+                    html.B('output: ', style=ax_opt_txt_sty),
                     dcc.Dropdown(
                         id='outvar',
-                        options=dropdown_opts_out,
+                        options=dd_opts_out,
                         value=outvars[0],
-                        style=dropdown_style,
-                    ),
+                        style=dd_sty, ),
                     dcc.Checklist(
                         id='outvar-log',
                         options=[{'label': 'log', 'value': 'log'}],
-                        style=axis_options_log_style,
-                    ),
+                        style=ax_opt_log_sty, ),
                 ]),
                 html.Div(id='color-div', style=axis_options_div_style, children=[
-                    html.B("color: ", style={'width': 50}),
+                    html.B("color: ", style={'width': txt_check_width}),
                     dcc.Checklist(
                         id='color-use',
                         options=[{'label': '', 'value': 'true'}],
-                        style={'width': 50},
-                    ),
+                        style={'width': check_txt_width}, ),
                     dcc.Dropdown(
                         id='color-dropdown',
-                        options=dropdown_opts_in + dropdown_opts_out,
+                        options=dd_opts_in + dd_opts_out,
                         value=invars[2] if len(invars) > 2 else invars[0],
-                        style=dropdown_style,
-                    ),
+                        style=dd_sty, ),
                 ]),
                 html.Div(id='error-div', style=axis_options_div_style, children=[
-                    html.B("error: ", style={'width': 50}),
+                    html.B("error: ", style={'width': txt_check_width}),
                     dcc.Checklist(
                         id='error-use',
                         options=[{'label': '', 'value': 'true'}],
-                        style={'width': 50},
-                    ),
+                        style={'width': check_txt_width}, ),
                     dcc.Dropdown(
                         id='error-dropdown',
-                        options=dropdown_opts_out,
+                        options=dd_opts_out,
                         value=outvars[-1],
-                        style=dropdown_style,
-                    ),
+                        style=dd_sty, ),
                 ]),
-                html.Div(id='placeholder', style=axis_options_div_style, children=[
-                    # just a placeholder
-                ]),
-            ]),
-            html.Td(id='fit-options', style={'vertical-align': 'top'}, children=[
+                html.Div(id='fit-opt', children=html.B("Fit options:", style=headline_sty), style=ax_opt_tit_sty),
                 html.Div(id='fit-use-div', style=axis_options_div_style, children=[
-                    html.B("display fit:", style=fit_options_text_style),
+                    html.B("display fit:", style=fit_opt_txt_sty),
                     dcc.Checklist(
                         id='fit-use',
                         options=[{'label': '', 'value': 'show'}],
-                        labelStyle={'display': 'inline-block'},
-                    ),
+                        labelStyle={'display': 'inline-block'}, ),
                 ]),
                 html.Div(id='fit-multiinput-div', style=axis_options_div_style, children=[
-                    html.B("variable for multi-fit:", style=fit_options_text_style),
+                    html.B("multi-fit:", style=fit_opt_txt_sty),
                     dcc.Dropdown(
                         id='fit-multiinput-dropdown',
-                        options=dropdown_opts_in,
+                        options=dd_opts_in,
                         value=invars[-1],
-                        style=dropdown_style,
-                    ),
+                        style=dd_sty, ),
                 ]),
                 html.Div(id='fit-number-div', style=axis_options_div_style, children=[
-                    html.B("number of fits:", style=fit_options_text_style),
+                    html.B("#fits:", style=fit_opt_txt_sty),
                     dcc.Input(id='fit-number', type='number', value=1, min=1),
                 ]),
                 html.Div(id='fit-conf-div', style=axis_options_div_style, children=[
-                    html.B("\u03c3-confidence:", style=fit_options_text_style),
+                    html.B("\u03c3-confidence:", style=fit_opt_txt_sty),
                     dcc.Input(id='fit-conf', type='number', value=2, min=0),
+                ]),
+                html.Div(id='fit-noise-div', style=axis_options_div_style, children=[
                     dcc.Checklist(
                         id='fit-var',
                         options=[{'label': 'add noise covariance', 'value': 'add'}],
+                        style={'margin-left': txt_width},
                     )
                 ]),
                 html.Div(id='fit-color-div', style=axis_options_div_style, children=[
-                    html.B("fit-color:", style=fit_options_text_style),
+                    html.B("fit-color:", style=fit_opt_txt_sty),
                     dcc.RadioItems(
                         id='fit-color',
                         options=[{'label': 'output', 'value': 'output'},
                                  {'label': 'variable of multi-fit', 'value': 'multi-fit'}],
                         value='output',
-                        labelStyle={'display': 'inline-block'},
-                    ),
+                        labelStyle={'display': 'inline-block'}, ),
                 ]),
                 html.Div(id='fit-opacity-div', style=axis_options_div_style, children=[
-                    html.B("fit-opacity:", style=fit_options_text_style),
-                    html.Div(style=dropdown_style, children=[
+                    html.B("fit-opacity:", style=fit_opt_txt_sty),
+                    html.Div(style={'width': col_width-txt_width}, children=[
                         dcc.Slider(
                             id='fit-opacity',
                             min=0,
                             max=1,
                             step=0.1,
                             value=0.5,
-                            marks={i: {'label': f'{100*i:.0f}%'} for i in [0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1]},
+                            marks={i: {'label': f'{100 * i:.0f}%'} for i in [0, 0.2, 0.4, 0.6, 0.8, 1]},
                         ),
                     ]),
                 ]),
                 html.Div(id='fit-sampling-div', style=axis_options_div_style, children=[
-                    html.B("fit-sampling-points:", style=fit_options_text_style),
+                    html.B("#sampling:", style=fit_opt_txt_sty),
                     dcc.Input(id='fit-sampling', type='number', value=50, min=20, max=100),
                 ]),
             ]),
+            html.Td(id='graph', style={'width': '80%'}, children=[html.Div(dcc.Graph(id='graph1'))]),
         ])]),
-        html.Div(html.Table(html.Tr([
+        html.Div(html.Table(id='filters', children=[html.Tr([
             html.Td(html.Div([
                 dcc.Dropdown(
                     id='filter-dropdown',
-                    options=dropdown_opts_in,
+                    options=dd_opts_in,
                     value=invars[0],
                     style={'width': 200, 'margin-right': 10},
                 ),
@@ -228,7 +214,7 @@ def init_app(config):
                                ),
                     style={'width': 500}),
             html.Td(html.Button("Scale Filter span", id='scale', n_clicks=0)),
-        ]))),
+        ])])),
         html.Div(html.Table(id='param-table', children=[
             html.Thead(id='param-table-head', children=[
                 html.Tr(children=[
@@ -249,7 +235,7 @@ def init_app(config):
                 ]),
             ]),
         ])),
-        html.Div([
+        html.Div(id='data-table', children=[
             html.Div(children=[
                 html.B("Show table of data:"),
                 html.Button("show table", id='show-table', n_clicks=0),
@@ -496,7 +482,7 @@ def init_app(config):
                     name='data',
                     error_y=dict(type='data', array=outdata[error_dd][sel_y], visible= error_use == ['true'])
                 )],
-                layout=go.Layout(height=600, xaxis=dict(title=invar, rangeslider=dict(visible=True)), yaxis=dict(title=outvar))
+                layout=go.Layout(xaxis=dict(title=invar, rangeslider=dict(visible=True)), yaxis=dict(title=outvar))
             )
             if fit_use == ['show']:
                 mesh_in, mesh_out, mesh_out_std, fit_dd_values = mesh_fit(param_slider, id_type, fit_dd, fit_num,
@@ -532,7 +518,6 @@ def init_app(config):
                 )],
                 layout=go.Layout(scene=dict(xaxis_title=invar, yaxis_title=invar_2, zaxis_title=outvar))
             )
-            fig.update_layout(height=700)
             if fit_use == ['show'] and invar != invar_2:
                 mesh_in, mesh_out, mesh_out_std, fit_dd_values = mesh_fit(param_slider, id_type, fit_dd, fit_num,
                                                                           param_center, [invar, invar_2],
@@ -709,6 +694,7 @@ def init_app(config):
                     colorbar=dict(title=color_dd, x=1.1),
                     colorscale='viridis',
                 ))
+        fig.update_layout(height=graph_height)
         return fig
 
 
