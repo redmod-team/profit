@@ -1,103 +1,135 @@
-"""Functions for custom GPs.
-
-Custom implementations of main routines used for GP regression.
 """
+Module with a collection of GP functions for the Custom surrogate.
+"""
+
 import numpy as np
-import sklearn.metrics
-from scipy.linalg import solve_triangular
-from scipy.sparse.linalg import eigsh
-import time
-import matplotlib.pyplot as plt
-from profit.sur.backend.gpfunc import gpfunc
-
-log2pihalf = 0.5*np.log(2.0*np.pi)
-
-def k(xa, xb, l):
-    return np.exp(-(xa-xb)**2 / (2.0*l**2))
-
-# derivatives of kernel
-def dkdxa(xa, xb, l):
-    return -(xa-xb)/l**2*np.exp(-(xa-xb)**2 / (2.0*l**2))
-
-def dkdxb(xa, xb, l):
-    return -(xb-xa)/l**2*np.exp(-(xa-xb)**2 / (2.0*l**2))
-
-def dkdxadxb(xa, xb, l):
-    return (1.0/l**2 - (xa-xb)**2/l**4)*np.exp(-(xa-xb)**2 / (2.0*l**2))
 
 
+def optimize(xtrain, ytrain, a0, kernel, fixed_sigma_n=False, eval_gradient=False, return_hess_inv=False):
+    """Find optimal hyperparameters from initial array a0, sorted as [length_scale, scale, noise].
+    Loss function is the negative log likelihood.
+    Add opt_kwargs to tweak the settings in the scipy.minimize optimizer.
+    Optionally return inverse of hessian matrix. This is important for the marginal likelihood calcualtion in active learning.
+    """
+    # TODO: add kwargs for negative_log_likelihood
+    from scipy.optimize import minimize
 
-# compute log-likelihood according to RW, p.19
+    if fixed_sigma_n:
+        sigma_n = a0[-1]
+        a0 = a0[:-1]
+    else:
+        sigma_n = None
+
+    a0 = np.log10(a0)
+
+    # Avoid values too close to zero
+    dy = ytrain.max() - ytrain.min()
+    bounds = [(1e-6, None)] * len(a0[:-1 if fixed_sigma_n else -2]) + \
+             [(1e-6 * dy, None)] + \
+             [(1e-6 * dy, None)] * (1 - fixed_sigma_n)
+
+    bounds = [(None, None)] * len(a0)
+
+    args = [xtrain, ytrain, kernel, eval_gradient, True]
+    if sigma_n is not None:
+        args.append(sigma_n)
+
+    opt_result = minimize(negative_log_likelihood, a0, args=tuple(args), bounds=bounds, jac=eval_gradient)
+    if return_hess_inv:
+        return opt_result.x, opt_result.hess_inv
+    return 10**opt_result.x
+
+
 def solve_cholesky(L, b):
-    return solve_triangular(
-        L.T, solve_triangular(L, b, lower=True, check_finite=False),
-        lower=False, check_finite=False)
-
-def invert_cholesky(L):
-    """Inverts a positive-definite matrix A based on a given Cholesky decomposition
-       A = L^T*L. Arguments: L"""
-    return solve_triangular(
-        L.T, solve_triangular(L, np.eye(L.shape[0]), lower=True, check_finite=False),
-        lower=False, check_finite=False)
-
-def invert(K, neig=0, tol=1e-10):
-    """Inverts a positive-definite matrix A using either an eigendecomposition or
-       a Cholesky decomposition, depending on the rapidness of decay of eigenvalues"""
-    if (neig <= 0 or neig > 0.05*K.shape[0]):
-        try:
-            return invert_cholesky(np.linalg.cholesky(K))
-        except:
-            print('Warning! Fallback to eig solver!')
-    w, Q = eigsh(K, neig, tol=tol)
-    while np.abs(w[0]-tol) > tol:
-        if neig > 0.05*K.shape[0]:  # TODO: get more stringent criterion
-            try:
-                return invert_cholesky(np.linalg.cholesky(K))
-            except:
-                print('Warning! Fallback to eig solver!')
-        neig = 2*neig
-        w, Q = eigsh(K, neig, tol=tol)
-    return Q.dot(np.diag(1.0/w).dot(Q.T))
+    """Matrix-vector product with L being a lower triangular matrix from the Cholesky decomposition."""
+    from scipy.linalg import solve_triangular
+    alpha = solve_triangular(L.T, solve_triangular(L, b, lower=True, check_finite=False),
+                             lower=False, check_finite=False)
+    return alpha
 
 
-def build_K(x, x0, th, K):
-    gpfunc.build_k_sqexp(x.T, x0.T, th, K)
+def negative_log_likelihood_cholesky(hyp, X, y, kernel, eval_gradient=False, log_scale_hyp=False, fixed_sigma_n=False):
+    """Compute the negative log-likelihood using the Cholesky decomposition of the covariance matrix
+     according to Rasmussen&Williams 2006, p. 19, 113-114.
 
-
-def build_dKdth(dim, x, x0, th, K, dK):
-    gpfunc.build_dkdth_sqexp(dim+1, x.T, x0.T, K, dK)
-
-
-def nll_chol(hyp, x, y, K, dK=None, build_K=build_K):
-    """Computes the negative log-likelihood.
-
-    hyp: Hyperparameters (sig2f, sig2n, theta)
+    hyp: Hyperparameter array (length_scale, sigma_f, sigma_n)
     x: Training points
     y: Function values at training points
-    K: Empty matrix to store covariance
-    dK: optional empty matrix to store covariance derivatives (default: None)
-    build_K: Function to build covariance matrix (default: build_K)
-
-    Computation according to Rasmussen&Williams 2006, p. 19, 113-114 .
-    Default hyperparemeters are a tuple containing inverse squared length
-    scales for each dimension of x.
+    kernel: Function to build covariance matrix
     """
-    nd = len(hyp) - 2
-    nx = len(x)
-    build_K(x, x, hyp[:-2], K)
-    Ky = hyp[-2]*(K + hyp[-1]*np.diag(np.ones(nx)))
+
+    Ky = kernel(X, X, hyp[:-2], *hyp[-2:], eval_gradient=eval_gradient)
+    if eval_gradient:
+        dKy = Ky[1]
+        Ky = Ky[0]
+
     L = np.linalg.cholesky(Ky)
     alpha = solve_cholesky(L, y)
-    nll = 0.5*y.T.dot(alpha) + np.sum(np.log(L.diagonal())) + nx*log2pihalf
+    nll = 0.5 * y.T @ alpha + np.sum(np.log(L.diagonal())) + len(X) * 0.5 * np.log(2.0 * np.pi)
+    if not eval_gradient:
+        return nll.item()
+    KyinvaaT = invert_cholesky(L)
+    KyinvaaT -= np.outer(alpha, alpha)
+    dnll = 0.5 * np.trace(KyinvaaT @ dKy)
+    if fixed_sigma_n:
+        dnll = dnll[:-1]
+        hyp = hyp[:-1]
+    if log_scale_hyp:
+        dnll *= hyp * np.log(10)
+    return nll.item(), dnll
 
-    if dK is None:
+
+def negative_log_likelihood(hyp, X, y, kernel, eval_gradient=False, log_scale_hyp=False,
+                            fixed_sigma_n_value=None, neig=0, max_iter=1000):
+    """Compute the negative log likelihood of GP either by Cholesky decomposition or
+    by finding the first neig eigenvalues. Solving for the eigenvalues is tried at maximum max_iter times.
+
+    hyp: Hyperparameter array (length_scale, sigma_f, sigma_n)
+    X: Training points
+    y: Function values at training points
+    kernel: Function to build covariance matrix
+    """
+    from scipy.sparse.linalg import eigsh
+
+    if log_scale_hyp:
+        hyp = 10**hyp
+    fixed_sigma_n = fixed_sigma_n_value is not None
+    if fixed_sigma_n:
+        hyp = np.append(hyp, fixed_sigma_n_value)
+
+    clip_eig = max(1e-3 * min(abs(hyp[:-2])), 1e-10)
+    Ky = kernel(X, X, hyp[:-2], *hyp[-2:], eval_gradient=eval_gradient)  # Construct covariance matrix
+
+    if eval_gradient:
+        dKy = Ky[1]
+        Ky = Ky[0]
+
+    converged = False
+    iteration = 0
+    neig = max(neig, 1)
+    while not converged:
+        if not neig or neig > 0.05 * len(X):  # First try with Cholesky decomposition if neig is big
+            try:
+                return negative_log_likelihood_cholesky(hyp, X, y, kernel, eval_gradient=eval_gradient,
+                                                        log_scale_hyp=log_scale_hyp, fixed_sigma_n=fixed_sigma_n)
+            except np.linalg.LinAlgError:
+                print("Warning! Fallback to eig solver!")
+        w, Q = eigsh(Ky, neig, tol=clip_eig)  # Otherwise, calculate the first neig eigenvalues and eigenvectors
+        if iteration >= max_iter:
+            print("Reached max. iterations!")
+            break
+        neig *= 2  # Calculate more eigenvalues
+        converged = w[0] <= clip_eig or neig >= len(X)
+
+    # Calculate the NLL with these eigenvalues and eigenvectors
+    w = np.maximum(w, 1e-10)
+    alpha = Q @ (np.diag(1.0 / w) @ (Q.T @ y))
+    nll = 0.5 * (y.T @ alpha + np.sum(np.log(w)) + min(neig, len(X)) * np.log(2 * np.pi))
+    if not eval_gradient:
         return nll.item()
 
     # This is according to Rasmussen&Williams 2006, p. 114, Eq. (5.9).
-    # We try to minimize the number of additional DxD matrices to store.
-    # In particular, dK contiainig derivatives is overwritten for each
-    # kernel hyperparameter in hyp[:-2].
-    KyinvaaT = invert_cholesky(L)
+    KyinvaaT = invert(Ky)
     KyinvaaT -= np.outer(alpha, alpha)
 
     dnll = np.empty(len(hyp))
@@ -113,322 +145,119 @@ def nll_chol(hyp, x, y, K, dK=None, build_K=build_K):
     return nll.item(), dnll
 
 
-def nll(hyp, x, y, neig=0, build_K=build_K):
-    K = np.empty((len(x), len(x)))
-    build_K(x, x, np.abs(hyp[:-1]), K)
-    Ky = K + np.abs(hyp[-1])*np.diag(np.ones(len(x)))
-    if (neig <= 0 or neig > 0.05*len(x)):
+def invert_cholesky(L):
+    from scipy.linalg import solve_triangular
+    """Inverts a positive-definite matrix A based on a given Cholesky decomposition
+       A = L^T*L."""
+    return solve_triangular(L.T, solve_triangular(L, np.eye(L.shape[0]), lower=True, check_finite=False),
+                            lower=False, check_finite=False)
+
+
+def invert(K, neig=0, tol=1e-10, max_iter=1000):
+    from scipy.sparse.linalg import eigsh
+    """Inverts a positive-definite matrix A using either an eigendecomposition or
+       a Cholesky decomposition, depending on the rapidness of decay of eigenvalues.
+       Solving for the eigenvalues is tried at maximum max_iter times."""
+    """
+    L = np.linalg.cholesky(K)  # Cholesky decomposition of the covariance matrix
+    if neig <= 0 or neig > 0.05 * len(K):  # First try with Cholesky decomposition
         try:
-            return nll_chol(hyp, x, y, build_K)
-        except:
+            return cls.invert_cholesky(L)
+        except np.linalg.LinAlgError:
             print('Warning! Fallback to eig solver!')
-    w, Q = eigsh(Ky, neig, tol=max(1e-6*np.abs(hyp[-1]), 1e-15))
-    while np.abs(w[0]-hyp[-1])/hyp[-1] > 1e-6 and neig < len(x):
-        if neig > 0.05*len(x):  # TODO: get more stringent criterion
+
+    # Otherwise, calculate the first neig eigenvalues and eigenvectors
+    w, Q = eigsh(K, neig, tol=tol)
+    for iteration in range(max_iter):  # Iterate until convergence or max_iter
+        if neig > 0.05 * len(K):
             try:
-                return nll_chol(hyp, x, y, build_K)
-            except:
-                print('Warning! Fallback to eig solver!')
-        neig =  2*neig
-        w, Q = eigsh(Ky, neig, tol=max(1e-6*hyp[-1], 1e-15))
+                return cls.invert_cholesky(L)
+            except np.linalg.LinAlgError:
+                print("Warning! Fallback to eig solver!")
+        neig = 2 * neig  # Calculate more eigenvalues
+        w, Q = eigsh(K, neig, tol=tol)
 
-    alpha = Q.dot(np.diag(1.0/w).dot(Q.T.dot(y)))
-    # print("l ", hyp[0])
-    # print("sigm_noise2 ", hyp[-1])
-    # print("\n\nalpha", alpha)
-    # print("w ", w)
-    # print("log w ", np.log(w))
-    # print("sum log w ", np.sum(np.log(w)))
-    # print("hyp-1 ", np.abs(hyp[-1]))
+        # Convergence criterion
+        if np.abs(w[0] - tol) <= tol or neig >= len(K):
+            break
+    if iteration == max_iter:
+        print("Tried maximum number of times.")
+    """
+    from scipy.linalg import eigh, inv
+    # w, Q = eigh(K)
+    # negative_eig = (-1e-2 < w) & (w < 0)
+    # w[negative_eig] = 1e-2
+    # K_inv = Q @ (np.diag(1 / w) @ Q.T)
+    K_inv = inv(K, check_finite=True)
+    return K_inv
 
-    ret = 0.5*y.T.dot(alpha) + 0.5*(np.sum(np.log(w)) + (len(x)-neig)*np.log(np.abs(hyp[-1])))
-    return ret.item()
+
+def marginal_variance_BBQ(Xtrain, ytrain, Xpred, kernel, hyperparameters, hess_inv, fixed_sigma_n,
+                              alpha=None, predictive_variance=0):
+    r"""Calculate the marginal variance to infer the next point in active learning.
+    The calculation follows Osborne (2012).
+    Currently, only an isotropic RBF kernel is supported.
+
+    Derivation of the marginal variance:
+
+        $\tilde{V}$ ... Marginal covariance matrix
+        $\hat{V}$ ... Predictive variance
+        $\frac{dm}{d\theta}$ ... Derivative of the predictive mean w.r.t. the hyperparameters
+        $H$ ... Hessian matrix
+
+        $$
+        \begin{equation}
+        \tilde{V} = \left( \frac{dm}{d\theta} \right) H^{-1} \left( \frac{dm}{d\theta} \right)^T
+        \end{equation}
+        $$
+
+    Parameters:
+        Xpred (ndarray): Possible prediction input points.
+    Returns:
+        ndarray: Sum of the actual marginal variance and the predictive variance.
+    """
+    # TODO: Add full derivatives as in Osborne (2021) and Garnett (2014)
+    ordered_hyperparameters = [hyperparameters[key] for key in ('length_scale', 'sigma_f', 'sigma_n')]
+
+    # If no Hessian is available, use only the predictive variance.
+    if hess_inv is None:
+        return predictive_variance.reshape(-1, 1)
+    if fixed_sigma_n is not False:
+        padding = np.zeros((len(ordered_hyperparameters), 1))
+        hess_inv = np.hstack([np.vstack([hess_inv, padding[:-1].T]), padding])
+
+    # Kernels and their derivatives
+    Ky, dKy = kernel(Xtrain, Xtrain, *ordered_hyperparameters, eval_gradient=True)
+    Kstar, dKstar = kernel(Xpred, Xtrain, *ordered_hyperparameters[:-1], eval_gradient=True)
+    Kyinv = invert(Ky)
+    if alpha is None:
+        alpha = Kyinv @ ytrain
+    dalpha_dl = -Kyinv @ (dKy[..., 0] @ alpha)
+    dalpha_ds = -Kyinv @ (np.eye(Xtrain.shape[0]) @ alpha)
+
+    # TODO: check derivatives
+    dm = np.empty((Xpred.shape[0], len(ordered_hyperparameters), 1))
+    dm[:, 0, :] = dKstar[..., 0] @ alpha - Kstar @ dalpha_dl
+    dm[:, 1, :] = Kstar @ dalpha_ds
+    dm[:, 2, :] = Kstar @ dalpha_ds
+    dm = dm.squeeze()
+
+    marginal_variance = dm @ (hess_inv @ dm.T)
+    marginal_variance = np.diag(marginal_variance).reshape(-1, 1)
+
+    return marginal_variance + predictive_variance
 
 
-def predict_f(hyp, x, y, xtest, neig=0):
-    Ktest = sklearn.metrics.pairwise.rbf_kernel(xtest, x, 0.5/hyp[0]**2)
-    Ktest2 = sklearn.metrics.pairwise.rbf_kernel(xtest, xtest, 0.5/hyp[0]**2)
-    K = sklearn.metrics.pairwise.rbf_kernel(x, x, 0.5/hyp[0]**2)
-    Ky = K + hyp[-1]*np.diag(np.ones(len(x)))
+def predict_f(hyp, x, y, xtest, kernel, return_full_cov=False, neig=0):
+    if len(hyp) < 3:
+        hyp[2] = 0  # sigma_n
+    Ky = kernel(x, x, hyp[:-2], *hyp[-2:])
+    Kstar = kernel(x, xtest, hyp[:-2], hyp[-2])
+    Kstarstar = kernel(xtest, xtest, *hyp)
     Kyinv = invert(Ky, neig, 1e-6*hyp[-1])
-    Ef = Ktest.dot(Kyinv.dot(y))
-    varf = (Ktest2 - Ktest.dot(Kyinv.dot(Ktest.T)))
-    return Ef, varf
-
-
-def predict_dfdx(hyp, x, y, xtest, neig=8, dkdxa=dkdxa, dkdxadxb=dkdxadxb):
-    Ktest = np.fromfunction(lambda i, j: dkdxa(xtest[i,0], x[j,0], hyp[0]), (len(xtest), len(x)), dtype=int)
-    Ktest2 = np.fromfunction(lambda i, j: dkdxadxb(xtest[i,0], xtest[i,0], hyp[0]), (len(xtest), len(xtest)), dtype=int)
-    K = sklearn.metrics.pairwise.rbf_kernel(x, x, 0.5/hyp[0]**2)
-    Ky = K + hyp[-1]*np.diag(np.ones(len(x)))
-    Kyinv = invert(Ky, neig, 1e-6*hyp[-1])
-    Edfdx = Ktest.dot(Kyinv.dot(y))
-    vardfdx = Ktest2 - Ktest.dot(Kyinv.dot(Ktest.T))
-    return Edfdx, vardfdx
-
-
-def dk_logdl(xa, xb, l): # derivative of the kernel w.r.t log lengthscale
-    dk_dl = ((xa - xb)**2.0 * np.exp(-(xa-xb)**2.0/(2 * l**2))) / l**3
-    dk_logdl = dk_dl * np.log(10) * 10**(np.log10(l)) # from log lengthscale to lengthscale
-    return dk_logdl
-
-
-def dkdl(xa, xb, l): # derivative of the kernel w.r.t lengthscale
-    dk_dl = ((xa - xb)**2.0 * np.exp(-(xa-xb)**2.0/(2 * l**2))) / l**3
-    return dk_dl
-
-def get_marginal_variance_BBQ(hess_inv, new_hyp, ntrain, ntest, xtrain, xtest, Kyinv, ytrain, varf, plot_result = False):
-
-    tic = time.time()
-    # Step 1 : invert the res.hess_inv to get H_tilde
-    H_tilde = invert(hess_inv)
-    # Step 2 Get H
-    H = np.zeros((len(H_tilde), len(H_tilde)))
-    for i in np.arange(len(H_tilde)):
-        for j in np.arange(len(H_tilde)):
-            H[i,j] = (1/np.log(10)**2) * H_tilde[i,j]/(new_hyp[i]*new_hyp[j])
-    # Step 3 get Sigma
-    H_inv = invert(H)
-    sigma_m = H_inv
-    tac = time.time()
-    print("time consumed : ", (tac - tic)*1000," ms")
-
-    ######################### Build needed Kernel Matrix #########################
-
-    # Kernel K(train, train) of shape (ntrain, ntrain)
-    K = np.empty((ntrain, ntrain))
-    for i in np.arange(len(xtrain)):
-        for j in np.arange(len(xtrain)):
-            K[i, j] = k(xtrain[i], xtrain[j], new_hyp[0])
-
-    # Kernel K_star(test, train) of shape (ntest, ntrain)
-    # note that K_star(test, train) = K_star.T(train, test)
-    K_star = np.empty((ntest, ntrain))
-    for i in np.arange(len(xtest)):
-        for j in np.arange(len(xtrain)):
-            K_star[i, j] = k(xtest[i], xtrain[j], new_hyp[0])
-
-
-    # Derivative of kernel K
-    K_prime = np.empty((ntrain, ntrain))
-    for i in np.arange(len(xtrain)):
-        for j in np.arange(len(xtrain)):
-            K_prime[i, j] = dkdl(xtrain[i], xtrain[j], new_hyp[0])
-
-    # Derivative of kernel K_star
-    K_star_prime = np.empty((ntest, ntrain))
-    for i in np.arange(len(xtest)):
-        for j in np.arange(len(xtrain)):
-            K_star_prime[i, j] = dkdl(xtest[i], xtrain[j], new_hyp[0])
-    ############################################################################
-
-    alpha = np.dot(Kyinv, ytrain) # RW p17 paragraph 4
-
-    dalpha_dl = -Kyinv.dot(K_prime).dot(Kyinv).dot(ytrain) # Compute the alpha's derivative w.r.t. lengthscale
-
-    dalpha_ds = -Kyinv.dot(np.eye(ntrain)).dot(Kyinv).dot(ytrain) # Compute the alpha's derivative w.r.t. sigma noise
-                                                                  # square
-    #print("dl ", dalpha_dl)
-    #print("\nds ", dalpha_ds)
-
-    dm = np.empty((ntest,len(new_hyp), 1))
-
-    for nb_hyp in range(len(new_hyp)):
-        if nb_hyp == 0 :
-            dm[:,nb_hyp,:] = np.dot(K_star_prime, alpha) -\
-                             np.dot(K_star, dalpha_dl)
-        else :
-            dm[:,nb_hyp,:] = np.dot(K_star, dalpha_ds)
-
-
-
-    V = varf # set V as the result of the predict_f diagonal
-
-    dm_transpose = np.empty((ntest, 1, len(new_hyp)))
-    dmT_dot_sigma = np.empty((ntest, 1, len(new_hyp)))
-    dmT_dot_sigma_dot_dm = np.empty((ntest, 1))
-
-    for i in range(ntest):
-        dm_transpose[i] = dm[i].T
-        dmT_dot_sigma[i] = dm_transpose[i].dot(sigma_m)
-        dmT_dot_sigma_dot_dm[i] = dmT_dot_sigma[i].dot(dm[i])
-
-    #print("dmT_dot_sigma_dot_dm = ", dmT_dot_sigma_dot_dm)
-    V_tild = V.reshape((ntest,1)) + dmT_dot_sigma_dot_dm # Osborne et al. (2012) Active learning eq.19
-
-    if plot_result == True:
-        print("\nThe marginal Variance has a shape of ", V_tild.shape)
-        print("\n\n\tMarginal variance\n\n", V_tild )
-
-    return V_tild
-
-def get_marginal_variance_MGP(hess_inv, new_hyp, ntrain, ntest, xtrain, xtest, Kyinv, ytrain, varf, plot_result = False):
-
-    # Step 1 : invert the res.hess_inv to get H_tilde
-    H_tilde = invert(hess_inv)
-    # Step 2 Get H
-    H = np.zeros((len(H_tilde), len(H_tilde)))
-    for i in np.arange(len(H_tilde)):
-        for j in np.arange(len(H_tilde)):
-            H[i,j] = (1/np.log(10)**2) * H_tilde[i,j]/(new_hyp[i]*new_hyp[j])
-    # Step 3 get Sigma
-    H_inv = invert(H)
-    sigma_m = H_inv
-
-
-    ######################### Build needed Kernel Matrix #########################
-
-    # Kernel K(train, train) of shape (ntrain, ntrain)
-    K = np.empty((ntrain, ntrain))
-    for i in np.arange(len(xtrain)):
-        for j in np.arange(len(xtrain)):
-            K[i, j] = k(xtrain[i], xtrain[j], new_hyp[0])
-
-    # Kernel K_star(test, train) of shape (ntest, ntrain)
-    # note that K_star(test, train) = K_star.T(train, test)
-    K_star = np.empty((ntest, ntrain))
-    for i in np.arange(len(xtest)):
-        for j in np.arange(len(xtrain)):
-            K_star[i, j] = k(xtest[i], xtrain[j], new_hyp[0])
-
-
-    # Derivative of kernel K
-    K_prime = np.empty((ntrain, ntrain))
-    for i in np.arange(len(xtrain)):
-        for j in np.arange(len(xtrain)):
-            K_prime[i, j] = dkdl(xtrain[i], xtrain[j], new_hyp[0])
-
-    # Derivative of kernel K_star
-    K_star_prime = np.empty((ntest, ntrain))
-    for i in np.arange(len(xtest)):
-        for j in np.arange(len(xtrain)):
-            K_star_prime[i, j] = dkdl(xtest[i], xtrain[j], new_hyp[0])
-
-    K_2star_prime = np.empty((ntest, ntest))
-    for i in np.arange(len(xtest)):
-        for j in np.arange(len(xtest)):
-            K_2star_prime[i, j] = dkdl(xtest[i], xtest[j], new_hyp[0])
-    ############################################################################
-
-
-
-    dKyinv_dl = -Kyinv.dot(K_prime).dot(Kyinv) # Compute the Kyinv's derivative w.r.t. lengthscale
-
-    dKyinv_ds = -Kyinv.dot(np.eye(ntrain)).dot(Kyinv) # Compute the Kyinv's derivative w.r.t. sigma noise
-                                                                  # square
-
-
-    term1 = K_star_prime.dot(Kyinv).dot(K_star.T)
-
-    # dm = np.empty((ntest,len(new_hyp), 1))
-    #
-    # for nb_hyp in range(len(new_hyp)):
-    #     if nb_hyp == 0 :
-    #         dm[:,nb_hyp,:] = np.dot(K_star_prime, alpha) -\
-    #                          np.dot(K_star, dalpha_dl)
-    #     else :
-    #         dm[:,nb_hyp,:] = np.dot(K_star, dalpha_ds)
-    #
-    #
-    #
-    # V = varf # set V as the result of the predict_f diagonal
-    #
-    # dm_transpose = np.empty((ntest, 1, len(new_hyp)))
-    # dmT_dot_sigma = np.empty((ntest, 1, len(new_hyp)))
-    # dmT_dot_sigma_dot_dm = np.empty((ntest, 1))
-    #
-    # for i in range(ntest):
-    #     dm_transpose[i] = dm[i].T
-    #     dmT_dot_sigma[i] = dm_transpose[i].dot(sigma_m)
-    #     dmT_dot_sigma_dot_dm[i] = dmT_dot_sigma[i].dot(dm[i])
-    #
-    # #print("dmT_dot_sigma_dot_dm = ", dmT_dot_sigma_dot_dm)
-    # V_tild = V.reshape((ntest,1)) + dmT_dot_sigma_dot_dm # Osborne et al. (2012) Active learning eq.19
-    #
-    # if plot_result == True:
-    #     print("\nThe marginal Variance has a shape of ", V_tild.shape)
-    #     print("\n\n\tMarginal variance\n\n", V_tild )
-    #
-    # return V_tild
-
-
-def wld_get_marginal_variance(wld_hess_inv, wld_hyp, ntrain, ntest, xtrain, xtest, Kyinv, ytrain, varf, plot_result = False):
-
-
-
-    ######################### Build needed Kernel Matrix #########################
-    wld_K = np.empty((ntrain, ntrain))
-    for i in np.arange(len(xtrain)):
-        for j in np.arange(len(xtrain)):
-            wld_K[i, j] = k(xtrain[i], xtrain[j], wld_hyp[0])
-
-
-    wld_K_star = np.empty((ntest, ntrain))
-    for i in np.arange(len(xtest)):
-        for j in np.arange(len(xtrain)):
-            wld_K_star[i, j] = k(xtest[i], xtrain[j], wld_hyp[0])
-
-
-    wld_K_prime = np.empty((ntrain, ntrain))
-    for i in np.arange(len(xtrain)):
-        for j in np.arange(len(xtrain)):
-            wld_K_prime[i, j] = dkdl(xtrain[i], xtrain[j], wld_hyp[0])
-
-
-    wld_K_star_prime = np.empty((ntest, ntrain))
-    for i in np.arange(len(xtest)):
-        for j in np.arange(len(xtrain)):
-            wld_K_star_prime[i, j] = dkdl(xtest[i], xtrain[j], wld_hyp[0])
-    ############################################################################
-
-
-    wld_alpha = np.dot(Kyinv, ytrain) # RW p17 paragraph 4
-
-    wld_dalpha_dl = -Kyinv.dot(wld_K_prime)\
-        .dot(Kyinv)\
-        .dot(ytrain)
-
-    wld_dalpha_ds = -Kyinv.dot(np.eye(ntrain)).dot(Kyinv).dot(ytrain) # - Kyinv x I x Kyinv x ytrain
-
-    wld_dm = np.empty((ntest,len(wld_hyp), 1))
-
-
-    for nb_hyp in range(len(wld_hyp)):
-        if nb_hyp == 0 :
-            wld_dm[:,nb_hyp,:] = np.dot(wld_K_star_prime, wld_alpha) -\
-                             np.dot(wld_K_star, wld_dalpha_dl)
-        else :
-            wld_dm[:,nb_hyp,:] = np.dot(wld_K_star, wld_dalpha_ds)
-
-    V = varf # set V as the result of the predict_f diagonal
-    wld_sigma = invert(wld_hess_inv)
-
-    wld_dm_transpose = np.empty((ntest, 1, len(wld_hyp)))
-    wld_dmT_dot_sigma = np.empty((ntest, 1, len(wld_hyp)))
-    wld_dmT_dot_sigma_dot_dm = np.empty((ntest, 1))
-
-    for i in range(ntest):
-        wld_dm_transpose[i] = wld_dm[i].T
-        wld_dmT_dot_sigma[i] = wld_dm_transpose[i].dot(wld_sigma)
-        wld_dmT_dot_sigma_dot_dm[i] = wld_dmT_dot_sigma[i].dot(wld_dm[i])
-
-    wld_V_tild = V.reshape((ntest,1)) + wld_dmT_dot_sigma_dot_dm # Osborne et al. (2012) Active learning eq.19
-
-    if plot_result == True :
-        print("The marginal Variance has a shape of ", wld_V_tild.shape)
-        print("\n\n\tMarginal variance\n\n", wld_V_tild )
-
-    return wld_V_tild
-
-def plot_searching_phase(scores, xtest, next_candidate, ntrain):
-    max = np.linspace(0, scores[next_candidate], 3)
-    #plt.figure()
-    plt.subplot(2,1,2)
-    plot_line = np.linspace(xtest[next_candidate], xtest[next_candidate],3)
-    plt.plot(xtest, scores, 'b')
-    plt.plot(plot_line, max, 'r')
-    plt.title('Iteration ' + str(ntrain + 1) + ' : searching phase')
-    plt.xlabel('xtest')
-    plt.ylabel('score')
-    plt.savefig('Active Gaussian Process with '+ str(ntrain) + ' observation(s)')
-    plt.show()
+    fstar = Kstar.T @ (Kyinv @ y)
+    vstar = Kstarstar - Kstar.T @ (invert(Ky) @ Kstar)
+    vstar = np.maximum(vstar, 1e-10)  # Assure a positive variance
+    if not return_full_cov:
+        vstar = np.diag(vstar)
+    return fstar, vstar

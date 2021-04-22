@@ -247,6 +247,7 @@ class GPSurrogate(GaussianProcess):
         hess_inv (ndarray): Inverse hessian matrix which is required for active learning.
             It is calculated during the hyperparameter optimization.
     """
+    from .backend import gp_functions
 
     def __init__(self):
         super().__init__()
@@ -318,7 +319,7 @@ class GPSurrogate(GaussianProcess):
         Kstar = self.kernel(self.Xtrain, Xpred, **prediction_hyperparameters)
         Kstarstar_diag = np.diag(self.kernel(Xpred, Xpred, **prediction_hyperparameters))
         fstar = Kstar.T @ self.alpha
-        vstar = Kstarstar_diag - np.diag((Kstar.T @ (GPFunctions.invert(self.Ky) @ Kstar)))
+        vstar = Kstarstar_diag - np.diag((Kstar.T @ (self.gp_functions.invert(self.Ky) @ Kstar)))
         vstar = np.maximum(vstar, 1e-10)  # Assure a positive variance
         if add_data_variance:
             vstar = vstar + self.hyperparameters['sigma_n']**2
@@ -358,35 +359,10 @@ class GPSurrogate(GaussianProcess):
         Returns:
             ndarray: Sum of the actual marginal variance and the predictive variance.
         """
-        # TODO: Add full derivatives as in Osborne (2021) and Garnett (2014)
         mtilde, vhat = self.predict(Xpred)
-
-        ordered_hyperparameters = [self.hyperparameters[key] for key in ('length_scale', 'sigma_f', 'sigma_n')]
-
-        # If no Hessian is available, use only the predictive variance.
-        if self.hess_inv is None:
-            return vhat.reshape(-1, 1)
-        if self.fixed_sigma_n is not False:
-            padding = np.zeros((len(ordered_hyperparameters), 1))
-            self.hess_inv = np.hstack([np.vstack([self.hess_inv, padding[:-1].T]), padding])
-
-        # Kernels and their derivatives
-        Ky, dKy = self.kernel(self.Xtrain, self.Xtrain, *ordered_hyperparameters, eval_gradient=True)
-        Kstar, dKstar = self.kernel(Xpred, self.Xtrain, *ordered_hyperparameters[:-1], eval_gradient=True)
-        Kyinv = GPFunctions.invert(Ky)
-        dalpha_dl = -Kyinv @ (dKy[..., 0] @ self.alpha)
-        dalpha_ds = -Kyinv @ (np.eye(self.Xtrain.shape[0]) @ self.alpha)
-
-        dm = np.empty((Xpred.shape[0], len(ordered_hyperparameters), 1))
-        dm[:, 0, :] = dKstar[..., 0] @ self.alpha - Kstar @ dalpha_dl
-        dm[:, 1, :] = Kstar @ dalpha_ds
-        dm[:, 2, :] = Kstar @ dalpha_ds
-        dm = dm.squeeze()
-
-        marginal_variance = dm @ self.hess_inv @ dm.T
-        marginal_variance = np.diag(marginal_variance).reshape(-1, 1) + vhat
-
-        return marginal_variance
+        return self.gp_functions.marginal_variance_BBQ(self.Xtrain, self.ytrain, Xpred,
+                                                       self.kernel, self.hyperparameters, self.hess_inv,
+                                                       self.fixed_sigma_n, self.alpha, vhat)
 
     def save_model(self, path):
         """Save the model as dict to a .hdf5 file.
@@ -458,9 +434,9 @@ class GPSurrogate(GaussianProcess):
         a0 = np.concatenate([self.hyperparameters[key] for key in ordered_hyp_keys])
         # TODO: Add log transformed length_scales and ensure stability.
         #a0 = np.log(a0)
-        opt_hyperparameters = GPFunctions.optimize(self.Xtrain, self.ytrain, a0, self.kernel,
-                                                   fixed_sigma_n=self.fixed_sigma_n or fixed_sigma_n,
-                                                   eval_gradient=eval_gradient, return_hess_inv=return_hess_inv)
+        opt_hyperparameters = self.gp_functions.optimize(self.Xtrain, self.ytrain, a0, self.kernel,
+                                                         fixed_sigma_n=self.fixed_sigma_n or fixed_sigma_n,
+                                                         eval_gradient=eval_gradient, return_hess_inv=return_hess_inv)
         if return_hess_inv:
             self.hess_inv = opt_hyperparameters[1].todense()
             opt_hyperparameters = opt_hyperparameters[0]
