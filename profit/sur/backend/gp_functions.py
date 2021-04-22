@@ -132,16 +132,12 @@ def negative_log_likelihood(hyp, X, y, kernel, eval_gradient=False, log_scale_hy
     KyinvaaT = invert(Ky)
     KyinvaaT -= np.outer(alpha, alpha)
 
-    dnll = np.empty(len(hyp))
-    for i in np.arange(nd):
-        build_dKdth(i, x, x, hyp[:-2], K, dK)
-        dnll[i] = 0.5*np.einsum('jk,kj', KyinvaaT, dK)
-
-    # Derivatives w.r.t. sig2f and sig2n
-    # TODO: optimize
-    dnll[-2] = 0.5*np.einsum('jk,kj', KyinvaaT, K + hyp[-1]*np.diag(np.ones(nx)))
-    dnll[-1] = 0.5*hyp[-2]*np.einsum('jk,kj', KyinvaaT, np.diag(np.ones(nx)))
-
+    dnll = 0.5 * np.trace(KyinvaaT @ dKy)
+    if fixed_sigma_n:
+        dnll = dnll[:-1]
+        hyp = hyp[:-1]
+    if log_scale_hyp:
+        dnll *= hyp * np.log(10)
     return nll.item(), dnll
 
 

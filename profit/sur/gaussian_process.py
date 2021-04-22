@@ -444,8 +444,11 @@ class GPSurrogate(GaussianProcess):
         #opt_hyperparameters = np.exp(opt_hyperparameters)
 
         # Set optimized hyperparameters
-        for idx, hyp_value in enumerate(opt_hyperparameters):
-            self.hyperparameters[ordered_hyp_keys[idx]] = np.atleast_1d(hyp_value)
+        last_idx = -1 if self.fixed_sigma_n else -2
+        self.hyperparameters['length_scale'] = np.atleast_1d(opt_hyperparameters[:last_idx])
+        self.hyperparameters['sigma_f'] = np.atleast_1d(opt_hyperparameters[last_idx])
+        if not self.fixed_sigma_n:
+            self.hyperparameters['sigma_n'] = np.atleast_1d(opt_hyperparameters[-1])
 
 
 @Surrogate.register('GPy')
