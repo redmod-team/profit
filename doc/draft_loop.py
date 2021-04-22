@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from profit.sur.backend.gp_functions import invert, nll, predict_f, \
-    get_marginal_variance, wld_get_marginal_variance
+from profit.sur.backend.gp_functions_old import invert, nll, predict_f, \
+    get_marginal_variance_BBQ, wld_get_marginal_variance
 from profit.sur.backend.kernels import kern_sqexp
 from profit.util.halton import halton
 from scipy.optimize import minimize

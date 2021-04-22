@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from profit.sur.backend.gp_functions import invert, nll, predict_f, \
+from profit.sur.backend.gp_functions_old import invert, nll, predict_f, \
     get_marginal_variance_BBQ, plot_searching_phase
 from profit.sur.backend.kernels import kern_sqexp
 from scipy.optimize import minimize
