@@ -50,6 +50,8 @@ def clean(config):
         remove(config['files'].get('input'))
     if path.exists(config['files'].get('output')):
         remove(config['files'].get('output'))
+    if path.exists(config['run'].get('log_path')):
+        rmtree(config['run'].get('log_path'))
 
 
 def test_1D():
@@ -74,34 +76,39 @@ def test_1D():
             remove(model_file)
 
 
+def multi_test_1d(study, config_file, output_file):
+    """ test 1D with different config files """
+    config_file = os.path.join(study, config_file)
+    output_file = os.paht.join(study, output_file)
+    config = Config.from_file(config_file)
+    try:
+        run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
+        output = load(output_file)
+        assert output.shape == (7, 1)
+        assert all(output['f'] - array([0.7836, -0.5511, 1.0966, 0.4403, 1.6244, -0.4455, 0.0941]).reshape((7, 1))
+                   < 1e-4)
+    finally:
+        clean(config)
+
+
 def test_custom_post():
     """ test 1D with custom postprocessor """
-
-    config_file = 'study_custom_post/profit_custom_post.yaml'
-    config = Config.from_file(config_file)
-    try:
-        run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
-        output = load('./study_custom_post/output_custom_post.hdf5')
-        assert output.shape == (7, 1)
-        assert all(output['f'] - array([0.7836, -0.5511, 1.0966, 0.4403, 1.6244, -0.4455, 0.0941]).reshape((7, 1))
-                   < 1e-4)
-    finally:
-        clean(config)
+    multi_test_1d('./study_custom_post', 'profit_custom_post.yaml', 'output_custom_post.hdf5')
 
 
-def test_custom_worker():
-    """ test 1D with custom worker """
+def test_custom_worker1():
+    """ test 1D with custom worker (custom entry point) """
+    multi_test_1d('./study_custom_worker1', 'profit_custom_worker1.yaml', 'output_custom_worker1.hdf5')
 
-    config_file = 'study_custom_worker/profit_custom_worker.yaml'
-    config = Config.from_file(config_file)
-    try:
-        run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
-        output = load('./study_custom_worker/output_custom_worker.hdf5')
-        assert output.shape == (7, 1)
-        assert all(output['f'] - array([0.7836, -0.5511, 1.0966, 0.4403, 1.6244, -0.4455, 0.0941]).reshape((7, 1))
-                   < 1e-4)
-    finally:
-        clean(config)
+
+def test_custom_worker2():
+    """ test 1D with custom worker (integrated, custom main) """
+    multi_test_1d('./study_custom_worker2', 'profit_custom_worker2.yaml', 'output_custom_worker2.hdf5')
+
+
+def test_custom_worker3():
+    """ test 1D with custom worker (integrated, custom run) """
+    multi_test_1d('./study_custom_worker3', 'profit_custom_worker3.yaml', 'output_custom_worker3.hdf5')
 
 
 def test_multi_output():

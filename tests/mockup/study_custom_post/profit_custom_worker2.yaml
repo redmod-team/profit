@@ -1,0 +1,13 @@
+# similar to 1D
+ntrain: 7
+variables:
+    u: Halton()
+    f: Output
+
+run:
+    worker: custom2
+    include: custom_worker2.py
+
+files:
+    input: input_custom_worker2.hdf5
+    output: output_custom_worker2.hdf5

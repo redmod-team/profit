@@ -15,5 +15,3 @@ run:
 files:
     input: input_custom_post.hdf5
     output: output_custom_post.hdf5
-fit:
-    save: model_custom_post.hdf5

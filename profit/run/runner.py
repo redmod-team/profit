@@ -10,7 +10,7 @@ import logging
 from abc import ABC, abstractmethod  # Abstract Base Class
 from collections.abc import MutableMapping
 
-from .worker import Worker
+from .worker import Preprocessor, Postprocessor, Worker
 from profit.util import load_includes, params2map, spread_struct_horizontal, flatten_struct
 
 import numpy as np
@@ -114,10 +114,6 @@ class Runner(ABC):
 
     def clean(self):
         self.interface.clean()
-        try:
-            shutil.rmtree(os.path.join(self.base_config['run_dir'], 'log'))
-        except FileNotFoundError:
-            pass
 
     @property
     def input_data(self):
@@ -143,8 +139,12 @@ class Runner(ABC):
     def handle_run_config(cls, base_config, run_config=None):
         """ handle the config dict, fill in defaults & delegate to the children
 
-        :param run_config: dict read from config file, ~base_config['run'] usually
-        :param base_config: base dict read from config file
+        Arguments:
+            run_config: dict read from config file, ~base_config['run'] usually
+            base_config: base dict read from config file
+
+        handles: include, runner, interface, custom, worker
+        all other config options need to be handled by the called worker (or other components)
 
         ToDo: check for correct types & valid paths
         ToDo: give warnings
@@ -159,7 +159,7 @@ class Runner(ABC):
                 run_config['include'][p] = os.path.abspath(os.path.join(base_config['base_dir'], path))
         load_includes(run_config['include'])
 
-        defaults = {'runner': 'local', 'interface': 'memmap', 'custom': False}
+        defaults = {'runner': 'local', 'interface': 'memmap', 'custom': False, 'worker': None}
         for key, default in defaults.items():
             if key not in run_config:
                 run_config[key] = default
@@ -170,7 +170,7 @@ class Runner(ABC):
         if not isinstance(run_config['interface'], MutableMapping):
             run_config['interface'] = {'class': run_config['interface']}
         RunnerInterface[run_config['interface']['class']].handle_config(run_config['interface'], base_config)
-        Worker.handle_config(run_config, base_config)
+        Worker[run_config['worker']].handle_config(run_config, base_config)
 
     @classmethod
     def handle_config(cls, config, base_config):
