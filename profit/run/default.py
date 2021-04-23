@@ -9,9 +9,10 @@ HDF5Postprocessor
 """
 
 from .runner import Runner, RunnerInterface
-from .worker import Interface, Preprocessor, Postprocessor
+from .worker import Interface, Preprocessor, Postprocessor, Worker
 
 import subprocess
+from multiprocessing import Process
 from time import sleep
 import logging
 
@@ -19,25 +20,32 @@ import numpy as np
 import os
 from shutil import rmtree
 
-
 # === Local Runner === #
 
 
 @Runner.register('local')
 class LocalRunner(Runner):
-    # ToDo: better behaviour with asyncio.create_subprocess_exec ?
     def spawn_run(self, params=None, wait=False):
         super().spawn_run(params, wait)
-        env = self.env.copy()
-        env['PROFIT_RUN_ID'] = str(self.next_run_id)
-        if self.run_config['custom']:
-            cmd = self.run_config['command']
+        if self.run_config['custom'] or not self.config['fork']:
+            env = self.env.copy()
+            env['PROFIT_RUN_ID'] = str(self.next_run_id)
+            if self.run_config['custom']:
+                cmd = self.run_config['command']
+            else:
+                cmd = 'profit-worker'
+            self.runs[self.next_run_id] = subprocess.Popen(cmd, shell=True, env=env, cwd=self.base_config['run_dir'])
+            if wait:
+                self.runs[self.next_run_id].wait()
+                del self.runs[self.next_run_id]
         else:
-            cmd = 'profit-worker'
-        self.runs[self.next_run_id] = subprocess.Popen(cmd, shell=True, env=env, cwd=self.base_config['run_dir'])
-        if wait:
-            self.runs[self.next_run_id].wait()
-            del self.runs[self.next_run_id]
+            worker = Worker.from_config(self.run_config, self.next_run_id)
+            process = Process(target=worker.main)
+            self.runs[self.next_run_id] = (worker, process)
+            process.start()
+            if wait:
+                process.join()
+                del self.runs[self.next_run_id]
         self.next_run_id += 1
 
     def spawn_array(self, params_array, blocking=True):
@@ -56,12 +64,21 @@ class LocalRunner(Runner):
     def check_runs(self, poll=False):
         """ check the status of runs via the interface """
         self.interface.poll()
-        for run_id, process in list(self.runs.items()):  # preserve state before deletions
-            if self.interface.internal['DONE'][run_id]:
-                process.wait()  # just to make sure
-                del self.runs[run_id]
-            elif poll and process.poll() is not None:
-                del self.runs[run_id]
+        if self.run_config['custom'] or not self.config['fork']:
+            for run_id, process in list(self.runs.items()):  # preserve state before deletions
+                if self.interface.internal['DONE'][run_id]:
+                    process.wait()  # just to make sure
+                    del self.runs[run_id]
+                elif poll and process.poll() is not None:
+                    del self.runs[run_id]
+        else:
+            for run_id, (worker, process) in list(self.runs.items()):  # preserve state before deletions
+                if self.interface.internal['DONE'][run_id]:
+                    process.join()  # just to make sure
+                    del self.runs[run_id]
+                elif poll and process.exitcode is not None:
+                    process.terminate()
+                    del self.runs[run_id]
 
     @classmethod
     def handle_config(cls, config, base_config):
@@ -69,11 +86,14 @@ class LocalRunner(Runner):
         class: local
         parallel: 1     # maximum number of simultaneous runs (for spawn array)
         sleep: 0        # number of seconds to sleep while polling
+        fork: true      # whether to spawn the (non-custom) worker via forking instead of a subprocess (via a shell)
         """
         if 'parallel' not in config:
             config['parallel'] = 1
         if 'sleep' not in config:
             config['sleep'] = 0
+        if 'fork' not in config:
+            config['fork'] = True
 
 
 # === Numpy Memmap Inerface === #

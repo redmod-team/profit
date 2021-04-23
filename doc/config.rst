@@ -115,6 +115,7 @@ The following gives an overview of all possible parameters
             class: local
             parallel: 1     # maximum number of simultaneous runs (for spawn array)
             sleep: 0        # number of seconds to sleep while polling
+            fork: true      # whether to spawn the (non-custom) worker via forking instead of a subprocess (via a shell)
 
         .. code-block:: yaml
 
