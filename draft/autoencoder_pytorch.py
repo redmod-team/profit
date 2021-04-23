@@ -1,10 +1,12 @@
-# %% See https://pytorch.org/tutorials/beginner/blitz/neural_networks_tutorial.html
+# %% See
+# https://pytorch.org/tutorials/beginner/blitz/neural_networks_tutorial.html
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from profit.sur.backend.ann import Autoencoder
+from profit.sur.ann import Autoencoder
+
 
 class LinearAutoencoder(nn.Module):
     """Linear autoencoder as 'rich man's PCA'.
@@ -14,13 +16,14 @@ class LinearAutoencoder(nn.Module):
     """
     def __init__(self, D, d):
         super(LinearAutoencoder, self).__init__()
-        self.W = nn.Parameter(torch.randn((d,D))/np.sqrt(d*D))
+        self.W = nn.Parameter(torch.randn((d, D)) / np.sqrt(d * D))
         #self.W = nn.Parameter(torch.eye(D))
 
     def forward(self, x):
-        x = F.linear(x, self.W)     # encoder
-        x = F.linear(x, self.W.t()) # decoder
+        x = F.linear(x, self.W)      # encoder
+        x = F.linear(x, self.W.t())  # decoder
         return x
+
 
 D = 4
 d = 2

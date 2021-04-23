@@ -1,0 +1,19 @@
+ntrain: 30
+variables:
+    x1: Uniform(0.0, 1.0)
+    x2: Uniform(0.0, 1.0)
+    t: Independent(0.0, 6.28318530718, 0.06346651825)
+    f: Output(t)
+run:
+    runner:
+        class: local
+        parallel: 4
+        sleep: 0
+    post: simulation
+    command: python3 ../simulation.py
+    include: post.py
+
+fit:
+    save: model.hdf5
+    plot:
+        xpred: [[0.0, 1.0, 0.05], [0.0, 1.0, 0.05]]
