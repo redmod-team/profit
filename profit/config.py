@@ -2,6 +2,7 @@ from os import path, getcwd
 from re import match, split
 import yaml
 from collections import OrderedDict
+from typing import Mapping
 
 from profit.run import Runner
 from profit.sur import Surrogate
@@ -200,6 +201,8 @@ class Config(OrderedDict):
             elif isinstance(v, (int, float)):
                 self['variables'][k] = {'kind': 'constant', 'range': variable_kinds.constant(v, size=self['ntrain'])}
                 self['variables'][k]['dtype'] = str(self['variables'][k]['range'].dtype)
+            elif isinstance(v, Mapping) and 'kind' in v:  # assume config dictionary is valid
+                self['variables'][k] = v
             else:
                 raise TypeError(f'cannot interpret variable {k} with value {v}')
 

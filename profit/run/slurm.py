@@ -89,7 +89,7 @@ class SlurmRunner(Runner):
                 self.del_run(run_id)
         # poll the slurm scheduler to check for crashed runs
         if poll:
-            acct = subprocess.run(['sacct', f'--name={self.config["job_name"]}', '--brief', '--parsable2'],
+            acct = subprocess.run(['sacct', f'--name={self.config["job-name"]}', '--brief', '--parsable2'],
                                   capture_output=True, text=True, check=True)
             lookup = {job: run for run, job in self.runs.items()}
             for line in acct.stdout.split('\n'):
@@ -116,7 +116,7 @@ class SlurmRunner(Runner):
     def clean(self):
         """remove generated scripts and any slurm-stdout-files which match ``slurm-*.out``"""
         super().clean()
-        if not self.config['custom']:
+        if not self.config['custom'] and os.path.exists(self.config['path']):
             os.remove(self.config['path'])
         for direntry in os.scandir(self.base_config['run_dir']):
             if direntry.is_file() and direntry.name.startswith('slurm-') and direntry.name.endswith('.out'):
