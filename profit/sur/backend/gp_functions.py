@@ -1,17 +1,36 @@
 """
-Module with a collection of GP functions for the Custom surrogate.
+Collection of functions for the Custom GPSurrogate.
 """
 
 import numpy as np
 
 
 def optimize(xtrain, ytrain, a0, kernel, fixed_sigma_n=False, eval_gradient=False, return_hess_inv=False):
-    """Find optimal hyperparameters from initial array a0, sorted as [length_scale, scale, noise].
-    Loss function is the negative log likelihood.
-    Add opt_kwargs to tweak the settings in the scipy.minimize optimizer.
-    Optionally return inverse of hessian matrix. This is important for the marginal likelihood calcualtion in active learning.
+    r"""Finds optimal hyperparameters from initial array a0, sorted as [length_scale, scale, noise].
+
+    The objective function, which is minimized, is the negative log likelihood.
+    The hyperparameters are transformed logarithmically before the optimization to enhance its flexibility. They are
+    transformed back afterwards.
+
+    Parameters:
+        xtrain (ndarray):
+        ytrain (ndarray):
+        a0 (ndarray): Flat array of initial hyperparameters.
+        kernel (function): Function of the kernel, not the actual matrix.
+        fixed_sigma_n (bool): If the noise $\sigma_n$ should be fixed during optimization.
+        eval_gradient (bool): Whether the analytic derivatives of the kernel and likelihood are used in the
+            optimization.
+        return_hess_inv (bool): If True, returns the inverse Hessian matrix from the optimization result.
+            This is important for advanced active learning.
+
+    Returns:
+        tuple: A tuple containing:
+            - opt_hyperparameters (ndarray): Flat array of optimized hyperparameters.
+            - hess_inv (scipy.optimize.LbfgsInvHessProduct): Inverse Hessian matrix in the form of a scipy linear
+            operator.
+            If return_hess_inv is False, only the optimized hyperparameters are returned.
     """
-    # TODO: add kwargs for negative_log_likelihood
+
     from scipy.optimize import minimize
 
     if fixed_sigma_n:
@@ -21,27 +40,41 @@ def optimize(xtrain, ytrain, a0, kernel, fixed_sigma_n=False, eval_gradient=Fals
         sigma_n = None
 
     a0 = np.log10(a0)
-
-    # Avoid values too close to zero
-    dy = ytrain.max() - ytrain.min()
-    bounds = [(1e-6, None)] * len(a0[:-1 if fixed_sigma_n else -2]) + \
-             [(1e-6 * dy, None)] + \
-             [(1e-6 * dy, None)] * (1 - fixed_sigma_n)
-
     bounds = [(None, None)] * len(a0)
 
+    # Additional arguments for the negative_log_likelihood function.
     args = [xtrain, ytrain, kernel, eval_gradient, True]
+
+    # If sigma_n should be kept fixed during optimization.
     if sigma_n is not None:
         args.append(sigma_n)
 
     opt_result = minimize(negative_log_likelihood, a0, args=tuple(args), bounds=bounds, jac=eval_gradient)
     if return_hess_inv:
-        return opt_result.x, opt_result.hess_inv
+        return 10**opt_result.x, opt_result.hess_inv
     return 10**opt_result.x
 
 
 def solve_cholesky(L, b):
-    """Matrix-vector product with L being a lower triangular matrix from the Cholesky decomposition."""
+    r"""Solves a linear equation with a lower triangular matrix L from the Cholesky decomposition.
+
+    In the context of GP's the $L$ is the Cholesky decomposition of the training kernel matrix and $b$ is the training
+    output data.
+
+    $$
+    \begin{equation}
+    \alpha = L^T L b
+    \end{equation}
+    $$
+
+    Parameters:
+        L (ndarray): Lower triangular matrix.
+        b (ndarray): A vector.
+
+    Returns:
+        ndarray
+    """
+
     from scipy.linalg import solve_triangular
     alpha = solve_triangular(L.T, solve_triangular(L, b, lower=True, check_finite=False),
                              lower=False, check_finite=False)
@@ -49,13 +82,36 @@ def solve_cholesky(L, b):
 
 
 def negative_log_likelihood_cholesky(hyp, X, y, kernel, eval_gradient=False, log_scale_hyp=False, fixed_sigma_n=False):
-    """Compute the negative log-likelihood using the Cholesky decomposition of the covariance matrix
-     according to Rasmussen&Williams 2006, p. 19, 113-114.
+    r"""Computes the negative log likelihood using the Cholesky decomposition of the covariance matrix.
 
-    hyp: Hyperparameter array (length_scale, sigma_f, sigma_n)
-    x: Training points
-    y: Function values at training points
-    kernel: Function to build covariance matrix
+    The calculation follows Rasmussen&Williams 2006, p. 19, 113-114.
+
+    $$
+    \begin{align}
+    NL &= \frac{1}{2} y^T \alpha + tr(\log(L)) + \frac{n}{2} \log(2 \pi) \\
+    \frac{dNL}{d\theta} &= \frac{1}{2} tr\left( (K_y^{-1} - \alpha \alpha^T) \frac{\partial K}{\partial \theta} \right) \\
+    \alpha &= K_y^{-1} y
+    \end{align}
+    $$
+
+    Parameters:
+        hyp (ndarray): Flat hyperparameter array [length_scale, sigma_f, sigma_n]. They can also be already
+            log transformed.
+        X (ndarray): Training input points.
+        y (ndarray): Observed training output.
+        kernel (function): Function to build the covariance matrix.
+        eval_gradient (bool): If the analytic gradient of the negative log likelihood w.r.t. the hyperparameters should
+            be returned.
+        log_scale_hyp (bool): Whether the hyperparameters are log transformed. This is important for the gradient
+            calculation.
+        fixed_sigma_n (bool): If the noise $\sigma_n$ is kept fixed. In this case, there is no gradient with respect to
+            sigma_n.
+
+    Returns:
+        tuple: A tuple containing:
+            - nll (float): The negative log likelihood.
+            - dnll (ndarray): The derivative of the negative log likelihood w.r.t. to the hyperparameters.
+            If eval_gradient is False, only nll is returned.
     """
 
     Ky = kernel(X, X, hyp[:-2], *hyp[-2:], eval_gradient=eval_gradient)
@@ -70,25 +126,54 @@ def negative_log_likelihood_cholesky(hyp, X, y, kernel, eval_gradient=False, log
         return nll.item()
     KyinvaaT = invert_cholesky(L)
     KyinvaaT -= np.outer(alpha, alpha)
-    dnll = 0.5 * np.trace(KyinvaaT @ dKy)
+    dnll = 0.5 * np.trace(KyinvaaT @ dKy)  # Rasmussen&Williams p. 114, eq. 5.9
     if fixed_sigma_n:
         dnll = dnll[:-1]
         hyp = hyp[:-1]
     if log_scale_hyp:
+        # Chain rule
         dnll *= hyp * np.log(10)
     return nll.item(), dnll
 
 
 def negative_log_likelihood(hyp, X, y, kernel, eval_gradient=False, log_scale_hyp=False,
                             fixed_sigma_n_value=None, neig=0, max_iter=1000):
-    """Compute the negative log likelihood of GP either by Cholesky decomposition or
-    by finding the first neig eigenvalues. Solving for the eigenvalues is tried at maximum max_iter times.
+    r"""Computes the negative log likelihood either by a Cholesky- or an Eigendecomposition.
 
-    hyp: Hyperparameter array (length_scale, sigma_f, sigma_n)
-    X: Training points
-    y: Function values at training points
-    kernel: Function to build covariance matrix
+    First, the Cholesky decomposition is tried. If this results in a LinAlgError, the biggest eigenvalues are
+    calculated until convergence or until the maximum iterations are reached.
+    The eigenvalues are cut off at $1e-10$ due ensure numerical stability.
+
+    $$
+    \begin{align}
+    NL &= \frac{1}{2} \left( y^T \alpha + tr(\log(\lambda)) + n_{eig} \log(2 \pi) \right) \\
+    \frac{dNL}{d\theta} &= \frac{1}{2} tr\left( (K_y^{-1} - \alpha \alpha^T) \frac{\partial K}{\partial \theta} \right) \\
+    \alpha &= v (\lambda^{-1} (v^T y))
+    \end{align}
+    $$
+
+    Parameters:
+        hyp (ndarray): Flat hyperparameter array [length_scale, sigma_f, sigma_n].
+        X (ndarray): Training input points.
+        y (ndarray): Observed training output.
+        kernel (function): Function to build the covariance matrix.
+        eval_gradient (bool): If the analytic gradient of the negative log likelihood w.r.t. the hyperparameters should
+            be returned.
+        log_scale_hyp (bool): Whether the hyperparameters are log transformed. This is important for the gradient
+            calculation.
+        fixed_sigma_n_value (float): The value of the fixed noise $\sigma_n$. If it should be optimizied as well, this
+            should be None.
+        neig (int): Initial number of eigenvalues to calculate if the Cholesky decomposition is not successful.
+            This is doubled during every iteration.
+        max_iter (int): Maximum number of iterations of the eigenvalue solver until convergence must be reached.
+
+    Returns:
+        tuple: A tuple containing:
+            - nll (float): The negative log likelihood.
+            - dnll (ndarray): The derivative of the negative log likelihood w.r.t. to the hyperparameters.
+            If eval_gradient is False, only nll is returned.
     """
+
     from scipy.sparse.linalg import eigsh
 
     if log_scale_hyp:
@@ -128,32 +213,53 @@ def negative_log_likelihood(hyp, X, y, kernel, eval_gradient=False, log_scale_hy
     if not eval_gradient:
         return nll.item()
 
-    # This is according to Rasmussen&Williams 2006, p. 114, Eq. (5.9).
     KyinvaaT = invert(Ky)
     KyinvaaT -= np.outer(alpha, alpha)
 
-    dnll = 0.5 * np.trace(KyinvaaT @ dKy)
+    dnll = 0.5 * np.trace(KyinvaaT @ dKy)  # Rasmussen&Williams p. 114, eq. 5.9
     if fixed_sigma_n:
         dnll = dnll[:-1]
         hyp = hyp[:-1]
     if log_scale_hyp:
+        # Chain rule
         dnll *= hyp * np.log(10)
     return nll.item(), dnll
 
 
 def invert_cholesky(L):
+    r"""Inverts a positive-definite matrix based on a Cholesky decomposition.
+
+    This is used to invert the covariance matrix.
+
+    Parameters:
+        L (ndarray): Lower triangular matrix from a Cholesky decomposition.
+
+    Returns:
+        ndarray: Inverse of the matrix $L^T L$
+    """
     from scipy.linalg import solve_triangular
-    """Inverts a positive-definite matrix A based on a given Cholesky decomposition
-       A = L^T*L."""
+
     return solve_triangular(L.T, solve_triangular(L, np.eye(L.shape[0]), lower=True, check_finite=False),
                             lower=False, check_finite=False)
 
 
 def invert(K, neig=0, tol=1e-10, max_iter=1000):
-    from scipy.sparse.linalg import eigsh
-    """Inverts a positive-definite matrix A using either an eigendecomposition or
-       a Cholesky decomposition, depending on the rapidness of decay of eigenvalues.
-       Solving for the eigenvalues is tried at maximum max_iter times."""
+    """Inverts a positive-definite matrix using either a Cholesky- or an Eigendecomposition.
+
+    The solution method depends on the rapidness of decay of the eigenvalues.
+
+    Parameters:
+        K (ndarray): Kernel matrix.
+        neig (int): Initial number of eigenvalues to calculate if the Cholesky decomposition is not successful.
+            This is doubled during every iteration.
+        tol (float): Convergence criterion for the eigenvalues.
+        max_iter (int): Maximum number of iterations of the eigenvalue solver until convergence must be reached.
+
+    Returns:
+        ndarray: Inverse covariance matrix.
+    """
+
+    # TODO: Fix this or continue using scipy?
     """
     L = np.linalg.cholesky(K)  # Cholesky decomposition of the covariance matrix
     if neig <= 0 or neig > 0.05 * len(K):  # First try with Cholesky decomposition
@@ -179,6 +285,7 @@ def invert(K, neig=0, tol=1e-10, max_iter=1000):
     if iteration == max_iter:
         print("Tried maximum number of times.")
     """
+    from scipy.sparse.linalg import eigsh
     from scipy.linalg import eigh, inv
     # w, Q = eigh(K)
     # negative_eig = (-1e-2 < w) & (w < 0)
@@ -188,13 +295,11 @@ def invert(K, neig=0, tol=1e-10, max_iter=1000):
     return K_inv
 
 
-def marginal_variance_BBQ(Xtrain, ytrain, Xpred, kernel, hyperparameters, hess_inv, fixed_sigma_n,
-                              alpha=None, predictive_variance=0):
-    r"""Calculate the marginal variance to infer the next point in active learning.
-    The calculation follows Osborne (2012).
-    Currently, only an isotropic RBF kernel is supported.
+def marginal_variance_BBQ(Xtrain, ytrain, Xpred, kernel, hyperparameters, hess_inv, fixed_sigma_n=False,
+                          alpha=None, predictive_variance=0):
+    r"""Calculates the marginal variance to infer the next point in active learning.
 
-    Derivation of the marginal variance:
+    The calculation follows Osborne (2012).
 
         $\tilde{V}$ ... Marginal covariance matrix
         $\hat{V}$ ... Predictive variance
@@ -208,17 +313,29 @@ def marginal_variance_BBQ(Xtrain, ytrain, Xpred, kernel, hyperparameters, hess_i
         $$
 
     Parameters:
+        Xtrain (ndarray): Input training points.
+        ytrain (ndarray): Observed output daat.
         Xpred (ndarray): Possible prediction input points.
+        kernel (function): Function to build the covariance matrix.
+        hyperparameters (dict): Dictionary of the hyperparameters.
+        hess_inv (ndarray): Inverse Hessian matrix.
+        fixed_sigma_n (bool): If the noise $\sigma_n$ was fixed during optimization. Then, the Hessian has to be
+            padded with zeros.
+        alpha (ndarray): If available, the result of $K_y^{-1} y$, else None.
+        predictive_variance (ndarray): Predictive variance only. This is added to the marginal variance.
+
     Returns:
         ndarray: Sum of the actual marginal variance and the predictive variance.
     """
+
     # TODO: Add full derivatives as in Osborne (2021) and Garnett (2014)
     ordered_hyperparameters = [hyperparameters[key] for key in ('length_scale', 'sigma_f', 'sigma_n')]
 
     # If no Hessian is available, use only the predictive variance.
     if hess_inv is None:
         return predictive_variance.reshape(-1, 1)
-    if fixed_sigma_n is not False:
+
+    if fixed_sigma_n:
         padding = np.zeros((len(ordered_hyperparameters), 1))
         hess_inv = np.hstack([np.vstack([hess_inv, padding[:-1].T]), padding])
 
@@ -245,6 +362,28 @@ def marginal_variance_BBQ(Xtrain, ytrain, Xpred, kernel, hyperparameters, hess_i
 
 
 def predict_f(hyp, x, y, xtest, kernel, return_full_cov=False, neig=0):
+    """Predicts values given only a set of hyperparameters and a kernel.
+
+    This function is independent of the surrogates and used to quickly predict a function output with specific
+    hyperparameters.
+
+    The calculation follows Rasmussen&Williams, p. 16, eq. 23-24.
+
+    Parameters:
+        hyp (ndarray): Flat array of hyperparameters, sorted as [length_scale, sigma_f, sigma_n].
+        x (ndarray): Input training points.
+        y (ndarray): Observed output data.
+        xtest (ndarray): Prediction points.
+        kernel (function): Function to build the covariance matrix.
+        return_full_cov (bool): If True, returns the full covariance matrix, otherwise only its diagonal.
+        neig (int): Initial number of eigenvalues to be computed during the inversion of the covariance matrix.
+
+    Returns:
+        tuple: A tuple containing:
+            - fstar (ndarray): Posterior mean.
+            - vstar (ndarray): Posterior covariance matrix or its diagonal.
+    """
+
     if len(hyp) < 3:
         hyp[2] = 0  # sigma_n
     Ky = kernel(x, x, hyp[:-2], *hyp[-2:])

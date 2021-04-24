@@ -1,16 +1,17 @@
 """
-Interfaces for surrogate models.
+Abstract base class for all surrogate models.
+
 Class structure:
-- Surrogate (base class)
+- Surrogate
     - GaussianProcess
-        - GP Surrogates
-        - ...
+        - GPSurrogate (Custom)
+        - GPySurrogate (GPy)
+        - SklearnGPSurrogate (Sklearn)
     - ANN
-        - ANN Surrogates
-        - ...
+        - ANNSurrogate (Pytorch)
+        - Autoencoder (Pytorch)
     - LinearRegression
-        - Linear regression surrogates
-        - ...
+        - Linear regression surrogates (Work in progress)
 """
 
 from abc import ABC, abstractmethod
@@ -22,13 +23,20 @@ class Surrogate(ABC):
 
     Attributes:
         trained (bool): Flag that indicates if the model is already trained and ready to make predictions.
-        fixed_sigma_n (bool/float/ndarray): Indicates if the data noise should be optimized or not.
-            If an ndarray is given, its length must match the training data.
-        Xtrain (ndarray): Input data, at least of shape (ntrain, 1) but can have more dimensions
-        ytrain (ndarray): Observed output data, at least of shape (ntrain, 1).
+        fixed_sigma_n (bool): Indicates if the data noise should be optimized or not.
+        Xtrain (ndarray): Input training points.
+        ytrain (ndarray): Observed output data.
             Vector output is supported for independent variables only.
         ndim (int): Dimension of input data.
         output_ndim (int): Dimension of output data.
+        multi_output (bool): If a multi-output fit is desired. If False, the excess output dimensions are used as
+            independent supporting points.
+
+    Default parameters:
+        surrogate: GPy
+        save: False
+        load: False
+        multi_output: False
     """
 
     _surrogates = {}  # All surrogates are registered here
@@ -48,32 +56,69 @@ class Surrogate(ABC):
 
     @abstractmethod
     def train(self, X, y, fixed_sigma_n=False, multi_output=False):
-        """Trains the surrogate on input points X and model outputs y.
-        Optional arguments e.g. for optimization are possible."""
+        r"""Trains the surrogate on input points X and model outputs y.
+
+        Depending on the surrogate, the signature can vary.
+
+        Parameters:
+            X (ndarray): Input training points.
+            y (ndarray): Observed output data.
+            fixed_sigma_n (bool): Whether the noise $\sigma_n$ is fixed during optimization.
+            multi_output (bool): Whether a multi output model should be used for fitting.
+        """
         pass
 
     @abstractmethod
     def predict(self, Xpred, add_data_variance=True):
-        """Predicts model output y for input X based on surrogate."""
+        r"""Predicts model output y for input Xpred based on surrogate.
+
+        Parameters:
+            Xpred (ndarray/list): Input points for prediction.
+            add_data_variance (bool): Adds the data noise $\sigma_n^2$ to the prediction variance.
+                This is especially useful for plotting.
+
+        Returns:
+            tuple: a tuple containing:
+                - ymean (ndarray) Predicted output values at the test input points.
+                - yvar (ndarray): Generally the uncertainty of the fit. For Gaussian Processes this is
+                the diagonal of the posterior covariance matrix.
+        """
         pass
 
     @abstractmethod
     def save_model(self, path):
-        """Save the surrogate to a file. The file format can vary between surrogates."""
+        """Saves the surrogate to a file. The file format can vary between surrogates.
+
+        Parameters:
+            path (str): Path including the file name, where the model should be saved.
+        """
         pass
 
     @classmethod
     @abstractmethod
     def load_model(cls, path):
-        """Load a saved surrogate from a file. The file format can vary between surrogates.
-        Identify the surrogate by its label in the path."""
+        """Loads a saved surrogate from a file. The file format can vary between surrogates.
+
+        Identifies the surrogate by its class label in the file name.
+
+        Parameters:
+            path (str): Path including the file name, from where the model should be loaded.
+
+        Returns:
+            profit.sur.Surrogate: Instantiated surrogate model.
+        """
         label = next(filter(lambda l: l in path, cls._surrogates), cls._defaults['surrogate'])
         return cls[label].load_model(path)
 
     @classmethod
     @abstractmethod
     def from_config(cls, config, base_config):
-        """Instantiate a surrogate based on the parameters given in the configuration file and delegate to child."""
+        """Instantiates a surrogate based on the parameters given in the configuration file and delegates to child.
+
+        Parameters:
+            config (dict): Only the 'fit' part of the base_config.
+            base_config (dict): The whole configuration parameters.
+        """
         child = cls[config['surrogate']]
         if config.get('load'):
             from os.path import isfile
@@ -86,7 +131,12 @@ class Surrogate(ABC):
 
     @classmethod
     def handle_config(cls, config, base_config):
-        """Fill configuration parameters with defaults, if not existent and delegate to child."""
+        """Fills the configuration parameters with defaults, if not existent, and delegates to child.
+
+        Parameters:
+            config (dict): Only the 'fit' part of the base_config.
+            base_config (dict): The whole configuration parameters.
+        """
         for key, default in cls._defaults.items():
             if key not in config:
                 config[key] = default
@@ -95,7 +145,12 @@ class Surrogate(ABC):
     @classmethod
     @abstractmethod
     def handle_subconfig(cls, config, base_config):
-        """Fill configuration parameters with child's defaults."""
+        """Fills configuration parameters with child's defaults.
+
+        Parameters:
+            config (dict): Only the 'fit' part of the base_config.
+            base_config (dict): The whole configuration parameters.
+        """
         pass
 
     @classmethod
@@ -109,18 +164,32 @@ class Surrogate(ABC):
         return decorator
 
     def __class_getitem__(cls, item):
+        """Returns the child surrogate."""
         return cls._surrogates[item]
 
     @classmethod
     def get_label(cls):
-        """Return label of a surrogate class object."""
+        """Returns the string label of a surrogate class object."""
         for label, item in cls._surrogates.items():
             if item == cls:
                 return label
         raise NotImplementedError("Class {} is not implemented.".format(cls))
 
     def plot(self, Xpred=None, independent=None, show=False, ref=None, add_data_variance=True, axes=None):
-        """Simple plotting for dimensions <= 2."""
+        r"""Simple plotting for dimensions <= 2.
+
+        Fore more sophisticated plots use the command 'profit ui'.
+
+        Parameters:
+            Xpred (ndarray): Prediction points where the fit is plotted. If None, it is inferred from the
+                training points.
+            independent (dict): Dictionary of independent variables from config.
+            show (bool): If the figure should be shown directly.
+            ref (ndarray): Reference function which is fitted.
+            add_data_variance (bool): Adds the data noise $\sigma_n^2$ to the prediction variance.
+            axes (matplotlib.pyplot.axes): Axes object to insert the plot into. If None, a new figure is created.
+        """
+
         import matplotlib.pyplot as plt
         if Xpred is None:
             Xpred = self.default_Xpred()
@@ -177,7 +246,13 @@ class Surrogate(ABC):
 
     def default_Xpred(self):
         """Infer prediction values from training points in each dimension.
-        Becomes inefficient for > 3 dimensions."""
+
+        Currently a dense grid is created. This becomes inefficient for > 3 dimensions.
+
+        Returns:
+            ndarray: Prediction points.
+        """
+
         if self.ndim <= 3:
             minval = self.Xtrain.min(axis=0)
             maxval = self.Xtrain.max(axis=0)

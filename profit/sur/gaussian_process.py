@@ -15,28 +15,42 @@ the Matern kernels.
 Isotropic RBF Kernel:
 $$
 \begin{align}
-k(x, x') &= \frac{1}{\sigma_f^2} \exp(\frac{1}{2} \frac{\lvert x-x' \rvert}{l^2})
+k(x, x') &= \sigma_f^2 \exp(-\frac{1}{2} \frac{\lvert x-x' \rvert}{l^2})
 \end{align}
 $$
 
 Literature:
-    Rasmussen & Williams 2006
+    Rasmussen & Williams 2006: General Introduction to Gaussian Processes
+    Garnett 2014: Active Learning and Linear Embeddings
+    Osborne 2012: Active Learning of Hyperparameters
 """
 
 from abc import ABC, abstractmethod
 import numpy as np
 from .sur import Surrogate
-from profit.util import check_ndim
 
 
 class GaussianProcess(Surrogate, ABC):
     r"""This is the base class for all Gaussian Process models.
 
     Attributes:
+        trained (bool): Flag that indicates if the model is already trained and ready to make predictions.
+        fixed_sigma_n (bool/float/ndarray): Indicates if the data noise should be optimized or not.
+            If an ndarray is given, its length must match the training data.
+        Xtrain (ndarray): Input training points.
+        ytrain (ndarray): Observed output data.
+            Vector output is supported for independent variables only.
+        ndim (int): Dimension of input data.
+        output_ndim (int): Dimension of output data.
         kernel (str/object): Kernel identifier such as 'RBF' or directly the (surrogate specific) kernel object.
             Defaults to 'RBF'.
         hyperparameters (dict): Parameters like length-scale, variance and noise which can be optimized during training.
             As default, they are inferred from the training data.
+
+    Default parameters:
+        surrogate: GPy
+        kernel: RBF
+        fixed_sigma_n: False
 
     Default hyperparameters:
         $l$ ... length scale
@@ -65,7 +79,7 @@ class GaussianProcess(Surrogate, ABC):
         self.hyperparameters = {}
 
     def prepare_train(self, X, y, kernel=None, hyperparameters=None, fixed_sigma_n=False, multi_output=False):
-        """Check the training data, initialize hyperparameters and set the kernel either from the given parameter,
+        """Check the training data, initialize the hyperparameters and set the kernel either from the given parameter,
         from config or from the default values.
 
         Parameters:
@@ -83,11 +97,11 @@ class GaussianProcess(Surrogate, ABC):
                 Otherwise the excess dimensions are used as independent variable.
         """
 
-        self.Xtrain = check_ndim(X)  # Input data must be at least (n, 1)
-        self.ytrain = check_ndim(y)  # Same for output data
-        self.ndim = self.Xtrain.shape[-1]  # Dimension for input data
-        self.multi_output = self.multi_output or multi_output  # Flag if multi output is desired
-        self.output_ndim = self.ytrain.shape[-1] if self.multi_output else 1  # Dimension of output data
+        self.Xtrain = np.atleast_2d(X)
+        self.ytrain = np.atleast_2d(y)
+        self.ndim = self.Xtrain.shape[-1]
+        self.multi_output = self.multi_output or multi_output
+        self.output_ndim = self.ytrain.shape[-1] if self.multi_output else 1
         self.fixed_sigma_n = self.fixed_sigma_n or fixed_sigma_n
 
         # Infer hyperparameters from training data
@@ -110,51 +124,57 @@ class GaussianProcess(Surrogate, ABC):
             self.kernel = self.select_kernel(self.kernel)
 
     @abstractmethod
-    def train(self, X, y, kernel=None, hyperparameters=None, fixed_sigma_n=False, multi_output=False):
-        """After initializing the model with a kernel function and initial hyperparameters,
+    def train(self, X, y, kernel=None, hyperparameters=None, fixed_sigma_n=False, return_hess_inv=False,
+              multi_output=False):
+        """Trains the model on the dataset.
+
+        After initializing the model with a kernel function and initial hyperparameters,
         it can be trained on input data X and observed output data y by optimizing the model's hyperparameters.
         This is done by minimizing the negative log likelihood.
 
         Parameters:
-            X: (n, d) array of input training data.
-            y: (n, D) array of training output.
-            kernel (str/object): Identifier of kernel like 'RBF' or directly the kernel object of the
-                specific surrogate.
+            X (ndarray): (n, d) array of input training data.
+            y (ndarray): (n, D) array of training output.
+            kernel (str/object): Identifier of kernel like 'RBF' or directly the kernel object of the surrogate.
             hyperparameters (dict): Hyperparameters such as length scale, variance and noise.
                 Taken either from given parameter, config file or inferred from the training data.
                 The hyperparameters can be different depending on the kernel. E.g. The length scale can be a scalar,
                 a vector of the size of the training data, or for the custom LinearEmbedding kernel a matrix.
-            fixed_sigma_n (bool/float/ndarray): Indicates if the data noise should be optimized or not.
-               If an ndarray is given, its length must match the training data.
+            fixed_sigma_n (bool): Indicates if the data noise should be optimized or not.
+            return_hess_inv (bool): Whether to the attribute hess_inv after optimization. This is important
+                for active learning.
             multi_output (bool): Indicates if a multi output is desired if y has more than one dimension.
                 Otherwise the excess dimensions are used as independent variable.
         """
         pass
 
     def prepare_predict(self, Xpred):
-        """Prepare the surrogate for prediction by checking if it is trained and validating the data.
+        """Prepares the surrogate for prediction by checking if it is trained and validating the data.
 
         Parameters:
             Xpred (ndarray): Input points for prediction
+
         Returns:
             ndarray: Checked input data or default values inferred from training data.
         """
+
         if not self.trained:
             raise RuntimeError("Need to train() before predict()!")
 
         if Xpred is None:
             Xpred = self.default_Xpred()
-        Xpred = check_ndim(Xpred)
+        Xpred = np.atleast_2d(Xpred)
         return Xpred
 
     @abstractmethod
     def predict(self, Xpred, add_data_variance=True):
-        r"""Predict the output at test points Xpred.
+        r"""Predicts the output at test points Xpred.
 
         Parameters:
             Xpred (ndarray/list): Input points for prediction.
             add_data_variance (bool): Adds the data noise $\sigma_n^2$ to the prediction variance.
-                This is escpecially useful for plotting.
+                This is especially useful for plotting.
+
         Returns:
             tuple: a tuple containing:
                 - ymean (ndarray) Predicted output values at the test input points.
@@ -167,10 +187,8 @@ class GaussianProcess(Surrogate, ABC):
         """Find optimized hyperparameters of the model. Optional kwargs for tweaking optimization.
 
         Parameters:
-            opt_kwargs:
-                # TODO: add explanation
+            opt_kwargs: Keyword arguments for optimization.
         """
-        # TODO: Implement opt_kwargs in config?
         pass
 
     @classmethod
@@ -180,9 +198,11 @@ class GaussianProcess(Surrogate, ABC):
         Parameters:
             config (dict): Only the 'fit' part of the base_config.
             base_config (dict): The whole configuration parameters.
+
         Returns:
-            object: Instantiated surrogate.
+            profit.sur.gaussian_process.GaussianProcess: Instantiated surrogate.
         """
+
         self = cls()
         self.kernel = config['kernel']
         self.hyperparameters = config['hyperparameters']
@@ -192,15 +212,15 @@ class GaussianProcess(Surrogate, ABC):
 
     @classmethod
     def handle_subconfig(cls, config, base_config):
-        """Set default parameters if not existent. Do this recursively for each element of the hyperparameter dict.
-        If saving is enabled, the class label in the save_model filename is included
-        to identify the surrogate when loaded.
+        """Sets default parameters if not existent.
+
+        Does this recursively for each element of the hyperparameter dict.
+        If saving is enabled, the class label in the save_model filename is included to identify the surrogate
+        when loaded.
 
         Parameters:
             config (dict): Only the 'fit' part of the base_config.
             base_config (dict): The whole configuration parameters.
-        Returns:
-            Nothing, but configuration dict is edited.
         """
 
         for key, default in cls._defaults.items():
@@ -230,23 +250,27 @@ class GaussianProcess(Surrogate, ABC):
         pass
 
     def print_hyperparameters(self, prefix):
-        """Helper function to print hyperparameter dict.
+        """Helper function to print the hyperparameter dict.
 
-        Paramters:
-            prefix (str): Normally 'Initialized' or 'Optimized' to identify the state of the hyperparameters.
+        Parameters:
+            prefix (str): Usually 'Initialized', 'Loaded' or 'Optimized' to identify the state of the hyperparameters.
         """
+
         print('\n'.join(["{} hyperparameters:".format(prefix)] +
                         ["{k}: {v}".format(k=key, v=value) for key, value in self.hyperparameters.items()]))
 
 
 @Surrogate.register('Custom')
 class GPSurrogate(GaussianProcess):
-    """Custom GP model made from scratch. Supports custom Fortran kernels with analytic derivatives.
+    """Custom GP model made from scratch.
+
+     Supports custom Python and Fortran kernels with analytic derivatives and advanced Active Learning.
 
     Attributes:
-        hess_inv (ndarray): Inverse hessian matrix which is required for active learning.
+        hess_inv (ndarray): Inverse Hessian matrix which is required for active learning.
             It is calculated during the hyperparameter optimization.
     """
+
     from .backend import gp_functions
 
     def __init__(self):
@@ -256,13 +280,15 @@ class GPSurrogate(GaussianProcess):
     @property
     def Ky(self):
         """Full training covariance matrix as defined in the kernel
-        including data noise as specified in the hyperparameters."""
+        including data noise as specified in the hyperparameters.
+        """
         return self.kernel(self.Xtrain, self.Xtrain, **self.hyperparameters)
 
     @property
     def alpha(self):
         r"""Convenient matrix-vector product of the inverse training matrix and the training output data.
         The equation is solved either exactly or with a least squares approximation.
+
         $$
         \begin{equation}
         \alpha = K_y^{-1} y_{train}
@@ -281,16 +307,16 @@ class GPSurrogate(GaussianProcess):
         This is done by minimizing the negative log likelihood.
 
         Parameters:
-            X: (n, d) array of input training data.
-            y: (n, D) array of training output.
+            X (ndarray): (n, D) array of input training data.
+            y (ndarray): (n, 1) array of training output.
+                Currently, only scalar output is supported.
             kernel (str/object): Identifier of kernel like 'RBF' or directly the kernel object of the
                 specific surrogate.
             hyperparameters (dict): Hyperparameters such as length_scale, variance and noise.
                 Taken either from given parameter, config file or inferred from the training data.
                 The hyperparameters can be different depending on the kernel. E.g. The length_scale can be a scalar,
                 a vector of the size of the training data, or for the custom LinearEmbedding kernel a matrix.
-            fixed_sigma_n (bool/float/ndarray): Indicates if the data noise should be optimized or not.
-               If an ndarray is given, its length must match the training data.
+            fixed_sigma_n (bool): Indicates if the data noise should be optimized or not.
             eval_gradient (bool): Whether the gradients of the kernel and negative log likelihood are
                 explicitly used in the scipy optimization or numerically calculated inside scipy.
             return_hess_inv (bool): Whether to the attribute hess_inv after optimization. This is important
@@ -328,18 +354,21 @@ class GPSurrogate(GaussianProcess):
     def add_training_data(self, X, y):
         """Add training points to existing data. This is important for active learning.
 
+        Only the training dataset is updated, but the hyperparameters are not optimized yet.
+
         Parameters:
             X (ndarray): Input points to add.
             y (ndarray): Observed output to add.
         """
+
         # TODO: Update Ky by applying the Sherman-Morrison-Woodbury formula?
         self.Xtrain = np.concatenate([self.Xtrain, X], axis=0)
         self.ytrain = np.concatenate([self.ytrain, y], axis=0)
 
     def get_marginal_variance(self, Xpred):
-        r"""Calculate the marginal variance to infer the next point in active learning.
+        r"""Calculates the marginal variance to infer the next point in active learning.
+
         The calculation follows Osborne (2012).
-        Currently, only an isotropic RBF kernel is supported.
 
         Derivation of the marginal variance:
 
@@ -356,6 +385,7 @@ class GPSurrogate(GaussianProcess):
 
         Parameters:
             Xpred (ndarray): Possible prediction input points.
+
         Returns:
             ndarray: Sum of the actual marginal variance and the predictive variance.
         """
@@ -365,7 +395,7 @@ class GPSurrogate(GaussianProcess):
                                                        self.fixed_sigma_n, self.alpha, vhat)
 
     def save_model(self, path):
-        """Save the model as dict to a .hdf5 file.
+        """Saves the model as dict to a .hdf5 file.
 
         Parameters:
             path (str): Path including the file name, where the model should be saved.
@@ -381,14 +411,17 @@ class GPSurrogate(GaussianProcess):
 
     @classmethod
     def load_model(cls, path):
-        """Load a saved model from a .hdf5 file and update its attributes.
+        """Loads a saved model from a .hdf5 file and updates its attributes.
 
         Parameters:
             path (str): Path including the file name, from where the model should be loaded.
+
         Returns:
-            object: Instantiated surrogate model.
+            profit.sur.gaussian_process.GPSurrogate: Instantiated surrogate model.
         """
+
         from profit.util import load_hdf
+
         sur_dict = load_hdf(open(path, 'rb'), astype='dict')
         self = cls()
 
@@ -404,10 +437,12 @@ class GPSurrogate(GaussianProcess):
 
         Parameters:
             kernel (str): Kernel string such as 'RBF'. Only single kernels are supported currently.
+
         Returns:
             object: Kernel object of the class. This is the function which builds the kernel and not
-                the calculated covariance matrix.
+            the calculated covariance matrix.
         """
+
         # TODO: Rewrite fortran kernels and rename them to be explicit, like 'fRBF'
         from .backend import kernels as fortran_kernels
         from .backend import python_kernels
@@ -422,10 +457,11 @@ class GPSurrogate(GaussianProcess):
 
     def optimize(self, fixed_sigma_n=False, eval_gradient=False, return_hess_inv=False):
         r"""Optimize the hyperparameters length_scale $l$, scale $\sigma_f$ and noise $\sigma_n$.
+
         As a backend, the scipy minimize optimizer is used.
 
         Parameters:
-            fixed_sigma_n (bool/float/ndarray): Indication if the data noise should also be optimized or not.
+            fixed_sigma_n (bool): Indication if the data noise should also be optimized or not.
             eval_gradient (bool): Flag if the gradients of the kernel and negative log likelihood should be
                 used explicitly or numerically calculated inside the optimizer.
             return_hess_inv (bool): Whether to set the inverse Hessian attribute hess_inv which is used to calculate the
@@ -433,15 +469,12 @@ class GPSurrogate(GaussianProcess):
         """
         ordered_hyp_keys = ('length_scale', 'sigma_f', 'sigma_n')
         a0 = np.concatenate([self.hyperparameters[key] for key in ordered_hyp_keys])
-        # TODO: Add log transformed length_scales and ensure stability.
-        #a0 = np.log(a0)
         opt_hyperparameters = self.gp_functions.optimize(self.Xtrain, self.ytrain, a0, self.kernel,
                                                          fixed_sigma_n=self.fixed_sigma_n or fixed_sigma_n,
                                                          eval_gradient=eval_gradient, return_hess_inv=return_hess_inv)
         if return_hess_inv:
             self.hess_inv = opt_hyperparameters[1].todense()
             opt_hyperparameters = opt_hyperparameters[0]
-        #opt_hyperparameters = np.exp(opt_hyperparameters)
 
         # Set optimized hyperparameters
         last_idx = -1 if self.fixed_sigma_n else -2
@@ -455,38 +488,17 @@ class GPSurrogate(GaussianProcess):
 class GPySurrogate(GaussianProcess):
     """Surrogate for https://github.com/SheffieldML/GPy.
 
-    TODO: Write some extended explanation here.
-
     Attributes:
-        model (object): Model object of GPy.
+        model (GPy.models): Model object of GPy.
     """
     import GPy
 
     def __init__(self):
         super().__init__()
-        self.model = None  # Initialize GPyRegression model
+        self.model = None
 
     def train(self, X, y, kernel=None, hyperparameters=None, fixed_sigma_n=False, return_hess_inv=False,
               multi_output=False):
-        """After initializing the model with a kernel function and initial hyperparameters,
-        it can be trained on input data X and observed output data y by optimizing the model's hyperparameters.
-        This is done by minimizing the negative log likelihood.
-
-        Parameters:
-            X: (n, d) array of input training data.
-            y: (n, D) array of training output.
-            kernel (str/object): Identifier of kernel like 'RBF' or directly the kernel object of the
-                specific surrogate.
-            hyperparameters (dict): Hyperparameters such as length_scale, variance and noise.
-                Taken either from given parameter, config file or inferred from the training data.
-                The hyperparameters can be different depending on the kernel. E.g. The length_scale can be a scalar,
-                a vector of the size of the training data.
-            fixed_sigma_n (bool): Currently, this setting is ignored.
-            return_hess_inv (bool): Whether to the attribute hess_inv after optimization. This is important
-                for active learning. Currently, this is setting is ignored.
-            multi_output (bool): Indicates if a multi output is desired if y has more than one dimension.
-                Otherwise the excess dimensions are used as independent variable.
-        """
         super().prepare_train(X, y, kernel, hyperparameters, fixed_sigma_n, multi_output)
 
         if not self.multi_output or self.output_ndim < 2:
@@ -506,7 +518,9 @@ class GPySurrogate(GaussianProcess):
         self.trained = True
 
     def add_training_data(self, X, y):
-        """Add training points to existing data. This is important for active learning.
+        """Adds training points to the existing dataset.
+
+        This is important for Active Learning. The data is added but the hyperparameters are not optimized yet.
 
         Parameters:
             X (ndarray): Input points to add.
@@ -531,25 +545,30 @@ class GPySurrogate(GaussianProcess):
         return ymean, yvar
 
     def get_marginal_variance(self, Xpred):
-        """Calculate the marginal variance to infer the next point in active learning.
+        """Calculates the marginal variance to infer the next point in active learning.
+
         Currently only the predictive variance is taken into account.
 
         Parameters:
             Xpred (ndarray): Possible prediction input points.
+
         Returns:
-            ndarray: Currently only predictive variance.
+            ndarray: Currently only the predictive variance.
         """
+
         mtilde, vhat = self.predict(Xpred)
         return vhat.reshape(-1, 1)
 
     def save_model(self, path):
         """Save the model as dict to a .hdf5 file. GPy does not support to_dict method for Coregionalization
-        (multi-output) models yet. It is then saved as pickle file.
+        (multi-output) models yet. It is then saved as a pickle file.
 
         Parameters:
             path (str): Path including the file name, where the model should be saved.
         """
+
         from profit.util import save_hdf
+
         try:
             save_hdf(path, self.model.to_dict())
         except NotImplementedError:
@@ -561,14 +580,16 @@ class GPySurrogate(GaussianProcess):
 
     @classmethod
     def load_model(cls, path):
-        """Load a saved model from a .hdf5 file and update its attributes. In case of a multi-output model, the .pkl
+        """Loads a saved model from a .hdf5 file and updates its attributes. In case of a multi-output model, the .pkl
         file is loaded, since .hdf5 is not supported yet.
 
         Parameters:
             path (str): Path including the file name, from where the model should be loaded.
+
         Returns:
-            object: Instantiated surrogate model.
+            GPy.models: Instantiated surrogate model.
         """
+
         from profit.util import load
 
         self = cls()
@@ -595,15 +616,17 @@ class GPySurrogate(GaussianProcess):
         return self
 
     def select_kernel(self, kernel):
-        """Get the GPy.kern.src.stationary kernel by matching the given string kernel identifier.
+        """Get the GPy.kern kernel by matching the given string kernel identifier.
 
         Parameters:
             kernel (str): Kernel string such as 'RBF' or depending on the surrogate also product and sum kernels
                 such as 'RBF+Matern52'.
+
         Returns:
-            object: GPy kernel object. Currently, for sum and product kernels, the initial hyperparameters are the
+            GPy.kern: GPy kernel object. Currently, for sum and product kernels, the initial hyperparameters are the
             same for all kernels.
         """
+
         try:
             if not any(operator in kernel for operator in ('+', '*')):
                 return getattr(self.GPy.kern, kernel)(self.ndim,
@@ -625,19 +648,22 @@ class GPySurrogate(GaussianProcess):
             raise RuntimeError("Kernel {} is not implemented.".format(kernel))
 
     def optimize(self, return_hess_inv=False, **opt_kwargs):
-        """For hyperparameter optimization the GPy base optimization is used. Currently, the inverse Hessian can
-        not be retrieved, which limits the active learning effectivity.
+        """For hyperparameter optimization the GPy base optimization is used.
+
+        Currently, the inverse Hessian can not be retrieved, which limits the active learning effectivity.
 
         Parameters:
             return_hess_inv (bool): Is not considered currently.
             opt_kwargs: Keyword arguments used directly in the GPy base optimization.
         """
+
         self.model.optimize(**opt_kwargs)
         self._set_hyperparameters_from_model()
 
     def _set_hyperparameters_from_model(self):
-        r"""Helper function to set the hyperparameter dict from the model, depending on whether it is a single kernel
-        or a combined one.
+        r"""Helper function to set the hyperparameter dict from the model.
+
+        It depends on whether it is a single kernel or a combined one.
         """
         if hasattr(self.model.kern, 'lengthscale'):
             self.hyperparameters['length_scale'] = self.model.kern.lengthscale.values
@@ -662,36 +688,18 @@ class GPySurrogate(GaussianProcess):
 class SklearnGPSurrogate(GaussianProcess):
     """Surrogate for https://github.com/scikit-learn/scikit-learn Gaussian process.
 
-    TODO: Write some extended explanation here.
-
     Attributes:
-
+        model (sklearn.gaussian_process.GaussianProcessRegressor): Model object of Sklearn.
     """
     from sklearn import gaussian_process as sklearn_gp
     from sklearn.gaussian_process import kernels as sklearn_kernels
 
     def __init__(self):
         super().__init__()
-        self.model = None  # Initialize Sklearn GP model
+        self.model = None
 
-    def train(self, X, y, kernel=None, hyperparameters=None, fixed_sigma_n=False, return_hess_inv=False):
-        """After initializing the model with a kernel function and initial hyperparameters,
-        it can be trained on input data X and observed output data y by optimizing the model's hyperparameters.
-        This is done by minimizing the negative log likelihood.
-
-        Parameters:
-            X: (n, d) array of input training data.
-            y: (n, D) array of training output.
-            kernel (str/object): Identifier of kernel like 'RBF' or directly the kernel object of
-                sklearn.gaussian_process.kernels.
-            hyperparameters (dict): Hyperparameters such as length_scale, variance and noise.
-                Taken either from given parameter, config file or inferred from the training data.
-                The hyperparameters can be different depending on the kernel. E.g. The length_scale can be a scalar,
-                a vector of the size of the training data.
-            return_hess_inv (bool): Whether to the attribute hess_inv after optimization. This is important
-                for active learning. Currently, this is setting is ignored.
-        """
-
+    def train(self, X, y, kernel=None, hyperparameters=None, fixed_sigma_n=False, return_hess_inv=False,
+              multi_output=False):
         super().prepare_train(X, y, kernel, hyperparameters, fixed_sigma_n)
 
         if self.multi_output:
@@ -713,7 +721,7 @@ class SklearnGPSurrogate(GaussianProcess):
         self.trained = True
 
     def add_training_data(self, X, y):
-        """Add training points to existing data. This is important for active learning.
+        """Add training points to existing data.
 
         Parameters:
             X (ndarray): Input points to add.
@@ -732,7 +740,8 @@ class SklearnGPSurrogate(GaussianProcess):
         return ymean, yvar
 
     def get_marginal_variance(self, Xpred):
-        """Calculate the marginal variance to infer the next point in active learning.
+        """Calculates the marginal variance to infer the next point in active learning.
+
         Currently only the predictive variance is taken into account.
 
         Parameters:
@@ -740,6 +749,7 @@ class SklearnGPSurrogate(GaussianProcess):
         Returns:
             ndarray: Currently only predictive variance.
         """
+
         mtilde, vhat = self.predict(Xpred)
         return vhat.reshape(-1, 1)
 
@@ -750,6 +760,7 @@ class SklearnGPSurrogate(GaussianProcess):
         Parameters:
             path (str): Path including the file name, where the model should be saved.
         """
+
         from pickle import dump
         dump(self.model, open(path, 'wb'))
 
@@ -759,9 +770,11 @@ class SklearnGPSurrogate(GaussianProcess):
 
         Parameters:
             path (str): Path including the file name, from where the model should be loaded.
+
         Returns:
-            object: Instantiated surrogate model.
+            profit.sur.gaussian_process.SklearnGPSurrogate: Instantiated surrogate model.
         """
+
         from pickle import load
 
         self = cls()
@@ -777,18 +790,28 @@ class SklearnGPSurrogate(GaussianProcess):
         return self
 
     def optimize(self, return_hess_inv=False, **opt_kwargs):
+        """For hyperparameter optimization the Sklearn base optimization is used.
+
+        Currently, the inverse Hessian can not be retrieved, which limits the active learning effectivity.
+
+        Parameters:
+            return_hess_inv (bool): Is not considered currently.
+            opt_kwargs: Keyword arguments used directly in the Sklearn base optimization.
+        """
         self.model.fit(self.Xtrain, self.ytrain, **opt_kwargs)
         self._set_hyperparameters_from_model()
 
     def select_kernel(self, kernel):
-        """Get the sklearn.gaussian_process.kernel kernel by matching the given kernel identifier.
+        """Get the sklearn.gaussian_process.kernels kernel by matching the given kernel identifier.
 
         Parameters:
             kernel (str): Kernel string such as 'RBF' or depending on the surrogate also product and sum kernels
                 such as 'RBF+Matern52'.
+
         Returns:
-            object: Scikit-learn kernel object. Currently, for sum and product kernels, the initial hyperparameters
-            are the same for all kernels."""
+            sklearn.gaussian_process.kernels: Scikit-learn kernel object. Currently, for sum and product kernels,
+            the initial hyperparameters are the same for all kernels.
+        """
 
         from re import split
         full_str = split('([+*])', kernel)
@@ -814,8 +837,10 @@ class SklearnGPSurrogate(GaussianProcess):
         return kernel
 
     def _set_hyperparameters_from_model(self):
-        r"""Helper function to set the hyperparameter dict from the model, depending on whether $\sigma_n$ is fixed.
-        Currently only stable for single kernels and not for Sum and Prod kernels.
+        r"""Helper function to set the hyperparameter dict from the model.
+
+        It depends on whether $\sigma_n$ is fixed.
+        Currently this is only stable for single kernels and not for Sum and Prod kernels.
         """
         if self.fixed_sigma_n:
             self.hyperparameters['length_scale'] = np.atleast_1d(self.model.kernel_.k1.length_scale)

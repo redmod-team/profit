@@ -1,7 +1,7 @@
 Configuration
 =============
 
-The main configuration file is called ``profit.yaml`` by default and lies in the base directory,
+The main configuration file is called ``profit.yaml`` by default and is located in the base directory,
 which is either the current working directory or specified when calling profit. It provides a Python dictionary with configuration parameters for simulation, fitting and uncertainty quantification.
 
 The format can either be a '.yaml' or a '.py' file.
@@ -54,7 +54,7 @@ The following gives an overview of all possible parameters
             | Distribution of the input variable. (See below.)
 
         .. confval:: range
-            :default: (0, 1)
+            :default: [0, 1]
 
             | Range of the input variable. (See below for specific inputs of different variable kinds.)
 
@@ -73,8 +73,8 @@ The following gives an overview of all possible parameters
 
         .. confval:: range
 
-            | Range of independent variables is linear. Format is (start, end, step).
-            | E.g. (0, 10, 1)
+            | Range of independent variables is linear. Format is [start, end, step].
+            | E.g. [0, 10, 1]
 
         .. confval:: dtype
 
@@ -249,49 +249,101 @@ The following gives an overview of all possible parameters
 .. confval:: fit
 
     .. confval:: surrogate
+        :type: identifier (string)
         :default: GPy
 
         | Decide which surrogate model is used to fit the data.
 
     .. confval:: kernel
+        :type: identifier (string)
         :default: RBF
 
         | Set the kernel to use. Also sum and product kernels are possible.
 
-    .. confval:: sigma_n
-        :default: None
+    .. confval:: hyperparameters:
 
-        | Data noise
+        .. confval:: length_scale
+            :type: float or list of floats
+            :default: inferred from training data
 
-    .. confval:: sigma_f
-        :default: 1e-6
+            | Set the initial length scale.
 
-        | Data scale
+        .. confval:: sigma_f
+            :type: float
+            :default: inferred from training data
+
+            | Set initial scaling.
+
+        .. confval:: sigma_n
+            :type: float
+            :default: inferred from training data
+
+            | Set initial data noise.
+
+    .. confval:: fixed_sigma_n
+        :type: boolean
+        :default: ``false``
+
+        | Whether the noise sigma_n should be kept fixed during optimization.
+
+    .. confval:: multi_output
+        :type: boolean
+        :default: ``false``
+
+        | Whether an n-D simulation output is interpreted as scalar output with n independent supporting points
+          or a coregionalized fit should be executed for all output dimensions.
 
     .. confval:: save
-        :default: /model.hdf5
+        :type: path
+        :default: ./model.hdf5
 
         | Save the trained model.
 
     .. confval:: load
+        :type: path
         :default: ./model.hdf5
 
         | Load an already saved model.
 
     .. confval:: plot
-        :default: False
+        :type: boolean
+        :default: ``false``
 
-        | Plot the results. Only possible for 'simple' data. For more sophisticated plots use ``profit ui``.
+        | Plot the results. Only possible for <= 2 dimensional data. For more sophisticated plots use ``profit ui``.
 
-        .. confval:: xpred
+        .. confval:: Xpred
+            :type: list of lists of floats
+            :default: inferred from training data
 
-            | Specify the range of the plot for every dimension as (start, end, step)
-            | E.g. for a parameter and an independent variable: ((0, 1, 0.01), (0, 10, 0.1))
+            | Specify the range of the plot for every dimension as [start, end, step]
+            | E.g. for a 2D input space: [[0, 1, 0.01], [0, 10, 0.1]]
 
-    .. confval:: plot_searching_phase
-        :default: False
+.. confval:: active_learning
 
-        | Not implemented yet.
+    .. confval:: nrand
+        :type: integer
+        :default: 3
+
+        | Number of runs with random points before active learning starts.
+
+    .. confval:: optimize_every:
+        :type: boolean
+        :default: 1
+
+        | Number of active learning iterations between hyperparameter optimizations.
+
+    .. confval:: plot_every:
+        :type: boolean or int
+        :default: ``false``
+
+        | Number of active learning iterations between plotting the progress.
+        | If no plots should be generated, it should be ``false``.
+
+    .. confval:: plot_marginal_variance
+        :type: boolean
+        :type: ``false``
+
+        | If a subplot of the marginal variance should be included in the plots.
 
 Declaring variables as strings
 ------------------------------
