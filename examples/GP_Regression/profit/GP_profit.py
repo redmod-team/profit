@@ -4,7 +4,8 @@ import seaborn as sns
 
 sns.set()
 import time
-from profit.sur.backend.gp_functions import k as kern_sqexp, build_K, predict_f
+from profit.sur.backend.gp_functions import predict_f
+from profit.sur.backend.python_kernels import RBF
 
 # Fixing the dimensions of the figure
 plt.rcParams['figure.figsize'] = [12, 7]
@@ -51,19 +52,15 @@ sigma_f = 1
 
 # Definition of the squared exponential kernel
 t = time.time()
-kernel = kern_sqexp(x, y, l)
+kernel = RBF(x, y, l)
 elapsed = time.time() - t
 print(elapsed)
 # Definition of the covariance matrices
 t = time.time()
-a = np.array([l, (sigma_n / sigma_f) ** 2])  # normalization
-K = np.empty((n, n))
-K_star2 = np.empty((n_star, n_star))
-K_star = np.empty((n_star, n))
-build_K(x, x, a, K)  # kernels.gp_matrix(x, x, a, K)
-build_K(x_star, x_star, a, K_star2)  # kernels.gp_matrix(x_star ,x_star , a, K_star2)
-# Or: gp.gp_matrix_train(x_star, a, sigma_n)
-build_K(x_star, x, a, K_star)
+a = np.array([l, sigma_f, sigma_n])
+K = RBF(x, x, *a)
+K_star2 = RBF(x_star, x_star, *a)
+K_star = RBF(x_star, x, *a)
 elapsed = time.time() - t
 print(elapsed)
 # Plot of K
@@ -91,7 +88,7 @@ for i in range(0, n_prior):
 plt.plot(x_star, f_star, 'b', linewidth=0.5)
 # Compute posterior mean and covariance.
 t = time.time()
-f_bar_star, cov_f_star = predict_f(a, x, y, x_star, neig=8)
+f_bar_star, cov_f_star = predict_f(a, x, y, x_star, RBF, return_full_cov=True, neig=8)
 elapsed = time.time() - t
 print(elapsed)
 # plot the covariance matrix

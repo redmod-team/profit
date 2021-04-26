@@ -1,13 +1,12 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from profit.sur.backend.gp_functions import invert, nll, predict_f, \
+from profit.sur.backend.gp_functions_old import invert, nll, predict_f, \
     get_marginal_variance_BBQ, plot_searching_phase
-from profit.sur.backend.gp_functions import k as kern_sqexp
+from profit.sur.backend.kernels import kern_sqexp
 from scipy.optimize import minimize
 
 
 def f(x): return x*np.cos(10*x)
-
 
 # Custom function to build GP matrix
 def build_K(xa, xb, hyp, K):
@@ -15,26 +14,24 @@ def build_K(xa, xb, hyp, K):
         for j in np.arange(len(xb)):
             K[i, j] = kern_sqexp(xa[i], xb[j], hyp[0])
 
-
 def nll_transform(log10hyp):
     hyp = 10**log10hyp
-    return nll(hyp, xtrain, ytrain, 1, build_K=build_K)
-
+    return nll(hyp, xtrain, ytrain, 0)
 
 def sigmoid(x):
     return 1.0/(1.0 + np.exp(-x))
-
 
 def prior(hyp):
     return sigmoid(hyp[0]-6)*sigmoid(hyp[-1]-6)
 
 
+
 noise_train = 0.01
 
-total_train = 15
+total_train = 30
 dimension = 1
-hyp = [0.5, 1e-2]
-ntest = 100
+hyp = [0.1, 1e-4]
+ntest = 300
 xtest = np.linspace(0, 1, ntest)
 start_point = ntest/2 # because it's always better to begin at the center
 next_candidate = start_point
@@ -42,7 +39,6 @@ next_candidate = start_point
 ftest = f(xtest)
 list_of_observation = []
 
-n_candidate = 20 # = ntest
 
 for ntrain in range(1, total_train + 1):
 
@@ -88,15 +84,16 @@ for ntrain in range(1, total_train + 1):
 
     ######################### PLOT ########################
 
+    #plt.subplot(2,1,1)
+    plt.figure()
     plt.plot(xtrain, ytrain, 'kx')
     plt.plot(xtest, ftest, 'm-')
     plt.plot(xtest, fmean, 'r--')
     axes = plt.gca()
     axes.set_ylim([-1.5, 1])
-    plt.title('Gaussian Process with '+ str(ntrain) + ' observation(s) hyp = [0.1, 1e-4]')
+    plt.title('Gaussian Process with '+ str(ntrain) + ' observation(s) hyp = [0.1 1e-4]')
     plt.legend(('training', 'reference', 'prediction'))
-    if ntrain == 10:
-        plt.savefig('Active Gaussian Process with '+ str(ntrain) + ' observation(s)')
+
 
 
 
@@ -104,22 +101,35 @@ for ntrain in range(1, total_train + 1):
                      (fmean.flatten() + 2 * np.sqrt(np.abs(varf).flatten())), # y1
                      (fmean.flatten() - 2 * np.sqrt(np.abs(varf).flatten())), facecolor='blue', alpha=0.4) # y2
 
-    plt.fill_between(xtest, # x
-                     (fmean.flatten() + 2 * np.sqrt(marginal_variance.flatten())), # y1
-                     (fmean.flatten() - 2 * np.sqrt(marginal_variance.flatten())), facecolor='yellow', alpha=0.4) # y2
+    # plt.fill_between(xtest, # x
+    #                  (fmean.flatten() + 2 * np.sqrt(marginal_variance.flatten())), # y1
+    #                  (fmean.flatten() - 2 * np.sqrt(marginal_variance.flatten())), facecolor='yellow', alpha=0.4) # y2
 
+
+    plt.legend(('training', 'reference', 'prediction', 'Posterior Variance', 'Marginal Variance'))
+    plt.savefig('Varf_active_'+ str(ntrain))
+    #plt.show()
     ################ FIND NEXT POINT ################
 
-    scores = marginal_variance + varf
+
+    scores = 0*marginal_variance + varf
     print(np.c_[marginal_variance, varf, scores])
     next_candidate = np.argmax(scores)
 
-    plot_searching_phase(scores, xtest, next_candidate, ntrain)
+    #plot_searching_phase(scores, xtest, next_candidate, ntrain)
     #plt.show()
 
+
+
+
+
     #################################################
+
 
     hyp = new_hyp
     print("next candidate ->\nx = ", xtest[next_candidate])
 
-plt.show()
+
+
+
+

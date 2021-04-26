@@ -1,6 +1,6 @@
 import numpy as np
-from profit.sur.gp import gp_matrix, gp_matrix_train, gpsolve
-
+from profit.sur.backend.gp_functions import solve_cholesky
+from profit.sur.backend.python_kernels import RBF
 
 def f(x):
     return np.sin(x)
@@ -17,19 +17,19 @@ a = np.array([1.0, 1.0])
 
 def test_gp_1D():
 
-    Ky = gp_matrix_train(xtrain, a, None)
+    Ky = RBF(xtrain, xtrain, *a)
 
     assert np.array_equal(Ky, Ky.T)
 
-    L, alpha = gpsolve(Ky, ytrain)
+    L = np.linalg.cholesky(Ky)
+    alpha = solve_cholesky(L, ytrain)
     alpha2 = np.linalg.solve(Ky, ytrain)
     Kyinv = np.linalg.inv(Ky)
     alpha3 = Kyinv.dot(ytrain)
     assert np.allclose(alpha2, alpha, rtol=1e-10, atol=1e-10)
     assert np.allclose(alpha3, alpha, rtol=1e-10, atol=1e-10)
 
-    KstarT = np.empty([nx, nxtrain], order='F')
-    gp_matrix(x, xtrain, a, KstarT)
+    KstarT = RBF(x, xtrain, *a)
     ypred = KstarT.dot(alpha)
 
     assert np.allclose(ytrain, ypred[::train_every], rtol=1e-14, atol=1e-14)

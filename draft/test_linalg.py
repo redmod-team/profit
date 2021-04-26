@@ -1,6 +1,6 @@
 import numpy as np
 import scipy as sp
-from profit.sur.backend.gp_functions import invert_cholesky, solve_cholesky
+from profit.sur.backend.gp_functions_old import invert_cholesky, solve_cholesky
 
 A = np.array([[2,1],[1,2]])
 print(np.linalg.inv(A))

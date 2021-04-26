@@ -4,6 +4,10 @@ variables:
     f: Output
 
 run:
+    pre:
+        class: template
+        path: ../template
+        param_files: mockup_1D.in
     post:
         class: numpytxt
         path: mockup.out

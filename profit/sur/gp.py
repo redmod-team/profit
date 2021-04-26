@@ -8,13 +8,12 @@ from scipy.optimize import minimize
 from scipy.linalg import solve_triangular
 import matplotlib.pyplot as plt
 from profit.sur import Surrogate
-from .backend.gp_functions import build_K
+from .backend.python_kernels import RBF
 
 
 def gp_matrix(x0, x1, a, K):
     """Constructs GP covariance matrix between two point tuples x0 and x1"""
-    build_K(x0, x1, a[:-1], K)
-    K = a[-1]*K
+    K = RBF(x0, x1, a[:-1]**2, np.sqrt(a[-1]))
 
 
 def gp_matrix_train(x, a, sigma_n):

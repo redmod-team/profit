@@ -10,10 +10,9 @@ Testcases for mockup simulations with active learning:
 
 from profit.config import Config
 from profit.sur import Surrogate
-from profit.util import load
 from os import path, remove, chdir, getcwd
 from subprocess import run
-from numpy import array, allclose  # necessary for eval() method when loading the surrogate model
+from numpy import allclose
 from shutil import rmtree
 from pytest import fixture
 
@@ -39,8 +38,8 @@ def clean(config):
         single_dir = path.join(config.get('run_dir'), f'run_{krun:03d}')
         if path.exists(single_dir):
             rmtree(single_dir)
-    if path.exists('./study/interface.npy'):
-        remove('./study/interface.npy')
+    if path.exists(config['run']['interface'].get('path')):
+        remove(config['run']['interface'].get('path'))
     if path.exists(config['files'].get('input')):
         remove(config['files'].get('input'))
     if path.exists(config['files'].get('output')):
@@ -50,9 +49,9 @@ def clean(config):
 def test_1D():
     """Test a simple function f(u) = cos(10*u) + u."""
 
-    config_file = './study/profit_1D.yaml'
+    config_file = 'study_1D/profit_1D.yaml'
     config = Config.from_file(config_file)
-    model_file = './study/model_1D.hdf5'
+    model_file = './study_1D/model_1D.hdf5'
     try:
         run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
         run(f"profit fit {config_file}", shell=True, timeout=TIMEOUT)
@@ -72,9 +71,9 @@ def test_1D():
 def test_2D():
     """Test a Rosenbrock 2D function with two random inputs."""
 
-    config_file = './study/profit_2D.yaml'
+    config_file = 'study_2D/profit_2D.yaml'
     config = Config.from_file(config_file)
-    model_file = './study/model_2D.hdf5'
+    model_file = './study_2D/model_2D.hdf5'
     try:
         run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
         run(f"profit fit {config_file}", shell=True, timeout=TIMEOUT)

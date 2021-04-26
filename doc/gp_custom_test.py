@@ -1,7 +1,7 @@
 import numpy as np
 import scipy
 import matplotlib.pyplot as plt
-from profit.sur.backend.gp_functions import invert, nll, predict_f, predict_dfdx
+from profit.sur.backend.gp_functions_old import invert, nll, predict_f, predict_dfdx
 from profit.sur.backend.kernels import kern_sqexp
 from profit.util.halton import halton
 from mpl_toolkits import mplot3d
