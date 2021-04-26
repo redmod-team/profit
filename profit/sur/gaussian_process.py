@@ -493,7 +493,8 @@ class GPySurrogate(GaussianProcess):
     """
 
     def __init__(self):
-        import GPy as self.GPy
+        import GPy
+        self.GPy = GPy
         super().__init__()
         self.model = None
 
@@ -502,7 +503,7 @@ class GPySurrogate(GaussianProcess):
         super().prepare_train(X, y, kernel, hyperparameters, fixed_sigma_n, multi_output)
 
         if not self.multi_output or self.output_ndim < 2:
-            self.model = models.GPRegression(self.Xtrain, self.ytrain, self.kernel,
+            self.model = self.GPy.models.GPRegression(self.Xtrain, self.ytrain, self.kernel,
                                                       noise_var=self.hyperparameters['sigma_n'] ** 2)
         else:
             print("{}-D output detected. Using Coregionalization.".format(self.output_ndim))
@@ -596,10 +597,10 @@ class GPySurrogate(GaussianProcess):
         self = cls()
         try:
             model_dict = load(path, as_type='dict')
-            self.model = cls.GPy.models.GPRegression.from_dict(model_dict)
+            self.model = models.GPRegression.from_dict(model_dict)
             self.Xtrain = self.model.X
             self.ytrain = self.model.Y
-        except FileNotFoundError:
+        except (OSError, FileNotFoundError):
             from pickle import load as pload
             from os.path import splitext
             # Load multi-output model from pickle file

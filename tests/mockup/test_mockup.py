@@ -78,8 +78,8 @@ def test_1D():
 
 def multi_test_1d(study, config_file, output_file):
     """ test 1D with different config files """
-    config_file = os.path.join(study, config_file)
-    output_file = os.paht.join(study, output_file)
+    config_file = path.join(study, config_file)
+    output_file = path.join(study, output_file)
     config = Config.from_file(config_file)
     try:
         run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
