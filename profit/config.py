@@ -2,6 +2,7 @@ from os import path, getcwd
 from re import match, split
 import yaml
 from collections import OrderedDict
+from typing import Mapping
 
 from profit.run import Runner
 from profit.sur import Surrogate
@@ -25,6 +26,16 @@ def represent_ordereddict(dumper, data):
         value.append((node_key, node_value))
 
     return yaml.nodes.MappingNode(u'tag:yaml.org,2002:map', value)
+
+
+def try_parse(s):
+    funcs = [int, float]
+    for f in funcs:
+        try:
+            return f(s)
+        except ValueError:
+            pass
+    return s
 
 
 def dict_constructor(loader, node):
@@ -151,10 +162,15 @@ class Config(OrderedDict):
         halton_dim = []
         for k, v in self['variables'].items():
             if isinstance(v, str):
-                # match word(int_or_float, int_or_float, int_or_float)
-                mat = match(r'(\w+)\(?(-?\d+(?:\.\d+)?)?,?\s?(-?\d+(?:\.\d+)?)?,?\s?(-?\d+(?:\.\d+)?)?\)?', v)
-                kind = mat.group(1)
-                entries = tuple(float(entry) for entry in mat.groups()[1:] if entry is not None)
+                # match word(comma seperated list of int or float)
+                parsed = split('[()]', v)
+                kind = parsed[0]
+                args = parsed[1] if len(parsed) >= 2 else ''
+                entries = tuple(try_parse(a) for a in args.split(',')) if args != '' else tuple()
+
+                if isinstance(try_parse(v), (int, float)):  # PyYaml has problems parsing scientific notation
+                    kind = 'Constant'
+                    entries = (try_parse(v),)
 
                 self['variables'][k] = {'kind': kind}
 
@@ -178,9 +194,17 @@ class Config(OrderedDict):
                             self['variables'][k]['al_range'] = entries  # range between active learning should happen
                         else:
                             self['variables'][k]['range'] = func(*entries, size=self['ntrain'])
+                            self['variables'][k]['dtype'] = str(self['variables'][k]['range'].dtype)
                     except AttributeError:
-                        raise RuntimeError("Variable kind not defined.\n"
-                                           "Valid Functions: {}".format(get_class_methods(variable_kinds)))
+                        raise RuntimeError(f"Variable kind {kind} not defined.\n"
+                                           f"Valid Functions: {get_class_methods(variable_kinds)}")
+            elif isinstance(v, (int, float)):
+                self['variables'][k] = {'kind': 'constant', 'range': variable_kinds.constant(v, size=self['ntrain'])}
+                self['variables'][k]['dtype'] = str(self['variables'][k]['range'].dtype)
+            elif isinstance(v, Mapping) and 'kind' in v:  # assume config dictionary is valid
+                self['variables'][k] = v
+            else:
+                raise TypeError(f'cannot interpret variable {k} with value {v}')
 
             # Process data types
             if 'dtype' not in self['variables'][k].keys():

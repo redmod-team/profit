@@ -32,3 +32,7 @@ def independent(start=0, end=1, step=1, size=None):
 
 def activelearning(size=None):
     return check_ndim(np.full(size, np.nan))
+
+
+def constant(value=0, size=None):
+    return check_ndim(np.full(size, value))

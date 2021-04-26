@@ -21,6 +21,7 @@ import numpy as np
 import json
 from time import sleep
 from logging import Logger
+import os
 
 
 @RunnerInterface.register('zeromq')
@@ -30,8 +31,12 @@ class ZeroMQRunnerInterface(RunnerInterface):
             self.internal_vars += [('FLAGS', np.byte)]
         super().__init__(config, size, input_config, output_config, logger_parent=logger_parent)
         self.socket = zmq.Context.instance().socket(zmq.ROUTER)
-        self.socket.bind(self.config['bind'])
-        self.logger.info('connected')
+        if self.config['address'] is None:
+            bind = f'{self.config["transport"]}://*:{self.config["port"]}'
+        else:
+            bind = self.config['bind']
+        self.socket.bind(bind)
+        self.logger.info(f'connected to {bind}')
 
     def poll(self):
         self.logger.debug('polling: checking for messages')
@@ -77,23 +82,24 @@ class ZeroMQRunnerInterface(RunnerInterface):
     @classmethod
     def handle_config(cls, config, base_config):
         """
-        class: zeromq
-        bind: tcp://*:9000              # address the runner binds to
-        connect: tcp://localhost:9000   # address the workers connect to
-        timeout: 2500                   # zeromq polling timeout, in ms
-        retries: 3                      # number of zeromq connection retries
-        retry-sleep: 1                  # sleep between retries, in s
+        Example:
+            .. code-block:: yaml
+
+                class: zeromq
+                transport: tcp      # transport system used by zeromq
+                port: 9000          # port for the interface
+                bind: null          # override bind address used by zeromq
+                connect: null       # override connect address used by zeromq
+                timeout: 2500       # zeromq polling timeout, in ms
+                retries: 3          # number of zeromq connection retries
+                retry-sleep: 1      # sleep between retries, in s
+
         """
-        if 'bind' not in config:
-            config['bind'] = 'tcp://*:9000'
-        if 'connect' not in config:
-            config['connect'] = 'tcp://localhost:9000'
-        if 'timeout' not in config:
-            config['timeout'] = 2500
-        if 'retries' not in config:
-            config['retries'] = 3
-        if 'retry-sleep' not in config:
-            config['retry-sleep'] = 1
+        defaults = dict(transport='tcp', port=9000, address=None, connect=None, timeout=2500, retries=3)
+        defaults['retry-sleep'] = 1
+        for key, value in defaults.items():
+            if key not in config:
+                config[key] = value
 
 
 @Interface.register('zeromq')
@@ -121,8 +127,15 @@ class ZeroMQInterface(Interface):
     def connect(self):
         self.socket = zmq.Context.instance().socket(zmq.REQ)
         self.socket.setsockopt(zmq.IDENTITY, f'req_{self.run_id}'.encode())
-        self.socket.connect(self.config['connect'])
-        self.logger.info('connected')
+        if self.config['connect'] is None:
+            address = os.environ.get('PROFIT_RUNNER_ADDRESS')
+            if address is None:
+                address = 'localhost'
+            connect = f'{self.config["transport"]}://{address}:{self.config["port"]}'
+        else:
+            connect = self.config['connect']
+        self.socket.connect(connect)
+        self.logger.info(f'connected to {connect}')
 
     def request(self, request):
         """ 0MQ - Lazy Pirate Pattern """
