@@ -90,6 +90,9 @@ def main():
             params_array = [row[0] for row in eval_points]
             runner.spawn_array(tqdm(params_array), blocking=True)
 
+        if config['run']['clean']:
+            runner.clean()
+
         if config['files']['output'].endswith('.txt'):
             data = runner.structured_output_data
             save(config['files']['output'], data.reshape(data.size, 1))
@@ -152,6 +155,10 @@ def main():
 
         runner = Runner.from_config(config['run'], config)
         runner.clean()
+        try:
+            rmtree(config['run']['log_path'])
+        except FileNotFoundError:
+            pass
 
 
 if __name__ == '__main__':

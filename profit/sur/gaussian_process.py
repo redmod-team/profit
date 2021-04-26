@@ -491,9 +491,10 @@ class GPySurrogate(GaussianProcess):
     Attributes:
         model (GPy.models): Model object of GPy.
     """
-    import GPy
 
     def __init__(self):
+        import GPy
+        self.GPy = GPy
         super().__init__()
         self.model = None
 
@@ -509,7 +510,7 @@ class GPySurrogate(GaussianProcess):
             icm = self.GPy.util.multioutput.ICM(input_dim=self.ndim, num_outputs=self.output_ndim, kernel=self.kernel)
             self.model = self.GPy.models.GPCoregionalizedRegression(self.output_ndim * [self.Xtrain],
                                                                     [self.ytrain[:, d].reshape(-1, 1)
-                                                                     for d in range(self.output_ndim)],
+                                                                    for d in range(self.output_ndim)],
                                                                     kernel=icm)
 
         self.optimize()
@@ -591,14 +592,15 @@ class GPySurrogate(GaussianProcess):
         """
 
         from profit.util import load
+        from GPy import models
 
         self = cls()
         try:
             model_dict = load(path, as_type='dict')
-            self.model = cls.GPy.models.GPRegression.from_dict(model_dict)
+            self.model = models.GPRegression.from_dict(model_dict)
             self.Xtrain = self.model.X
             self.ytrain = self.model.Y
-        except FileNotFoundError:
+        except (OSError, FileNotFoundError):
             from pickle import load as pload
             from os.path import splitext
             # Load multi-output model from pickle file
@@ -691,7 +693,6 @@ class SklearnGPSurrogate(GaussianProcess):
     Attributes:
         model (sklearn.gaussian_process.GaussianProcessRegressor): Model object of Sklearn.
     """
-    from sklearn import gaussian_process as sklearn_gp
     from sklearn.gaussian_process import kernels as sklearn_kernels
 
     def __init__(self):
@@ -700,6 +701,7 @@ class SklearnGPSurrogate(GaussianProcess):
 
     def train(self, X, y, kernel=None, hyperparameters=None, fixed_sigma_n=False, return_hess_inv=False,
               multi_output=False):
+        from sklearn import gaussian_process as sklearn_gp
         super().prepare_train(X, y, kernel, hyperparameters, fixed_sigma_n)
 
         if self.multi_output:
@@ -814,12 +816,13 @@ class SklearnGPSurrogate(GaussianProcess):
         """
 
         from re import split
+        from sklearn.gaussian_process import kernels as sklearn_kernels
         full_str = split('([+*])', kernel)
         try:
             kernel = []
             for key in full_str:
                 kernel += [key if key in ('+', '*') else
-                           getattr(self.sklearn_kernels, key)(length_scale=self.hyperparameters['length_scale'])]
+                           getattr(sklearn_kernels, key)(length_scale=self.hyperparameters['length_scale'])]
         except AttributeError:
             raise RuntimeError("Kernel {} is not implemented.".format(kernel))
 

@@ -9,10 +9,8 @@ run:
         class: local
         parallel: 4
         sleep: 0
-    post:
-        class: numpytxt
-        path: mockup.out
-    command: python3 mockup.py
+    include: ../mockup.py
+    worker: mockup
 
 fit:
     plot:

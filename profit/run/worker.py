@@ -146,14 +146,16 @@ class Postprocessor(ABC):
 
 
 class Worker:
+    _registry = {}
+
     def __init__(self, config: Mapping, interface_class, pre_class, post_class, run_id: int):
         self.logger = logging.getLogger('Worker')
         self.logger.setLevel(logging.DEBUG)
         try:
-            os.mkdir('log')
+            os.mkdir(config['log_path'])
         except FileExistsError:
             pass
-        log_handler = logging.FileHandler(f'log/run_{run_id:03d}.log', mode='w')
+        log_handler = logging.FileHandler(os.path.join(config['log_path'], f'run_{run_id:03d}.log'), mode='w')
         log_formatter = logging.Formatter('{asctime} {levelname:8s} {name}: {message}', style='{')
         log_handler.setFormatter(log_formatter)
         self.logger.addHandler(log_handler)
@@ -171,7 +173,7 @@ class Worker:
         interface = Interface[config['interface']['class']]
         pre = Preprocessor[config['pre']['class']]
         post = Postprocessor[config['post']['class']]
-        return cls(config, interface, pre, post, run_id)
+        return cls[config['worker']](config, interface, pre, post, run_id)
 
     @classmethod
     def from_env(cls, label='run'):
@@ -193,17 +195,33 @@ class Worker:
         ToDo: give warnings
         """
         defaults = {'pre': 'template', 'post': 'json', 'command': './simulation', 'stdout': 'stdout', 'stderr': None,
-                    'clean': True, 'time': True}
+                    'clean': True, 'time': True, 'log_path': 'log'}
         for key, default in defaults.items():
             if key not in config:
                 config[key] = default
 
+        if not os.path.isabs(config['log_path']):
+            config['log_path'] = os.path.abspath(os.path.join(base_config['base_dir'], config['log_path']))
         if not isinstance(config['pre'], MutableMapping):
             config['pre'] = {'class': config['pre']}
         Preprocessor[config['pre']['class']].handle_config(config['pre'], base_config)
         if not isinstance(config['post'], MutableMapping):
             config['post'] = {'class': config['post']}
         Postprocessor[config['post']['class']].handle_config(config['post'], base_config)
+
+    @classmethod
+    def register(cls, label):
+        def decorator(worker):
+            if label in cls._registry:
+                raise KeyError(f'registering duplicate label {label} for Worker')
+            cls._registry[label] = worker
+            return worker
+        return decorator
+
+    def __class_getitem__(cls, item):
+        if item is None:
+            return cls
+        return cls._registry[item]
 
     def run(self):
         self.logger.debug('run')

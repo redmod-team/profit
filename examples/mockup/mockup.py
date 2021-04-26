@@ -5,15 +5,26 @@ Created on Mon Feb  4 08:34:52 2019
 
 @author: Christopher Albert
 """
-import numpy as np
+from profit.run import Worker
+
 
 def rosenbrock(x, y, a, b):
     return (a - x)**2 + b * (y - x**2)**2
-def f(r, u, v):
-    return rosenbrock((r - 0.5) + u - 5, 1 + 3 * (v - 0.6), a=1, b=3)
 
-params = np.loadtxt('mockup.in')
-result = f(0.25, params[0], params[1])
-print(result)
-np.savetxt('mockup.out', np.array([result]))
 
+def func(r, u, v, a, b):
+    return rosenbrock((r - 0.5) + u - 5, 1 + 3 * (v - 0.6), a, b)
+
+
+@Worker.register('mockup')
+class Mockup(Worker):
+    def main(self):
+        inputs = self.interface.input
+        names = self.interface.input.dtype.names
+        r = inputs['r'] if 'r' in names else 0.25
+        u = inputs['u'] if 'u' in names else 5
+        v = inputs['v'] if 'v' in names else 0.5
+        a = inputs['a'] if 'a' in names else 1
+        b = inputs['b'] if 'b' in names else 2
+        self.interface.output['f'] = func(r, u, v, a, b)
+        self.interface.done()

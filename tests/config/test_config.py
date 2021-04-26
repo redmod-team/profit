@@ -42,6 +42,8 @@ def clean(config):
         remove(config['files'].get('input'))
     if path.exists(config['files'].get('output')):
         remove(config['files'].get('output'))
+    if path.exists(config['run'].get('log_path')):
+        rmtree(config['run'].get('log_path'))
 
 
 def test_yaml_py_config():
