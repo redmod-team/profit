@@ -43,13 +43,9 @@ def init_app(config):
     axis_options_div_style = {'display': 'flex', 'align-items': 'center', 'height':36, 'padding': 1}
     fit_opt_txt_sty = {'width': txt_width}
     headline_sty = {'text-align': 'center', 'display': 'block', 'width': col_width-25}
+    input_div_sty = {'height': 40}
+    input_sty = {'width': 150}
 
-    def colormap(cmin, cmax, c):
-        if cmin == cmax:
-            c_scal = 0.5
-        else:
-            c_scal = (c-cmin)/(cmax-cmin)
-        return color2hex(colormaps.cividis(c_scal))
 
     app.layout = html.Div(children=[
         html.Table(children=[html.Tr(children=[
@@ -145,11 +141,11 @@ def init_app(config):
                 ]),
                 html.Div(id='fit-number-div', style=axis_options_div_style, children=[
                     html.B("#fits:", style=fit_opt_txt_sty),
-                    dcc.Input(id='fit-number', type='number', value=1, min=1),
+                    dcc.Input(id='fit-number', type='number', value=1, min=1, debounce=True),
                 ]),
                 html.Div(id='fit-conf-div', style=axis_options_div_style, children=[
                     html.B("\u03c3-confidence:", style=fit_opt_txt_sty),
-                    dcc.Input(id='fit-conf', type='number', value=2, min=0),
+                    dcc.Input(id='fit-conf', type='number', value=2, min=0, debounce=True),
                 ]),
                 html.Div(id='fit-noise-div', style=axis_options_div_style, children=[
                     dcc.Checklist(
@@ -181,8 +177,8 @@ def init_app(config):
                     ]),
                 ]),
                 html.Div(id='fit-sampling-div', style=axis_options_div_style, children=[
-                    html.B("#sampling:", style=fit_opt_txt_sty),
-                    dcc.Input(id='fit-sampling', type='number', value=50, min=20, max=100),
+                    html.B("#samples:", style=fit_opt_txt_sty),
+                    dcc.Input(id='fit-sampling', type='number', value=50, min=1, debounce=True),
                 ]),
             ]),
             html.Td(id='graph', style={'width': '80%'}, children=[html.Div(dcc.Graph(id='graph1'))]),
@@ -202,36 +198,33 @@ def init_app(config):
             html.Td(dcc.Slider(id='scale-slider',
                                min=-0.5, max=0.5,
                                value=0, step=0.01,
-                               marks={-1: '-100%',
-                                      -0.75: '-75%',
-                                      -0.5: '-50%',
-                                      -0.25: '-25%',
-                                      0: '0%',
-                                      0.25: '25%',
-                                      0.5: '50%',
-                                      0.75: '75%',
-                                      1: '100%'}
+                               marks={i: f'{100*i:.0f}%' for i in [-0.5, -0.25, 0, 0.25, 0.5]},
                                ),
-                    style={'width': 500}),
+                    style={'width': 500}
+            ),
             html.Td(html.Button("Scale Filter span", id='scale', n_clicks=0)),
         ])])),
         html.Div(html.Table(id='param-table', children=[
             html.Thead(id='param-table-head', children=[
                 html.Tr(children=[
                     html.Th("Parameter", style={'width': 150}),
+                    html.Th("log"),
                     html.Th("Slider", style={'width': 300}),
                     html.Th("Range (min/max)"),
                     html.Th("center/span"),
                     html.Th("filter active"),
+                    html.Td("#digits")
                 ]),
             ]),
             html.Tbody(id='param-table-body', children=[
                 html.Tr(children=[
                     html.Td(html.Div(id='param-text-div', children=[])),
+                    html.Td(html.Div(id='param-log-div', children=[])),
                     html.Td(html.Div(id='param-slider-div', children=[])),
                     html.Td(html.Div(id='param-range-div', children=[])),
                     html.Td(html.Div(id='param-center-div', children=[])),
                     html.Td(html.Div(id='param-active-div', children=[])),
+                    html.Td(html.Div(id='param-digits-div', children=[])),
                 ]),
             ]),
         ])),
@@ -255,102 +248,137 @@ def init_app(config):
 
     @app.callback(
         [Output('param-text-div', 'children'),
+         Output('param-log-div', 'children'),
          Output('param-slider-div', 'children'),
          Output('param-range-div', 'children'),
          Output('param-center-div', 'children'),
-         Output('param-active-div', 'children'), ],
+         Output('param-active-div', 'children'),
+         Output('param-digits-div', 'children'), ],
         [Input('add-filter', 'n_clicks'),
          Input('clear-filter', 'n_clicks'),
          Input('clear-all-filter', 'n_clicks')],
         [State('filter-dropdown', 'value'),
          State('param-text-div', 'children'),
+         State('param-log-div', 'children'),
          State('param-slider-div', 'children'),
          State('param-range-div', 'children'),
          State('param-center-div', 'children'),
-         State('param-active-div', 'children'), ],
+         State('param-active-div', 'children'),
+         State('param-digits-div', 'children'), ],
     )
-    def add_filterrow(n_clicks, clear, clear_all, filter_dd, text, slider, range_div, center_div, active_div):
+    def add_filterrow(n_clicks, clear, clear_all, filter_dd, text, log, slider, range_div, center_div, active_div, dig_div):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
         if trigger_id == 'clear-all-filter':
-            return [], [], [], [], []
+            return [], [], [], [], [], [], []
         elif trigger_id == 'clear-filter':
-            for i, element in enumerate(text):  # TODO: better names
+            for i in range(len(text)):
                 if text[i]['props']['children'][0] == filter_dd:
                     text.pop(i)
+                    log.pop(i)
                     slider.pop(i)
                     range_div.pop(i)
                     center_div.pop(i)
                     active_div.pop(i)
-        elif trigger_id == 'add-filter':  # TODO: avoid double usage of filter
-            for i, element in enumerate(text):
+                    dig_div.pop(i)
+                    break
+        elif trigger_id == 'add-filter':
+            for i in range(len(text)):
                 if text[i]['props']['children'][0] == filter_dd:
-                    return text, slider, range_div, center_div, active_div
+                    return text, log, slider, range_div, center_div, active_div, dig_div
             ind = invars.index(filter_dd)
             txt = filter_dd
-            new_text = html.Div(id={'type': 'dyn-text', 'index': ind}, children=[txt], style={'height': 40})
-            new_slider = html.Div(id={'type': 'dyn-slider', 'index': ind}, style={'height': 40}, children=[
+            new_text = html.Div(id={'type': 'dyn-text', 'index': ind}, children=[txt], style=input_div_sty)
+            new_log = html.Div(id={'type': 'dyn-log', 'index': ind}, style=input_div_sty, children=[
+                dcc.Checklist(id={'type': 'param-log', 'index': ind}, options=[{'label': '', 'value': 'log'}])], )
+            new_slider = html.Div(id={'type': 'dyn-slider', 'index': ind}, style=input_div_sty, children=[
                 create_slider(txt)], )
-            new_range = html.Div(id={'type': 'dyn-range', 'index': ind}, style={'height': 40}, children=[
-                dcc.Input(id={'type': 'param-range-min', 'index': ind}, type='number', placeholder='range min'),
-                dcc.Input(id={'type': 'param-range-max', 'index': ind}, type='number', placeholder='range max'),
+            new_range = html.Div(id={'type': 'dyn-range', 'index': ind}, style=input_div_sty, children=[
+                dcc.Input(id={'type': 'param-range-min', 'index': ind}, type='number', debounce=True, style=input_sty),
+                dcc.Input(id={'type': 'param-range-max', 'index': ind}, type='number', debounce=True, style=input_sty),
             ], )
-            new_center = html.Div(id={'type': 'dyn-center', 'index': ind}, style={'height': 40}, children=[
-                dcc.Input(id={'type': 'param-center', 'index': ind}, type='number', placeholder='center'),
-                dcc.Input(id={'type': 'param-span', 'index': ind}, type='number', placeholder='span'),
+            new_center = html.Div(id={'type': 'dyn-center', 'index': ind}, style=input_div_sty, children=[
+                dcc.Input(id={'type': 'param-center', 'index': ind}, type='number', debounce=True, style=input_sty),
+                dcc.Input(id={'type': 'param-span', 'index': ind}, type='number', debounce=True, style=input_sty),
             ], )
             new_active = html.Div(id={'type': 'dyn-active', 'index': ind},
-                                  style={'height': 40, 'text-align': 'center'},
+                                  style={**input_div_sty, 'text-align': 'center'},
                                   children=[
                                       dcc.Checklist(id={'type': 'param-active', 'index': ind},
                                                     options=[{'label': '', 'value': 'act'}],
-                                                    value=['act'],
-                                                    )
+                                                    value=['act'], )
                                   ])
+            new_dig = html.Div(id={'type': 'dyn-dig', 'index': ind}, children=[
+                dcc.Input(id={'type': 'param-dig', 'index': ind}, type='number', value=5, debounce=True, min=0, style={'width':100})
+            ])
             text.append(new_text)
+            log.append(new_log)
             slider.append(new_slider)
             range_div.append(new_range)
             center_div.append(new_center)
             active_div.append(new_active)
-        return text, slider, range_div, center_div, active_div
+            dig_div.append(new_dig)
+        return text, log, slider, range_div, center_div, active_div, dig_div
 
 
     @app.callback(
         [Output({'type': 'param-range-min', 'index': MATCH}, 'step'),
          Output({'type': 'param-range-max', 'index': MATCH}, 'step'),
          Output({'type': 'param-center', 'index': MATCH}, 'step'),
-         Output({'type': 'param-span', 'index': MATCH}, 'step'), ],
-        Input({'type': 'param-slider', 'index': MATCH}, 'step')
+         Output({'type': 'param-span', 'index': MATCH}, 'step'),
+         Output({'type': 'param-slider', 'index': MATCH}, 'step'), ],
+        Input({'type': 'param-dig', 'index': MATCH}, 'value')
     )
-    def update_step(step):
-        return step, step, step, step
+    def update_step(dig):
+        step = 10**(-dig)
+        return step, step, step, step, step
 
 
     @app.callback(
         [Output({'type': 'param-range-min', 'index': MATCH}, 'value'),
          Output({'type': 'param-range-max', 'index': MATCH}, 'value'),
          Output({'type': 'param-slider', 'index': MATCH}, 'value'),
+         Output({'type': 'param-slider', 'index': MATCH}, 'min'),
+         Output({'type': 'param-slider', 'index': MATCH}, 'max'),
          Output({'type': 'param-center', 'index': MATCH}, 'value'),
-         Output({'type': 'param-span', 'index': MATCH}, 'value'), ],
-        [Input({'type': 'param-range-min', 'index': MATCH}, 'value'),
+         Output({'type': 'param-span', 'index': MATCH}, 'value'),
+         Output({'type': 'param-slider', 'index': MATCH}, 'marks'), ],
+        [Input('param-text-div', 'children'),
+         Input({'type': 'param-log', 'index': MATCH}, 'value'),
+         Input({'type': 'param-range-min', 'index': MATCH}, 'value'),
          Input({'type': 'param-range-max', 'index': MATCH}, 'value'),
          Input({'type': 'param-slider', 'index': MATCH}, 'value'),
          Input({'type': 'param-center', 'index': MATCH}, 'value'),
          Input({'type': 'param-span', 'index': MATCH}, 'value'),
-         Input('scale', 'n_clicks'), ],
-        [State({'type': 'param-slider', 'index': MATCH}, 'step'),
-         State('scale-slider', 'value'), ]
+         Input('scale', 'n_clicks'),
+         Input({'type': 'param-dig', 'index': MATCH}, 'value'), ],
+        [State({'type': 'param-slider', 'index': MATCH}, 'id'),
+         State('scale-slider', 'value'),
+         State({'type': 'param-slider', 'index': MATCH}, 'marks'), ]
     )
-    def update_dyn_slider_range(dyn_min, dyn_max, slider_val, center, span, scale, step, scale_slider):
+    def update_dyn_slider_range(text_div, log_act, dyn_min, dyn_max, slider_val, center, span, scale, dig, id, scale_slider, marks):
         ctx = dash.callback_context
-        # print(ctx.triggered[0]["prop_id"])
+        try:
+            trigger_id = ctx.triggered[0]["prop_id"].split('}')[0].split(',')[1].split(':')[1]
+        except IndexError:
+            trigger_id = ctx.triggered[0]["prop_id"]
+        mark_lim = [float(i) for i in list(marks.keys())]
+
+        if (trigger_id == '"param-log"' and log_act != ['log']) or (trigger_id != '"param-log"' and log_act == ['log']):
+            dyn_min = 10**dyn_min
+            dyn_max = 10**dyn_max
+            slider_val = [10**val for val in slider_val]
+            center = 10**center
+            span = 10**span
+            mark_lim = [10**lim for lim in mark_lim]
+
         if ctx.triggered[0]["prop_id"] == "scale.n_clicks":
+            print('scale')
             span = span * (1 + scale_slider)
             dyn_min = center - span
             dyn_max = center + span
             slider_val = [dyn_min, dyn_max]
         else:
-            trigger_id = ctx.triggered[0]["prop_id"].split('}')[0].split(',')[1].split(':')[1]
             # TODO: search in str instead of split
             if trigger_id == '"param-center"' or trigger_id == '"param-span"' and (center and span):
                 # print('center')
@@ -360,41 +388,41 @@ def init_app(config):
             elif (trigger_id == '"param-range-min"' or trigger_id == '"param-range-max"') and (
                     dyn_min is not None and dyn_max is not None):
                 # print('range')
-                # print('min:', dyn_min, 'max:', dyn_max)
                 slider_val = [dyn_min, dyn_max]
                 span = (slider_val[1] - slider_val[0]) / 2
                 center = slider_val[0] + span
-            elif slider_val:
-                # print('else')
+            elif slider_val: # and trigger_id == '"param-slider"':
+                # print('slider')
                 dyn_min = slider_val[0]
                 dyn_max = slider_val[1]
                 span = (slider_val[1] - slider_val[0]) / 2
                 center = slider_val[0] + span
-            # rounding based on stepsize of slider
-        dig = int(-log10(step))
-        slider_val = [round(slider_val[0], dig), round(slider_val[1], dig)]
-        return round(dyn_min, dig), round(dyn_max, dig), slider_val, round(center, dig), round(span, dig)
 
-
-    def create_slider(dd_value):
-        ind = invars.index(dd_value)
-        slider_min = indata[dd_value].min()
-        slider_max = indata[dd_value].max()
-        step_exponent = floor(log10((slider_max - slider_min) / 100))
-        while slider_max / (10 ** step_exponent) > 1000:
-            step_exponent = step_exponent + 1
-        while (slider_max - slider_min) / (10 ** step_exponent) < 20:  # minimum of 20 steps per slider
-            step_exponent = step_exponent - 1
-        new_slider = dcc.RangeSlider(
-            id={'type': 'param-slider', 'index': ind},
-            step=10 ** step_exponent,  # floor and log10 from package `math`
-            min=slider_min,
-            max=slider_max,
-            value=[slider_min, slider_max],
-            marks={slider_min: str(round(slider_min, -step_exponent)),
-                   slider_max: str(round(slider_max, -step_exponent))},
-        )
-        return new_slider
+        if log_act == ['log']:
+            # log values
+            data_in = indata[invars[id['index']]]
+            data_min = min(data_in[data_in > 0])
+            try:
+                log_dyn_min = log10(dyn_min)
+            except ValueError:
+                log_dyn_min = log10(data_min)
+            log_dyn_max = log10(dyn_max)
+            log_slider_val = [log_dyn_min, log_dyn_max]
+            try:
+                log_mark_lim = [log10(mark) for mark in mark_lim]
+            except ValueError:
+                log_mark_lim = [log10(data_min), log10(mark_lim[1])]
+            log_center = log10(center)
+            log_span = log10(span)
+            # marks
+            log_marks = {log_mark_lim[0]: str(round(log_mark_lim[0], dig)),
+                         log_mark_lim[1]: str(round(log_mark_lim[1], dig))}
+            return round(log_dyn_min, dig), round(log_dyn_max, dig), log_slider_val, log_mark_lim[0], log_mark_lim[1],\
+                   round(log_center, dig), round(log_span, dig), log_marks
+        else:
+            marks = {mark_lim[0]: str(round(mark_lim[0], dig)), mark_lim[1]: str(round(mark_lim[1], dig))}
+            return round(dyn_min, dig), round(dyn_max, dig), slider_val, mark_lim[0], mark_lim[1], \
+                   round(center, dig), round(span, dig), marks
 
 
     @app.callback(
@@ -455,11 +483,16 @@ def init_app(config):
          Input('fit-opacity', 'value'),
          Input('fit-sampling', 'value'), ],
         [State({'type': 'param-slider', 'index': ALL}, 'id'),
-         State({'type': 'param-center', 'index': ALL}, 'value')],
+         State({'type': 'param-center', 'index': ALL}, 'value'),
+         State({'type': 'param-log', 'index': ALL}, 'value')],
     )
     def update_figure(invar, invar_2, invar_3, outvar, invar1_log, invar2_log, invar3_log, outvar_log, param_slider,
                       graph_type, color_use, color_dd, error_use, error_dd, filter_active, fit_use, fit_dd, fit_num, fit_conf, add_noise_var, fit_color,
-                      fit_opacity, fit_sampling, id_type, param_center):
+                      fit_opacity, fit_sampling, id_type, param_center, param_log):
+        for i in range(len(param_slider)):
+            if param_log[i] == ['log']:
+                param_slider[i] = [10**val for val in param_slider[i]]
+                param_center[i] = 10**param_center[i]
         if invar is None:
             return go.Figure()
         sel_y = np.full((len(outdata),), True)
@@ -756,5 +789,34 @@ def init_app(config):
             return {'visibility': 'visible'}
         else:
             return {'visibility': 'hidden'}
+
+
+    def create_slider(dd_value):
+        ind = invars.index(dd_value)
+        slider_min = indata[dd_value].min()
+        slider_max = indata[dd_value].max()
+        step_exponent = -3 #floor(log10((slider_max - slider_min) / 100))
+        # while slider_max / (10 ** step_exponent) > 1000:
+        #     step_exponent = step_exponent + 1
+        # while (slider_max - slider_min) / (10 ** step_exponent) < 20:  # minimum of 20 steps per slider
+        #     step_exponent = step_exponent - 1
+        new_slider = dcc.RangeSlider(
+            id={'type': 'param-slider', 'index': ind},
+            step=10 ** step_exponent,  # floor and log10 from package `math`
+            min=slider_min,
+            max=slider_max,
+            value=[slider_min, slider_max],
+            marks={slider_min: str(round(slider_min, -step_exponent)),
+                   slider_max: str(round(slider_max, -step_exponent))},
+        )
+        return new_slider
+
+
+    def colormap(cmin, cmax, c):
+        if cmin == cmax:
+            c_scal = 0.5
+        else:
+            c_scal = (c-cmin)/(cmax-cmin)
+        return color2hex(colormaps.cividis(c_scal))
 
     return app
