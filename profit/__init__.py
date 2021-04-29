@@ -15,3 +15,4 @@ from . import config
 
 from . import util
 
+__version__ = '0.4.dev0'
