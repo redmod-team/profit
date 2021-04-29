@@ -362,46 +362,64 @@ def init_app(config):
             trigger_id = ctx.triggered[0]["prop_id"].split('}')[0].split(',')[1].split(':')[1]
         except IndexError:
             trigger_id = ctx.triggered[0]["prop_id"]
+
         mark_lim = [float(i) for i in list(marks.keys())]
 
-        if (trigger_id == '"param-log"' and log_act != ['log']) or (trigger_id != '"param-log"' and log_act == ['log']):
+        data_in = indata[invars[id['index']]]
+        data_min = min(data_in[data_in > 0])
+
+        if trigger_id == '"param-log"' and log_act != ['log']:
             dyn_min = 10**dyn_min
             dyn_max = 10**dyn_max
             slider_val = [10**val for val in slider_val]
-            center = 10**center
-            span = 10**span
-            mark_lim = [10**lim for lim in mark_lim]
+            mark_lim = [10 ** lim for lim in mark_lim]
+            if min(data_in) < 0 and slider_val[0] > 0:
+                mark_lim[0] = min(data_in)
+            span = (slider_val[1] - slider_val[0])/2
+            center = (slider_val[0] + slider_val[1])/2
+
+        if trigger_id != '"param-log"' and log_act == ['log']:
+            dyn_min = 10 ** dyn_min
+            dyn_max = 10 ** dyn_max
+            slider_val = [10 ** val for val in slider_val]
+            mark_lim = [10 ** lim for lim in mark_lim]
+            if min(data_in) < 0 and slider_val[0] > 0:
+                mark_lim[0] = min(data_in)
 
         if ctx.triggered[0]["prop_id"] == "scale.n_clicks":
-            print('scale')
+            # print('scale')
             span = span * (1 + scale_slider)
-            dyn_min = center - span
-            dyn_max = center + span
-            slider_val = [dyn_min, dyn_max]
-        else:
-            # TODO: search in str instead of split
-            if trigger_id == '"param-center"' or trigger_id == '"param-span"' and (center and span):
-                # print('center')
+            if log_act == ['log']:
+                trigger_id = '"param-span"'
+            else:
                 dyn_min = center - span
                 dyn_max = center + span
                 slider_val = [dyn_min, dyn_max]
-            elif (trigger_id == '"param-range-min"' or trigger_id == '"param-range-max"') and (
-                    dyn_min is not None and dyn_max is not None):
-                # print('range')
-                slider_val = [dyn_min, dyn_max]
-                span = (slider_val[1] - slider_val[0]) / 2
-                center = slider_val[0] + span
-            elif slider_val: # and trigger_id == '"param-slider"':
-                # print('slider')
-                dyn_min = slider_val[0]
-                dyn_max = slider_val[1]
-                span = (slider_val[1] - slider_val[0]) / 2
-                center = slider_val[0] + span
+
+        if trigger_id == '"param-center"' or trigger_id == '"param-span"' and (center and span):
+            # print('center')
+            if log_act == ['log']:
+                dyn_min = 10**(center-span)
+                dyn_max = 10**(center+span)
+            else:
+                dyn_min = center - span
+                dyn_max = center + span
+            slider_val = [dyn_min, dyn_max]
+        elif (trigger_id == '"param-range-min"' or trigger_id == '"param-range-max"') and (
+                dyn_min is not None and dyn_max is not None):
+            # print('range')
+            slider_val = [dyn_min, dyn_max]
+            span = (slider_val[1] - slider_val[0]) / 2
+            center = (slider_val[0] + slider_val[1]) / 2
+        elif slider_val: # and trigger_id == '"param-slider"':
+            # print('slider')
+            dyn_min = slider_val[0]
+            dyn_max = slider_val[1]
+            span = (slider_val[1] - slider_val[0]) / 2
+            center = (slider_val[0] + slider_val[1]) / 2
 
         if log_act == ['log']:
             # log values
-            data_in = indata[invars[id['index']]]
-            data_min = min(data_in[data_in > 0])
             try:
                 log_dyn_min = log10(dyn_min)
             except ValueError:
@@ -412,9 +430,8 @@ def init_app(config):
                 log_mark_lim = [log10(mark) for mark in mark_lim]
             except ValueError:
                 log_mark_lim = [log10(data_min), log10(mark_lim[1])]
-            log_center = log10(center)
-            log_span = log10(span)
-            # marks
+            log_span = (log_slider_val[1] - log_slider_val[0])/2
+            log_center = log_slider_val[0] + log_span
             log_marks = {log_mark_lim[0]: str(round(log_mark_lim[0], dig)),
                          log_mark_lim[1]: str(round(log_mark_lim[1], dig))}
             return round(log_dyn_min, dig), round(log_dyn_max, dig), log_slider_val, log_mark_lim[0], log_mark_lim[1],\
