@@ -44,7 +44,7 @@ def init_app(config):
     fit_opt_txt_sty = {'width': txt_width}
     headline_sty = {'text-align': 'center', 'display': 'block', 'width': col_width-25}
     input_div_sty = {'height': 40}
-    input_sty = {'width': 150}
+    input_sty = {'width': 125}
 
 
     app.layout = html.Div(children=[
@@ -177,7 +177,7 @@ def init_app(config):
                     ]),
                 ]),
                 html.Div(id='fit-sampling-div', style=axis_options_div_style, children=[
-                    html.B("#samples:", style=fit_opt_txt_sty),
+                    html.B("#points:", style=fit_opt_txt_sty),
                     dcc.Input(id='fit-sampling', type='number', value=50, min=1, debounce=True),
                 ]),
             ]),
@@ -207,13 +207,13 @@ def init_app(config):
         html.Div(html.Table(id='param-table', children=[
             html.Thead(id='param-table-head', children=[
                 html.Tr(children=[
-                    html.Th("Parameter", style={'width': 150}),
+                    html.Th("Parameter", style=input_sty),
                     html.Th("log"),
                     html.Th("Slider", style={'width': 300}),
                     html.Th("Range (min/max)"),
                     html.Th("center/span"),
                     html.Th("filter active"),
-                    html.Td("#digits")
+                    html.Th("#digits"),
                 ]),
             ]),
             html.Tbody(id='param-table-body', children=[
@@ -288,7 +288,7 @@ def init_app(config):
                     return text, log, slider, range_div, center_div, active_div, dig_div
             ind = invars.index(filter_dd)
             txt = filter_dd
-            new_text = html.Div(id={'type': 'dyn-text', 'index': ind}, children=[txt], style=input_div_sty)
+            new_text = html.Div(id={'type': 'dyn-text', 'index': ind}, children=[txt], style={**input_div_sty, **input_sty})
             new_log = html.Div(id={'type': 'dyn-log', 'index': ind}, style=input_div_sty, children=[
                 dcc.Checklist(id={'type': 'param-log', 'index': ind}, options=[{'label': '', 'value': 'log'}])], )
             new_slider = html.Div(id={'type': 'dyn-slider', 'index': ind}, style=input_div_sty, children=[
@@ -429,6 +429,7 @@ def init_app(config):
         [Output('invar-2-div', 'style'),
          Output('invar-3-div', 'style'),
          Output('color-div', 'style'),
+         Output('error-div', 'style'),
          Output('fit-use-div', 'style'),
          Output('fit-multiinput-div', 'style'),
          Output('fit-number-div', 'style'),
@@ -443,18 +444,18 @@ def init_app(config):
         show = axis_options_div_style.copy()
         show['visibility'] = 'visible'
         if graph_type == '1D':
-            return hide, hide, show, show, show, show, show, hide, show
+            return hide, hide, show, show, show, show, show, show, hide, show
         if graph_type == '2D':
             if len(invars) <= 2:
-                return show, hide, show, show, hide, hide, show, show, show
+                return show, hide, show, show, show, hide, hide, show, show, show
             else:
-                return show, hide, show, show, show, show, show, show, show
+                return show, hide, show, show, show, show, show, show, show, show
         if graph_type == '2D contour':
-            return show, hide, show, hide, hide, hide, hide, hide, hide
+            return show, hide, show, hide, hide, hide, hide, hide, hide, hide
         if graph_type == '3D':
-            return show, show, hide, show, hide, show, hide, hide, show
+            return show, show, hide, hide, show, hide, show, hide, hide, show
         else:
-            return show, show, show, show, show, show, show, show, show
+            return show, show, show, show, show, show, show, show, show, show
 
 
     @app.callback(
