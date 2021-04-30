@@ -26,204 +26,209 @@ def init_app(config):
 
     invars = indata.dtype.names
     outvars = outdata.dtype.names
-    dropdown_opts_in = [{'label': invar, 'value': invar} for invar in invars]
-    dropdown_opts_out = [{'label': outvar, 'value': outvar} for outvar in outvars]
-    dropdown_style = {'width': 500}
-    axis_options_text_style = {'width':100}
-    axis_options_log_style = {'width': 50}
-    axis_options_div_style = {'display': 'flex', 'align-items': 'center', 'height':36, 'padding':1, 'margin-left':5}
-    fit_options_text_style = {'width': 150}
+    dd_opts_in = [{'label': invar, 'value': invar} for invar in invars]
+    dd_opts_out = [{'label': outvar, 'value': outvar} for outvar in outvars]
 
-    def colormap(cmin, cmax, c):
-        if cmin == cmax:
-            c_scal = 0.5
-        else:
-            c_scal = (c-cmin)/(cmax-cmin)
-        return color2hex(colormaps.plasma(c_scal))
+    col_width = 400
+    txt_width = 100
+    dd_width = 250
+    log_width = 50
+    graph_height = 620
+    txt_check_width = 50
+    check_txt_width = txt_width-txt_check_width
+    ax_opt_tit_sty = {'width': col_width}
+    ax_opt_txt_sty = {'width': txt_width}
+    ax_opt_log_sty = {'width': log_width}
+    dd_sty = {'width': dd_width}
+    axis_options_div_style = {'display': 'flex', 'align-items': 'center', 'height':36, 'padding': 1}
+    fit_opt_txt_sty = {'width': txt_width}
+    headline_sty = {'text-align': 'center', 'display': 'block', 'width': col_width-25}
+    input_div_sty = {'height': 40}
+    input_sty = {'width': 125}
+
 
     app.layout = html.Div(children=[
-        html.Div(dcc.Graph(id='graph1')),
-        html.Div(dcc.RadioItems(
-            id='graph-type',
-            options=[{'label': i, 'value': i} for i in ['1D',
-                                                        '2D',
-                                                        '2D contour',
-                                                        '3D']
-                     ],
-            value='1D',
-            labelStyle={'display': 'inline-block'})),
         html.Table(children=[html.Tr(children=[
-            html.Td(id='axis-options', style={'width': 650}, children=[
+            html.Td(id='axis-options', style={'width': '20%'}, children=[
+                html.Div(dcc.RadioItems(
+                    id='graph-type',
+                    options=[{'label': i, 'value': i} for i in ['1D', '2D', '2D contour', '3D']],
+                    value='1D',
+                    labelStyle={'display': 'inline-block'})),
+                html.Div(id='header-opt', children=[html.B("Axis options:", style=headline_sty)], style=ax_opt_tit_sty),
                 html.Div(id='invar-1-div', style=axis_options_div_style, children=[
-                    html.B('x: ', style=axis_options_text_style),
-                    dcc.Dropdown(
-                        id='invar',
-                        options=dropdown_opts_in,
-                        value=invars[0],
-                        style=dropdown_style,
-                    ),
-                    dcc.Checklist(
-                        id='invar-1-log',
-                        options=[{'label': 'log', 'value': 'log'}],
-                        style=axis_options_log_style,
-                    ),
+                    html.B('x: ', style=ax_opt_txt_sty),
+                    dcc.Dropdown(id='invar', options=dd_opts_in, value=invars[0], style=dd_sty),
+                    dcc.Checklist(id='invar-1-log', options=[{'label': 'log', 'value': 'log'}], style=ax_opt_log_sty),
                 ]),
                 html.Div(id='invar-2-div', style=axis_options_div_style, children=[
-                    html.B('y: ', style=axis_options_text_style),
+                    html.B('y: ', style=ax_opt_txt_sty),
                     dcc.Dropdown(
                         id='invar_2',
-                        options=dropdown_opts_in,
+                        options=dd_opts_in,
                         value=invars[1] if len(invars) > 1 else invars[0],
-                        style=dropdown_style,
-                    ),
+                        style=dd_sty, ),
                     dcc.Checklist(
                         id='invar-2-log',
                         options=[{'label': 'log', 'value': 'log'}],
-                        style=axis_options_log_style,
-                    ),
+                        style=ax_opt_log_sty, ),
                 ]),
                 html.Div(id='invar-3-div', style=axis_options_div_style, children=[
-                    html.B('z: ', style=axis_options_text_style),
+                    html.B('z: ', style=ax_opt_txt_sty),
                     dcc.Dropdown(
                         id='invar_3',
-                        options=dropdown_opts_in,
+                        options=dd_opts_in,
                         value=invars[2] if len(invars) > 2 else invars[0],
-                        style=dropdown_style,
+                        style=dd_sty,
                     ),
                     dcc.Checklist(
                         id='invar-3-log',
                         options=[{'label': 'log', 'value': 'log'}],
-                        style=axis_options_log_style,
+                        style=ax_opt_log_sty,
                     ),
                 ]),
                 html.Div(id='outvar-div', style=axis_options_div_style, children=[
-                    html.B('output: ', style=axis_options_text_style),
+                    html.B('output: ', style=ax_opt_txt_sty),
                     dcc.Dropdown(
                         id='outvar',
-                        options=dropdown_opts_out,
+                        options=dd_opts_out,
                         value=outvars[0],
-                        style=dropdown_style,
-                    ),
+                        style=dd_sty, ),
                     dcc.Checklist(
                         id='outvar-log',
                         options=[{'label': 'log', 'value': 'log'}],
-                        style=axis_options_log_style,
-                    ),
+                        style=ax_opt_log_sty, ),
                 ]),
                 html.Div(id='color-div', style=axis_options_div_style, children=[
-                    html.B("color: ", style={'width': 50}),
+                    html.B("color: ", style={'width': txt_check_width}),
                     dcc.Checklist(
                         id='color-use',
                         options=[{'label': '', 'value': 'true'}],
-                        style={'width': 50},
-                    ),
+                        style={'width': check_txt_width}, ),
                     dcc.Dropdown(
                         id='color-dropdown',
-                        options=dropdown_opts_in + dropdown_opts_out,
+                        options=dd_opts_in + dd_opts_out,
                         value=invars[2] if len(invars) > 2 else invars[0],
-                        style=dropdown_style,
-                    ),
+                        style=dd_sty, ),
                 ]),
-                html.Div(id='placeholder', style=axis_options_div_style, children=[
-                    # just a placeholder
+                html.Div(id='error-div', style=axis_options_div_style, children=[
+                    html.B("error: ", style={'width': txt_check_width}),
+                    dcc.Checklist(
+                        id='error-use',
+                        options=[{'label': '', 'value': 'true'}],
+                        style={'width': check_txt_width}, ),
+                    dcc.Dropdown(
+                        id='error-dropdown',
+                        options=dd_opts_out,
+                        value=outvars[-1],
+                        style=dd_sty, ),
                 ]),
-            ]),
-            html.Td(id='fit-options', style={'vertical-align': 'top'}, children=[
+                html.Div(id='fit-opt', children=html.B("Fit options:", style=headline_sty), style=ax_opt_tit_sty),
                 html.Div(id='fit-use-div', style=axis_options_div_style, children=[
-                    html.B("display fit:", style=fit_options_text_style),
+                    html.B("display fit:", style=fit_opt_txt_sty),
                     dcc.Checklist(
                         id='fit-use',
                         options=[{'label': '', 'value': 'show'}],
-                        labelStyle={'display': 'inline-block'},
-                    ),
+                        labelStyle={'display': 'inline-block'}, ),
                 ]),
                 html.Div(id='fit-multiinput-div', style=axis_options_div_style, children=[
-                    html.B("variable for multi-fit:", style=fit_options_text_style),
+                    html.B("multi-fit:", style=fit_opt_txt_sty),
                     dcc.Dropdown(
                         id='fit-multiinput-dropdown',
-                        options=dropdown_opts_in,
+                        options=dd_opts_in,
                         value=invars[-1],
-                        style=dropdown_style,
-                    ),
+                        style=dd_sty, ),
                 ]),
                 html.Div(id='fit-number-div', style=axis_options_div_style, children=[
-                    html.B("number of fits:", style=fit_options_text_style),
-                    dcc.Input(id='fit-number', type='number', value=1, min=1),
+                    html.B("#fits:", style=fit_opt_txt_sty),
+                    dcc.Input(id='fit-number', type='number', value=1, min=1, debounce=True),
                 ]),
                 html.Div(id='fit-conf-div', style=axis_options_div_style, children=[
-                    html.B("\u03c3-confidence:", style=fit_options_text_style),
-                    dcc.Input(id='fit-conf', type='number', value=2, min=0),
+                    html.B("\u03c3-confidence:", style=fit_opt_txt_sty),
+                    dcc.Input(id='fit-conf', type='number', value=2, min=0, debounce=True),
+                ]),
+                html.Div(id='fit-noise-div', style=axis_options_div_style, children=[
                     dcc.Checklist(
                         id='fit-var',
                         options=[{'label': 'add noise covariance', 'value': 'add'}],
+                        style={'margin-left': txt_width},
                     )
                 ]),
                 html.Div(id='fit-color-div', style=axis_options_div_style, children=[
-                    html.B("fit-color:", style=fit_options_text_style),
+                    html.B("fit-color:", style=fit_opt_txt_sty),
                     dcc.RadioItems(
                         id='fit-color',
                         options=[{'label': 'output', 'value': 'output'},
                                  {'label': 'variable of multi-fit', 'value': 'multi-fit'}],
                         value='output',
-                        labelStyle={'display': 'inline-block'},
-                    ),
+                        labelStyle={'display': 'inline-block'}, ),
                 ]),
                 html.Div(id='fit-opacity-div', style=axis_options_div_style, children=[
-                    html.B("fit-opacity:", style=fit_options_text_style),
-                    html.Div(style=dropdown_style, children=[
+                    html.B("fit-opacity:", style=fit_opt_txt_sty),
+                    html.Div(style={'width': col_width-txt_width}, children=[
                         dcc.Slider(
                             id='fit-opacity',
                             min=0,
                             max=1,
                             step=0.1,
                             value=0.5,
-                            marks={i: {'label': f'{100*i:.0f}%'} for i in [0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1]},
+                            marks={i: {'label': f'{100 * i:.0f}%'} for i in [0, 0.2, 0.4, 0.6, 0.8, 1]},
                         ),
                     ]),
                 ]),
+                html.Div(id='fit-sampling-div', style=axis_options_div_style, children=[
+                    html.B("#points:", style=fit_opt_txt_sty),
+                    dcc.Input(id='fit-sampling', type='number', value=50, min=1, debounce=True),
+                ]),
             ]),
+            html.Td(id='graph', style={'width': '80%'}, children=[html.Div(dcc.Graph(id='graph1'))]),
         ])]),
-        html.Div(html.Table(html.Tr([
-            html.Td(html.Button("Add Filter", id='add-filter', n_clicks=0)),
+        html.Div(html.Table(id='filters', children=[html.Tr([
+            html.Td(html.Div([
+                dcc.Dropdown(
+                    id='filter-dropdown',
+                    options=dd_opts_in,
+                    value=invars[0],
+                    style={'width': 200, 'margin-right': 10},
+                ),
+                html.Button("Add Filter", id='add-filter', n_clicks=0),
+            ], style={'display': 'flex'})),
             html.Td(html.Button("Clear Filter", id='clear-filter', n_clicks=0)),
             html.Td(html.Button("Clear all Filter", id='clear-all-filter', n_clicks=0)),
             html.Td(dcc.Slider(id='scale-slider',
                                min=-0.5, max=0.5,
                                value=0, step=0.01,
-                               marks={-1: '-100%',
-                                      -0.75: '-75%',
-                                      -0.5: '-50%',
-                                      -0.25: '-25%',
-                                      0: '0%',
-                                      0.25: '25%',
-                                      0.5: '50%',
-                                      0.75: '75%',
-                                      1: '100%'}
+                               marks={i: f'{100*i:.0f}%' for i in [-0.5, -0.25, 0, 0.25, 0.5]},
                                ),
-                    style={'width': 500}),
+                    style={'width': 500}
+            ),
             html.Td(html.Button("Scale Filter span", id='scale', n_clicks=0)),
-        ]))),
+        ])])),
         html.Div(html.Table(id='param-table', children=[
             html.Thead(id='param-table-head', children=[
                 html.Tr(children=[
-                    html.Th("Parameter", style={'width': 150}),
+                    html.Th("Parameter", style=input_sty),
+                    html.Th("log"),
                     html.Th("Slider", style={'width': 300}),
                     html.Th("Range (min/max)"),
                     html.Th("center/span"),
                     html.Th("filter active"),
+                    html.Th("#digits"),
                 ]),
             ]),
             html.Tbody(id='param-table-body', children=[
                 html.Tr(children=[
                     html.Td(html.Div(id='param-text-div', children=[])),
+                    html.Td(html.Div(id='param-log-div', children=[])),
                     html.Td(html.Div(id='param-slider-div', children=[])),
                     html.Td(html.Div(id='param-range-div', children=[])),
                     html.Td(html.Div(id='param-center-div', children=[])),
                     html.Td(html.Div(id='param-active-div', children=[])),
+                    html.Td(html.Div(id='param-digits-div', children=[])),
                 ]),
             ]),
         ])),
-        html.Div([
+        html.Div(id='data-table', children=[
             html.Div(children=[
                 html.B("Show table of data:"),
                 html.Button("show table", id='show-table', n_clicks=0),
@@ -243,175 +248,231 @@ def init_app(config):
 
     @app.callback(
         [Output('param-text-div', 'children'),
+         Output('param-log-div', 'children'),
          Output('param-slider-div', 'children'),
          Output('param-range-div', 'children'),
          Output('param-center-div', 'children'),
-         Output('param-active-div', 'children'), ],
+         Output('param-active-div', 'children'),
+         Output('param-digits-div', 'children'), ],
         [Input('add-filter', 'n_clicks'),
          Input('clear-filter', 'n_clicks'),
          Input('clear-all-filter', 'n_clicks')],
-        [State('invar', 'value'),
+        [State('filter-dropdown', 'value'),
          State('param-text-div', 'children'),
+         State('param-log-div', 'children'),
          State('param-slider-div', 'children'),
          State('param-range-div', 'children'),
          State('param-center-div', 'children'),
-         State('param-active-div', 'children'), ],
+         State('param-active-div', 'children'),
+         State('param-digits-div', 'children'), ],
     )
-    def add_filterrow(n_clicks, clear, clear_all, invar, text, slider, range_div, center_div, active_div):
+    def add_filterrow(n_clicks, clear, clear_all, filter_dd, text, log, slider, range_div, center_div, active_div, dig_div):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
         if trigger_id == 'clear-all-filter':
-            return [], [], [], [], []
+            return [], [], [], [], [], [], []
         elif trigger_id == 'clear-filter':
-            for i, element in enumerate(text):  # TODO: better names
-                if text[i]['props']['children'][0] == invar:
+            for i in range(len(text)):
+                if text[i]['props']['children'][0] == filter_dd:
                     text.pop(i)
+                    log.pop(i)
                     slider.pop(i)
                     range_div.pop(i)
                     center_div.pop(i)
                     active_div.pop(i)
-        elif trigger_id == 'add-filter':  # TODO: avoid double usage of filter
-            for i, element in enumerate(text):
-                if text[i]['props']['children'][0] == invar:
-                    return text, slider, range_div, center_div, active_div
-            ind = invars.index(invar)
-            txt = invar
-            new_text = html.Div(id={'type': 'dyn-text', 'index': ind}, children=[txt], style={'height': 40})
-            new_slider = html.Div(id={'type': 'dyn-slider', 'index': ind}, style={'height': 40}, children=[
+                    dig_div.pop(i)
+                    break
+        elif trigger_id == 'add-filter':
+            for i in range(len(text)):
+                if text[i]['props']['children'][0] == filter_dd:
+                    return text, log, slider, range_div, center_div, active_div, dig_div
+            ind = invars.index(filter_dd)
+            txt = filter_dd
+            new_text = html.Div(id={'type': 'dyn-text', 'index': ind}, children=[txt], style={**input_div_sty, **input_sty})
+            new_log = html.Div(id={'type': 'dyn-log', 'index': ind}, style=input_div_sty, children=[
+                dcc.Checklist(id={'type': 'param-log', 'index': ind}, options=[{'label': '', 'value': 'log'}])], )
+            new_slider = html.Div(id={'type': 'dyn-slider', 'index': ind}, style=input_div_sty, children=[
                 create_slider(txt)], )
-            new_range = html.Div(id={'type': 'dyn-range', 'index': ind}, style={'height': 40}, children=[
-                dcc.Input(id={'type': 'param-range-min', 'index': ind}, type='number', placeholder='range min'),
-                dcc.Input(id={'type': 'param-range-max', 'index': ind}, type='number', placeholder='range max'),
+            new_range = html.Div(id={'type': 'dyn-range', 'index': ind}, style=input_div_sty, children=[
+                dcc.Input(id={'type': 'param-range-min', 'index': ind}, type='number', debounce=True, style=input_sty),
+                dcc.Input(id={'type': 'param-range-max', 'index': ind}, type='number', debounce=True, style=input_sty),
             ], )
-            new_center = html.Div(id={'type': 'dyn-center', 'index': ind}, style={'height': 40}, children=[
-                dcc.Input(id={'type': 'param-center', 'index': ind}, type='number', placeholder='center'),
-                dcc.Input(id={'type': 'param-span', 'index': ind}, type='number', placeholder='span'),
+            new_center = html.Div(id={'type': 'dyn-center', 'index': ind}, style=input_div_sty, children=[
+                dcc.Input(id={'type': 'param-center', 'index': ind}, type='number', debounce=True, style=input_sty),
+                dcc.Input(id={'type': 'param-span', 'index': ind}, type='number', debounce=True, style=input_sty),
             ], )
             new_active = html.Div(id={'type': 'dyn-active', 'index': ind},
-                                  style={'height': 40, 'text-align': 'center'},
+                                  style={**input_div_sty, 'text-align': 'center'},
                                   children=[
                                       dcc.Checklist(id={'type': 'param-active', 'index': ind},
                                                     options=[{'label': '', 'value': 'act'}],
-                                                    value=['act'],
-                                                    )
+                                                    value=['act'], )
                                   ])
+            new_dig = html.Div(id={'type': 'dyn-dig', 'index': ind}, children=[
+                dcc.Input(id={'type': 'param-dig', 'index': ind}, type='number', value=5, debounce=True, min=0, style={'width':100})
+            ])
             text.append(new_text)
+            log.append(new_log)
             slider.append(new_slider)
             range_div.append(new_range)
             center_div.append(new_center)
             active_div.append(new_active)
-        return text, slider, range_div, center_div, active_div
+            dig_div.append(new_dig)
+        return text, log, slider, range_div, center_div, active_div, dig_div
 
 
     @app.callback(
         [Output({'type': 'param-range-min', 'index': MATCH}, 'step'),
          Output({'type': 'param-range-max', 'index': MATCH}, 'step'),
          Output({'type': 'param-center', 'index': MATCH}, 'step'),
-         Output({'type': 'param-span', 'index': MATCH}, 'step'), ],
-        Input({'type': 'param-slider', 'index': MATCH}, 'step')
+         Output({'type': 'param-span', 'index': MATCH}, 'step'),
+         Output({'type': 'param-slider', 'index': MATCH}, 'step'), ],
+        Input({'type': 'param-dig', 'index': MATCH}, 'value')
     )
-    def update_step(step):
-        return step, step, step, step
+    def update_step(dig):
+        step = 10**(-dig)
+        return step, step, step, step, step
 
 
     @app.callback(
         [Output({'type': 'param-range-min', 'index': MATCH}, 'value'),
          Output({'type': 'param-range-max', 'index': MATCH}, 'value'),
          Output({'type': 'param-slider', 'index': MATCH}, 'value'),
+         Output({'type': 'param-slider', 'index': MATCH}, 'min'),
+         Output({'type': 'param-slider', 'index': MATCH}, 'max'),
          Output({'type': 'param-center', 'index': MATCH}, 'value'),
-         Output({'type': 'param-span', 'index': MATCH}, 'value'), ],
-        [Input({'type': 'param-range-min', 'index': MATCH}, 'value'),
+         Output({'type': 'param-span', 'index': MATCH}, 'value'),
+         Output({'type': 'param-slider', 'index': MATCH}, 'marks'), ],
+        [Input('param-text-div', 'children'),
+         Input({'type': 'param-log', 'index': MATCH}, 'value'),
+         Input({'type': 'param-range-min', 'index': MATCH}, 'value'),
          Input({'type': 'param-range-max', 'index': MATCH}, 'value'),
          Input({'type': 'param-slider', 'index': MATCH}, 'value'),
          Input({'type': 'param-center', 'index': MATCH}, 'value'),
          Input({'type': 'param-span', 'index': MATCH}, 'value'),
-         Input('scale', 'n_clicks'), ],
-        [State({'type': 'param-slider', 'index': MATCH}, 'step'),
-         State('scale-slider', 'value'), ]
+         Input('scale', 'n_clicks'),
+         Input({'type': 'param-dig', 'index': MATCH}, 'value'), ],
+        [State({'type': 'param-slider', 'index': MATCH}, 'id'),
+         State('scale-slider', 'value'),
+         State({'type': 'param-slider', 'index': MATCH}, 'marks'), ]
     )
-    def update_dyn_slider_range(dyn_min, dyn_max, slider_val, center, span, scale, step, scale_slider):
+    def update_dyn_slider_range(text_div, log_act, dyn_min, dyn_max, slider_val, center, span, scale, dig, id, scale_slider, marks):
         ctx = dash.callback_context
-        # print(ctx.triggered[0]["prop_id"])
-        if ctx.triggered[0]["prop_id"] == "scale.n_clicks":
-            span = span * (1 + scale_slider)
-            dyn_min = center - span
-            dyn_max = center + span
-            slider_val = [dyn_min, dyn_max]
-        else:
+        try:
             trigger_id = ctx.triggered[0]["prop_id"].split('}')[0].split(',')[1].split(':')[1]
-            # TODO: search in str instead of split
-            if trigger_id == '"param-center"' or trigger_id == '"param-span"' and (center and span):
-                # print('center')
+        except IndexError:
+            trigger_id = ctx.triggered[0]["prop_id"]
+
+        mark_lim = [float(i) for i in list(marks.keys())]
+
+        data_in = indata[invars[id['index']]]
+        data_min = min(data_in[data_in > 0])
+
+        if trigger_id == '"param-log"' and log_act != ['log']:
+            dyn_min = 10**dyn_min
+            dyn_max = 10**dyn_max
+            slider_val = [10**val for val in slider_val]
+            mark_lim = [10 ** lim for lim in mark_lim]
+            if min(data_in) < 0 and slider_val[0] > 0:
+                mark_lim[0] = min(data_in)
+            span = (slider_val[1] - slider_val[0])/2
+            center = (slider_val[0] + slider_val[1])/2
+
+        if trigger_id != '"param-log"' and log_act == ['log']:
+            dyn_min = 10 ** dyn_min
+            dyn_max = 10 ** dyn_max
+            slider_val = [10 ** val for val in slider_val]
+            mark_lim = [10 ** lim for lim in mark_lim]
+            if min(data_in) < 0 and slider_val[0] > 0:
+                mark_lim[0] = min(data_in)
+
+        if ctx.triggered[0]["prop_id"] == "scale.n_clicks":
+            # print('scale')
+            span = span * (1 + scale_slider)
+            if log_act == ['log']:
+                trigger_id = '"param-span"'
+            else:
                 dyn_min = center - span
                 dyn_max = center + span
                 slider_val = [dyn_min, dyn_max]
-            elif (trigger_id == '"param-range-min"' or trigger_id == '"param-range-max"') and (
-                    dyn_min is not None and dyn_max is not None):
-                # print('range')
-                # print('min:', dyn_min, 'max:', dyn_max)
-                slider_val = [dyn_min, dyn_max]
-                span = (slider_val[1] - slider_val[0]) / 2
-                center = slider_val[0] + span
-            elif slider_val:
-                # print('else')
-                dyn_min = slider_val[0]
-                dyn_max = slider_val[1]
-                span = (slider_val[1] - slider_val[0]) / 2
-                center = slider_val[0] + span
-            # rounding based on stepsize of slider
-        dig = int(-log10(step))
-        slider_val = [round(slider_val[0], dig), round(slider_val[1], dig)]
-        return round(dyn_min, dig), round(dyn_max, dig), slider_val, round(center, dig), round(span, dig)
 
+        if trigger_id == '"param-center"' or trigger_id == '"param-span"' and (center and span):
+            # print('center')
+            if log_act == ['log']:
+                dyn_min = 10**(center-span)
+                dyn_max = 10**(center+span)
+            else:
+                dyn_min = center - span
+                dyn_max = center + span
+            slider_val = [dyn_min, dyn_max]
+        elif (trigger_id == '"param-range-min"' or trigger_id == '"param-range-max"') and (
+                dyn_min is not None and dyn_max is not None):
+            # print('range')
+            slider_val = [dyn_min, dyn_max]
+            span = (slider_val[1] - slider_val[0]) / 2
+            center = (slider_val[0] + slider_val[1]) / 2
+        elif slider_val: # and trigger_id == '"param-slider"':
+            # print('slider')
+            dyn_min = slider_val[0]
+            dyn_max = slider_val[1]
+            span = (slider_val[1] - slider_val[0]) / 2
+            center = (slider_val[0] + slider_val[1]) / 2
 
-    def create_slider(dd_value):
-        ind = invars.index(dd_value)
-        slider_min = indata[dd_value].min()
-        slider_max = indata[dd_value].max()
-        step_exponent = floor(log10((slider_max - slider_min) / 100))
-        while slider_max / (10 ** step_exponent) > 1000:
-            step_exponent = step_exponent + 1
-        while (slider_max - slider_min) / (10 ** step_exponent) < 20:  # minimum of 20 steps per slider
-            step_exponent = step_exponent - 1
-        new_slider = dcc.RangeSlider(
-            id={'type': 'param-slider', 'index': ind},
-            step=10 ** step_exponent,  # floor and log10 from package `math`
-            min=slider_min,
-            max=slider_max,
-            value=[slider_min, slider_max],
-            marks={slider_min: str(round(slider_min, -step_exponent)),
-                   slider_max: str(round(slider_max, -step_exponent))},
-        )
-        return new_slider
+        if log_act == ['log']:
+            # log values
+            try:
+                log_dyn_min = log10(dyn_min)
+            except ValueError:
+                log_dyn_min = log10(data_min)
+            log_dyn_max = log10(dyn_max)
+            log_slider_val = [log_dyn_min, log_dyn_max]
+            try:
+                log_mark_lim = [log10(mark) for mark in mark_lim]
+            except ValueError:
+                log_mark_lim = [log10(data_min), log10(mark_lim[1])]
+            log_span = (log_slider_val[1] - log_slider_val[0])/2
+            log_center = log_slider_val[0] + log_span
+            log_marks = {log_mark_lim[0]: str(round(log_mark_lim[0], dig)),
+                         log_mark_lim[1]: str(round(log_mark_lim[1], dig))}
+            return round(log_dyn_min, dig), round(log_dyn_max, dig), log_slider_val, log_mark_lim[0], log_mark_lim[1],\
+                   round(log_center, dig), round(log_span, dig), log_marks
+        else:
+            marks = {mark_lim[0]: str(round(mark_lim[0], dig)), mark_lim[1]: str(round(mark_lim[1], dig))}
+            return round(dyn_min, dig), round(dyn_max, dig), slider_val, mark_lim[0], mark_lim[1], \
+                   round(center, dig), round(span, dig), marks
 
 
     @app.callback(
         [Output('invar-2-div', 'style'),
          Output('invar-3-div', 'style'),
          Output('color-div', 'style'),
+         Output('error-div', 'style'),
          Output('fit-use-div', 'style'),
          Output('fit-multiinput-div', 'style'),
          Output('fit-number-div', 'style'),
          Output('fit-conf-div', 'style'),
          Output('fit-color-div', 'style'),
          Output('fit-opacity-div', 'style'), ],
-        Input('graph-type', 'value')
+        [Input('graph-type', 'value'), ]
     )
     def div_visibility(graph_type):
-        hide_div_style = axis_options_div_style.copy()
-        hide_div_style['visibility'] = 'hidden'
-        show_div_style = axis_options_div_style.copy()
-        show_div_style['visibility'] = 'visible'
+        hide = axis_options_div_style.copy()
+        hide['visibility'] = 'hidden'
+        show = axis_options_div_style.copy()
+        show['visibility'] = 'visible'
         if graph_type == '1D':
-            return hide_div_style, hide_div_style, show_div_style, show_div_style, show_div_style, show_div_style, show_div_style, hide_div_style, hide_div_style
+            return hide, hide, show, show, show, show, show, show, hide, show
         if graph_type == '2D':
-            return show_div_style, hide_div_style, show_div_style, show_div_style, show_div_style, show_div_style, show_div_style, show_div_style, show_div_style
+            if len(invars) <= 2:
+                return show, hide, show, show, show, hide, hide, show, show, show
+            else:
+                return show, hide, show, show, show, show, show, show, show, show
         if graph_type == '2D contour':
-            return show_div_style, hide_div_style, show_div_style, hide_div_style, hide_div_style, hide_div_style, hide_div_style, hide_div_style, hide_div_style
+            return show, hide, show, hide, hide, hide, hide, hide, hide, hide
         if graph_type == '3D':
-            return show_div_style, show_div_style, hide_div_style, show_div_style, hide_div_style, show_div_style, hide_div_style, hide_div_style, show_div_style
+            return show, show, hide, hide, show, hide, show, hide, hide, show
         else:
-            return show_div_style, show_div_style, show_div_style, show_div_style, show_div_style, show_div_style, show_div_style, show_div_style, show_div_style
+            return show, show, show, show, show, show, show, show, show, show
 
 
     @app.callback(
@@ -428,6 +489,8 @@ def init_app(config):
          Input('graph-type', 'value'),
          Input('color-use', 'value'),
          Input('color-dropdown', 'value'),
+         Input('error-use', 'value'),
+         Input('error-dropdown', 'value'),
          Input({'type': 'param-active', 'index': ALL}, 'value'),
          Input('fit-use', 'value'),
          Input('fit-multiinput-dropdown', 'value'),
@@ -435,13 +498,19 @@ def init_app(config):
          Input('fit-conf', 'value'),
          Input('fit-var', 'value'),
          Input('fit-color', 'value'),
-         Input('fit-opacity', 'value'), ],
+         Input('fit-opacity', 'value'),
+         Input('fit-sampling', 'value'), ],
         [State({'type': 'param-slider', 'index': ALL}, 'id'),
-         State({'type': 'param-center', 'index': ALL}, 'value')],
+         State({'type': 'param-center', 'index': ALL}, 'value'),
+         State({'type': 'param-log', 'index': ALL}, 'value')],
     )
     def update_figure(invar, invar_2, invar_3, outvar, invar1_log, invar2_log, invar3_log, outvar_log, param_slider,
-                      graph_type, color_use, color_dd, filter_active, fit_use, fit_dd, fit_num, fit_conf, add_noise_var, fit_color,
-                      fit_opacity, id_type, param_center):
+                      graph_type, color_use, color_dd, error_use, error_dd, filter_active, fit_use, fit_dd, fit_num, fit_conf, add_noise_var, fit_color,
+                      fit_opacity, fit_sampling, id_type, param_center, param_log):
+        for i in range(len(param_slider)):
+            if param_log[i] == ['log']:
+                param_slider[i] = [10**val for val in param_slider[i]]
+                param_center[i] = 10**param_center[i]
         if invar is None:
             return go.Figure()
         sel_y = np.full((len(outdata),), True)
@@ -462,19 +531,20 @@ def init_app(config):
                     y=outdata[outvar][sel_y],
                     mode='markers',
                     name='data',
+                    error_y=dict(type='data', array=outdata[error_dd][sel_y], visible= error_use == ['true'])
                 )],
-                layout=go.Layout(height=600, xaxis=dict(title=invar, rangeslider=dict(visible=True)), yaxis=dict(title=outvar))
+                layout=go.Layout(xaxis=dict(title=invar, rangeslider=dict(visible=True)), yaxis=dict(title=outvar))
             )
             if fit_use == ['show']:
-                num_samples = 20
                 mesh_in, mesh_out, mesh_out_std, fit_dd_values = mesh_fit(param_slider, id_type, fit_dd, fit_num,
-                                                                          param_center, [invar], outvar, num_samples, add_noise_var)
+                                                                          param_center, [invar], [invar1_log],
+                                                                          outvar, fit_sampling, add_noise_var)
                 for i in range(len(fit_dd_values)):
                     fig.add_trace(go.Scatter(
                         x=mesh_in[i][invars.index(invar)],
                         y=mesh_out[i],
                         mode='lines',
-                        name=f'fit: {fit_dd}={fit_dd_values[i]:.2f}',
+                        name=f'fit: {fit_dd}={fit_dd_values[i]:.1e}',
                         line_color=colormap(indata[fit_dd].min(), indata[fit_dd].max(), fit_dd_values[i]),
                         marker_line=dict(coloraxis="coloraxis2"),
                     ))
@@ -484,7 +554,8 @@ def init_app(config):
                         showlegend=False,
                         fill='toself',
                         line_color=colormap(indata[fit_dd].min(), indata[fit_dd].max(), fit_dd_values[i]),
-                        marker_line=dict(coloraxis="coloraxis2")
+                        marker_line=dict(coloraxis="coloraxis2"),
+                        opacity=fit_opacity,
                     ))
         elif graph_type == '2D':
             fig = go.Figure(
@@ -494,47 +565,47 @@ def init_app(config):
                     z=outdata[outvar][sel_y],
                     mode='markers',
                     name='Data',
+                    error_z=dict(type='data', array=outdata[error_dd][sel_y], visible=error_use == ['true'])
                 )],
                 layout=go.Layout(scene=dict(xaxis_title=invar, yaxis_title=invar_2, zaxis_title=outvar))
             )
-            fig.update_layout(height=700)
             if fit_use == ['show'] and invar != invar_2:
-                num_samples = 20
                 mesh_in, mesh_out, mesh_out_std, fit_dd_values = mesh_fit(param_slider, id_type, fit_dd, fit_num,
-                                                                          param_center, [invar, invar_2], outvar,
-                                                                          num_samples, add_noise_var)
+                                                                          param_center, [invar, invar_2],
+                                                                          [invar1_log, invar2_log], outvar,
+                                                                          fit_sampling, add_noise_var)
                 for i in range(len(fit_dd_values)):
                     fig.add_trace(go.Surface(
-                        x=mesh_in[i][invars.index(invar)].reshape((num_samples, num_samples)),
-                        y=mesh_in[i][invars.index(invar_2)].reshape((num_samples, num_samples)),
-                        z=mesh_out[i].reshape((num_samples, num_samples)),
+                        x=mesh_in[i][invars.index(invar)].reshape((fit_sampling, fit_sampling)),
+                        y=mesh_in[i][invars.index(invar_2)].reshape((fit_sampling, fit_sampling)),
+                        z=mesh_out[i].reshape((fit_sampling, fit_sampling)),
                         name=f'fit: {fit_dd}={fit_dd_values[i]:.2f}',
-                        surfacecolor=mesh_out[i].reshape((num_samples, num_samples)) if fit_color == 'output' else
-                        fit_dd_values[i] * np.ones([num_samples, num_samples]),
+                        surfacecolor=mesh_out[i].reshape((fit_sampling, fit_sampling)) if fit_color == 'output' else
+                        fit_dd_values[i] * np.ones([fit_sampling, fit_sampling]),
                         opacity=fit_opacity,
                         coloraxis="coloraxis2",
                         showlegend=True,
                     ))
                     if fit_conf > 0:
                         fig.add_trace(go.Surface(
-                            x=mesh_in[i][invars.index(invar)].reshape((num_samples, num_samples)),
-                            y=mesh_in[i][invars.index(invar_2)].reshape((num_samples, num_samples)),
-                            z=mesh_out[i].reshape((num_samples, num_samples)) + fit_conf * mesh_out_std[i].reshape((num_samples, num_samples)),
+                            x=mesh_in[i][invars.index(invar)].reshape((fit_sampling, fit_sampling)),
+                            y=mesh_in[i][invars.index(invar_2)].reshape((fit_sampling, fit_sampling)),
+                            z=mesh_out[i].reshape((fit_sampling, fit_sampling)) + fit_conf * mesh_out_std[i].reshape((fit_sampling, fit_sampling)),
                             showlegend=False,
                             name=f'fit+v: {fit_dd}={fit_dd_values[i]:.2f}',
-                            surfacecolor=mesh_out[i].reshape((num_samples, num_samples)) if fit_color == 'output' else
-                            fit_dd_values[i] * np.ones([num_samples, num_samples]),
+                            surfacecolor=mesh_out[i].reshape((fit_sampling, fit_sampling)) if fit_color == 'output' else
+                            fit_dd_values[i] * np.ones([fit_sampling, fit_sampling]),
                             opacity=fit_opacity,
                             coloraxis="coloraxis2",
                         ))
                         fig.add_trace(go.Surface(
-                            x=mesh_in[i][invars.index(invar)].reshape((num_samples, num_samples)),
-                            y=mesh_in[i][invars.index(invar_2)].reshape((num_samples, num_samples)),
-                            z=mesh_out[i].reshape((num_samples, num_samples)) - fit_conf * mesh_out_std[i].reshape((num_samples, num_samples)),
+                            x=mesh_in[i][invars.index(invar)].reshape((fit_sampling, fit_sampling)),
+                            y=mesh_in[i][invars.index(invar_2)].reshape((fit_sampling, fit_sampling)),
+                            z=mesh_out[i].reshape((fit_sampling, fit_sampling)) - fit_conf * mesh_out_std[i].reshape((fit_sampling, fit_sampling)),
                             showlegend=False,
                             name=f'fit-v: {fit_dd}={fit_dd_values[i]:.2f}',
-                            surfacecolor=mesh_out[i].reshape((num_samples, num_samples)) if fit_color == 'output' else
-                            fit_dd_values[i] * np.ones([num_samples, num_samples]),
+                            surfacecolor=mesh_out[i].reshape((fit_sampling, fit_sampling)) if fit_color == 'output' else
+                            fit_dd_values[i] * np.ones([fit_sampling, fit_sampling]),
                             opacity=fit_opacity,
                             coloraxis="coloraxis2",
                         ))
@@ -544,10 +615,10 @@ def init_app(config):
                     cmax=max(fit_dd_values) if fit_color == 'multi-fit' else None,
                 ))
         elif graph_type == '2D contour':
-            num_samples = 20
             mesh_in, mesh_out, mesh_out_std, fit_dd_values = mesh_fit(param_slider, id_type, fit_dd, fit_num,
-                                                                      param_center, [invar, invar_2], outvar,
-                                                                      num_samples, add_noise_var)
+                                                                      param_center, [invar, invar_2],
+                                                                      [invar1_log, invar2_log], outvar,
+                                                                      fit_sampling, add_noise_var)
             fig= go.Figure()
             fig.add_trace(go.Scatter(
                 x=indata[invar][sel_y],
@@ -564,13 +635,14 @@ def init_app(config):
                 coloraxis='coloraxis2',
                 name='fit',
             ))
-            print('Xmin', min(fig.data[1]['x']))
-            fig.update_xaxes(range=[min(fig.data[1]['x']), max(fig.data[1]['x'])])
-            fig.update_yaxes(range=[min(fig.data[1]['y']), max(fig.data[1]['y'])])
+            fig.update_xaxes(range=[log10(min(fig.data[1]['x'])), log10(max(fig.data[1]['x']))] if invar1_log == ['log']
+            else [min(fig.data[1]['x']), max(fig.data[1]['x'])])
+            fig.update_yaxes(range=[log10(min(fig.data[1]['y'])), log10(max(fig.data[1]['y']))] if invar2_log == ['log']
+            else [min(fig.data[1]['y']), max(fig.data[1]['y'])])
             fig.update_layout(xaxis_title=invar,
                               yaxis_title=invar_2,
                               coloraxis2=dict(colorbar=dict(title=outvar),
-                                              colorscale='ice',
+                                              colorscale='solar',
                                               cmin=min(fig.data[1]['z']),
                                               cmax=max(fig.data[1]['z'])))
         elif graph_type == '3D':
@@ -592,10 +664,10 @@ def init_app(config):
                 colorbar=dict(title=outvar),
             ))
             if fit_use == ['show'] and len({invar, invar_2, invar_3}) == 3:
-                num_samples = 20
                 mesh_in, mesh_out, mesh_out_std, fit_dd_values = mesh_fit(param_slider, id_type, fit_dd, fit_num,
-                                                                          param_center, [invar, invar_2, invar_3], outvar,
-                                                                          num_samples, add_noise_var)
+                                                                          param_center, [invar, invar_2, invar_3],
+                                                                          [invar1_log, invar2_log, invar3_log], outvar,
+                                                                          fit_sampling, add_noise_var)
                 for i in range(len(fit_dd_values)):
                     fig.add_trace(
                         go.Isosurface(
@@ -614,50 +686,6 @@ def init_app(config):
         else:
             fig = go.Figure()
         fig.update_layout(legend=dict(xanchor="left", x=0.01))
-        if color_use == ['true']: # TODO: trigger-detection no new fig just update
-            if fit_use == ['show'] and (graph_type=='2D' and ((fit_color=='output' and color_dd==outvar) or (fit_color=='multi-fit' and color_dd==fit_dd)) or graph_type=='3D'):
-                fig.update_traces(
-                    marker=dict(
-                        coloraxis="coloraxis2",
-                        color=indata[color_dd][sel_y] if color_dd in indata.dtype.names else outdata[color_dd][sel_y],
-                    ),
-                    selector=dict(mode='markers'),
-                )
-                fig.update_layout(coloraxis2=dict(cauto=True))
-            elif graph_type=='1D' and color_dd==fit_dd:
-                fig.update_traces(
-                    marker=dict(
-                        coloraxis="coloraxis2",
-                        color=indata[color_dd][sel_y] if color_dd in indata.dtype.names else outdata[color_dd][sel_y],
-                    ),
-                    selector=dict(mode='markers'),
-                )
-                fig.update_layout(coloraxis2=dict(colorscale='plasma', colorbar=dict(title=fit_dd)))
-            elif graph_type =='2D contour':
-                fig.update_traces(
-                    marker=dict(
-                        coloraxis="coloraxis",
-                        color=indata[color_dd][sel_y] if color_dd in indata.dtype.names else outdata[color_dd][sel_y],
-                    ),
-                    selector=dict(mode='markers'),
-                )
-                if color_dd == outvar:
-                    fig.update_traces(marker_coloraxis="coloraxis2", selector=dict(mode='markers'))
-                else:
-                    fig.update_layout(coloraxis=dict(colorbar=dict(title=color_dd, x=1.1),
-                                                     colorscale='solar'))
-            else:
-                fig.update_traces(
-                    marker=dict(
-                        coloraxis="coloraxis",
-                        color=indata[color_dd][sel_y] if color_dd in indata.dtype.names else outdata[color_dd][sel_y],
-                    ),
-                    selector=dict(mode='markers'),
-                )
-                fig.update_layout(coloraxis=dict(
-                    colorbar=dict(title=color_dd, x=1.1),
-                    colorscale='viridis',
-                ))
         # log scale
         log_dict = {'1D': (invar1_log, outvar_log),
                     '2D': (invar1_log, invar2_log, outvar_log),
@@ -670,10 +698,58 @@ def init_app(config):
             fig.update_layout(**comb_dict)
         else:
             fig.update_scenes(**comb_dict)
+        # color
+        if color_use == ['true']: # TODO: trigger-detection no new fig just update
+            if fit_use == ['show'] and (graph_type=='2D' and ((fit_color=='output' and color_dd==outvar) or (fit_color=='multi-fit' and color_dd==fit_dd)) or graph_type=='3D'):
+                fig.update_traces(
+                    marker=dict(
+                        coloraxis="coloraxis2",
+                        color=indata[color_dd][sel_y] if color_dd in indata.dtype.names else outdata[color_dd][sel_y],
+                    ),
+                    selector=dict(mode='markers'),
+                )
+            elif graph_type=='1D':
+                fig.update_traces(
+                    marker=dict(
+                        coloraxis="coloraxis2",
+                        color=indata[color_dd][sel_y] if color_dd in indata.dtype.names else outdata[color_dd][sel_y],
+                    ),
+                    selector=dict(mode='markers'),
+                )
+                if color_dd==fit_dd:
+                    fig.update_layout(coloraxis2=dict(colorscale='cividis', colorbar=dict(title=fit_dd)))
+                else:
+                    fig.update_layout(coloraxis2=dict(colorscale='plasma', colorbar=dict(title=color_dd)))
+            elif graph_type =='2D contour':
+                fig.update_traces(
+                    marker=dict(
+                        coloraxis="coloraxis",
+                        color=indata[color_dd][sel_y] if color_dd in indata.dtype.names else outdata[color_dd][sel_y],
+                    ),
+                    selector=dict(mode='markers'),
+                )
+                if color_dd == outvar:
+                    fig.update_traces(marker_coloraxis="coloraxis2", selector=dict(mode='markers'))
+                else:
+                    fig.update_layout(coloraxis=dict(colorbar=dict(title=color_dd, x=1.1),
+                                                     colorscale='ice'))
+            else:
+                fig.update_traces(
+                    marker=dict(
+                        coloraxis="coloraxis",
+                        color=indata[color_dd][sel_y] if color_dd in indata.dtype.names else outdata[color_dd][sel_y],
+                    ),
+                    selector=dict(mode='markers'),
+                )
+                fig.update_layout(coloraxis=dict(
+                    colorbar=dict(title=color_dd, x=1.1),
+                    colorscale='viridis',
+                ))
+        fig.update_layout(height=graph_height)
         return fig
 
 
-    def mesh_fit(param_slider, id_type, fit_dd, fit_num, param_center, invar_list, outvar, num_samples, add_noise_var):
+    def mesh_fit(param_slider, id_type, fit_dd, fit_num, param_center, invar_list, invar_log_list, outvar, num_samples, add_noise_var):
         try:  # collecting min/max of slider in filter section
             fit_dd_min, fit_dd_max = param_slider[[i['index'] for i in id_type].index(invars.index(fit_dd))]
         except ValueError:
@@ -689,20 +765,25 @@ def init_app(config):
                 ind = id_type[iter]['index']
                 fit_params[ind] = center_values
             fit_params[invars.index(fit_dd)] = fit_dd_value
-            for invar in invar_list:
-                fit_params[invars.index(invar)] = np.linspace(min(indata[invar]), max(indata[invar]), num_samples)
+            for iter, invar in enumerate(invar_list):
+                if invar_log_list[iter] == ['log']:
+                    fit_params[invars.index(invar)] = np.logspace(log10(min(indata[invar])), log10(max(indata[invar])),
+                                                                  num_samples)
+                else:
+                    fit_params[invars.index(invar)] = np.linspace(min(indata[invar]), max(indata[invar]), num_samples)
             grid = np.meshgrid(*fit_params)
             x_pred = np.vstack([g.flatten() for g in grid]).T  # extract vector for predict
             sur = Surrogate.load_model(config['fit']['save']) # load surrogate
             try:
-                fit_data, fit_var = sur.predict(x_pred, add_noise_var==['add'])
+                fit_data, fit_var = sur.predict(x_pred, add_noise_var == ['add'])
             except TypeError:
                 fit_data, fit_var = sur.predict(x_pred)
-                print('Warning: full data variance not supported') # TODO: fix after PR from Maximilian
+                if add_noise_var == ['add']:
+                    print('Warning: full data variance not supported') # TODO: fix after PR from Maximilian
             # generated data
             new_mesh_in = np.array([[grid[invars.index(invar)].flatten() for invar in invars]])
             new_mesh_out = np.array([fit_data[:, outvars.index(outvar)]])
-            new_mesh_out_std = np.array([np.sqrt(fit_var[:, outvars.index(outvar)])])
+            new_mesh_out_std = np.array([np.sqrt(fit_var[:, 0])]) # TODO: use second variance if available
             if iteration == 0:
                 mesh_in = new_mesh_in
                 mesh_out = new_mesh_out
@@ -726,5 +807,34 @@ def init_app(config):
             return {'visibility': 'visible'}
         else:
             return {'visibility': 'hidden'}
+
+
+    def create_slider(dd_value):
+        ind = invars.index(dd_value)
+        slider_min = indata[dd_value].min()
+        slider_max = indata[dd_value].max()
+        step_exponent = -3 #floor(log10((slider_max - slider_min) / 100))
+        # while slider_max / (10 ** step_exponent) > 1000:
+        #     step_exponent = step_exponent + 1
+        # while (slider_max - slider_min) / (10 ** step_exponent) < 20:  # minimum of 20 steps per slider
+        #     step_exponent = step_exponent - 1
+        new_slider = dcc.RangeSlider(
+            id={'type': 'param-slider', 'index': ind},
+            step=10 ** step_exponent,  # floor and log10 from package `math`
+            min=slider_min,
+            max=slider_max,
+            value=[slider_min, slider_max],
+            marks={slider_min: str(round(slider_min, -step_exponent)),
+                   slider_max: str(round(slider_max, -step_exponent))},
+        )
+        return new_slider
+
+
+    def colormap(cmin, cmax, c):
+        if cmin == cmax:
+            c_scal = 0.5
+        else:
+            c_scal = (c-cmin)/(cmax-cmin)
+        return color2hex(colormaps.cividis(c_scal))
 
     return app
