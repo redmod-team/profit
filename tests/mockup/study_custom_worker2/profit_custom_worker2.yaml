@@ -8,8 +8,8 @@ run:
     pre:
         class: template
         path: ../template_1D
-    worker: custom2
-    include: custom_worker2.py
+    worker: mockup_worker2
+    include: ../simulation_files/custom_components.py
 
 files:
     input: input_custom_worker2.hdf5
