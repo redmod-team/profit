@@ -62,15 +62,18 @@ def convert_relative_symlinks(template_dir, out_dir):
 
 
 def fill_template(out_dir, params, param_files=None):
-    """ TODO: Explain param_files """
-    for root, dirs, files in os.walk(out_dir):
+    """
+    Arguments:
+        param_files(list): a list of filenames which are to be substituted or None for all
+    """
+    for root, dirs, files in os.walk(out_dir):  # by default, walk ignores subdirectories which are links
         for filename in files:
-            if not param_files or filename in param_files:
-                filepath = os.path.join(root, filename)
+            filepath = os.path.join(root, filename)
+            if (not param_files and not os.path.islink(filepath)) or filename in param_files:
                 fill_template_file(filepath, filepath, params)
 
 
-def fill_template_file(template_filepath, output_filepath, params):
+def fill_template_file(template_filepath, output_filepath, params, copy_link=True):
     with open(template_filepath, 'r') as f:
         content = f.read()
         # Escape '{*}' for e.g. json templates by replacing it with '{{*}}'.
@@ -81,6 +84,8 @@ def fill_template_file(template_filepath, output_filepath, params):
                 .replace('{', '{{').replace('}', '}}').replace('§§', '}').replace('§', '{')
             pre, post = '{{', '}}'
         content = content.format_map(util.SafeDict.from_params(params, pre=pre, post=post))
+    if copy_link and os.path.islink(output_filepath):
+        os.remove(output_filepath)  # otherwise the link target would be substituted
     with open(output_filepath, 'w') as f:
         f.write(content)
 
