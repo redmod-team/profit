@@ -159,7 +159,8 @@ def init_app(config):
                     dcc.RadioItems(
                         id='fit-color',
                         options=[{'label': 'output', 'value': 'output'},
-                                 {'label': 'variable of multi-fit', 'value': 'multi-fit'}],
+                                 {'label': 'multi-fit', 'value': 'multi-fit'},
+                                 {'label': 'marker-color', 'value': 'marker-color'}],
                         value='output',
                         labelStyle={'display': 'inline-block'}, ),
                 ]),
@@ -580,10 +581,14 @@ def init_app(config):
                         y=mesh_in[i][invars.index(invar_2)].reshape((fit_sampling, fit_sampling)),
                         z=mesh_out[i].reshape((fit_sampling, fit_sampling)),
                         name=f'fit: {fit_dd}={fit_dd_values[i]:.2f}',
-                        surfacecolor=mesh_out[i].reshape((fit_sampling, fit_sampling)) if fit_color == 'output' else
-                        fit_dd_values[i] * np.ones([fit_sampling, fit_sampling]),
+                        surfacecolor=fit_dd_values[i] * np.ones([fit_sampling, fit_sampling])
+                            if fit_color == 'multi-fit' else
+                            (mesh_in[i][invars.index(color_dd)].reshape((fit_sampling, fit_sampling))
+                             if (fit_color == 'marker-color' and color_dd in invars) else
+                             mesh_out[i].reshape((fit_sampling, fit_sampling))),
                         opacity=fit_opacity,
-                        coloraxis="coloraxis2",
+                        coloraxis="coloraxis2" if (fit_color == 'multi-fit' or
+                            (fit_color == 'output' and (color_dd != outvar and color_dd != 'OUTPUT'))) else "coloraxis",
                         showlegend=True,
                     ))
                     if fit_conf > 0:
@@ -593,10 +598,15 @@ def init_app(config):
                             z=mesh_out[i].reshape((fit_sampling, fit_sampling)) + fit_conf * mesh_out_std[i].reshape((fit_sampling, fit_sampling)),
                             showlegend=False,
                             name=f'fit+v: {fit_dd}={fit_dd_values[i]:.2f}',
-                            surfacecolor=mesh_out[i].reshape((fit_sampling, fit_sampling)) if fit_color == 'output' else
-                            fit_dd_values[i] * np.ones([fit_sampling, fit_sampling]),
+                            surfacecolor=fit_dd_values[i] * np.ones([fit_sampling, fit_sampling])
+                                if fit_color == 'multi-fit' else
+                                (mesh_in[i][invars.index(color_dd)].reshape((fit_sampling, fit_sampling))
+                                 if (fit_color == 'marker-color' and color_dd in invars) else
+                                 mesh_out[i].reshape((fit_sampling, fit_sampling))),
                             opacity=fit_opacity,
-                            coloraxis="coloraxis2",
+                            coloraxis="coloraxis2" if (fit_color == 'multi-fit' or
+                                (fit_color == 'output' and (color_dd != outvar and color_dd != 'OUTPUT')))
+                                else "coloraxis",
                         ))
                         fig.add_trace(go.Surface(
                             x=mesh_in[i][invars.index(invar)].reshape((fit_sampling, fit_sampling)),
@@ -604,10 +614,15 @@ def init_app(config):
                             z=mesh_out[i].reshape((fit_sampling, fit_sampling)) - fit_conf * mesh_out_std[i].reshape((fit_sampling, fit_sampling)),
                             showlegend=False,
                             name=f'fit-v: {fit_dd}={fit_dd_values[i]:.2f}',
-                            surfacecolor=mesh_out[i].reshape((fit_sampling, fit_sampling)) if fit_color == 'output' else
-                            fit_dd_values[i] * np.ones([fit_sampling, fit_sampling]),
+                            surfacecolor=fit_dd_values[i] * np.ones([fit_sampling, fit_sampling])
+                                if fit_color == 'multi-fit' else
+                                (mesh_in[i][invars.index(color_dd)].reshape((fit_sampling, fit_sampling))
+                                 if (fit_color == 'marker-color' and color_dd in invars) else
+                                 mesh_out[i].reshape((fit_sampling, fit_sampling))),
                             opacity=fit_opacity,
-                            coloraxis="coloraxis2",
+                            coloraxis="coloraxis2" if (fit_color == 'multi-fit' or
+                                (fit_color == 'output' and (color_dd != outvar and color_dd != 'OUTPUT')))
+                                else "coloraxis",
                         ))
                 fig.update_layout(coloraxis2=dict(
                     colorbar=dict(title=outvar if fit_color == 'output' else fit_dd),
@@ -700,7 +715,7 @@ def init_app(config):
             fig.update_scenes(**comb_dict)
         # color
         if color_use == ['true']: # TODO: trigger-detection no new fig just update
-            if fit_use == ['show'] and (graph_type=='2D' and ((fit_color=='output' and color_dd==outvar) or (fit_color=='multi-fit' and color_dd==fit_dd)) or graph_type=='3D'):
+            if fit_use == ['show'] and (graph_type=='2D' and (fit_color=='multi-fit' and color_dd==fit_dd) or graph_type=='3D'):
                 fig.update_traces(
                     marker=dict(
                         coloraxis="coloraxis2",
@@ -818,14 +833,10 @@ def init_app(config):
         ind = invars.index(dd_value)
         slider_min = indata[dd_value].min()
         slider_max = indata[dd_value].max()
-        step_exponent = -3 #floor(log10((slider_max - slider_min) / 100))
-        # while slider_max / (10 ** step_exponent) > 1000:
-        #     step_exponent = step_exponent + 1
-        # while (slider_max - slider_min) / (10 ** step_exponent) < 20:  # minimum of 20 steps per slider
-        #     step_exponent = step_exponent - 1
+        step_exponent = -3
         new_slider = dcc.RangeSlider(
             id={'type': 'param-slider', 'index': ind},
-            step=10 ** step_exponent,  # floor and log10 from package `math`
+            step=10 ** step_exponent,
             min=slider_min,
             max=slider_max,
             value=[slider_min, slider_max],
