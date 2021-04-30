@@ -9,6 +9,10 @@ run:
     runner:
         class: slurm
         parallel: 10
+        options:
+            job-name: profit-mockup
+            time: 1:00:00
+            mem-per-cpu: 1G
     interface:
         class: zeromq
         port: 9100

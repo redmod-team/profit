@@ -144,20 +144,31 @@ class SlurmRunner(Runner):
                 path: slurm.bash    # the path to the generated batch script (relative to the base directory)
                 custom: false       # whether a custom batch script is already provided at 'path'
                 prefix: srun        # prefix for the command
-                job-name: profit    # the name of the submitted jobs
                 OpenMP: false       # whether to set OMP_NUM_THREADS and OMP_PLACES
                 cpus: 1             # number of cpus (including hardware threads) to use (may specify 'all')
+                options:            # (long) options to be passed to slurm: e.g. time, mem-per-cpu, account, constraint
+                    job-name: profit
 
         """
-        defaults = dict(parallel=None, sleep=0, poll=60,
-                        path='slurm.bash', custom=False, prefix='srun',
-                        OpenMP=False, cpus=1,
-                        account=None, partition=None, qos=None, constraint=None)
-        defaults.update({'job-name': 'profit', 'mem-per-cpu': None})
+        defaults = {'parallel': None,
+                    'sleep': 0,
+                    'poll': 60,
+                    'path': 'slurm.bash',
+                    'custom': False,
+                    'prefix': 'srun',
+                    'OpenMP': False,
+                    'cpus': 1,
+                    }
+        options = {'job-name': 'profit'}
 
         for key, value in defaults.items():
             if key not in config:
                 config[key] = value
+        if 'options' not in config:
+            config['options'] = {}
+        for key, value in options.items():
+            if key not in config['options']:
+                config['options'][key] = value
 
         # convert path to absolute path
         if not os.path.isabs(config['path']):
@@ -171,13 +182,14 @@ class SlurmRunner(Runner):
 #!/bin/bash
 # automatically generated SLURM batch script for running simulations with proFit
 # see https://github.com/redmod-team/profit
-
 """
-        for key in ['job-name', 'account', 'partition', 'qos', 'constraint', 'mem-per-cpu']:
-            if self.config[key] is not None:
-                text += f"\n#SBATCH --{key}={self.config[key]}"
+        for key, value in self.config['options'].items():
+            if value is not None:
+                text += f"\n#SBATCH --{key}={value}"
 
-        text += "\n#SBATCH --ntasks=1"
+        text += """
+#SBATCH --ntasks=1
+"""
         if self.config['cpus'] == 'all':
             text += """
 #SBATCH --nodes=1
