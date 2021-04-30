@@ -107,8 +107,8 @@ def init_app(config):
                         style={'width': check_txt_width}, ),
                     dcc.Dropdown(
                         id='color-dropdown',
-                        options=dd_opts_in + dd_opts_out,
-                        value=invars[2] if len(invars) > 2 else invars[0],
+                        options=dd_opts_in + dd_opts_out + [{'label': 'OUTPUT', 'value': 'OUTPUT'}],
+                        value='OUTPUT',
                         style=dd_sty, ),
                 ]),
                 html.Div(id='error-div', style=axis_options_div_style, children=[
@@ -712,23 +712,27 @@ def init_app(config):
                 fig.update_traces(
                     marker=dict(
                         coloraxis="coloraxis2",
-                        color=indata[color_dd][sel_y] if color_dd in indata.dtype.names else outdata[color_dd][sel_y],
+                        color=outdata[outvar][sel_y] if color_dd == 'OUTPUT' else
+                        (indata[color_dd][sel_y] if color_dd in indata.dtype.names else outdata[color_dd][sel_y]),
                     ),
                     selector=dict(mode='markers'),
                 )
                 if color_dd==fit_dd:
                     fig.update_layout(coloraxis2=dict(colorscale='cividis', colorbar=dict(title=fit_dd)))
+                elif color_dd == 'OUTPUT':
+                    fig.update_layout(coloraxis2=dict(colorscale='plasma', colorbar=dict(title=outvar)))
                 else:
                     fig.update_layout(coloraxis2=dict(colorscale='plasma', colorbar=dict(title=color_dd)))
             elif graph_type =='2D contour':
                 fig.update_traces(
                     marker=dict(
                         coloraxis="coloraxis",
-                        color=indata[color_dd][sel_y] if color_dd in indata.dtype.names else outdata[color_dd][sel_y],
+                        color=outdata[outvar][sel_y] if color_dd == 'OUTPUT' else
+                        (indata[color_dd][sel_y] if color_dd in indata.dtype.names else outdata[color_dd][sel_y]),
                     ),
                     selector=dict(mode='markers'),
                 )
-                if color_dd == outvar:
+                if color_dd == outvar or color_dd == 'OUTPUT':
                     fig.update_traces(marker_coloraxis="coloraxis2", selector=dict(mode='markers'))
                 else:
                     fig.update_layout(coloraxis=dict(colorbar=dict(title=color_dd, x=1.1),
@@ -737,12 +741,13 @@ def init_app(config):
                 fig.update_traces(
                     marker=dict(
                         coloraxis="coloraxis",
-                        color=indata[color_dd][sel_y] if color_dd in indata.dtype.names else outdata[color_dd][sel_y],
+                        color=outdata[outvar][sel_y] if color_dd == 'OUTPUT' else
+                        (indata[color_dd][sel_y] if color_dd in indata.dtype.names else outdata[color_dd][sel_y]),
                     ),
                     selector=dict(mode='markers'),
                 )
                 fig.update_layout(coloraxis=dict(
-                    colorbar=dict(title=color_dd, x=1.1),
+                    colorbar=dict(title=outvar if color_dd == 'OUTPUT' else color_dd, x=1.1),
                     colorscale='viridis',
                 ))
         fig.update_layout(height=graph_height)
