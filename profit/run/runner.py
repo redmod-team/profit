@@ -112,6 +112,10 @@ class Runner(ABC):
     def check_runs(self):
         pass
 
+    @abstractmethod
+    def cancel_all(self):
+        pass
+
     def clean(self):
         self.interface.clean()
 

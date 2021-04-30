@@ -11,8 +11,7 @@ run:
         parallel: 10
     interface:
         class: zeromq
-        bind: tcp://*:9000
-        connect: tcp://acluster:9000
+        port: 9100
     post:
         class: numpytxt
         path: mockup.out

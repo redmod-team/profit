@@ -100,6 +100,15 @@ class SlurmRunner(Runner):
                     if not (state.startswith('RUNNING') or state.startswith('PENDING')):
                         self.del_run(lookup[job_id])
 
+    def cancel_all(self):
+        from re import split
+        ids = set()
+        for run_id in self.runs:
+            ids.add(split(r'[_.]', run_id))
+        for run_id in ids:
+            subprocess.run(['scancel', run_id])
+        self.runs = {}
+
     def del_run(self, run_id: int):
         """helper: delete run from runs and remove slurm-stdout
 

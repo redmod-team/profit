@@ -87,6 +87,15 @@ class LocalRunner(Runner):
                     process.terminate()
                     del self.runs[run_id]
 
+    def cancel_all(self):
+        if self.run_config['custom'] or not self.config['fork']:
+            for process in self.runs.values():
+                process.terminate()
+        else:
+            for worker, process in self.runs.values():
+                process.terminate()
+        self.runs = {}
+
     @classmethod
     def handle_config(cls, config, base_config):
         """
