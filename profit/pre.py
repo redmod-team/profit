@@ -66,6 +66,8 @@ def fill_template(out_dir, params, param_files=None):
     Arguments:
         param_files(list): a list of filenames which are to be substituted or None for all
     """
+    if param_files is None:
+        param_files = []
     for root, dirs, files in os.walk(out_dir):  # by default, walk ignores subdirectories which are links
         for filename in files:
             filepath = os.path.join(root, filename)

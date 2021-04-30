@@ -115,8 +115,8 @@ def test_symlinks():
 
     config_file = './study/profit_symlink.yaml'
     config = Config.from_file(config_file)
-    base_file = './study/template/symlink_base.txt'
-    link_file = './study/template/some_subdir/symlink_link.txt'
+    base_file = './study/run_000/mockup.in'
+    link_file = './study/run_000/some_subdir/symlink_link.txt'
     try:
         run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
         with open(link_file, 'r') as link:
@@ -126,10 +126,6 @@ def test_symlinks():
                 assert link_data == base_data and not link_data.startswith('{')
     finally:
         clean(config)
-        with open(link_file, 'w') as link:
-            with open(base_file, 'w') as base:
-                base.write("{u} {v} {w}")
-                link.write("{u} {v} {w}")
 
 
 def test_default_values():

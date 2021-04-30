@@ -10,7 +10,7 @@ variables:
 run:
     pre:
         class: template
-        param_files: [mockup.in]
+        param_files: [mockup.in, symlink_link.txt]
     post:
         class: numpytxt
         path: mockup.out
