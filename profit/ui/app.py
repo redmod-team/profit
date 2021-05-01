@@ -386,7 +386,7 @@ def init_app(config):
         mark_lim = [float(i) for i in list(marks.keys())]
 
         data_in = indata[invars[id['index']]]
-        data_min = min(data_in[data_in > 0])
+        data_min_0 = min(data_in[data_in > 0])
 
         if trigger_id == '"param-log"' and log_act != ['log']:
             dyn_min = 10**dyn_min
@@ -446,13 +446,13 @@ def init_app(config):
             try:
                 log_dyn_min = log10(dyn_min)
             except ValueError:
-                log_dyn_min = log10(data_min)
+                log_dyn_min = log10(data_min_0)
             log_dyn_max = log10(dyn_max)
             log_slider_val = [log_dyn_min, log_dyn_max]
             try:
                 log_mark_lim = [log10(mark) for mark in mark_lim]
             except ValueError:
-                log_mark_lim = [log10(data_min), log10(mark_lim[1])]
+                log_mark_lim = [log10(data_min_0), log10(mark_lim[1])]
             log_span = (log_slider_val[1] - log_slider_val[0])/2
             log_center = log_slider_val[0] + log_span
             log_marks = {log_mark_lim[0]: str(round(log_mark_lim[0], dig)),
@@ -590,8 +590,7 @@ def init_app(config):
                     z=outdata[outvar][sel_y],
                     mode='markers',
                     name='Data',
-                    error_z=dict(type='data', array=outdata[error_dd][sel_y], visible=error_use == ['true'],
-                                 thickness=25, width= 10)
+                    error_z=dict(type='data', array=outdata[error_dd][sel_y], visible=error_use == ['true'], width= 10)
                 )],
                 layout=go.Layout(scene=dict(xaxis_title=invar, yaxis_title=invar_2, zaxis_title=outvar))
             )
@@ -750,11 +749,19 @@ def init_app(config):
             fig.update_scenes(**comb_dict)
         # color
         if color_use == ['true']: # TODO: trigger-detection no new fig just update
-            if fit_use == ['show'] and (graph_type=='2D' and (fit_color=='multi-fit' and color_dd==fit_dd) or graph_type=='3D'):
+            if fit_use == ['show'] and (graph_type=='2D' and (fit_color=='multi-fit' and color_dd==fit_dd)):
                 fig.update_traces(
                     marker=dict(
                         coloraxis="coloraxis2",
                         color=indata[color_dd][sel_y] if color_dd in indata.dtype.names else outdata[color_dd][sel_y],
+                    ),
+                    selector=dict(mode='markers'),
+                )
+            elif graph_type == '3D':
+                fig.update_traces(
+                    marker=dict(
+                        coloraxis="coloraxis2",
+                        color=outdata[outvar][sel_y],
                     ),
                     selector=dict(mode='markers'),
                 )
@@ -857,7 +864,7 @@ def init_app(config):
     def show_table(show, hide):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
-        print(trigger_id)
+        # print(trigger_id)
         if trigger_id == 'show-table':
             return {'visibility': 'visible'}
         else:
