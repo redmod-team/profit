@@ -107,7 +107,7 @@ def init_app(config):
                         style={'width': check_txt_width}, ),
                     dcc.Dropdown(
                         id='color-dropdown',
-                        options=dd_opts_in + dd_opts_out + [{'label': 'OUTPUT', 'value': 'OUTPUT'}],
+                        options=[{'label': 'OUTPUT', 'value': 'OUTPUT'}] + dd_opts_in + dd_opts_out,
                         value='OUTPUT',
                         style=dd_sty, ),
                 ]),
@@ -474,6 +474,7 @@ def init_app(config):
          Output('fit-multiinput-div', 'style'),
          Output('fit-number-div', 'style'),
          Output('fit-conf-div', 'style'),
+         Output('fit-noise-div', 'style'),
          Output('fit-color-div', 'style'),
          Output('fit-opacity-div', 'style'), ],
         [Input('graph-type', 'value'), ]
@@ -484,18 +485,18 @@ def init_app(config):
         show = axis_options_div_style.copy()
         show['visibility'] = 'visible'
         if graph_type == '1D':
-            return hide, hide, show, show, show, show, show, show, hide, show
+            return hide, hide, show, show, show, show, show, show, show, hide, show
         if graph_type == '2D':
             if len(invars) <= 2:
-                return show, hide, show, show, show, hide, hide, show, show, show
+                return show, hide, show, show, show, hide, hide, show, show, show, show
             else:
-                return show, hide, show, show, show, show, show, show, show, show
+                return show, hide, show, show, show, show, show, show, show, show, show
         if graph_type == '2D contour':
-            return show, hide, show, hide, hide, hide, hide, hide, hide, hide
+            return show, hide, show, hide, hide, hide, hide, hide, hide, hide, hide
         if graph_type == '3D':
-            return show, show, hide, hide, show, hide, show, hide, hide, show
+            return show, show, hide, hide, show, hide, show, hide, hide, hide, show
         else:
-            return show, show, show, show, show, show, show, show, show, show
+            return show, show, show, show, show, show, show, show, show, show, show
 
 
     @app.callback(
@@ -537,12 +538,13 @@ def init_app(config):
         if invar is None:
             return go.Figure()
         sel_y = np.full((len(outdata),), True)
+        dds_value = []
         for iteration, values in enumerate(param_slider):
-            dds_value = invars[id_type[iteration]['index']]
+            dds_value.append(invars[id_type[iteration]['index']])
             # filter for minimum
-            sel_y_min = np.array(indata[dds_value] >= param_slider[iteration][0])
+            sel_y_min = np.array(indata[dds_value[iteration]] >= param_slider[iteration][0])
             # filter for maximum
-            sel_y_max = np.array(indata[dds_value] <= param_slider[iteration][1])
+            sel_y_max = np.array(indata[dds_value[iteration]] <= param_slider[iteration][1])
             # print('iter ', iteration, 'filer', filter_active[iteration][0])
             if filter_active != [[]]:
                 if filter_active[iteration] == ['act']:
@@ -812,40 +814,47 @@ def init_app(config):
 
 
     def mesh_fit(param_slider, id_type, fit_dd, fit_num, param_center, invar_list, invar_log_list, outvar, num_samples, add_noise_var):
-        try:  # collecting min/max of slider in filter section
+        try:  # collecting min/max of slider for variable of multifit
             fit_dd_min, fit_dd_max = param_slider[[i['index'] for i in id_type].index(invars.index(fit_dd))]
         except ValueError:
             fit_dd_min = min(indata[fit_dd])
             fit_dd_max = max(indata[fit_dd])
-        if fit_num == 1:
+
+        if fit_num == 1: # generate list of value of variable of multifit
             fit_dd_values = np.array([(fit_dd_max + fit_dd_min) / 2])
         else:
             fit_dd_values = np.linspace(fit_dd_min, fit_dd_max, fit_num)
-        for iteration, fit_dd_value in enumerate(fit_dd_values):
+
+        for iteration, fit_dd_value in enumerate(fit_dd_values): # iteration for each fit
+            # set fit parameter for all invars as center of range
             fit_params = [(max(indata[var_invar]) + min(indata[var_invar])) / 2 for var_invar in invars]
-            for iter, center_values in enumerate(param_center):
-                ind = id_type[iter]['index']
-                fit_params[ind] = center_values
+            # for all invars with filter change fit_param to center defined by filter
+            flt_ind_list = [] # list of filter indices
+            for i, center_values in enumerate(param_center):
+                flt_ind_list.append(id_type[i]['index'])
+                fit_params[flt_ind_list[i]] = center_values
+            # change param of fit-variable
             fit_params[invars.index(fit_dd)] = fit_dd_value
-            for iter, invar in enumerate(invar_list):
-                if invar_log_list[iter] == ['log']:
-                    fit_params[invars.index(invar)] = np.logspace(log10(min(indata[invar])), log10(max(indata[invar])),
-                                                                  num_samples)
+            # change param for axis invars
+            for i, ax_in in enumerate(invar_list):
+                if invars.index(ax_in) in flt_ind_list:
+                    ax_min, ax_max = param_slider[flt_ind_list.index(invars.index(ax_in))]
                 else:
-                    fit_params[invars.index(invar)] = np.linspace(min(indata[invar]), max(indata[invar]), num_samples)
-            grid = np.meshgrid(*fit_params)
+                    ax_min = min(indata[ax_in])
+                    ax_max = max(indata[ax_in])
+                if invar_log_list[i] == ['log']:
+                    fit_params[invars.index(ax_in)] = np.logspace(log10(ax_min), log10(ax_max), num_samples)
+                else:
+                    fit_params[invars.index(ax_in)] = np.linspace(ax_min, ax_max, num_samples)
+            grid = np.meshgrid(*fit_params) # generate grid
             x_pred = np.vstack([g.flatten() for g in grid]).T  # extract vector for predict
             sur = Surrogate.load_model(config['fit']['save']) # load surrogate
-            try:
-                fit_data, fit_var = sur.predict(x_pred, add_noise_var == ['add'])
-            except TypeError:
-                fit_data, fit_var = sur.predict(x_pred)
-                if add_noise_var == ['add']:
-                    print('Warning: full data variance not supported') # TODO: fix after PR from Maximilian
+            fit_data, fit_var = sur.predict(x_pred, add_noise_var == ['add']) # generate fit data an variance
             # generated data
             new_mesh_in = np.array([[grid[invars.index(invar)].flatten() for invar in invars]])
             new_mesh_out = np.array([fit_data[:, outvars.index(outvar)]])
-            new_mesh_out_std = np.array([np.sqrt(fit_var[:, 0])]) # TODO: use second variance if available
+            new_mesh_out_std = np.array([np.sqrt(fit_var[:, 0])])
+            # stack data together
             if iteration == 0:
                 mesh_in = new_mesh_in
                 mesh_out = new_mesh_out
