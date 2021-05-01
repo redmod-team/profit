@@ -215,6 +215,7 @@ def init_app(config):
                     html.Th("center/span"),
                     html.Th("filter active"),
                     html.Th("#digits"),
+                    html.Th("reset"),
                 ]),
             ]),
             html.Tbody(id='param-table-body', children=[
@@ -226,6 +227,7 @@ def init_app(config):
                     html.Td(html.Div(id='param-center-div', children=[])),
                     html.Td(html.Div(id='param-active-div', children=[])),
                     html.Td(html.Div(id='param-digits-div', children=[])),
+                    html.Td(html.Div(id='param-reset-div', children=[])),
                 ]),
             ]),
         ])),
@@ -254,7 +256,8 @@ def init_app(config):
          Output('param-range-div', 'children'),
          Output('param-center-div', 'children'),
          Output('param-active-div', 'children'),
-         Output('param-digits-div', 'children'), ],
+         Output('param-digits-div', 'children'),
+         Output('param-reset-div', 'children'), ],
         [Input('add-filter', 'n_clicks'),
          Input('clear-filter', 'n_clicks'),
          Input('clear-all-filter', 'n_clicks')],
@@ -265,13 +268,14 @@ def init_app(config):
          State('param-range-div', 'children'),
          State('param-center-div', 'children'),
          State('param-active-div', 'children'),
-         State('param-digits-div', 'children'), ],
+         State('param-digits-div', 'children'),
+         State('param-reset-div', 'children')],
     )
-    def add_filterrow(n_clicks, clear, clear_all, filter_dd, text, log, slider, range_div, center_div, active_div, dig_div):
+    def add_filterrow(n_clicks, clear, clear_all, filter_dd, text, log, slider, range_div, center_div, active_div, dig_div, reset_div):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
         if trigger_id == 'clear-all-filter':
-            return [], [], [], [], [], [], []
+            return [], [], [], [], [], [], [], []
         elif trigger_id == 'clear-filter':
             for i in range(len(text)):
                 if text[i]['props']['children'][0] == filter_dd:
@@ -282,11 +286,12 @@ def init_app(config):
                     center_div.pop(i)
                     active_div.pop(i)
                     dig_div.pop(i)
+                    reset_div.pop(i)
                     break
         elif trigger_id == 'add-filter':
             for i in range(len(text)):
                 if text[i]['props']['children'][0] == filter_dd:
-                    return text, log, slider, range_div, center_div, active_div, dig_div
+                    return text, log, slider, range_div, center_div, active_div, dig_div, reset_div
             ind = invars.index(filter_dd)
             txt = filter_dd
             new_text = html.Div(id={'type': 'dyn-text', 'index': ind}, children=[txt], style={**input_div_sty, **input_sty})
@@ -312,6 +317,9 @@ def init_app(config):
             new_dig = html.Div(id={'type': 'dyn-dig', 'index': ind}, children=[
                 dcc.Input(id={'type': 'param-dig', 'index': ind}, type='number', value=5, debounce=True, min=0, style={'width':100})
             ])
+            new_reset = html.Div(id={'type': 'dyn-reset', 'index': ind}, children=[
+                html.Button("reset", id={'type': 'param-reset', 'index': ind}, n_clicks=0)
+            ])
             text.append(new_text)
             log.append(new_log)
             slider.append(new_slider)
@@ -319,7 +327,8 @@ def init_app(config):
             center_div.append(new_center)
             active_div.append(new_active)
             dig_div.append(new_dig)
-        return text, log, slider, range_div, center_div, active_div, dig_div
+            reset_div.append(new_reset)
+        return text, log, slider, range_div, center_div, active_div, dig_div, reset_div
 
 
     @app.callback(
@@ -361,12 +370,13 @@ def init_app(config):
          Input({'type': 'param-center', 'index': MATCH}, 'value'),
          Input({'type': 'param-span', 'index': MATCH}, 'value'),
          Input('scale', 'n_clicks'),
-         Input({'type': 'param-dig', 'index': MATCH}, 'value'), ],
+         Input({'type': 'param-dig', 'index': MATCH}, 'value'),
+         Input({'type': 'param-reset', 'index': MATCH}, 'n_clicks'), ],
         [State({'type': 'param-slider', 'index': MATCH}, 'id'),
          State('scale-slider', 'value'),
          State({'type': 'param-slider', 'index': MATCH}, 'marks'), ]
     )
-    def update_dyn_slider_range(text_div, log_act, dyn_min, dyn_max, slider_val, center, span, scale, dig, id, scale_slider, marks):
+    def update_dyn_slider_range(text_div, log_act, dyn_min, dyn_max, slider_val, center, span, scale, dig, reset, id, scale_slider, marks):
         ctx = dash.callback_context
         try:
             trigger_id = ctx.triggered[0]["prop_id"].split('}')[0].split(',')[1].split(':')[1]
@@ -396,6 +406,9 @@ def init_app(config):
             if min(data_in) < 0 and slider_val[0] > 0:
                 mark_lim[0] = min(data_in)
 
+        if trigger_id == '"param-reset"':
+            slider_val = [min(data_in), max(data_in)]
+
         if ctx.triggered[0]["prop_id"] == "scale.n_clicks":
             # print('scale')
             span = span * (1 + scale_slider)
@@ -421,7 +434,7 @@ def init_app(config):
             slider_val = [dyn_min, dyn_max]
             span = (slider_val[1] - slider_val[0]) / 2
             center = (slider_val[0] + slider_val[1]) / 2
-        elif slider_val: # and trigger_id == '"param-slider"':
+        elif slider_val:
             # print('slider')
             dyn_min = slider_val[0]
             dyn_max = slider_val[1]
