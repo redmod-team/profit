@@ -331,6 +331,15 @@ def init_app(config):
         Input({'type': 'param-dig', 'index': MATCH}, 'value')
     )
     def update_step(dig):
+        """ Function to update an synchronise step-sizes throughout the filter-table.
+
+        Args:
+            dig (int): Number of digits to be used. Selected by the user via a 'dcc.Input'-layout-element.
+
+        Returns:
+            step: Step-size for the 4 'dcc.Input'-Elements and the slider step.
+
+        """
         step = 10**(-dig)
         return step, step, step, step, step
 
@@ -566,7 +575,8 @@ def init_app(config):
                     z=outdata[outvar][sel_y],
                     mode='markers',
                     name='Data',
-                    error_z=dict(type='data', array=outdata[error_dd][sel_y], visible=error_use == ['true'])
+                    error_z=dict(type='data', array=outdata[error_dd][sel_y], visible=error_use == ['true'],
+                                 thickness=25, width= 10)
                 )],
                 layout=go.Layout(scene=dict(xaxis_title=invar, yaxis_title=invar_2, zaxis_title=outvar))
             )
