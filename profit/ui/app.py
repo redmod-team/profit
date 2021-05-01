@@ -554,7 +554,9 @@ def init_app(config):
                     y=outdata[outvar][sel_y],
                     mode='markers',
                     name='data',
-                    error_y=dict(type='data', array=outdata[error_dd][sel_y], visible= error_use == ['true'])
+                    error_y=dict(type='data', array=outdata[error_dd][sel_y], visible= error_use == ['true']),
+                    # text=[(invar, outvar) for i in range(len(indata[invar][sel_y]))],
+                    # hovertemplate=" %{text} <br> %{x} <br> %{y}",
                 )],
                 layout=go.Layout(xaxis=dict(title=invar, rangeslider=dict(visible=True)), yaxis=dict(title=outvar))
             )
@@ -657,32 +659,42 @@ def init_app(config):
                                                                       param_center, [invar, invar_2],
                                                                       [invar1_log, invar2_log], outvar,
                                                                       fit_sampling, add_noise_var)
-            fig= go.Figure()
-            fig.add_trace(go.Scatter(
-                x=indata[invar][sel_y],
-                y=indata[invar_2][sel_y],
-                mode='markers',
-                name='Data',
-            ))
-            fig.add_trace(go.Contour(
-                x=mesh_in[0][invars.index(invar)],
-                y=mesh_in[0][invars.index(invar_2)],
-                z=mesh_out[0],
-                contours_coloring='heatmap',
-                contours_showlabels=True,
-                coloraxis='coloraxis2',
-                name='fit',
-            ))
-            fig.update_xaxes(range=[log10(min(fig.data[1]['x'])), log10(max(fig.data[1]['x']))] if invar1_log == ['log']
-            else [min(fig.data[1]['x']), max(fig.data[1]['x'])])
-            fig.update_yaxes(range=[log10(min(fig.data[1]['y'])), log10(max(fig.data[1]['y']))] if invar2_log == ['log']
-            else [min(fig.data[1]['y']), max(fig.data[1]['y'])])
-            fig.update_layout(xaxis_title=invar,
-                              yaxis_title=invar_2,
-                              coloraxis2=dict(colorbar=dict(title=outvar),
-                                              colorscale='solar',
-                                              cmin=min(fig.data[1]['z']),
-                                              cmax=max(fig.data[1]['z'])))
+            data_x = mesh_in[0][invars.index(invar)]
+            data_y = mesh_in[0][invars.index(invar_2)]
+            fig = go.Figure()
+            if min(data_x) != max(data_x):
+                if min(data_y) != max(data_y):
+                    fig.add_trace(go.Scatter(
+                        x=indata[invar][sel_y],
+                        y=indata[invar_2][sel_y],
+                        mode='markers',
+                        name='Data',
+                    ))
+                    fig.add_trace(go.Contour(
+                        x=mesh_in[0][invars.index(invar)],
+                        y=mesh_in[0][invars.index(invar_2)],
+                        z=mesh_out[0],
+                        contours_coloring='heatmap',
+                        contours_showlabels=True,
+                        coloraxis='coloraxis2',
+                        name='fit',
+                    ))
+                    fig.update_xaxes(
+                        range=[log10(min(fig.data[1]['x'])), log10(max(fig.data[1]['x']))] if invar1_log == ['log']
+                        else [min(fig.data[1]['x']), max(fig.data[1]['x'])])
+                    fig.update_yaxes(
+                        range=[log10(min(fig.data[1]['y'])), log10(max(fig.data[1]['y']))] if invar2_log == ['log']
+                        else [min(fig.data[1]['y']), max(fig.data[1]['y'])])
+                    fig.update_layout(xaxis_title=invar,
+                                      yaxis_title=invar_2,
+                                      coloraxis2=dict(colorbar=dict(title=outvar),
+                                                      colorscale='solar',
+                                                      cmin=min(fig.data[1]['z']),
+                                                      cmax=max(fig.data[1]['z'])))
+                else:
+                    fig.update_layout(title="y-data is constant, no contour-plot possible")
+            else:
+                fig.update_layout(title="x-data is constant, no contour-plot possible")
         elif graph_type == '3D':
             fig = go.Figure(
                 data=go.Scatter3d(
