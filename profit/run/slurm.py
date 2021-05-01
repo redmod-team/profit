@@ -89,7 +89,7 @@ class SlurmRunner(Runner):
                 self.del_run(run_id)
         # poll the slurm scheduler to check for crashed runs
         if poll:
-            acct = subprocess.run(['sacct', f'--name={self.config["job-name"]}', '--brief', '--parsable2'],
+            acct = subprocess.run(['sacct', f'--name={self.config["options"]["job-name"]}', '--brief', '--parsable2'],
                                   capture_output=True, text=True, check=True)
             lookup = {job: run for run, job in self.runs.items()}
             for line in acct.stdout.split('\n'):
@@ -104,9 +104,9 @@ class SlurmRunner(Runner):
         from re import split
         ids = set()
         for run_id in self.runs:
-            ids.add(split(r'[_.]', run_id))
-        for run_id in ids:
-            subprocess.run(['scancel', run_id])
+            ids.add(split(r'[_.]', self.runs[run_id])[0])
+        for job_id in ids:
+            subprocess.run(['scancel', job_id])
         self.runs = {}
 
     def del_run(self, run_id: int):
