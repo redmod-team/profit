@@ -224,13 +224,14 @@ class Worker:
         return cls._registry[item]
 
     def run(self):
-        self.logger.debug('run')
         kwargs = {}
         if self.config['stdout'] is not None:
             kwargs['stdout'] = open(self.config['stdout'], 'w')
         if self.config['stderr'] is not None:
             kwargs['stderr'] = open(self.config['stderr'], 'w')
-        subprocess.run(self.config['command'], shell=True, text=True, **kwargs)
+        self.logger.debug(f"run `{self.config['command']}` {kwargs if kwargs != {} else ''}")
+        cp = subprocess.run(self.config['command'], shell=True, text=True, **kwargs)
+        self.logger.debug(f"run returned {cp.returncode}")
 
     def main(self):
         self.pre(self.interface.input, self.run_dir)
