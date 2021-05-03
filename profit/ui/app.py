@@ -4,7 +4,7 @@ import dash_core_components as dcc
 import dash_html_components as html
 import plotly.graph_objs as go
 from dash.dependencies import Input, Output, State, MATCH, ALL
-from math import log10, floor
+from math import log10
 import numpy as np
 from profit.util import load
 from profit.sur import Surrogate
@@ -13,9 +13,8 @@ from matplotlib.colors import to_hex as color2hex
 
 def init_app(config):
     external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
-    external_scripts = ['https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js?config=TeX-MML-AM_CHTML']
 
-    app = dash.Dash(__name__, external_stylesheets=external_stylesheets, external_scripts=external_scripts)
+    app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
     server = app.server
     app.config.suppress_callback_exceptions = False
 
@@ -46,6 +45,10 @@ def init_app(config):
     input_div_sty = {'height': 40}
     input_sty = {'width': 125}
 
+    try:
+        sur = Surrogate.load_model(config['fit']['save'])  # load surrogate
+    except AttributeError:
+        print('Model could not be loaded')
 
     app.layout = html.Div(children=[
         html.Table(children=[html.Tr(children=[
@@ -141,11 +144,11 @@ def init_app(config):
                 ]),
                 html.Div(id='fit-number-div', style=axis_options_div_style, children=[
                     html.B("#fits:", style=fit_opt_txt_sty),
-                    dcc.Input(id='fit-number', type='number', value=1, min=1, debounce=True),
+                    dcc.Input(id='fit-number', type='number', value=1, min=1),
                 ]),
                 html.Div(id='fit-conf-div', style=axis_options_div_style, children=[
                     html.B("\u03c3-confidence:", style=fit_opt_txt_sty),
-                    dcc.Input(id='fit-conf', type='number', value=2, min=0, debounce=True),
+                    dcc.Input(id='fit-conf', type='number', value=2, min=0),
                 ]),
                 html.Div(id='fit-noise-div', style=axis_options_div_style, children=[
                     dcc.Checklist(
@@ -179,7 +182,7 @@ def init_app(config):
                 ]),
                 html.Div(id='fit-sampling-div', style=axis_options_div_style, children=[
                     html.B("#points:", style=fit_opt_txt_sty),
-                    dcc.Input(id='fit-sampling', type='number', value=50, min=1, debounce=True),
+                    dcc.Input(id='fit-sampling', type='number', value=50, min=1, debounce=True, style={'appearance': 'textfield'}),
                 ]),
             ]),
             html.Td(id='graph', style={'width': '80%'}, children=[html.Div(dcc.Graph(id='graph1'))]),
@@ -300,12 +303,12 @@ def init_app(config):
             new_slider = html.Div(id={'type': 'dyn-slider', 'index': ind}, style=input_div_sty, children=[
                 create_slider(txt)], )
             new_range = html.Div(id={'type': 'dyn-range', 'index': ind}, style=input_div_sty, children=[
-                dcc.Input(id={'type': 'param-range-min', 'index': ind}, type='number', debounce=True, style=input_sty),
-                dcc.Input(id={'type': 'param-range-max', 'index': ind}, type='number', debounce=True, style=input_sty),
+                dcc.Input(id={'type': 'param-range-min', 'index': ind}, type='number', debounce=True, style={**input_sty, 'appearance': 'textfield'}),
+                dcc.Input(id={'type': 'param-range-max', 'index': ind}, type='number', debounce=True, style={**input_sty, 'appearance': 'textfield'}),
             ], )
             new_center = html.Div(id={'type': 'dyn-center', 'index': ind}, style=input_div_sty, children=[
-                dcc.Input(id={'type': 'param-center', 'index': ind}, type='number', debounce=True, style=input_sty),
-                dcc.Input(id={'type': 'param-span', 'index': ind}, type='number', debounce=True, style=input_sty),
+                dcc.Input(id={'type': 'param-center', 'index': ind}, type='number', debounce=True, style={**input_sty, 'appearance': 'textfield'}),
+                dcc.Input(id={'type': 'param-span', 'index': ind}, type='number', debounce=True, style={**input_sty, 'appearance': 'textfield'}),
             ], )
             new_active = html.Div(id={'type': 'dyn-active', 'index': ind},
                                   style={**input_div_sty, 'text-align': 'center'},
@@ -315,7 +318,7 @@ def init_app(config):
                                                     value=['act'], )
                                   ])
             new_dig = html.Div(id={'type': 'dyn-dig', 'index': ind}, children=[
-                dcc.Input(id={'type': 'param-dig', 'index': ind}, type='number', value=5, debounce=True, min=0, style={'width':100})
+                dcc.Input(id={'type': 'param-dig', 'index': ind}, type='number', value=5, min=0, style={'width':100})
             ])
             new_reset = html.Div(id={'type': 'dyn-reset', 'index': ind}, children=[
                 html.Button("reset", id={'type': 'param-reset', 'index': ind}, n_clicks=0)
@@ -848,7 +851,6 @@ def init_app(config):
                     fit_params[invars.index(ax_in)] = np.linspace(ax_min, ax_max, num_samples)
             grid = np.meshgrid(*fit_params) # generate grid
             x_pred = np.vstack([g.flatten() for g in grid]).T  # extract vector for predict
-            sur = Surrogate.load_model(config['fit']['save']) # load surrogate
             fit_data, fit_var = sur.predict(x_pred, add_noise_var == ['add']) # generate fit data an variance
             # generated data
             new_mesh_in = np.array([[grid[invars.index(invar)].flatten() for invar in invars]])
