@@ -45,10 +45,12 @@ def init_app(config):
     input_div_sty = {'height': 40}
     input_sty = {'width': 125}
 
+    # try to load model with 'save' and 'fit' config option
+    path = config['fit']['save'] or config['fit']['load']
     try:
-        sur = Surrogate.load_model(config['fit']['save'])  # load surrogate
-    except AttributeError:
-        print('Model could not be loaded')
+        sur = Surrogate.load_model(path)
+    except (TypeError, FileNotFoundError):
+            print('Model could not be loaded')
 
     app.layout = html.Div(children=[
         html.Table(children=[html.Tr(children=[
@@ -107,7 +109,8 @@ def init_app(config):
                     dcc.Checklist(
                         id='color-use',
                         options=[{'label': '', 'value': 'true'}],
-                        style={'width': check_txt_width}, ),
+                        style={'width': check_txt_width},
+                        value=['true'], ),
                     dcc.Dropdown(
                         id='color-dropdown',
                         options=[{'label': 'OUTPUT', 'value': 'OUTPUT'}] + dd_opts_in + dd_opts_out,
