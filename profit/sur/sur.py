@@ -29,29 +29,30 @@ class Surrogate(ABC):
             Vector output is supported for independent variables only.
         ndim (int): Dimension of input data.
         output_ndim (int): Dimension of output data.
-        multi_output (bool): If a multi-output fit is desired. If False, the excess output dimensions are used as
-            independent supporting points.
+        multi_output (bool): True, if more than one output variable is defined in the
+            config file. If False, excess output dimensions are used as independent supporting points.
 
     Default parameters:
         surrogate: GPy
-        save: False
+        save: ./model_{surrogate_label}.hdf5
         load: False
-        multi_output: False
+        fixed_sigma_n: False
     """
 
     _surrogates = {}  # All surrogates are registered here
     _defaults = {'surrogate': 'GPy',  # Default surrogate configuration parameters
-                 'save': False, 'load': False,
-                 'multi_output': False}
+                 'save': './model.hdf5',
+                 'load': False,
+                 'fixed_sigma_n': False}
 
     def __init__(self):
         self.trained = False
         self.fixed_sigma_n = False
-        self.multi_output = False
+        self.multi_output = False  # Inferred from output variables in config.
 
         self.Xtrain = None
         self.ytrain = None
-        self.ndim = None
+        self.ndim = None  # TODO: Consistency between len(base_config['input']) and self.Xtrain.shape[-1]
         self.output_ndim = 1
 
     @abstractmethod
@@ -88,6 +89,7 @@ class Surrogate(ABC):
     @abstractmethod
     def save_model(self, path):
         """Saves the surrogate to a file. The file format can vary between surrogates.
+        As default, the surrogate is saved to 'base_dir/model_{surrogate_label}.hdf5'.
 
         Parameters:
             path (str): Path including the file name, where the model should be saved.
@@ -120,6 +122,7 @@ class Surrogate(ABC):
             base_config (dict): The whole configuration parameters.
         """
         child = cls[config['surrogate']]
+
         if config.get('load'):
             from os.path import isfile
             if isfile(config['load']):
@@ -127,11 +130,21 @@ class Surrogate(ABC):
             else:
                 file = f'_{child.get_label()}.'.join(config['load'].split('.'))
                 return child.load_model(file)
-        return child.from_config(config, base_config)
+        else:
+            child_instance = child.from_config(config, base_config)
+            # Set global attributes
+            child_instance.ndim = len(base_config['input'])
+            child_instance.output_ndim = len(base_config['output'])
+            child_instance.multi_output = len(base_config['output']) > 1
+            child_instance.fixed_sigma_n = config['fixed_sigma_n']
+        return child_instance
 
     @classmethod
     def handle_config(cls, config, base_config):
         """Fills the configuration parameters with defaults, if not existent, and delegates to child.
+
+        If saving or loading is enabled, the class label is included in the filename to identify the
+        surrogate class. Relative paths are referenced to the base directory.
 
         Parameters:
             config (dict): Only the 'fit' part of the base_config.
@@ -140,6 +153,14 @@ class Surrogate(ABC):
         for key, default in cls._defaults.items():
             if key not in config:
                 config[key] = default
+
+        for mode in ('save', 'load'):
+            if config.get(mode):
+                from os.path import abspath, join
+                config[mode] = abspath(join(base_config['base_dir'], config[mode]))
+                if config['surrogate'] not in config[mode]:
+                    filepath = config[mode].rsplit('.', 1)
+                    config[mode] = ''.join(filepath[:-1]) + f'_{config["surrogate"]}.' + filepath[-1]
         Surrogate[config['surrogate']].handle_subconfig(config, base_config)
 
     @classmethod

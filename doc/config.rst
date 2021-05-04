@@ -271,6 +271,7 @@ The following gives an overview of all possible parameters
             :default: inferred from training data
 
             | Set the initial length scale.
+            | If a list of floats is given, the entries correspond to the length scale in each input dimension.
 
         .. confval:: sigma_f
             :type: float
@@ -289,13 +290,6 @@ The following gives an overview of all possible parameters
         :default: ``false``
 
         | Whether the noise sigma_n should be kept fixed during optimization.
-
-    .. confval:: multi_output
-        :type: boolean
-        :default: ``false``
-
-        | Whether an n-D simulation output is interpreted as scalar output with n independent supporting points
-          or a coregionalized fit should be executed for all output dimensions.
 
     .. confval:: save
         :type: path
@@ -365,19 +359,28 @@ The variables can also be declared directly as strings. E.g:
 Possible variable distributions
 -------------------------------
 
+* Constant:
+    | Simple constant value.
 * Uniform:
-    Uniform distribution
+    | Uniform distribution
+    | Arguments: (start=0, end=1)
 * LogUniform
-    Log10 uniform distribution
+    | Log10 uniform distribution
+    | Arguments: (start=1e-6, end=1)
 * Normal
-    Normal distribution with 'mu' and 'sigma' as range.
+    | Gaussian distribution
+    | Arguments: (mu=0, sigma=1)
 * Halton
-    Halton sequence with 'size' as range.
+    | Quasi-random, space-filling Halton sequence
+    | Arguments: (start=0, end=1)
 * Linear
-    Linear with (start, end, step) as range.
+    | Linspace
+    | Arguments: (start=0, end=1, step=1)
 * Independent
-    Like linear.
+    | Like linear but used if the output is a function of an independent variable.
 * Output
-    Also several outputs are possible.
+    | Output variable. Also several outputs are possible.
+    | Optional argument: Independent
+    | E.g. f(t)
 * ActiveLearning
-    Initialized as NaN and filled during training.
+    | Initialized as NaN and filled during training.

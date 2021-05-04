@@ -14,7 +14,7 @@ def uniform(start=0, end=1, size=None):
     return check_ndim(start + np.random.random(size) * (end - start))
 
 
-def loguniform(start=0, end=1, size=None):
+def loguniform(start=1e-6, end=1, size=None):
     return check_ndim(start * np.exp((np.log(end) - np.log(start)) * np.random.random(size)))
 
 

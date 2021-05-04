@@ -50,7 +50,6 @@ class GaussianProcess(Surrogate, ABC):
     Default parameters:
         surrogate: GPy
         kernel: RBF
-        fixed_sigma_n: False
 
     Default hyperparameters:
         $l$ ... length scale
@@ -66,9 +65,8 @@ class GaussianProcess(Surrogate, ABC):
         $$
     """
 
-    _defaults = {'surrogate': 'GPy',  # Default parameters for all GP surrogates
+    _defaults = {'surrogate': Surrogate._defaults['surrogate'],  # Default parameters for all GP surrogates
                  'kernel': 'RBF',
-                 'fixed_sigma_n': False,
                  'hyperparameters': {'length_scale': None,  # Hyperparameters are inferred from training data
                                      'sigma_n': None,
                                      'sigma_f': None}}
@@ -206,8 +204,6 @@ class GaussianProcess(Surrogate, ABC):
         self = cls()
         self.kernel = config['kernel']
         self.hyperparameters = config['hyperparameters']
-        self.fixed_sigma_n = config['fixed_sigma_n']
-        self.multi_output = config['multi_output']
         return self
 
     @classmethod
@@ -215,8 +211,6 @@ class GaussianProcess(Surrogate, ABC):
         """Sets default parameters if not existent.
 
         Does this recursively for each element of the hyperparameter dict.
-        If saving is enabled, the class label in the save_model filename is included to identify the surrogate
-        when loaded.
 
         Parameters:
             config (dict): Only the 'fit' part of the base_config.
@@ -231,10 +225,6 @@ class GaussianProcess(Surrogate, ABC):
                     for kkey, ddefault in default.items():
                         if kkey not in config[key]:
                             config[key][kkey] = ddefault
-
-        if config.get('save') and cls.get_label() not in config.get('save'):
-            filepath = config['save'].split('.')
-            config['save'] = ''.join(filepath[:-1]) + f'_{cls.get_label()}.' + filepath[-1]
 
     @abstractmethod
     def select_kernel(self, kernel):
@@ -693,7 +683,6 @@ class SklearnGPSurrogate(GaussianProcess):
     Attributes:
         model (sklearn.gaussian_process.GaussianProcessRegressor): Model object of Sklearn.
     """
-    from sklearn.gaussian_process import kernels as sklearn_kernels
 
     def __init__(self):
         super().__init__()
@@ -701,7 +690,7 @@ class SklearnGPSurrogate(GaussianProcess):
 
     def train(self, X, y, kernel=None, hyperparameters=None, fixed_sigma_n=False, return_hess_inv=False,
               multi_output=False):
-        from sklearn import gaussian_process as sklearn_gp
+        from sklearn.gaussian_process import GaussianProcessRegressor
         super().prepare_train(X, y, kernel, hyperparameters, fixed_sigma_n)
 
         if self.multi_output:
@@ -710,7 +699,7 @@ class SklearnGPSurrogate(GaussianProcess):
         numeric_noise = self.hyperparameters['sigma_n'].item() ** 2 if self.fixed_sigma_n else 1e-5
 
         # Instantiate the model
-        self.model = self.sklearn_gp.GaussianProcessRegressor(kernel=self.kernel, alpha=numeric_noise)
+        self.model = GaussianProcessRegressor(kernel=self.kernel, alpha=numeric_noise)
 
         # Train the model
         self.model.fit(self.Xtrain, self.ytrain)
@@ -833,9 +822,9 @@ class SklearnGPSurrogate(GaussianProcess):
             kernel = eval(''.join(kernel))
 
         # Add scale and noise to kernel
-        kernel *= self.sklearn_kernels.ConstantKernel(constant_value=1/self.hyperparameters['sigma_f'].item() ** 2)
+        kernel *= sklearn_kernels.ConstantKernel(constant_value=1/self.hyperparameters['sigma_f'].item() ** 2)
         if not self.fixed_sigma_n:
-            kernel += self.sklearn_kernels.WhiteKernel(noise_level=self.hyperparameters['sigma_n'].item() ** 2)
+            kernel += sklearn_kernels.WhiteKernel(noise_level=self.hyperparameters['sigma_n'].item() ** 2)
 
         return kernel
 
