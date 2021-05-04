@@ -16,13 +16,6 @@ from profit.run import Runner
 yes = False  # always answer 'y'
 
 
-def fit(x, y):
-    from profit.sur.gp import GPySurrogate
-    fresp = GPySurrogate()
-    fresp.train(x, y)
-    return fresp
-
-
 def fill_uq(self, krun, content):
     params_fill = SafeDict()
     kp = 0

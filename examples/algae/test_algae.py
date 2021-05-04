@@ -10,7 +10,7 @@ import os
 from collections import OrderedDict
 from chaospy import J, generate_quadrature, orth_ttr, fit_quadrature, E, Std, descriptives, Normal
 
-from profit.sur.gp import GPFlowSurrogate
+from profit.sur.gaussian_process import GPySurrogate
 
 import pickle
 
@@ -97,7 +97,7 @@ plt.show()
 xtrain = 1.0*np.repeat(np.arange(nx), ns).reshape([ntrain, 1])
 ytrain = y.reshape([ntrain, 1])
 #%%
-sur = GPFlowSurrogate()
+sur = GPySurrogate()
 sur.train(xtrain, ytrain)
 
 #%%
