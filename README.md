@@ -1,5 +1,8 @@
 [![DOI](https://zenodo.org/badge/168945305.svg)](https://zenodo.org/badge/latestdoi/168945305)
+
 [![Documentation Status](https://readthedocs.org/projects/profit/badge/?version=latest)](https://profit.readthedocs.io/en/latest/?badge=latest)
+[![Python package](https://github.com/redmod-team/profit/actions/workflows/python-package.yml/badge.svg?)](https://github.com/redmod-team/profit/actions/workflows/python-package.yml)
+[![Publish Releases to PyPI](https://github.com/redmod-team/profit/actions/workflows/publish-to-pypi.yml/badge.svg)](https://github.com/redmod-team/profit/actions/workflows/publish-to-pypi.yml)
 
 <img src="https://raw.githubusercontent.com/redmod-team/profit/master/logo.png" width="208.5px">
 
