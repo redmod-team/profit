@@ -67,18 +67,15 @@ proFit is still in development. There is currently no stable release. It is plan
 publish them on *PyPi*.
 
 proFit uses the new build system, as specified by PEP 517. The build system is defined in `pyproject.toml` and uses the 
-default `setuptools` and `wheels`. Package 
-metadata and requirements are specified in `setup.cfg`. Building the *fortran* backend requires a 
-`setup.py` and `numpy` installed during the build process.
+default `setuptools` and `wheels`.
+Package metadata and requirements are specified in `setup.cfg`. Building the *fortran* backend requires a 
+`setup.py` file and `numpy` installed during the build process.
 
-To upload a new version to *PyPi*, follow this [guide](https://packaging.python.org/tutorials/packaging-projects/). In 
-the process you will require the packages `build` and `twine`.
-
-When a new version is tagged, update the corresponding number in the toplevel `__init__.py`. The package metadata reads
-this variable.
+Upon publishing a new release in *GitHub*, a workflow should automatically upload the package to *PyPI*.
+To create a release manually follow this [guide](https://packaging.python.org/tutorials/packaging-projects/)
 
 ## Testing
-proFit uses `pytest` for automatic testing. A pull request on github triggers automatic testing with the supported
+proFit uses `pytest` for automatic testing. A pull request on *GitHub* triggers automatic testing with the supported
 python versions. 
 
 ## Coding
