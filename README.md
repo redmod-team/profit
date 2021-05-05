@@ -1,7 +1,7 @@
 [![DOI](https://zenodo.org/badge/168945305.svg)](https://zenodo.org/badge/latestdoi/168945305)
 [![Documentation Status](https://readthedocs.org/projects/profit/badge/?version=latest)](https://profit.readthedocs.io/en/latest/?badge=latest)
 
-<img src="logo.png" width="208.5px">
+<img src="https://raw.githubusercontent.com/redmod-team/profit/master/logo.png" width="208.5px">
 
 ## Probabilistic Response Model Fitting with Interactive Tools
 
