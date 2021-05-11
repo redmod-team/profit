@@ -97,6 +97,7 @@ class GaussianProcess(Surrogate, ABC):
 
         self.Xtrain = np.atleast_2d(X)
         self.ytrain = np.atleast_2d(y)
+        self.encode_training_data()
         self.ndim = self.Xtrain.shape[-1]
         self.multi_output = self.multi_output or multi_output
         self.output_ndim = self.ytrain.shape[-1] if self.multi_output else 1
@@ -162,6 +163,7 @@ class GaussianProcess(Surrogate, ABC):
         if Xpred is None:
             Xpred = self.default_Xpred()
         Xpred = np.atleast_2d(Xpred)
+        Xpred = self.encode_predict_data(Xpred)
         return Xpred
 
     @abstractmethod
@@ -316,17 +318,23 @@ class GPSurrogate(GaussianProcess):
         """
 
         super().prepare_train(X, y, kernel, hyperparameters, fixed_sigma_n)
+        if self.encoder:
+            print("For now, encoding is not supported for this surrogate. The model is created without encoding.")
+            self.decode_training_data()
 
         if self.multi_output:
             raise NotImplementedError("Multi-Output is not implemented for this surrogate.")
 
         # Find best hyperparameters
         self.optimize(fixed_sigma_n=self.fixed_sigma_n, eval_gradient=eval_gradient, return_hess_inv=return_hess_inv)
-        self.print_hyperparameters("Optimized")
         self.trained = True
 
     def predict(self, Xpred, add_data_variance=True):
         Xpred = super().prepare_predict(Xpred)
+        # Encoding is not supported yet for this surrogate.
+        for enc in self.encoder[::-1]:
+            if not enc.output:
+                Xpred = enc.decode(Xpred)
 
         # Skip data noise sigma_n in hyperparameters
         prediction_hyperparameters = {key: value for key, value in self.hyperparameters.items() if key != 'sigma_n'}
@@ -472,6 +480,7 @@ class GPSurrogate(GaussianProcess):
         self.hyperparameters['sigma_f'] = np.atleast_1d(opt_hyperparameters[last_idx])
         if not self.fixed_sigma_n:
             self.hyperparameters['sigma_n'] = np.atleast_1d(opt_hyperparameters[-1])
+        self.print_hyperparameters("Optimized")
 
 
 @Surrogate.register('GPy')
@@ -507,6 +516,7 @@ class GPySurrogate(GaussianProcess):
         self._set_hyperparameters_from_model()
         self.print_hyperparameters("Optimized")
         self.trained = True
+        self.decode_training_data()
 
     def add_training_data(self, X, y):
         """Adds training points to the existing dataset.
@@ -533,6 +543,7 @@ class GPySurrogate(GaussianProcess):
                 noise_dict = {'output_index': newX[:, self.ndim:].astype(int)}
                 ym, yv = self.model.predict(newX, Y_metadata=noise_dict)
                 ymean[:, d], yvar[:, d] = ym.flatten(), yv.flatten()
+        ymean, yvar = self.decode_predict_data(ymean, yvar)
         return ymean, yvar
 
     def get_marginal_variance(self, Xpred):
@@ -561,13 +572,17 @@ class GPySurrogate(GaussianProcess):
         from profit.util import save_hdf
 
         try:
-            save_hdf(path, self.model.to_dict())
+            sur_dict = {attr: getattr(self, attr) for attr in ('Xtrain', 'ytrain')}
+            sur_dict['model'] = self.model.to_dict()
+            sur_dict['encoder'] = str([enc.repr for enc in self.encoder])
+            save_hdf(path, sur_dict)
         except NotImplementedError:
             # GPy does not support to_dict method for Coregionalization kernel yet.
             from pickle import dump
             from os.path import splitext
             print("Saving to .hdf5 not implemented yet for multi-output models. Saving to .pkl file instead.")
-            dump(self.model, open(splitext(path)[0] + '.pkl', 'wb'))
+            dump([self.model, self.Xtrain, self.ytrain, str([enc.repr for enc in self.encoder])],
+                 open(splitext(path)[0] + '.pkl', 'wb'))
 
     @classmethod
     def load_model(cls, path):
@@ -582,23 +597,29 @@ class GPySurrogate(GaussianProcess):
         """
 
         from profit.util import load
+        from .encoders import Encoder
         from GPy import models
 
         self = cls()
         try:
-            model_dict = load(path, as_type='dict')
-            self.model = models.GPRegression.from_dict(model_dict)
-            self.Xtrain = self.model.X
-            self.ytrain = self.model.Y
+            sur_dict = load(path, as_type='dict')
+            self.model = models.GPRegression.from_dict(sur_dict['model'])
+            self.Xtrain = sur_dict['Xtrain']
+            self.ytrain = sur_dict['ytrain']
+            self.encoder = [Encoder(func, cols, out) for func, cols, out in eval(sur_dict['encoder'])]
         except (OSError, FileNotFoundError):
             from pickle import load as pload
             from os.path import splitext
             # Load multi-output model from pickle file
-            self.model = pload(open(splitext(path)[0] + '.pkl', 'rb'))
+            print("File {} not found. Trying to find a .pkl file with multi-output instead.".format(path))
+            self.model, self.Xtrain, self.ytrain, encoder_str = pload(open(splitext(path)[0] + '.pkl', 'rb'))
+            self.encoder = [Encoder(func, cols, out) for func, cols, out in eval(encoder_str)]
             self.output_ndim = int(max(self.model.X[:, -1])) + 1
-            self.Xtrain = self.model.X[:len(self.model.X) // self.output_ndim, :-1]
-            self.ytrain = self.model.Y.reshape(-1, self.output_ndim, order='F')
             self.multi_output = True
+
+        # Initialize the encoder by encoding and decoding the training data once.
+        self.encode_training_data()
+        self.decode_training_data()
 
         self.kernel = self.model.kern
         self._set_hyperparameters_from_model()
@@ -710,6 +731,7 @@ class SklearnGPSurrogate(GaussianProcess):
         self.print_hyperparameters("Optimized")
 
         self.trained = True
+        self.decode_training_data()
 
     def add_training_data(self, X, y):
         """Add training points to existing data.
@@ -728,6 +750,7 @@ class SklearnGPSurrogate(GaussianProcess):
         yvar = ystd.reshape(-1, 1)**2
         if add_data_variance:
             yvar = yvar + self.hyperparameters['sigma_n'] ** 2
+        ymean, yvar = self.decode_predict_data(ymean, yvar)
         return ymean, yvar
 
     def get_marginal_variance(self, Xpred):
