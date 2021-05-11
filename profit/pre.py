@@ -76,20 +76,28 @@ def fill_template(out_dir, params, param_files=None):
 
 
 def fill_template_file(template_filepath, output_filepath, params, copy_link=True):
+    """ Fill template in `template_filepath` by `params` and output into
+    `output_filepath`. If `copy_link` is set (default), do not write into
+    symbolic links but copy them instead.
+    """
     with open(template_filepath, 'r') as f:
-        content = f.read()
-        # Escape '{*}' for e.g. json templates by replacing it with '{{*}}'.
-        # Variables then have to be declared as '{{*}}' which is replaced by a single '{*}'.
-        pre, post = '{', '}'
-        if '{{' in content:
-            content = content.replace('{{', '§').replace('}}', '§§') \
-                .replace('{', '{{').replace('}', '}}').replace('§§', '}').replace('§', '{')
-            pre, post = '{{', '}}'
-        content = content.format_map(util.SafeDict.from_params(params, pre=pre, post=post))
+        content = replace_template(f.read(), params)
     if copy_link and os.path.islink(output_filepath):
         os.remove(output_filepath)  # otherwise the link target would be substituted
     with open(output_filepath, 'w') as f:
         f.write(content)
+
+
+def replace_template(content, params):
+    """ Returns filled template by putting values of `params` in `content`."""
+    # Escape '{*}' for e.g. json templates by replacing it with '{{*}}'.
+    # Variables then have to be declared as '{{*}}' which is replaced by a single '{*}'.
+    pre, post = '{', '}'
+    if '{{' in content:
+        content = content.replace('{{', '§').replace('}}', '§§') \
+            .replace('{', '{{').replace('}', '}}').replace('§§', '}').replace('§', '{')
+        pre, post = '{{', '}}'
+    return content.format_map(util.SafeDict.from_params(params, pre=pre, post=post))
 
 
 def get_eval_points(config):
