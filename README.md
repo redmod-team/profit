@@ -15,7 +15,7 @@ order response models over input parameter space.
 proFit can be fed with a number of data points consisting of different 
 input parameter combinations and the resulting output of the model under 
 investigation. It then fits a response "surface" through the point cloud.
-This probablistic response model allows to predict ("interpolate") the output 
+This probabilistic response model allows to predict ("interpolate") the output 
 at yet unexplored parameter combinations including uncertainty estimates. 
 It can also tell you where to put more training points to gain maximum new 
 information (experimental design) and automatically generate and start
@@ -39,8 +39,17 @@ The web frontend is based on [plotly/dash](https://github.com/plotly/dash).
 
 ## Installation
 
-Currently the code is under heavy development so it should be cloned 
-from GitHub via Git and pulled regularily. 
+Currently, the code is under heavy development, so it should be cloned 
+from GitHub via Git and pulled regularly.
+
+### Requirements
+```bash
+sudo apt install python3-dev build-essential
+```
+To enable compilation of the fortran modules the following is needed:
+```bash
+sudo apt install gfortran
+```
 
 ### Dependencies
 * numpy, scipy, matplotlib, sympy, pandas
@@ -57,13 +66,26 @@ All dependencies are configured in `setup.cfg` and should be installed automatic
 
 Automatic tests use `pytest`.
 
-### Windows
-To install proFit under Windows it is recommended to use the *Windows Subsystem for Linux (WSL2)* (see `INSTALL.md` 
-for an example).
+### Windows 10
+To install proFit under Windows 10 we recommend using *Windows Subsystem 
+for Linux (WSL2)* with the Ubuntu 20.04 LTS distribution ([install guide](https://docs.microsoft.com/en-us/windows/wsl/install-win10)).
+
+After the installation of WSL2 execute the following steps in your Linux terminal (when asked press `y` to continue):
+
+1. Make sure you have the right version of Python installed and the basic developer toolset available
+   ```bash
+   sudo apt update
+   sudo apt install python3 python3-pip python3-dev build-essential
+   ```
+
+2. To install proFit from Git, make sure that the project is located in the Linux file system
+not the Windows system, and follow the steps in the next section.
+
+To configure the Python interpreter available in your Linux distribution in pycharm
+(tested with professional edition) follow this [guide](https://www.jetbrains.com/help/pycharm/using-wsl-as-a-remote-interpreter.html).
 
 ### Installation from Git
 To install proFit for the current user (`--user`) in development-mode (`-e`) use:
-
 ```bash
 git clone https://github.com/redmod-team/profit.git
 cd profit
@@ -71,9 +93,20 @@ pip install -e . --user
 ```
 
 ### Fortran
-Certain surrogates require a compiled fortran backend. To enable compilation of the fortran modules during install:
+Certain surrogates require a compiled Fortran backend. To enable compilation of the fortran modules during install:
 
     USE_FORTRAN=1 pip install .
+
+### Troubleshooting installation problems
+1. Make sure you have all the requirements mentioned above installed.
+
+2. If `pip` is not recognized try the following:
+```bash
+python3 -m pip install -e . --user
+```
+3. If pip warns you about PATH or proFit is not found close and reopen the terminal 
+   and type `profit --help` to check if the installation was successful.
+
 
 ### Documentation using *Sphinx*
 Install requirements for building the documentation using `sphinx`
