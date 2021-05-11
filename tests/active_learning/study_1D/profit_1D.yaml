@@ -17,7 +17,10 @@ files:
     input: input_1D.hdf5
     output: output_1D.hdf5
 
+fit:
+    surrogate: Custom
+    save: model_1D.hdf5
+
 active_learning:
     nrand: 3
     Xpred: [[0, 1, 0.01]]
-    save: model_1D.hdf5

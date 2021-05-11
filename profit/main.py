@@ -77,8 +77,8 @@ def main():
             al = ActiveLearning.from_config(runner, config['active_learning'], config)
             al.run_first()
             al.learn()
-            if config['active_learning'].get('save'):
-                al.save(config['active_learning']['save'])
+            if config['fit'].get('save'):
+                al.save(config['fit']['save'])
         else:
             params_array = [row[0] for row in eval_points]
             runner.spawn_array(tqdm(params_array), blocking=True)

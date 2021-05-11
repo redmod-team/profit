@@ -26,7 +26,6 @@ def chdir_pytest():
 
 
 # Allow a large range of parameters, just ensure that it is approximately at the same scale
-NLL_ATOL = 1e3
 PARAM_RTOL = 2
 TIMEOUT = 30  # seconds
 
@@ -51,17 +50,16 @@ def test_1D():
 
     config_file = 'study_1D/profit_1D.yaml'
     config = Config.from_file(config_file)
-    model_file = './study_1D/model_1D.hdf5'
+    model_file = './study_1D/model_1D_Custom.hdf5'
     try:
         run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
-        run(f"profit fit {config_file}", shell=True, timeout=TIMEOUT)
         sur = Surrogate.load_model(model_file)
-        assert sur.get_label() == 'GPy'
+        assert sur.get_label() == 'Custom'
         assert sur.trained
-        assert sur.model.kern.name == 'rbf'
-        assert allclose(sur.model.likelihood.variance[0], 4.809421284738159e-11, atol=NLL_ATOL)
-        assert allclose(sur.model.kern.variance[0], 1.6945780226638725, rtol=PARAM_RTOL)
-        assert allclose(sur.model.kern.lengthscale, 0.22392982500520792, rtol=PARAM_RTOL)
+        assert sur.kernel.__name__ == 'RBF'
+        assert allclose(sur.hyperparameters['length_scale'], 0.15975022, rtol=PARAM_RTOL)
+        assert allclose(sur.hyperparameters['sigma_f'], 0.91133526, rtol=PARAM_RTOL)
+        assert allclose(sur.hyperparameters['sigma_n'], 0.00014507, rtol=PARAM_RTOL)
     finally:
         clean(config)
         if path.exists(model_file):
@@ -73,18 +71,17 @@ def test_2D():
 
     config_file = 'study_2D/profit_2D.yaml'
     config = Config.from_file(config_file)
-    model_file = './study_2D/model_2D.hdf5'
+    model_file = './study_2D/model_2D_Custom.hdf5'
     try:
         run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
-        run(f"profit fit {config_file}", shell=True, timeout=TIMEOUT)
         sur = Surrogate.load_model(model_file)
-        assert sur.get_label() == 'GPy'
+        assert sur.get_label() == 'Custom'
         assert sur.trained
-        assert sur.model.kern.name == 'rbf'
-        assert sur.model.kern.input_dim == 2
-        assert allclose(sur.model.likelihood.variance[0], 2.657441549034709e-08, atol=NLL_ATOL)
-        assert allclose(sur.model.kern.variance[0], 270.2197671669302, rtol=PARAM_RTOL)
-        assert allclose(sur.model.kern.lengthscale[0], 1.079943283873971, rtol=PARAM_RTOL)
+        assert sur.kernel.__name__ == 'RBF'
+        assert sur.ndim == 2
+        assert allclose(sur.hyperparameters['length_scale'], 0.96472754, rtol=PARAM_RTOL)
+        assert allclose(sur.hyperparameters['sigma_f'], 15.02288291, rtol=PARAM_RTOL)
+        assert allclose(sur.hyperparameters['sigma_n'], 8.83125694e-06, rtol=PARAM_RTOL)
     finally:
         clean(config)
         if path.exists(model_file):
