@@ -86,12 +86,12 @@ class LocalRunner(Runner):
     def handle_config(cls, config, base_config):
         """
         class: local
-        parallel: 1     # maximum number of simultaneous runs (for spawn array)
+        parallel: all   # maximum number of simultaneous runs (for spawn array)
         sleep: 0        # number of seconds to sleep while polling
         fork: true      # whether to spawn the (non-custom) worker via forking instead of a subprocess (via a shell)
         """
-        if 'parallel' not in config:
-            config['parallel'] = 1
+        if 'parallel' not in config or config['parallel'] == 'all':
+            config['parallel'] = os.cpu_count()
         if 'sleep' not in config:
             config['sleep'] = 0
         if 'fork' not in config:
