@@ -243,29 +243,39 @@ class JSONPostprocessor(Postprocessor):
 @Postprocessor.register('numpytxt')
 class NumpytxtPostprocessor(Postprocessor):
     def post(self, data):
+        dtype = [(name, float, data.dtype[name].shape if name in data.dtype.names else ())
+                 for name in self.config['names']]
         try:
-            raw = np.loadtxt(self.config['path'])
+            raw = np.genfromtxt(self.config['path'], dtype=dtype, **self.config['options'])
         except OSError:
             self.logger.error(f'output file {self.config["path"]} not found')
             self.logger.info(f'cwd = {os.getcwd()}')
             dirname = os.path.dirname(self.config['path']) or '.'
             self.logger.info(f'ls {dirname} = {os.listdir(dirname)}')
             raise
-        for k, key in enumerate(self.config['names'].split()):
+        for key in self.config['names']:
             if key in data.dtype.names:
-                data[key] = raw[k] if len(raw.shape) else raw
+                data[key] = raw[key]
 
     @classmethod
     def handle_config(cls, config, base_config):
         """
         class: numpytxt
         path: stdout    # file to read from, relative to the run directory
-        names: "f g"    # whitespace separated list of output variables in order, default read from config/variables
+        names: "f g"    # list or string of output variables in order, default read from config/variables
+        options:        # options which are passed on to numpy.genfromtxt() (fname & dtype are used internally)
+            deletechars: ""
         """
         if 'path' not in config:
             config['path'] = 'stdout'
         if 'names' not in config:
-            config['names'] = ' '.join(base_config['output'].keys())
+            config['names'] = list(base_config['output'].keys())
+        if isinstance(config['names'], str):
+            config['names'] = config['names'].split()
+        if 'options' not in config:
+            config['options'] = {}
+        if 'deletechars' not in config['options']:
+            config['options']['deletechars'] = ""
 
 
 # === HDF5 Postprocessor === #
