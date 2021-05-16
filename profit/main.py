@@ -111,7 +111,7 @@ def main():
             sur.save_model(config['fit']['save'])
         if config['fit'].get('plot'):
             try:
-                xpred = [arange(minv, maxv, step) for minv, maxv, step in config['fit']['plot'].get('xpred')]
+                xpred = [arange(minv, maxv, step) for minv, maxv, step in config['fit']['plot'].get('Xpred')]
                 xpred = hstack([xi.flatten().reshape(-1, 1) for xi in meshgrid(*xpred)])
             except AttributeError:
                 xpred = None

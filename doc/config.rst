@@ -6,6 +6,132 @@ which is either the current working directory or specified when calling profit. 
 
 The format can either be a '.yaml' or a '.py' file.
 
+Example
+-------
+
+.. code-block:: yaml
+
+    ntrain: 10
+    variables:
+        u: Halton(4.7, 5.3)
+        v: Halton(0.55, 0.6)
+        r: Independent
+        f: Output
+
+    run:
+        pre:
+            class: template
+            path: ../template_2D
+        post:
+            class: numpytxt
+            path: mockup.out
+        command: python3 mockup_2D.py
+
+    files:
+        input: input_2D.txt
+        output: output_2D.txt
+
+    fit:
+        surrogate: GPy
+        kernel: RBF
+        save: model_2D.hdf5
+        plot:
+            Xpred: [[4.5, 5.5, 0.01], [0.54, 0.61, 0.005]]
+
+
+Available options by default
+----------------------------
+
+.. list-table:: Runners
+    :widths: 25 80 25
+    :header-rows: 1
+
+    * - Label
+      - Description
+      - Status
+    * - Local
+      - Execution of local commands.
+      - Tested
+    * - Slurm
+      - For clusters with SLURM interface
+      - Tested
+    * - ZeroMQ
+      - For clusters with ZeroMQ interface
+      - Not fully tested
+
+.. list-table:: Interfaces
+    :widths: 25 80 25
+    :header-rows: 1
+
+    * - Label
+      - Description
+      - Status
+    * - Memmap
+      - Uses numpy memmap for storing run variables.
+      - Tested
+    * - ZeroMQ
+      - Specific interface for ZeroMQ cluster.
+      - Not fully tested
+
+.. list-table:: Preprocessors
+    :widths: 25 80 25
+    :header-rows: 1
+
+    * - Label
+      - Description
+      - Status
+    * - Template
+      - Variables are inserted into the template files.
+      - Tested
+
+.. list-table:: Postprocessors
+    :widths: 25 80 25
+    :header-rows: 1
+
+    * - Label
+      - Description
+      - Status
+    * - Numpytxt
+      - Reads results from a .txt file into a numpy array.
+      - Tested
+    * - JSON
+      - Reads output from a json formatted file.
+      - Tested
+    * - HDF5
+      - Reads output from an hdf5 file.
+      - Tested
+
+.. list-table:: Gaussian Process Surrogates
+    :widths: 25 80 25
+    :header-rows: 1
+
+    * - Label
+      - Description
+      - Status
+    * - GPy
+      - Good overall performance.
+      - Tested
+    * - Custom
+      - Better active learning and custom kernels, but still quite unstable.
+      - Tested
+    * - Sklearn
+      - Good overall performance, but sometimes unstable.
+      - Tested
+
+.. list-table:: Artificial Neural Network Surrogates
+    :widths: 25 80 25
+    :header-rows: 1
+
+    * - Label
+      - Description
+      - Status
+    * - ANN
+      - Standard PyTorch Surrogate.
+      - Work in progress
+    * - Autoencoder
+      - Nonlinear encoder for dimensionality reduction.
+      - Work in progress
+
 Possible parameters
 -----------------------
 
@@ -323,6 +449,13 @@ The following gives an overview of all possible parameters
         :default: 3
 
         | Number of runs with random points before active learning starts.
+
+    .. confval:: Xpred:
+            :type: list of lists of floats
+            :default: inferred from currently available training data
+
+            | Specify the range of possible next points for every dimension as [start, end, step]
+            | E.g. for a 2D input space: [[0, 1, 0.01], [0, 10, 0.1]]
 
     .. confval:: optimize_every:
         :type: boolean
