@@ -110,7 +110,7 @@ class GaussianProcess(Surrogate, ABC):
                                     'sigma_n': np.array([1e-2*np.mean(self.ytrain.max(axis=0) - self.ytrain.min(axis=0))])}
 
         # Set hyperparameters either from config, the given parameter or inferred from the training data
-        self.hyperparameters = self.hyperparameters or hyperparameters or self._defaults['hyperparameters']
+        self.hyperparameters = self.hyperparameters or hyperparameters or self._defaults['hyperparameters'].copy()
         for key, value in self.hyperparameters.items():
             if value is None:
                 value = inferred_hyperparameters[key]
@@ -643,9 +643,9 @@ class GPySurrogate(GaussianProcess):
         try:
             if not any(operator in kernel for operator in ('+', '*')):
                 return getattr(self.GPy.kern, kernel)(self.ndim,
-                                                      lengthscale=self.hyperparameters['length_scale'],
-                                                      variance=self.hyperparameters['sigma_f']**2,
-                                                      ARD=len(self.hyperparameters['length_scale']) > 1)
+                                                      lengthscale=self.hyperparameters.get('length_scale', [1]),
+                                                      variance=self.hyperparameters.get('sigma_f', 1)**2,
+                                                      ARD=len(self.hyperparameters.get('length_scale', [1])) > 1)
             else:
                 from re import split
                 full_str = split('([+*])', kernel)
@@ -654,8 +654,8 @@ class GPySurrogate(GaussianProcess):
                     kern += [key if key in ('+', '*') else
                                'self.GPy.kern.{}({}, lengthscale={}, variance={})'
                                    .format(key, self.ndim,
-                                           self.hyperparameters['length_scale'],
-                                           self.hyperparameters['sigma_f']**2)]
+                                           self.hyperparameters.get('length_scale', [1]),
+                                           self.hyperparameters.get('sigma_f', 1)**2)]
                 return eval(''.join(kern))
         except AttributeError:
             raise RuntimeError("Kernel {} is not implemented.".format(kernel))
