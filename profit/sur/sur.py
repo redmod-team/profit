@@ -29,30 +29,96 @@ class Surrogate(ABC):
             Vector output is supported for independent variables only.
         ndim (int): Dimension of input data.
         output_ndim (int): Dimension of output data.
-        multi_output (bool): If a multi-output fit is desired. If False, the excess output dimensions are used as
-            independent supporting points.
+        multi_output (bool): True, if more than one output variable is defined in the
+            config file. If False, excess output dimensions are used as independent supporting points.
+        encoder (list of profit.sur.encoders.Encoder): For now, inputs of kind 'LogUniform' are encoded with 'log10'
+            and all input and output data is normalized. Can be modified in the config file using the format
+            e.g. [['log10', [0], False], ['normalization', [0, 1], False]].
 
     Default parameters:
         surrogate: GPy
-        save: False
+        save: ./model_{surrogate_label}.hdf5
         load: False
-        multi_output: False
+        fixed_sigma_n: False
+        encoder: [['log10', [log_input_cols], False], ['normalization', [input_cols], False],
+            ['normalization', [output_cols], True]]
     """
 
     _surrogates = {}  # All surrogates are registered here
     _defaults = {'surrogate': 'GPy',  # Default surrogate configuration parameters
-                 'save': False, 'load': False,
-                 'multi_output': False}
+                 'save': './model.hdf5',
+                 'load': False,
+                 'fixed_sigma_n': False,
+                 'encoder': []}
 
     def __init__(self):
         self.trained = False
         self.fixed_sigma_n = False
-        self.multi_output = False
+        self.multi_output = False  # Inferred from output variables in config.
 
         self.Xtrain = None
         self.ytrain = None
-        self.ndim = None
+        self.ndim = None  # TODO: Consistency between len(base_config['input']) and self.Xtrain.shape[-1]
         self.output_ndim = 1
+
+        self.encoder = []
+
+    def encode_training_data(self):
+        """Encodes the input and output training data.
+        """
+        for enc in self.encoder:
+            if enc.output:
+                self.ytrain = enc.encode(self.ytrain)
+            else:
+                self.Xtrain = enc.encode(self.Xtrain)
+
+    def decode_training_data(self):
+        """Applies the decoding function of the encoder in reverse order on the input and output training data.
+        """
+        for enc in self.encoder[::-1]:
+            if enc.output:
+                self.ytrain = enc.decode(self.ytrain)
+            else:
+                self.Xtrain = enc.decode(self.Xtrain)
+
+    def encode_predict_data(self, x):
+        """Transforms the input prediction points according to the encoder used for training.
+
+        Parameters:
+            x (ndarray): Prediction input points.
+
+        Returns:
+            ndarray: Encoded and normalized prediction points.
+        """
+        for enc in self.encoder:
+            if not enc.output:
+                if enc.label == 'normalization':
+                    x[:, enc.columns] = x[:, enc.columns] / enc.variables['xmax']
+                else:
+                    x = enc.encode(x)
+        return x
+
+    def decode_predict_data(self, ym, yv):
+        """Rescales and then back-transforms the predicted output.
+
+        Parameters:
+            ym (ndarray): Predictive output.
+            yv (ndarray): Variance of predicted output.
+
+        Returns:
+            tuple: a tuple containing:
+                - ym (ndarray) Rescaled and decoded output values at the test input points.
+                - yv (ndarray): Rescaled predictive variance.
+        """
+
+        for enc in self.encoder[::-1]:
+            if enc.output:
+                if enc.label == 'normalization':
+                    ym = ym * enc.variables['xmax']
+                    yv = yv * enc.variables['xmax'] ** 2
+                else:
+                    ym = enc.decode(ym)
+        return ym, yv
 
     @abstractmethod
     def train(self, X, y, fixed_sigma_n=False, multi_output=False):
@@ -88,6 +154,7 @@ class Surrogate(ABC):
     @abstractmethod
     def save_model(self, path):
         """Saves the surrogate to a file. The file format can vary between surrogates.
+        As default, the surrogate is saved to 'base_dir/model_{surrogate_label}.hdf5'.
 
         Parameters:
             path (str): Path including the file name, where the model should be saved.
@@ -119,19 +186,28 @@ class Surrogate(ABC):
             config (dict): Only the 'fit' part of the base_config.
             base_config (dict): The whole configuration parameters.
         """
+        from .encoders import Encoder
+
         child = cls[config['surrogate']]
+
         if config.get('load'):
-            from os.path import isfile
-            if isfile(config['load']):
-                return child.load_model(config['load'])
-            else:
-                file = f'_{child.get_label()}.'.join(config['load'].split('.'))
-                return child.load_model(file)
-        return child.from_config(config, base_config)
+            child_instance = child.load_model(config['load'])
+        else:
+            child_instance = child.from_config(config, base_config)
+            # Set global attributes
+            child_instance.ndim = len(base_config['input'])
+            child_instance.output_ndim = len(base_config['output'])
+            child_instance.multi_output = len(base_config['output']) > 1
+            child_instance.fixed_sigma_n = config['fixed_sigma_n']
+        child_instance.encoder = [Encoder(func, cols, out) for func, cols, out in config['encoder']]
+        return child_instance
 
     @classmethod
     def handle_config(cls, config, base_config):
         """Fills the configuration parameters with defaults, if not existent, and delegates to child.
+
+        If saving or loading is enabled, the class label is included in the filename to identify the
+        surrogate class. Relative paths are referenced to the base directory.
 
         Parameters:
             config (dict): Only the 'fit' part of the base_config.
@@ -140,6 +216,24 @@ class Surrogate(ABC):
         for key, default in cls._defaults.items():
             if key not in config:
                 config[key] = default
+        if not config['encoder']:
+            in_dims = [idx for idx, value in enumerate(base_config['input'].values()) if value['kind'] != 'constant']
+            out_dims = list(range(len(base_config['output'].keys())))
+            log_input = [idx for idx, value in enumerate(base_config['input'].values())
+                         if value['kind'] == 'LogUniform']
+            config['encoder'] = [['log10', log_input, False],
+                                 ['normalization', in_dims, False],
+                                 ['normalization', out_dims, True]]
+
+        for mode in ('save', 'load'):
+            if config.get(mode):
+                from os.path import abspath, join
+                config[mode] = abspath(join(base_config['base_dir'], config[mode]))
+                if config['surrogate'] not in config[mode]:
+                    filepath = config[mode].rsplit('.', 1)
+                    config[mode] = ''.join(filepath[:-1]) + f'_{config["surrogate"]}.' + filepath[-1]
+        if config.get('load'):
+            config['save'] = False
         Surrogate[config['surrogate']].handle_subconfig(config, base_config)
 
     @classmethod

@@ -50,7 +50,6 @@ class GaussianProcess(Surrogate, ABC):
     Default parameters:
         surrogate: GPy
         kernel: RBF
-        fixed_sigma_n: False
 
     Default hyperparameters:
         $l$ ... length scale
@@ -66,9 +65,8 @@ class GaussianProcess(Surrogate, ABC):
         $$
     """
 
-    _defaults = {'surrogate': 'GPy',  # Default parameters for all GP surrogates
+    _defaults = {'surrogate': Surrogate._defaults['surrogate'],  # Default parameters for all GP surrogates
                  'kernel': 'RBF',
-                 'fixed_sigma_n': False,
                  'hyperparameters': {'length_scale': None,  # Hyperparameters are inferred from training data
                                      'sigma_n': None,
                                      'sigma_f': None}}
@@ -99,6 +97,7 @@ class GaussianProcess(Surrogate, ABC):
 
         self.Xtrain = np.atleast_2d(X)
         self.ytrain = np.atleast_2d(y)
+        self.encode_training_data()
         self.ndim = self.Xtrain.shape[-1]
         self.multi_output = self.multi_output or multi_output
         self.output_ndim = self.ytrain.shape[-1] if self.multi_output else 1
@@ -111,7 +110,7 @@ class GaussianProcess(Surrogate, ABC):
                                     'sigma_n': np.array([1e-2*np.mean(self.ytrain.max(axis=0) - self.ytrain.min(axis=0))])}
 
         # Set hyperparameters either from config, the given parameter or inferred from the training data
-        self.hyperparameters = self.hyperparameters or hyperparameters or self._defaults['hyperparameters']
+        self.hyperparameters = self.hyperparameters or hyperparameters or self._defaults['hyperparameters'].copy()
         for key, value in self.hyperparameters.items():
             if value is None:
                 value = inferred_hyperparameters[key]
@@ -164,6 +163,7 @@ class GaussianProcess(Surrogate, ABC):
         if Xpred is None:
             Xpred = self.default_Xpred()
         Xpred = np.atleast_2d(Xpred)
+        Xpred = self.encode_predict_data(Xpred)
         return Xpred
 
     @abstractmethod
@@ -206,8 +206,6 @@ class GaussianProcess(Surrogate, ABC):
         self = cls()
         self.kernel = config['kernel']
         self.hyperparameters = config['hyperparameters']
-        self.fixed_sigma_n = config['fixed_sigma_n']
-        self.multi_output = config['multi_output']
         return self
 
     @classmethod
@@ -215,8 +213,6 @@ class GaussianProcess(Surrogate, ABC):
         """Sets default parameters if not existent.
 
         Does this recursively for each element of the hyperparameter dict.
-        If saving is enabled, the class label in the save_model filename is included to identify the surrogate
-        when loaded.
 
         Parameters:
             config (dict): Only the 'fit' part of the base_config.
@@ -231,10 +227,6 @@ class GaussianProcess(Surrogate, ABC):
                     for kkey, ddefault in default.items():
                         if kkey not in config[key]:
                             config[key][kkey] = ddefault
-
-        if config.get('save') and cls.get_label() not in config.get('save'):
-            filepath = config['save'].split('.')
-            config['save'] = ''.join(filepath[:-1]) + f'_{cls.get_label()}.' + filepath[-1]
 
     @abstractmethod
     def select_kernel(self, kernel):
@@ -326,17 +318,23 @@ class GPSurrogate(GaussianProcess):
         """
 
         super().prepare_train(X, y, kernel, hyperparameters, fixed_sigma_n)
+        if self.encoder:
+            print("For now, encoding is not supported for this surrogate. The model is created without encoding.")
+            self.decode_training_data()
 
         if self.multi_output:
             raise NotImplementedError("Multi-Output is not implemented for this surrogate.")
 
         # Find best hyperparameters
         self.optimize(fixed_sigma_n=self.fixed_sigma_n, eval_gradient=eval_gradient, return_hess_inv=return_hess_inv)
-        self.print_hyperparameters("Optimized")
         self.trained = True
 
     def predict(self, Xpred, add_data_variance=True):
         Xpred = super().prepare_predict(Xpred)
+        # Encoding is not supported yet for this surrogate.
+        for enc in self.encoder[::-1]:
+            if not enc.output:
+                Xpred = enc.decode(Xpred)
 
         # Skip data noise sigma_n in hyperparameters
         prediction_hyperparameters = {key: value for key, value in self.hyperparameters.items() if key != 'sigma_n'}
@@ -482,6 +480,7 @@ class GPSurrogate(GaussianProcess):
         self.hyperparameters['sigma_f'] = np.atleast_1d(opt_hyperparameters[last_idx])
         if not self.fixed_sigma_n:
             self.hyperparameters['sigma_n'] = np.atleast_1d(opt_hyperparameters[-1])
+        self.print_hyperparameters("Optimized")
 
 
 @Surrogate.register('GPy')
@@ -517,6 +516,7 @@ class GPySurrogate(GaussianProcess):
         self._set_hyperparameters_from_model()
         self.print_hyperparameters("Optimized")
         self.trained = True
+        self.decode_training_data()
 
     def add_training_data(self, X, y):
         """Adds training points to the existing dataset.
@@ -543,6 +543,7 @@ class GPySurrogate(GaussianProcess):
                 noise_dict = {'output_index': newX[:, self.ndim:].astype(int)}
                 ym, yv = self.model.predict(newX, Y_metadata=noise_dict)
                 ymean[:, d], yvar[:, d] = ym.flatten(), yv.flatten()
+        ymean, yvar = self.decode_predict_data(ymean, yvar)
         return ymean, yvar
 
     def get_marginal_variance(self, Xpred):
@@ -571,13 +572,17 @@ class GPySurrogate(GaussianProcess):
         from profit.util import save_hdf
 
         try:
-            save_hdf(path, self.model.to_dict())
+            sur_dict = {attr: getattr(self, attr) for attr in ('Xtrain', 'ytrain')}
+            sur_dict['model'] = self.model.to_dict()
+            sur_dict['encoder'] = str([enc.repr for enc in self.encoder])
+            save_hdf(path, sur_dict)
         except NotImplementedError:
             # GPy does not support to_dict method for Coregionalization kernel yet.
             from pickle import dump
             from os.path import splitext
             print("Saving to .hdf5 not implemented yet for multi-output models. Saving to .pkl file instead.")
-            dump(self.model, open(splitext(path)[0] + '.pkl', 'wb'))
+            dump([self.model, self.Xtrain, self.ytrain, str([enc.repr for enc in self.encoder])],
+                 open(splitext(path)[0] + '.pkl', 'wb'))
 
     @classmethod
     def load_model(cls, path):
@@ -592,23 +597,29 @@ class GPySurrogate(GaussianProcess):
         """
 
         from profit.util import load
+        from .encoders import Encoder
         from GPy import models
 
         self = cls()
         try:
-            model_dict = load(path, as_type='dict')
-            self.model = models.GPRegression.from_dict(model_dict)
-            self.Xtrain = self.model.X
-            self.ytrain = self.model.Y
+            sur_dict = load(path, as_type='dict')
+            self.model = models.GPRegression.from_dict(sur_dict['model'])
+            self.Xtrain = sur_dict['Xtrain']
+            self.ytrain = sur_dict['ytrain']
+            self.encoder = [Encoder(func, cols, out) for func, cols, out in eval(sur_dict['encoder'])]
         except (OSError, FileNotFoundError):
             from pickle import load as pload
             from os.path import splitext
             # Load multi-output model from pickle file
-            self.model = pload(open(splitext(path)[0] + '.pkl', 'rb'))
+            print("File {} not found. Trying to find a .pkl file with multi-output instead.".format(path))
+            self.model, self.Xtrain, self.ytrain, encoder_str = pload(open(splitext(path)[0] + '.pkl', 'rb'))
+            self.encoder = [Encoder(func, cols, out) for func, cols, out in eval(encoder_str)]
             self.output_ndim = int(max(self.model.X[:, -1])) + 1
-            self.Xtrain = self.model.X[:len(self.model.X) // self.output_ndim, :-1]
-            self.ytrain = self.model.Y.reshape(-1, self.output_ndim, order='F')
             self.multi_output = True
+
+        # Initialize the encoder by encoding and decoding the training data once.
+        self.encode_training_data()
+        self.decode_training_data()
 
         self.kernel = self.model.kern
         self._set_hyperparameters_from_model()
@@ -632,9 +643,9 @@ class GPySurrogate(GaussianProcess):
         try:
             if not any(operator in kernel for operator in ('+', '*')):
                 return getattr(self.GPy.kern, kernel)(self.ndim,
-                                                      lengthscale=self.hyperparameters['length_scale'],
-                                                      variance=self.hyperparameters['sigma_f']**2,
-                                                      ARD=len(self.hyperparameters['length_scale']) > 1)
+                                                      lengthscale=self.hyperparameters.get('length_scale', [1]),
+                                                      variance=self.hyperparameters.get('sigma_f', 1)**2,
+                                                      ARD=len(self.hyperparameters.get('length_scale', [1])) > 1)
             else:
                 from re import split
                 full_str = split('([+*])', kernel)
@@ -643,8 +654,8 @@ class GPySurrogate(GaussianProcess):
                     kern += [key if key in ('+', '*') else
                                'self.GPy.kern.{}({}, lengthscale={}, variance={})'
                                    .format(key, self.ndim,
-                                           self.hyperparameters['length_scale'],
-                                           self.hyperparameters['sigma_f']**2)]
+                                           self.hyperparameters.get('length_scale', [1]),
+                                           self.hyperparameters.get('sigma_f', 1)**2)]
                 return eval(''.join(kern))
         except AttributeError:
             raise RuntimeError("Kernel {} is not implemented.".format(kernel))
@@ -693,7 +704,6 @@ class SklearnGPSurrogate(GaussianProcess):
     Attributes:
         model (sklearn.gaussian_process.GaussianProcessRegressor): Model object of Sklearn.
     """
-    from sklearn.gaussian_process import kernels as sklearn_kernels
 
     def __init__(self):
         super().__init__()
@@ -701,7 +711,7 @@ class SklearnGPSurrogate(GaussianProcess):
 
     def train(self, X, y, kernel=None, hyperparameters=None, fixed_sigma_n=False, return_hess_inv=False,
               multi_output=False):
-        from sklearn import gaussian_process as sklearn_gp
+        from sklearn.gaussian_process import GaussianProcessRegressor
         super().prepare_train(X, y, kernel, hyperparameters, fixed_sigma_n)
 
         if self.multi_output:
@@ -710,7 +720,7 @@ class SklearnGPSurrogate(GaussianProcess):
         numeric_noise = self.hyperparameters['sigma_n'].item() ** 2 if self.fixed_sigma_n else 1e-5
 
         # Instantiate the model
-        self.model = self.sklearn_gp.GaussianProcessRegressor(kernel=self.kernel, alpha=numeric_noise)
+        self.model = GaussianProcessRegressor(kernel=self.kernel, alpha=numeric_noise)
 
         # Train the model
         self.model.fit(self.Xtrain, self.ytrain)
@@ -721,6 +731,7 @@ class SklearnGPSurrogate(GaussianProcess):
         self.print_hyperparameters("Optimized")
 
         self.trained = True
+        self.decode_training_data()
 
     def add_training_data(self, X, y):
         """Add training points to existing data.
@@ -739,6 +750,7 @@ class SklearnGPSurrogate(GaussianProcess):
         yvar = ystd.reshape(-1, 1)**2
         if add_data_variance:
             yvar = yvar + self.hyperparameters['sigma_n'] ** 2
+        ymean, yvar = self.decode_predict_data(ymean, yvar)
         return ymean, yvar
 
     def get_marginal_variance(self, Xpred):
@@ -833,9 +845,9 @@ class SklearnGPSurrogate(GaussianProcess):
             kernel = eval(''.join(kernel))
 
         # Add scale and noise to kernel
-        kernel *= self.sklearn_kernels.ConstantKernel(constant_value=1/self.hyperparameters['sigma_f'].item() ** 2)
+        kernel *= sklearn_kernels.ConstantKernel(constant_value=1/self.hyperparameters['sigma_f'].item() ** 2)
         if not self.fixed_sigma_n:
-            kernel += self.sklearn_kernels.WhiteKernel(noise_level=self.hyperparameters['sigma_n'].item() ** 2)
+            kernel += sklearn_kernels.WhiteKernel(noise_level=self.hyperparameters['sigma_n'].item() ** 2)
 
         return kernel
 

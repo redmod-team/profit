@@ -16,13 +16,6 @@ from profit.run import Runner
 yes = False  # always answer 'y'
 
 
-def fit(x, y):
-    from profit.sur.gp import GPySurrogate
-    fresp = GPySurrogate()
-    fresp.train(x, y)
-    return fresp
-
-
 def fill_uq(self, krun, content):
     params_fill = SafeDict()
     kp = 0
@@ -84,8 +77,8 @@ def main():
             al = ActiveLearning.from_config(runner, config['active_learning'], config)
             al.run_first()
             al.learn()
-            if config['active_learning'].get('save'):
-                al.save(config['active_learning']['save'])
+            if config['fit'].get('save'):
+                al.save(config['fit']['save'])
         else:
             params_array = [row[0] for row in eval_points]
             runner.spawn_array(tqdm(params_array), blocking=True)
@@ -118,7 +111,7 @@ def main():
             sur.save_model(config['fit']['save'])
         if config['fit'].get('plot'):
             try:
-                xpred = [arange(minv, maxv, step) for minv, maxv, step in config['fit']['plot'].get('xpred')]
+                xpred = [arange(minv, maxv, step) for minv, maxv, step in config['fit']['plot'].get('Xpred')]
                 xpred = hstack([xi.flatten().reshape(-1, 1) for xi in meshgrid(*xpred)])
             except AttributeError:
                 xpred = None
