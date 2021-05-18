@@ -12,21 +12,33 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
+from sphinx.ext import autodoc
+from pkg_resources import get_distribution
 import os
 import sys
 sys.path.insert(0, os.path.abspath('..'))
 
-
 # -- Project information -----------------------------------------------------
 
 project = 'profit'
-copyright = '2019, The RedMod Team'
+copyright = '2021, The RedMod Team'
 author = 'The RedMod Team'
 
-# The short X.Y version
-version = ''
+# credit: https://pypi.org/project/setuptools-scm/
 # The full version, including alpha/beta/rc tags
-release = ''
+release = get_distribution('profit').version
+# The short X.Y version
+version = '.'.join(release.split('.')[:2])
+
+
+# -- Custom Formatters -------------------------------------------------------
+# credit: https://stackoverflow.com/questions/7825263/including-docstring-in-sphinx-documentation
+class RawDocumenter(autodoc.MethodDocumenter):
+    objtype = 'raw'
+    content_indent = ""  # do not indent the content
+
+    def add_directive_header(self, sig: str) -> None:
+        pass  # do not add a header to the docstring
 
 
 # -- General configuration ---------------------------------------------------
@@ -62,6 +74,7 @@ def setup(app):
         'enable_inline_math': True,
         'enable_eval_rst': True
         }, True)
+    app.add_autodocumenter(RawDocumenter)
 
 
 autoapi_type = 'python'

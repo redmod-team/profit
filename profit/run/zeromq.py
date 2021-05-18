@@ -1,16 +1,6 @@
 """ zeromq Interface
 
-communication via 0MQ
- - router + req for data transfer
- - router + rep for heartbeat
-  - only one router is used, the worker maintains two sockets with two different addresses
-
-internal storage with a structured numpy array
- - not saved to disk
-
-no backup capability
-
-Ideas & Help from the 0MQ Guide (zguide.zeromq.org, examples are MIT licence)
+Ideas & Help from the 0MQ Guide (zguide.zeromq.org, examples are licensed with MIT)
 """
 
 from .runner import RunnerInterface
@@ -26,6 +16,14 @@ import os
 
 @RunnerInterface.register('zeromq')
 class ZeroMQRunnerInterface(RunnerInterface):
+    """ Runner-Worker Interface using the lightweight message queue `ZeroMQ <https://zeromq.org/>`_
+
+    - can use different transport systems, most commonly tcp
+    - can be used efficiently on a cluster (tested)
+    - expected to be inefficient for a large number of small, locally run simulations where communication overhead is
+      a concern (unverified, could be mitigated by using a different transport system)
+    - known issue: some workers were unable to establish a connection with three tries, reason unknown
+    """
     def __init__(self, config, size, input_config, output_config, *, logger_parent: Logger = None):
         if 'FLAGS' not in [var[0] for var in self.internal_vars]:
             self.internal_vars += [('FLAGS', np.byte)]
@@ -88,7 +86,7 @@ class ZeroMQRunnerInterface(RunnerInterface):
                 class: zeromq
                 transport: tcp      # transport system used by zeromq
                 port: 9000          # port for the interface
-                bind: null          # override bind address used by zeromq
+                address: null       # override bind address used by zeromq
                 connect: null       # override connect address used by zeromq
                 timeout: 2500       # zeromq polling timeout, in ms
                 retries: 3          # number of zeromq connection retries
@@ -104,6 +102,10 @@ class ZeroMQRunnerInterface(RunnerInterface):
 
 @Interface.register('zeromq')
 class ZeroMQInterface(Interface):
+    """ Runner-Worker Interface using the lightweight message queue `ZeroMQ <https://zeromq.org/>`_
+
+    counterpart to :py:class:`ZeroMQRunnerInterface`
+    """
     def __init__(self, config, run_id: int, *, logger_parent: Logger = None):
         super().__init__(config, run_id, logger_parent=logger_parent)
         self.connect()  # self.socket

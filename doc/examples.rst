@@ -87,12 +87,12 @@ full configuration
 custom components
 -----------------
 
-.. code_block:: yaml
+.. code-block:: yaml
 
         include: custom_components.py
         post: identifier
 
-.. code_block:: yaml
+.. code-block:: yaml
 
         include: custom_components.py
         post:

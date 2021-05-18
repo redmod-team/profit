@@ -25,6 +25,11 @@ from shutil import rmtree
 
 @Runner.register('local')
 class LocalRunner(Runner):
+    """ Runner for executing simulations locally
+
+    - forks the worker, thereby having less overhead (especially with a custom python Worker)
+    - per default uses all available CPUs
+    """
     def spawn_run(self, params=None, wait=False):
         super().spawn_run(params, wait)
         if self.run_config['custom'] or not self.config['fork']:
@@ -85,10 +90,13 @@ class LocalRunner(Runner):
     @classmethod
     def handle_config(cls, config, base_config):
         """
-        class: local
-        parallel: all   # maximum number of simultaneous runs (for spawn array)
-        sleep: 0        # number of seconds to sleep while polling
-        fork: true      # whether to spawn the (non-custom) worker via forking instead of a subprocess (via a shell)
+        Example:
+            .. code-block:: yaml
+
+                class: local
+                parallel: all   # maximum number of simultaneous runs (for spawn array)
+                sleep: 0        # number of seconds to sleep while polling
+                fork: true      # whether to spawn the worker via forking instead of a subprocess (via a shell)
         """
         if 'parallel' not in config or config['parallel'] == 'all':
             config['parallel'] = os.cpu_count()
@@ -103,6 +111,14 @@ class LocalRunner(Runner):
 
 @RunnerInterface.register('memmap')
 class MemmapRunnerInterface(RunnerInterface):
+    """ Runner-Worker Interface using a memory mapped numpy array
+
+    - expected to be very fast with the *local* Runner as each Worker can access the array directly (unverified)
+    - expected to be inefficient if used on a cluster with a shared filesystem (unverified)
+    - reliable
+    - known issue: resizing the array (to add more runs) is dangerous, needs a workaround
+      (e.g. several arrays in the same file)
+    """
     def __init__(self, config, size, input_config, output_config, *, logger_parent: logging.Logger = None):
         super().__init__(config, size, input_config, output_config, logger_parent=logger_parent)
 
@@ -128,8 +144,11 @@ class MemmapRunnerInterface(RunnerInterface):
     @classmethod
     def handle_config(cls, config, base_config):
         """
-        class: memmap
-        path: interface.npy     # memory mapped interface file, relative to base directory
+        Example:
+            .. code-block:: yaml
+
+                class: memmap
+                path: interface.npy     # path to memory mapped interface file, relative to base directory
         """
         if 'path' not in config:
             config['path'] = 'interface.npy'
@@ -140,14 +159,9 @@ class MemmapRunnerInterface(RunnerInterface):
 
 @Interface.register('memmap')
 class MemmapInterface(Interface):
-    """ Worker Interface using `numpy.memmap`
+    """ Runner-Worker Interface using a memory mapped numpy array
 
-    YAML:
-    ```
-    interface:
-        class: memmap
-        path: $BASE_DIR/interface.npy  -  path to memmap file (relative to calling directory [~base_dir])
-    ```
+    counterpart to :py:class:`MemmapRunnerInterface`
     """
     def __init__(self, config, run_id: int, *, logger_parent: logging.Logger = None):
         super().__init__(config, run_id, logger_parent=logger_parent)
@@ -188,6 +202,16 @@ class MemmapInterface(Interface):
 
 @Preprocessor.register('template')
 class TemplatePreprocessor(Preprocessor):
+    """ Preprocessor which substitutes the variables with a given template
+
+    - copies the given template directory to the target run directory
+    - searches all files for variables templates of the form {name} and replaces them with their values
+    - for file formats which use curly braces (e.g. json) the template identifier is {{name}}
+    - substitution can be restricted to certain files by specifying `param_files`
+    - relative symbolic links are converted to absolute symbolic links on copying
+    - linked files are ignored with `param_files: all`, but if specified explicitly the link target is copied to the run
+      directory and then substituted
+    """
     def pre(self, data, run_dir):
         # No call to super()! replaces the default preprocessing
         from profit.pre import fill_run_dir_single
@@ -200,9 +224,13 @@ class TemplatePreprocessor(Preprocessor):
     @classmethod
     def handle_config(cls, config, base_config):
         """
-        class: template
-        path: template      # directory to copy from, relative to base directory
-        param_files: null   # files in template which contain placeholders for variables, null means all files
+        Example:
+            .. code-block:: yaml
+
+                class: template
+                path: template      # directory to copy from, relative to base directory
+                param_files: null   # files in template which contain placeholders for variables, null means all files
+                                    # can be a filename or a list of filenames
         """
         if 'path' not in config:
             config['path'] = 'template'
@@ -220,6 +248,11 @@ class TemplatePreprocessor(Preprocessor):
 
 @Postprocessor.register('json')
 class JSONPostprocessor(Postprocessor):
+    """ Postprocessor to read output from a JSON file
+
+    - variables are assumed to be stored with the correct key and able to be converted immediately
+    - not extensively tested
+    """
     def post(self, data):
         import json
         with open(self.config['path']) as f:
@@ -230,8 +263,11 @@ class JSONPostprocessor(Postprocessor):
     @classmethod
     def handle_config(cls, config, base_config):
         """
-        class: json
-        path: stdout    # file to read from, relative to the run directory
+        Example:
+            .. code-block:: yaml
+
+                class: json
+                path: stdout    # file to read from, relative to the run directory
         """
         if 'path' not in config:
             config['path'] = 'stdout'
@@ -242,6 +278,14 @@ class JSONPostprocessor(Postprocessor):
 
 @Postprocessor.register('numpytxt')
 class NumpytxtPostprocessor(Postprocessor):
+    """ Postprocessor to read output from a tabular text file (e.g. csv, tsv) with numpy ``genfromtxt``
+
+    - the data is assumed to be row oriented
+    - vector variables are spread across the row and have to be in the right order, only the name of the variable should
+      be specified once in ``names``
+    - ``names`` which are not specified as output variables are ignored
+    - additional options are passed directly to ``numpy.genfromtxt()`
+    """
     def post(self, data):
         dtype = [(name, float, data.dtype[name].shape if name in data.dtype.names else ())
                  for name in self.config['names']]
@@ -260,11 +304,14 @@ class NumpytxtPostprocessor(Postprocessor):
     @classmethod
     def handle_config(cls, config, base_config):
         """
-        class: numpytxt
-        path: stdout    # file to read from, relative to the run directory
-        names: "f g"    # list or string of output variables in order, default read from config/variables
-        options:        # options which are passed on to numpy.genfromtxt() (fname & dtype are used internally)
-            deletechars: ""
+        Example:
+            .. code-block:: yaml
+
+                class: numpytxt
+                path: stdout    # file to read from, relative to the run directory
+                names: "f g"    # list or string of output variables in order, default read from config/variables
+                options:        # options which are passed on to numpy.genfromtxt() (fname & dtype are used internally)
+                    deletechars: ""
         """
         if 'path' not in config:
             config['path'] = 'stdout'
@@ -283,6 +330,11 @@ class NumpytxtPostprocessor(Postprocessor):
 
 @Postprocessor.register('hdf5')
 class HDF5Postprocessor(Postprocessor):
+    """ Postprocessor to read output from a HDF5 file
+
+        - variables are assumed to be stored with the correct key and able to be converted immediately
+        - not extensively tested
+    """
     def post(self, data):
         import h5py
         with h5py.File(self.config['path'], 'r') as f:
@@ -292,8 +344,11 @@ class HDF5Postprocessor(Postprocessor):
     @classmethod
     def handle_config(cls, config, base_config):
         """
-        class: hdf5
-        path: output.hdf5   # file to read from, relative to the run directory
+        Example:
+            .. code-block:: yaml
+
+                class: hdf5
+                path: output.hdf5   # file to read from, relative to the run directory
         """
         if 'path' not in config:
             config['path'] = 'output.hdf5'
