@@ -16,7 +16,14 @@ from tqdm import trange
 
 @Runner.register('slurm')
 class SlurmRunner(Runner):
-    """Runner Implementation which submits each run as a job to the slurm scheduler"""
+    """ Runner which submits each run as a job to the SLURM scheduler on a cluster
+
+    - generates a slurm batch script with the given configuration
+    - can also be used with a custom script
+    - supports OpenMP
+    - tries to minimize overhead by using job arrays if possible
+    - polls the scheduler only at longer intervals
+    """
     def __init__(self, interface_class, config, base_config):
         super().__init__(interface_class, config, base_config)
         if self.config['custom']:
