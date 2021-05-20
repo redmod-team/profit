@@ -1,9 +1,6 @@
 User Interface
 ##############
 
-Idea
-****
-
 The goal of the user interface (UI) is to visualise the output data and the fitted response model. In addition a
 variety of options for the user to select and restrict the displayed range of data as well as a control
 interface for the fit parameters should be provided. The UI consists of the three major sections:
@@ -16,40 +13,6 @@ The UI provides four different plot types, namely 1D, 2D, 2D contour and 3D plot
 UI includes coloring the markers and fits, display of errors (1D & 2D), display the response model
 with its uncertainty (variable σ-confidence) in 1D & 2D and limiting the range of the displayed input variables.
 A more detailed description of the functionality can be found below.
-
-Technical Background
-********************
-
-The User Interface (UI) is based on ``plotly/dash`` for Python (see `Homepage <https://dash.plotly.com/>`_).
-Dash is a declarative and reactive web-based application. Dash is build on top
-of the following components:
-
-* Flask
-* React.js
-* Plotly.js
-
-The entire UI is running on a ``Flask`` web server. Flask is a WSGI (Web Server Gateway
-Interface) web app framework. When starting the ``Dash`` application a local webserver is
-started via ``Flask``. It is possible to extend the application via Flask Plugins.
-
-In ``Dash`` one is able to use the entire set of the ``plotly`` library. The frontend is
-rendered via ``react.js`` (`react.js on github <https://github.com/facebook/react/>`_). ``react.js`` is a
-declarative, component-based JavaScript library for building user interfaces developed an maintained by Facebook.
-
-When working with ``Dash`` there are a lot of standard components available for the user via the
-``dash_html_components`` library (see `dash_core_components on github <https://github.com/plotly/dash-core-components>`_) maintained by
-the Dash core team. In addition it is possible to write your own component library via the standard open-source
-React-to-Dash toolchain.
-
-The second important library especially for structuring the UI is the ``dash_html_component`` library
-(see `dash_html_component on github <https://github.com/plotly/dash-html-components>`_). It includes a set of HTML tags which are also
-rendered via ``react.js``.
-
-For customization it is possible to use ``CSS`` stylesheets for the entire interface as well as individual
-``CSS``-styles for each element.
-
-The graphs itself is based on the above mentioned ``plotly.js`` library
-(see `github <https://github.com/plotly/plotly.js>`_). This graphic library maintained by Plotly.
 
 
 User documentation
@@ -71,30 +34,37 @@ General structure
 =================
 
 In order to visualise the data and provide a as straightforward as possible user experience in adjusting the options
-a three section layout is used. As shown in the figure below, the upper left column is used for the *axis/fit options*.
-In the upper right column the *graph* itself is located. On the bottom of these two sections the *filter options*
-section is placed. The functionality of each section will be described in the according sections below.
+a three section layout is used. The sections are listed below and shown in the figure.
+
+* axis / fit options
+* graph
+* filter options
 
 .. figure:: doc/pics/layout.png
   :width: 600
 
-  Layout of the user interface with the three major sections.
+  Layout of the user interface with the three major sections: *axis/fit options*, *graph* and *filter options*.
 
 axis/fit options
 ----------------
-In this section of the layout three different types of options can be controlled, namely the graph type itself,
-the options for the axis including the color and the error. In addition the different options for the fit based on
-the response model.
+In this section of the layout the following three different types of options can be controlled:
 
+* graph type
+* options for the axis (including color and error)
+* options for the fit based on the response model
+
+.. figure:: doc/pics/axis.png
+
+  Different types of options in the axis/fit options section of the UI.
 graph type
 ^^^^^^^^^^
 
 With the first radiobutton on the top, the type of graph can be selected. The following options are available:
 
-* 1D
-* 2D
+* 1D (scatter + line)
+* 2D (scatter + surface)
 * 2D contour
-* 3D
+* 3D (scatter + isosurface)
 
 The four graph types are shown below with sample data and a sample response model:
 
@@ -122,6 +92,136 @@ The four graph types are shown below with sample data and a sample response mode
 
   Example of the UI for a 3D graph.
 
+axis options
+^^^^^^^^^^^^
+
+The section **axis options** contains all control options concerning the selection and the display of the data.
+This includes the following options:
+
+.. confval:: input-variables
+
+  :type: dropdown
+  :options: all input-variables
+  | number of rows depending on graphtype
+
+.. confval:: output-variable
+
+  :type: dropdown
+  :options: all output-variables
+
+.. confval:: log
+
+  :type: checkbox
+  :default: deactivated
+  | activation of log-scale for each variable
+
+.. confval:: marker color
+
+  :type: dropdown & checkbox
+  :options: input-variables | output-variables | *OUTPUT*
+  :default: activated
+  :available: 1D | 2D | 2D contour
+  | Option *OUTPUT* is always syncronised with the :confval:output-variable.
+  .. figure:: doc/pics/color_dd.png
+    :width: 400
+    :align: center
+
+  Example for the possible variables for the marker color consisting of the *OUTPUT*-option and all in- and
+  output-variables.
+
+.. confval:: error
+
+  :type: dropdown & checkbox
+  :options: output-variables
+  :default: deactivated
+  :available: 1D | 2D
+  | In order to be able to display the error, the error must be included in the output-file in a separate output-variable (column).
+  .. figure:: doc/pics/error_1D.png
+    :width: 600
+    :align: center
+
+    Example of errorbars for a 1D graphtype.
+
+**Example:**
+
+.. figure:: doc/pics/ex_axis_opt_2D.png
+  :width: 400
+  :align: center
+
+  Example of the axis options for a 2D graphtype.
+
+fit options
+^^^^^^^^^^^
+
+The section **fit options** contains all the control options concerning the activation/display and basic configuration
+for the response model (fit). This includes depending on the graphtype (see sec. dynamic options) the following:
+
+.. confval:: display fit
+
+  :type: checkbox
+  :default: deactivated
+
+.. confval:: multi-fit
+
+  :type: dropdown
+  :options: input-variables
+  :available: 1D | 2D
+  Select dimension (variable) along which the number of fits specified in :confval:`#fits` will be constructed (only relevant if :confval:`#fits` > ``1``)
+
+.. confval:: #fits
+
+  :type: input
+  :default: 1
+  :available: 1D | 2D | 3D
+  | Number of constructed fits along the dimension (variable) specified in the :confval:`multi-fit`.
+  | **Caution**: In 3D the top and bottom isosurface is possibly only partly visible. Workaround increase :confval:`#fits` by 2.
+
+.. confval:: σ-confidence
+
+  :type: input
+  :defualt: 2
+  :available: 1D | 2D
+  | Width of confidence interval. Types of display:
+  | **1D**: area around the fit line
+  | **2D**: two additional surfaces under and above the fit surface
+
+.. confval:: add noise covariance
+
+  :type: checkbox
+  :default: deactivated
+  :available: 1D | 2D
+  | Takes uncertainty of underlying data into account for the response model.
+  | Caution: Not supported for all surrogate models.
+
+.. confval:: fit-color
+
+  :type: radiobutton & checkbox
+  :options: :confval:`output-variable` | :confval:`multi-fit` | :confval:`marker color`
+  :default: output & activated
+  :available: 2D
+
+  | Controls dimension (variable) for the colorscale in 2D.
+  | **1D**: same as :confval:`multi-fit`
+  | **3D**: same as :confval:`output-variable`
+
+
+.. confval:: fit-opacity
+
+  :type: slider
+  :range: [0%, 100%]
+  :default: 50%
+  :available: 1D | 2D | 3D
+  | **1D**: opacity of area between upper and lower limit
+  | **2D/3D**: opacity of all surfaces
+
+.. confval:: #points
+
+  :type: input
+  :default: 50
+  | Number of predictions for the fit out of the response model along the input axis.
+
+Depending on the graphtype the fit will be a line (1D), a surface (2D) or an isosurface (3D).
+The details how the parameters for the fits are selected can be found below in section *response model/fit*.
 
 
 dynamic options
@@ -159,126 +259,6 @@ input-variables are needed. The equivalent behaviour is implemented for the *3D*
   :align: center
 
   axis options: input-variable dropdowns (x and y) for graphtype 2D
-
-
-axis options
-^^^^^^^^^^^^
-
-The section axis options contains all control options concerning the selection and the display of the data. This
-includes the different in- and output-variables (number depending on graphtype), the marker color and the errorbars.
-In the figure below the axis options section for the case of the 2D graphtype is shown.
-
-.. figure:: doc/pics/ex_axis_opt_2D.png
-  :width: 400
-  :align: center
-
-  Example of the axis options for a 2D graphtype.
-
-in-/output-variables
-""""""""""""""""""""
-
-The up to three rows for the input-variables provided all inputs from the input-file as a dropdown option. The
-output-variable dropdown provides the according option form the output-file. All rows provide a
-**log**-checkbox which scale the according axis in the plot in logscale.
-
-color
-"""""
-
-With the **color** option the marker-color can be controlled. The dropdown options include all in- and output-variables
-and in addition the option *OUTPUT* in CAPS at the first position. This options is a reference to the selected
-output-variable in the **output**-dropdown. Therefore the coloraxis will always be in sync with the output.
-
-Furthermore the color can be activated/deactivated via the checkbox. The color is activated by default after loading
-the UI.
-
-.. figure:: doc/pics/color_dd.png
-  :width: 400
-  :align: center
-
-  Example for the possible variables for the marker color consisting of the *OUTPUT*-option and all in- and
-  output-variables.
-
-error
-"""""
-
-The 1D and 2D plot support errorbars. In order to be able to display the error, the error must be included in the
-output-file in a separate output-variable (column). Technically it the **error**-dropdown provides all output-variables
-as dropdown options. With the checkbox the errorbars can be activated/deactivated and are deactivared by default.
-
-.. figure:: doc/pics/error_1D.png
-  :width: 600
-  :align: center
-
-  Example of errorbars for a 1D graphtype.
-
-fit options
-^^^^^^^^^^^
-
-The section **fit options** contains all the control options concerning the activation/display and basic configuration
-for the response model (fit). This includes depending on the graphtype (see sec. dynamic options) the following:
-
-* checkbox for activation/display
-* dropdown for the variable of the multi-fit
-* input-field for the number of fits
-* input-field for the σ-confidence
-* checkbox to add the noise covariance
-* radiobuttons for the fit-color
-* slider for the fit-opacity
-* input-field for the number of points
-
-Depending on the graphtype the fit will be a line (1D), a surface (2D) or an isosurface (3D).
-The details how the parameters for the fits are selected can be found below in section *Response model/fit*).
-
-multi-fit
-"""""""""
-With the **multi-fit**-dropdown the user can select along which dimension (variable) the number of fits specified in
-the **#fits**-input-field will be constructed (only relevant if **#fits** > 1). All input-variables are possible
-dropdown-options.
-
-#fits
-"""""
-With the **#fits**-input-field the number of constructed fits along the dimension (variable) specified in the
-**multi-fit**-dropdown can be controlled. The default value is set to 1.
-
-Caution: In 3D the top and bottom isosurface is possibly only partly visible, maybe **#fits** needs to be improved by 2
-to actually see the desired number of fits.
-
-σ-confidence
-""""""""""""
-With the **σ-confidence**-input-field the width of the confidence interval can be controlled. The confidence interval
-is only available in 1D and 2D and the default value is set to 2. Depending on the graphtype the the confidence
-interval is either displayed as area around the fit line (1D) or as two additional surfaces under an above the
-fit surface (2D).
-
-The checkbox *add noise covariance* takes the uncertainty of the underlying data for the response model into account.
-This option is not available for every surrogate model, check Terminal for possible warning.
-
-fit-color
-"""""""""
-With the **fit-color**-radiobutton the coloraxis of the fits can be controlled (dimension/variable for colorscale).
-This options is only available in 2D. In 1D the fit-color is automatically defined as the **mulit-fit**-variable
-and in 3D the fit-color is equal to the output-variable (in 3D already the color). For the 2D graphtype the
-following options a provided:
-
-* output
-    sync with output-variable
-* multi-fit
-    sync with mutlti-fit-variable
-* maker-color
-    sync with color-variable
-
-The output options is selected by default.
-
-fit-opacity
-"""""""""""
-With the **fit-opacity**-slider the opacity of the surfaces respectively the confidence interval display can be
-controlled. In 1D it controls the opacity of the area between the upper and lower limit, in 2D and 3D the opacity
-of all surfaces. The default value is set to 50%.
-
-#points
-"""""""
-With the **#points**-input-field the number of point for the prediction of the fit out of the response model can be
-controlled. The default value is set to 50.
 
 
 graph
@@ -375,4 +355,37 @@ account. Based on the activation-status of the **log**-checkbox in the filter-ta
 For further details on the generation of the response model itself see the API documentation of the surrogate model.
 
 
+Technical Background
+********************
+
+The User Interface (UI) is based on ``plotly/dash`` for Python (see `Homepage <https://dash.plotly.com/>`_).
+Dash is a declarative and reactive web-based application. Dash is build on top
+of the following components:
+
+* Flask
+* React.js
+* Plotly.js
+
+The entire UI is running on a ``Flask`` web server. Flask is a WSGI (Web Server Gateway
+Interface) web app framework. When starting the ``Dash`` application a local webserver is
+started via ``Flask``. It is possible to extend the application via Flask Plugins.
+
+In ``Dash`` one is able to use the entire set of the ``plotly`` library. The frontend is
+rendered via ``react.js`` (`react.js on github <https://github.com/facebook/react/>`_). ``react.js`` is a
+declarative, component-based JavaScript library for building user interfaces developed an maintained by Facebook.
+
+When working with ``Dash`` there are a lot of standard components available for the user via the
+``dash_html_components`` library (see `dash_core_components on github <https://github.com/plotly/dash-core-components>`_) maintained by
+the Dash core team. In addition it is possible to write your own component library via the standard open-source
+React-to-Dash toolchain.
+
+The second important library especially for structuring the UI is the ``dash_html_component`` library
+(see `dash_html_component on github <https://github.com/plotly/dash-html-components>`_). It includes a set of HTML tags which are also
+rendered via ``react.js``.
+
+For customization it is possible to use ``CSS`` stylesheets for the entire interface as well as individual
+``CSS``-styles for each element.
+
+The graphs itself is based on the above mentioned ``plotly.js`` library
+(see `github <https://github.com/plotly/plotly.js>`_). This graphic library maintained by Plotly.
 
