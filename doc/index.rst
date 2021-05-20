@@ -13,6 +13,7 @@ Welcome to proFit's documentation!
    proFit <README>
    design
    config
+   cluster
    kernels
    codegen
    troubleshooting
