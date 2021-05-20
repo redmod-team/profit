@@ -12,6 +12,7 @@ Welcome to proFit's documentation!
 
    design
    config
+   ui
    kernels
    codegen
    troubleshooting
