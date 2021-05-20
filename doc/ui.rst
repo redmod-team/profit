@@ -40,11 +40,11 @@ a three section layout is used. The sections are listed below and shown in the f
 * graph
 * filter options
 
-.. figure:: doc/pics/layout.png
-  :width: 600
+.. figure:: ../../pics/layout.png
 
   Layout of the user interface with the three major sections: *axis/fit options*, *graph* and *filter options*.
 
+.. _axis/fit-options:
 axis/fit options
 ----------------
 In this section of the layout the following three different types of options can be controlled:
@@ -53,13 +53,15 @@ In this section of the layout the following three different types of options can
 * options for the axis (including color and error)
 * options for the fit based on the response model
 
-.. figure:: doc/pics/axis.png
+.. figure:: ../../pics/axis.png
 
   Different types of options in the axis/fit options section of the UI.
-graph type
+
+.. _graphtype:
+graphtype
 ^^^^^^^^^^
 
-With the first radiobutton on the top, the type of graph can be selected. The following options are available:
+There are four different graphtypes available:
 
 * 1D (scatter + line)
 * 2D (scatter + surface)
@@ -68,35 +70,35 @@ With the first radiobutton on the top, the type of graph can be selected. The fo
 
 The four graph types are shown below with sample data and a sample response model:
 
-.. figure:: doc/pics/ex_1D_fit.png
+.. figure:: ../../pics/ex_1D_fit.png
   :width: 600
   :align: center
 
   Example of the UI for a 1D graph.
 
-.. figure:: doc/pics/ex_2D_fit.png
+.. figure:: ../../pics/ex_2D_fit.png
   :width: 600
   :align: center
 
   Example of the UI for a 2D graph.
 
-.. figure:: doc/pics/ex_2Dc.png
+.. figure:: ../../pics/ex_2Dc.png
   :width: 600
   :align: center
 
   Example of the UI for a 2D contour graph.
 
-.. figure:: doc/pics/ex_3D_fit.png
+.. figure:: ../../pics/ex_3D_fit.png
   :width: 600
   :align: center
 
   Example of the UI for a 3D graph.
 
+.. _axis options:
 axis options
 ^^^^^^^^^^^^
 
 The section **axis options** contains all control options concerning the selection and the display of the data.
-This includes the following options:
 
 .. confval:: input-variables
 
@@ -122,9 +124,7 @@ This includes the following options:
   :default: activated
   :available: 1D | 2D | 2D contour
   | Option *OUTPUT* is always syncronised with the :confval:output-variable.
-  .. figure:: doc/pics/color_dd.png
-    :width: 400
-    :align: center
+  .. figure:: ../../pics/color_dd.png
 
   Example for the possible variables for the marker color consisting of the *OUTPUT*-option and all in- and
   output-variables.
@@ -136,25 +136,22 @@ This includes the following options:
   :default: deactivated
   :available: 1D | 2D
   | In order to be able to display the error, the error must be included in the output-file in a separate output-variable (column).
-  .. figure:: doc/pics/error_1D.png
-    :width: 600
-    :align: center
+  .. figure:: ../../pics/error_1D.png
 
     Example of errorbars for a 1D graphtype.
 
 **Example:**
 
-.. figure:: doc/pics/ex_axis_opt_2D.png
-  :width: 400
-  :align: center
+.. figure:: ../../pics/ex_axis_opt_2D.png
 
   Example of the axis options for a 2D graphtype.
 
+.. _fit options:
 fit options
 ^^^^^^^^^^^
 
 The section **fit options** contains all the control options concerning the activation/display and basic configuration
-for the response model (fit). This includes depending on the graphtype (see sec. dynamic options) the following:
+for the fit based on the response model. This includes depending on the graphtype (see `dynamic-options`_) the following:
 
 .. confval:: display fit
 
@@ -221,14 +218,13 @@ for the response model (fit). This includes depending on the graphtype (see sec.
   | Number of predictions for the fit out of the response model along the input axis.
 
 Depending on the graphtype the fit will be a line (1D), a surface (2D) or an isosurface (3D).
-The details how the parameters for the fits are selected can be found below in section *response model/fit*.
+The details how the parameters for the fits are selected can be found below in section `responce model`_.
 
-
+.. _dynamic options:
 dynamic options
 """""""""""""""
-
-When changing the graph type not only the graph changes but also all non relevant options disappear respectively
-all relevant not visible options will be made visible. The behaviour is implemented for the following options:
+Based on the graphtype only the relevent options are displayed. The behaviour is implemented for the following
+options:
 
 * **axis options**:
     * input-variables (1D: x; 2D: x,y; 3D: x,y,z)
@@ -244,28 +240,33 @@ all relevant not visible options will be made visible. The behaviour is implemen
 
 **Example:** number of input-variables
 
-In *1D* at the **axis options** section only the input-variables for **x** will be shown because only one input-variable
-is needed. If graph-type is switches to *2D* in addition a row for **y** will be visible because now two
-input-variables are needed. The equivalent behaviour is implemented for the *3D* option.
+In the **axis options** section the number of rows for input-variables is dependent on the graphtype.
+In **1D** only one row for **x** will be shown because only one input-variable is needed.
+For the **2D** graphtype another row will be visible for **y**. The equivalent behaviour is implemented
+for the **3D** option.
 
-.. figure:: doc/pics/graphtype1D.png
-  :width: 400
+.. figure:: ../../pics/graphtype1D.png
   :align: center
 
-  axis options: input-variable dropdowns (only x) for graphtype 1D
+  Axis options with input-variable dropdowns (only x) for graphtype 1D
 
-.. figure:: doc/pics/graphtype2D.png
-  :width: 400
+.. figure:: ../../pics/graphtype2D.png
   :align: center
 
-  axis options: input-variable dropdowns (x and y) for graphtype 2D
+  Axis options with input-variable dropdowns (x and y) for graphtype 2D
 
-
+.. _graph:
 graph
 -----
 The section graph contains the actual graph. Since the graph is generated out of the plotly-library all the plotly
 tools are available in the upper right corner. This tools include a png-download, zoom, pan, box and lasso select,
 zoom in/out, autoscale, reset axis and various hover/selection tools.
+
+.. figure:: ../../pics/graphtools.png
+  :align: center
+
+  Graph tools provided by plotly.
+
 
 There are different specific properties of the different graphtypes described below. In all graphtypes the axis
 have the title according to the selected variable.
@@ -276,6 +277,11 @@ The 1D graph offers a range-slider beneath the plot. With the range-slider the d
 and moved along the axis. The alternative to the range-slider is to click&drag in the graph to select a certain
 area, but with this method the viewed area can only be decreased.
 
+.. figure:: ../../pics/rangeslider.png
+  :align: center
+
+    Rangeslider on the bottom of the 1D graph.
+
 2D/3D
 ^^^^^
 In the 2D and 3D graph the graph can be rotated an tilted by click&drag. Unfortunately the camera positions resets as
@@ -283,15 +289,15 @@ soon as an option is changed.
 
 2D contour
 ^^^^^^^^^^
-In the 2D contour plot one fit is displayed. In addition all points in this area are also displayed. This can be quite
-confusing because some points may have quite different values for the parameters (variables) not attached to the axis.
-Therefore a narrowing of the range the non-axis parameters is recommended.
+In the 2D contour plot one fit is displayed. In addition all points in this area are also displayed.
+Because all points (even the points with non-axis parameters far off the fit parameters) are displayed it is
+recommended to limit the span of the non-axis parameters via the **filter-table**.
 
+.. _filter options:
 filter options
 --------------
-The third major section of the user interface are the filter options. The main function of the filter options is to
-limit the range of the input-variables for the display in the plot and the determination of the parameters for the
-prediction of the fit based on the response model.
+The main function of the **filter options** is to limit the range of the input-variables for the display in the plot
+and the determination of the parameters for the prediction of the fit based on the response model.
 
 The filter options are designed as a table. The controls for the entries of the table are located at the table
 head and consist of the following:
@@ -324,37 +330,37 @@ columns:
 * reset:
     A button to reset the range to the default values (minimum to maximum).
 
-Changes to the slider, the range-inputs or the center/span-inputs will automatically trigger a recalculation of the
-other values. Also changes to the log-Checkbox or the #digets-input will be evaluated immediately.
+Changes to the the values in the different coloumns will automatically trigger a recalculation of the other values.
 
-In addition the center values determines the value of the parameter used for the prediction of the fit based on
-the response model. If several fits along one dimension (variable) are predicted (**#fits** > 1), the minimum and
-maximum of the range will be used for the limit of the linspace or logspace based on the log-Checkbox.
-For details see section ().
+In addition the center values determine the value of the parameter used for the prediction of the fit based on
+the response model. If several fits along one dimension (variable) are predicted (:confval:`#fits` > ``1``),
+the minimum and maximum of the range will be used for the limit of the ``linspace`` or ``logspace`` based on
+the :confval:`log`. For details see `response model`_.
 
-
+.. _response model:
 Response model/fit
 ******************
 
 For the prediction of the fit out of the response model the response model needs to be evaluated at different
-places in the multidimensional parameter space. Therefore a multidimensional meshgrid is generated.
-Along the dimensions of the plot (axis-variables) the meshgrid has the same length as the **#points**-input-field
-specifies. The point are either linear-spaced or log-spaced based on the activation status of the **log**-checkbox
-in the **axis options**-section beside the according dimension. The limits are based on the limit of the variables
-respectively on the limits set in the filter-table.
+points in the multidimensional parameter space. Therefore a multidimensional meshgrid is generated.
+Along the dimensions of the plot (axis-variables) the meshgrid has the same length as :confval:`#points`.
+The points are either linear-spaced or log-spaced based on the activation status of :confval:`log` in the
+**axis options**-section beside the according dimension. The limits are based on the limit of the variables
+respectively on the limits set in the **filter-table**.
 
-In case of a single fit all non-axis parameters for the response model are constant. Where the center of the range
-of this dimension is used. If the range is limited via the filer-table the fit adjusts accordingly.
+In case of a single fit (:confval:`#fits`=``1``) all non-axis parameters for the response model are constant.
+The center of the range of this dimension is used. If the range is limited via the **filer-table** the fit
+adjusts accordingly.
 
-In case of a multi-fit (**#fits** > 1) along a dimension (selected via **multi-fit**-dropdown) the minimum and
+In case of a multi-fit (:confval:`#fits`>``1``) along the :confval:`multi-fit` dimension the minimum and
 maximum of the range of this dimension will be used as limits for the generation of the vector. The number of points
-is chosen according to the **#fits**-input-field. Restrictions of the limits via the filter-table will be taken into
-account. Based on the activation-status of the **log**-checkbox in the filter-table a ``linspace`` or
-``logspace``-vector is used.
+is chosen according to :confval:`#fits`. Restrictions of the limits via the **filter-table** will be taken into
+account. Based on the activation-status of the **log**-checkbox in the **filter-table** a ``linspace`` or
+``logspace``-vector will be used.
 
 For further details on the generation of the response model itself see the API documentation of the surrogate model.
 
-
+.. _technical background
 Technical Background
 ********************
 
