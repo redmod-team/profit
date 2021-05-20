@@ -10,20 +10,13 @@ Welcome to proFit's documentation!
    :maxdepth: 2
    :caption: Contents:
 
+   proFit <README>
    design
    config
    kernels
    codegen
    troubleshooting
-
-
-
-Running
--------
-
-1. Pure UQ mode
-2. Pure Surrogate mode
-3. Surrogate with nested UQ
+   CONTRIBUTING
 
 
 Indices and tables

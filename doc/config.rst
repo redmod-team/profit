@@ -319,14 +319,14 @@ The following gives an overview of all possible parameters
         :type: ``null`` or path
         :default: ``stdout``
 
-        | where the simulation's stdout should be redirected to (relative to run directory)
+        | where the simulation's stdout should be redirected to (relative to the run directory)
         | ``null`` means insertion into the worker's stdout
 
     .. confval:: stderr
         :type: ``null`` or path
         :default: ``null``
 
-        | where the simulation's stderr should be redirected to (relative to run directory)
+        | where the simulation's stderr should be redirected to (relative to the run directory)
         | ``null`` means insertion into the worker's stderr
 
     .. confval:: clean
@@ -341,6 +341,12 @@ The following gives an overview of all possible parameters
 
         | whether to record the computation time (using the key ``TIME``)
         | currently this information is not added to the output data
+
+    .. confval:: log_path
+        :type: path
+        :default: ``log``
+
+        | the directory where the Worker logs should be saved to (relative to the run directory)
 
     .. confval:: include
         :type: path or list of paths

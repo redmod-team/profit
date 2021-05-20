@@ -6,7 +6,7 @@
 
 <img src="https://raw.githubusercontent.com/redmod-team/profit/master/logo.png" width="208.5px">
 
-## Probabilistic Response Model Fitting with Interactive Tools
+# Probabilistic Response Model Fitting with Interactive Tools
 
 This is a collection of tools for studying parametric dependencies of 
 black-box simulation codes or experiments and construction of reduced 

@@ -13,6 +13,7 @@
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
 from sphinx.ext import autodoc
+from recommonmark.parser import CommonMarkParser
 from pkg_resources import get_distribution
 import os
 import sys
@@ -62,7 +63,8 @@ extensions = [
     'sphinx.ext.ifconfig',
     'sphinx.ext.viewcode',
     'sphinx.ext.githubpages',
-    'sphinx.ext.napoleon'
+    'sphinx.ext.napoleon',
+    'recommonmark',
 ]
 
 
@@ -76,6 +78,10 @@ def setup(app):
         }, True)
     app.add_autodocumenter(RawDocumenter)
 
+
+source_parsers = {
+    '.md': CommonMarkParser
+}
 
 autoapi_type = 'python'
 autoapi_dirs = ['../profit']
