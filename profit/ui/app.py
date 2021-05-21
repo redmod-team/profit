@@ -1,5 +1,4 @@
 import dash
-import dash_table
 import dash_core_components as dcc
 import dash_html_components as html
 import plotly.graph_objs as go
@@ -237,21 +236,6 @@ def init_app(config):
                 ]),
             ]),
         ])),
-        html.Div(id='data-table', children=[
-            html.Div(children=[
-                html.B("Show table of data:"),
-                html.Button("show table", id='show-table', n_clicks=0),
-                html.Button("hide table", id='hide-table', n_clicks=0),
-            ], style={'visibility': 'hidden'}),
-            html.Div(id='data-table-div', style={'visibility': 'hidden'}, children=[
-                # dash_table.DataTable(
-                #     id='data-table',
-                #     columns=[{"name": i, "id": i} for i in invars],
-                #     data=indata.to_dict('records'),
-                #     page_size=20,
-                # ) # TODO: fix table
-            ])
-        ]),
     ])
 
 
@@ -479,30 +463,32 @@ def init_app(config):
          Output('fit-use-div', 'style'),
          Output('fit-multiinput-div', 'style'),
          Output('fit-number-div', 'style'),
+         Output('fit-number', 'value'),
          Output('fit-conf-div', 'style'),
          Output('fit-noise-div', 'style'),
          Output('fit-color-div', 'style'),
          Output('fit-opacity-div', 'style'), ],
-        [Input('graph-type', 'value'), ]
+        [Input('graph-type', 'value'), ],
+        [State('fit-number', 'value'), ]
     )
-    def div_visibility(graph_type):
+    def div_visibility(graph_type, fits):
         hide = axis_options_div_style.copy()
         hide['visibility'] = 'hidden'
         show = axis_options_div_style.copy()
         show['visibility'] = 'visible'
         if graph_type == '1D':
-            return hide, hide, show, show, show, show, show, show, show, hide, show
+            return hide, hide, show, show, show, show, show, fits, show, show, hide, show
         if graph_type == '2D':
             if len(invars) <= 2:
-                return show, hide, show, show, show, hide, hide, show, show, show, show
+                return show, hide, show, show, show, hide, hide, 1, show, show, show, show
             else:
-                return show, hide, show, show, show, show, show, show, show, show, show
+                return show, hide, show, show, show, show, show, fits, show, show, show, show
         if graph_type == '2D contour':
-            return show, hide, show, hide, hide, hide, hide, hide, hide, hide, hide
+            return show, hide, show, hide, hide, hide, hide, fits, hide, hide, hide, hide
         if graph_type == '3D':
-            return show, show, hide, hide, show, hide, show, hide, hide, hide, show
+            return show, show, hide, hide, show, hide, show, fits, hide, hide, hide, show
         else:
-            return show, show, show, show, show, show, show, show, show, show, show
+            return show, show, show, show, show, show, show, fits, show, show, show, show
 
 
     @app.callback(
@@ -621,7 +607,7 @@ def init_app(config):
                         opacity=fit_opacity,
                         coloraxis="coloraxis2" if (fit_color == 'multi-fit' or
                             (fit_color == 'output' and (color_dd != outvar and color_dd != 'OUTPUT'))) else "coloraxis",
-                        showlegend=True,
+                        showlegend=True if len(invars) > 2 else False,
                     ))
                     if fit_conf > 0:
                         fig.add_trace(go.Surface(
@@ -869,20 +855,6 @@ def init_app(config):
                 mesh_out = np.vstack((mesh_out, new_mesh_out))
                 mesh_out_std = np.vstack((mesh_out_std, new_mesh_out_std))
         return mesh_in, mesh_out, mesh_out_std, fit_dd_values
-
-    @app.callback(
-        Output('data-table-div', 'style'),
-        [Input('show-table', 'n_clicks'),
-         Input('hide-table', 'n_clicks'), ]
-    )
-    def show_table(show, hide):
-        ctx = dash.callback_context
-        trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
-        # print(trigger_id)
-        if trigger_id == 'show-table':
-            return {'visibility': 'visible'}
-        else:
-            return {'visibility': 'hidden'}
 
 
     def create_slider(dd_value):
