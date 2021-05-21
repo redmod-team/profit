@@ -48,3 +48,4 @@ kernels_base.f90
 *.plist
 a.out
 *.S
+*.npy
