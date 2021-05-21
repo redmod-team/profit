@@ -11,12 +11,9 @@ Welcome to proFit's documentation!
    :caption: Contents:
 
    proFit <README>
-   design
    config
    cluster
-   kernels
-   codegen
-   troubleshooting
+   ui
    CONTRIBUTING
 
 
