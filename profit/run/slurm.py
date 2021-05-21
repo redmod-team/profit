@@ -16,7 +16,14 @@ from tqdm import trange
 
 @Runner.register('slurm')
 class SlurmRunner(Runner):
-    """Runner Implementation which submits each run as a job to the slurm scheduler"""
+    """ Runner which submits each run as a job to the SLURM scheduler on a cluster
+
+    - generates a slurm batch script with the given configuration
+    - can also be used with a custom script
+    - supports OpenMP
+    - tries to minimize overhead by using job arrays if possible
+    - polls the scheduler only at longer intervals
+    """
     def __init__(self, interface_class, config, base_config):
         super().__init__(interface_class, config, base_config)
         if self.config['custom']:
@@ -89,7 +96,7 @@ class SlurmRunner(Runner):
                 self.del_run(run_id)
         # poll the slurm scheduler to check for crashed runs
         if poll:
-            acct = subprocess.run(['sacct', f'--name={self.config["job-name"]}', '--brief', '--parsable2'],
+            acct = subprocess.run(['sacct', f'--name={self.config["options"]["job-name"]}', '--brief', '--parsable2'],
                                   capture_output=True, text=True, check=True)
             lookup = {job: run for run, job in self.runs.items()}
             for line in acct.stdout.split('\n'):
@@ -99,6 +106,15 @@ class SlurmRunner(Runner):
                 if job_id in lookup:
                     if not (state.startswith('RUNNING') or state.startswith('PENDING')):
                         self.del_run(lookup[job_id])
+
+    def cancel_all(self):
+        from re import split
+        ids = set()
+        for run_id in self.runs:
+            ids.add(split(r'[_.]', self.runs[run_id])[0])
+        for job_id in ids:
+            subprocess.run(['scancel', job_id])
+        self.runs = {}
 
     def del_run(self, run_id: int):
         """helper: delete run from runs and remove slurm-stdout
@@ -135,20 +151,31 @@ class SlurmRunner(Runner):
                 path: slurm.bash    # the path to the generated batch script (relative to the base directory)
                 custom: false       # whether a custom batch script is already provided at 'path'
                 prefix: srun        # prefix for the command
-                job-name: profit    # the name of the submitted jobs
                 OpenMP: false       # whether to set OMP_NUM_THREADS and OMP_PLACES
                 cpus: 1             # number of cpus (including hardware threads) to use (may specify 'all')
+                options:            # (long) options to be passed to slurm: e.g. time, mem-per-cpu, account, constraint
+                    job-name: profit
 
         """
-        defaults = dict(parallel=None, sleep=0, poll=60,
-                        path='slurm.bash', custom=False, prefix='srun',
-                        OpenMP=False, cpus=1,
-                        account=None, partition=None, qos=None, constraint=None)
-        defaults.update({'job-name': 'profit', 'mem-per-cpu': None})
+        defaults = {'parallel': None,
+                    'sleep': 0,
+                    'poll': 60,
+                    'path': 'slurm.bash',
+                    'custom': False,
+                    'prefix': 'srun',
+                    'OpenMP': False,
+                    'cpus': 1,
+                    }
+        options = {'job-name': 'profit'}
 
         for key, value in defaults.items():
             if key not in config:
                 config[key] = value
+        if 'options' not in config:
+            config['options'] = {}
+        for key, value in options.items():
+            if key not in config['options']:
+                config['options'][key] = value
 
         # convert path to absolute path
         if not os.path.isabs(config['path']):
@@ -162,13 +189,14 @@ class SlurmRunner(Runner):
 #!/bin/bash
 # automatically generated SLURM batch script for running simulations with proFit
 # see https://github.com/redmod-team/profit
-
 """
-        for key in ['job-name', 'account', 'partition', 'qos', 'constraint', 'mem-per-cpu']:
-            if self.config[key] is not None:
-                text += f"\n#SBATCH --{key}={self.config[key]}"
+        for key, value in self.config['options'].items():
+            if value is not None:
+                text += f"\n#SBATCH --{key}={value}"
 
-        text += "\n#SBATCH --ntasks=1"
+        text += """
+#SBATCH --ntasks=1
+"""
         if self.config['cpus'] == 'all':
             text += """
 #SBATCH --nodes=1

@@ -9,10 +9,13 @@ run:
     runner:
         class: slurm
         parallel: 10
+        options:
+            job-name: profit-mockup
+            time: 1:00:00
+            mem-per-cpu: 1G
     interface:
         class: zeromq
-        bind: tcp://*:9000
-        connect: tcp://acluster:9000
+        port: 9100
     post:
         class: numpytxt
         path: mockup.out

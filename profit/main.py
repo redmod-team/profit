@@ -75,13 +75,19 @@ def main():
                 config['active_learning'] = {}
             ActiveLearning.handle_config(config['active_learning'], config)
             al = ActiveLearning.from_config(runner, config['active_learning'], config)
-            al.run_first()
-            al.learn()
+            try:
+                al.run_first()
+                al.learn()
+            finally:
+                runner.cancel_all()
             if config['fit'].get('save'):
                 al.save(config['fit']['save'])
         else:
             params_array = [row[0] for row in eval_points]
-            runner.spawn_array(tqdm(params_array), blocking=True)
+            try:
+                runner.spawn_array(tqdm(params_array), blocking=True)
+            finally:
+                runner.cancel_all()
 
         if config['run']['clean']:
             runner.clean()
