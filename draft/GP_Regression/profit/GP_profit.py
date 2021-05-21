@@ -32,7 +32,7 @@ plt.ylabel('f(x)')
 f_x = f(x)
 # the noise sigma_n
 sigma_n = 1e-2
-# Definition of the errors -> we assume that the noise on observations 
+# Definition of the errors -> we assume that the noise on observations
 # follows an independent , identically distributed Gaussian distribution with zero mean and variance sigma_n ^2
 epsilon = sigma_n * np.random.randn(n).reshape((-1, 1))
 # Observed target variable (f(x) + epsilon)
@@ -96,6 +96,7 @@ plt.imshow(cov_f_star)
 # Plot of n_prior samples from the posterior distribution and of the true function
 for i in range(n_prior):
     f_posterior = np.random.multivariate_normal(f_bar_star[:, 0], cov_f_star)
+plt.figure()
 plt.plot(x_star, f_posterior)
 plt.fill_between(x_star.flatten(),
                  (f_bar_star.flatten() + 2 * np.sqrt(np.diag(cov_f_star))),
