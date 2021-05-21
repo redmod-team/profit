@@ -1,4 +1,5 @@
 [![DOI](https://zenodo.org/badge/168945305.svg)](https://zenodo.org/badge/latestdoi/168945305)
+[![PyPI](https://img.shields.io/pypi/v/profit)](https://pypi.org/project/profit/)
 
 [![Documentation Status](https://readthedocs.org/projects/profit/badge/?version=latest)](https://profit.readthedocs.io/en/latest/?badge=latest)
 [![Python package](https://github.com/redmod-team/profit/actions/workflows/python-package.yml/badge.svg?)](https://github.com/redmod-team/profit/actions/workflows/python-package.yml)
