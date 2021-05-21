@@ -46,7 +46,7 @@ The default method to resolve conflicts is to rebase the personal fork onto `ups
 Please also use *interactive rebase* to squash intermediate commits if you use many small commits.
 
 ### Jupyter Notebooks
-TODO
+Make sure to clear output of Jupyter notebooks before committing them to the git repository.
 
 ## Documentation
 The project documentation is maintained in the `doc` directory of the repository. proFit uses *Sphinx* and *rst* markup.
