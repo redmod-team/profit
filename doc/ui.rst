@@ -40,7 +40,7 @@ a three section layout is used. The sections are listed below and shown in the f
 * graph
 * filter options
 
-.. figure:: ../../pics/layout.png
+.. figure:: pics/layout.png
 
   Layout of the user interface with the three major sections: *axis/fit options*, *graph* and *filter options*.
 
@@ -53,7 +53,7 @@ In this section of the layout the following three different types of options can
 * options for the axis (including color and error)
 * options for the fit based on the response model
 
-.. figure:: ../../pics/axis_options_color.png
+.. figure:: pics/axis_options_color.png
   :align: center
   :width: 250
 
@@ -80,25 +80,25 @@ There are four different graph-types available:
 
 The four graph-types are shown below with sample data and a sample response model:
 
-.. figure:: ../../pics/ex_1D_fit.png
+.. figure:: pics/ex_1D_fit.png
   :width: 600
   :align: center
 
   Example of the UI for a 1D graph.
 
-.. figure:: ../../pics/ex_2D_fit.png
+.. figure:: pics/ex_2D_fit.png
   :width: 600
   :align: center
 
   Example of the UI for a 2D graph.
 
-.. figure:: ../../pics/ex_2Dc.png
+.. figure:: pics/ex_2Dc.png
   :width: 600
   :align: center
 
   Example of the UI for a 2D contour graph.
 
-.. figure:: ../../pics/ex_3D_fit.png
+.. figure:: pics/ex_3D_fit.png
   :width: 600
   :align: center
 
@@ -108,7 +108,7 @@ The four graph-types are shown below with sample data and a sample response mode
 Axis options
 ^^^^^^^^^^^^
 
-.. figure:: ../../pics/ex_axis_opt_2D.png
+.. figure:: pics/ex_axis_opt_2D.png
   :align: center
   :width: 400
 
@@ -145,7 +145,7 @@ Depending on the graph-type different options are available.
   :available: 1D | 2D | 2D contour
   | **3D:** same as :confval:`output`
   | Option *OUTPUT* is always synchronised with the :confval:`output`.
-  .. figure:: ../../pics/color_dd.png
+  .. figure:: pics/color_dd.png
     :align: center
     :width: 250
 
@@ -159,7 +159,7 @@ Depending on the graph-type different options are available.
   :default: last output-variable & deactivated
   :available: 1D | 2D
 
-  .. figure:: ../../pics/error_1D.png
+  .. figure:: pics/error_1D.png
     :align: center
 
     Example of errorbars for a 1D graph-type.
@@ -248,7 +248,7 @@ This section contains the actual graph. Since the graph is generated out of the 
 tools are available in the upper right corner. This tools include a png-download, zoom, pan, box and lasso select,
 zoom in/out, autoscale, reset axis and various hover/selection tools.
 
-.. figure:: ../../pics/tools.png
+.. figure:: pics/tools.png
   :align: center
   :width: 400
 
@@ -263,7 +263,7 @@ The 1D graph offers a range-slider beneath the plot. With the range-slider the d
 and moved along the axis. The alternative to the range-slider is to click&drag in the graph to select a certain
 area. By using this method, however the viewed area can only be decreased.
 
-.. figure:: ../../pics/rangeslider.png
+.. figure:: pics/rangeslider.png
   :align: center
 
   Range-slider on the bottom of the 1D graph.
@@ -285,7 +285,7 @@ Filter options
 The main function of the **filter options** is to limit the range of the input-variables for the display in the plot
 and the determination of the parameters for the prediction of the fit based on the response model.
 
-.. figure:: ../../pics/filter_table_n.png
+.. figure:: pics/filter_table_n.png
   :align: center
   :width: 500
 
