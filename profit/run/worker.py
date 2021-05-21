@@ -10,8 +10,9 @@ import logging
 from abc import ABC, abstractmethod  # Abstract Base Class
 import time
 import subprocess
-from collections.abc import Mapping, MutableMapping
+from typing import Mapping, MutableMapping
 from numpy import zeros, void
+from warnings import warn
 
 
 def checkenv(name):  # ToDo: move to utils? Modify logger name
@@ -51,7 +52,7 @@ class Interface(ABC):
     def register(cls, label):
         def decorator(interface):
             if label in cls.interfaces:
-                raise KeyError(f'registering duplicate label {label} for Interface')
+                warn(f'registering duplicate label {label} for Interface')
             cls.interfaces[label] = interface
             return interface
         return decorator
@@ -88,7 +89,6 @@ class Preprocessor(ABC):
         return self.pre(data, run_dir)
 
     @classmethod
-    @abstractmethod
     def handle_config(cls, config, base_config):
         pass
 
@@ -96,13 +96,22 @@ class Preprocessor(ABC):
     def register(cls, label):
         def decorator(pre):
             if label in cls.preprocessors:
-                raise KeyError(f'registering duplicate label {label} for Preprocessor')
+                warn(f'registering duplicate label {label} for Preprocessor')
             cls.preprocessors[label] = pre
             return pre
         return decorator
 
     def __class_getitem__(cls, item):
         return cls.preprocessors[item]
+
+    @classmethod
+    def wrap(cls, label):
+        def decorator(func):
+            @cls.register(label)
+            class WrappedPreprocessor(cls):
+                def pre(self, data, run_dir):
+                    func(data)
+        return decorator
 
 
 # === Post === #
@@ -125,7 +134,6 @@ class Postprocessor(ABC):
         return self.post(data)
 
     @classmethod
-    @abstractmethod
     def handle_config(cls, config, base_config):
         pass
 
@@ -133,13 +141,22 @@ class Postprocessor(ABC):
     def register(cls, label):
         def decorator(post):
             if label in cls.postprocessors:
-                raise KeyError(f'registering duplicate label {label} for Postprocessor')
+                warn(f'registering duplicate label {label} for Postprocessor')
             cls.postprocessors[label] = post
             return post
         return decorator
 
     def __class_getitem__(cls, item):
         return cls.postprocessors[item]
+
+    @classmethod
+    def wrap(cls, label):
+        def decorator(func):
+            @cls.register(label)
+            class WrappedPostprocessor(cls):
+                def post(self, data):
+                    func(data)
+        return decorator
 
 
 # === Worker === #
@@ -213,7 +230,7 @@ class Worker:
     def register(cls, label):
         def decorator(worker):
             if label in cls._registry:
-                raise KeyError(f'registering duplicate label {label} for Worker')
+                warn(f'registering duplicate label {label} for Worker')
             cls._registry[label] = worker
             return worker
         return decorator
@@ -222,6 +239,21 @@ class Worker:
         if item is None:
             return cls
         return cls._registry[item]
+
+    @classmethod
+    def wrap(cls, label, inputs, outputs):
+        def decorator(func):
+            @cls.register(label)
+            class WrappedWorker(cls):
+                def main(self):
+                    values = func(*[self.interface.input[key] for key in inputs])
+                    if isinstance(outputs, str):
+                        self.interface.output[outputs] = values
+                    else:
+                        for value, key in zip(values, outputs):
+                            self.interface.output[key] = value
+                    self.interface.done()
+        return decorator
 
     def run(self):
         kwargs = {}
@@ -249,13 +281,12 @@ class Worker:
 # === Entry Point === #
 
 
-def main():  # ToDo: better name?
+def main():
     """
     entry point to run a worker
 
     configuration with environment variables and the main config file
     intended to be called by the Runner class
-    ToDo: entry_point OR part of main OR direct invocation via path ?
     """
     worker = Worker.from_env()
     worker.main()

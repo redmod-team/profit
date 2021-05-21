@@ -11,9 +11,9 @@ run:
     post:
         class: numpytxt
         path: mockup.out
-    worker: mockup_worker3
+    worker: mockup_worker4
     include: ../simulation_files/custom_components.py
 
 files:
-    input: input_custom_worker3.hdf5
-    output: output_custom_worker3.hdf5
+    input: input_custom_worker4.hdf5
+    output: output_custom_worker4.hdf5

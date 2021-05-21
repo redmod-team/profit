@@ -49,15 +49,12 @@ Available options by default
     * - Label
       - Description
       - Status
-    * - Local
-      - Execution of local commands.
+    * - local
+      - For local execution.
       - Tested
-    * - Slurm
+    * - slurm
       - For clusters with SLURM interface
       - Tested
-    * - ZeroMQ
-      - For clusters with ZeroMQ interface
-      - Not fully tested
 
 .. list-table:: Interfaces
     :widths: 25 80 25
@@ -66,12 +63,12 @@ Available options by default
     * - Label
       - Description
       - Status
-    * - Memmap
-      - Uses numpy memmap for storing run variables.
+    * - memmap
+      - Using a memory mapped array (with numpy memmap).
       - Tested
-    * - ZeroMQ
-      - Specific interface for ZeroMQ cluster.
-      - Not fully tested
+    * - zeromq
+      - Using a lightweight message queue (with ZeroMQ).
+      - Tested
 
 .. list-table:: Preprocessors
     :widths: 25 80 25
@@ -80,7 +77,7 @@ Available options by default
     * - Label
       - Description
       - Status
-    * - Template
+    * - template
       - Variables are inserted into the template files.
       - Tested
 
@@ -91,13 +88,13 @@ Available options by default
     * - Label
       - Description
       - Status
-    * - Numpytxt
-      - Reads results from a .txt file into a numpy array.
+    * - numpytxt
+      - Reads output from a tabular text file (e.g. csv, tsv) with numpy ``genfromtxt``.
       - Tested
-    * - JSON
+    * - json
       - Reads output from a json formatted file.
       - Tested
-    * - HDF5
+    * - hdf5
       - Reads output from an hdf5 file.
       - Tested
 
@@ -222,111 +219,95 @@ The following gives an overview of all possible parameters
 
 .. confval:: run
 
-    | toplevel dictionary, specifying the handling of runs
-    | *or*: a command (string) -> shortcut for run/command + default values
+    :type: toplevel dictionary (specifying the handling of runs)
+        **or** command (string) as shortcut for run/command + default values
 
     .. confval:: runner
 
-        | dictionary, specifying the run system to use
-        | *or*: an identifier (string) -> shortcut for runner/class + default values
+        :type: dictionary (specifying the run system to use)
+            **or** identifier (string) as shortcut for runner/class + default values
+        :default: ``local``
 
-        .. confval:: class
-            :type: identifier (string)
-            :default: ``local``
+        .. confval:: class: local
 
-        | other options depend on the class (see some of the choices below)
+            | :py:class:`profit.run.default.LocalRunner`
 
-        .. code-block:: yaml
+            .. autoraw:: profit.run.default.LocalRunner
 
-            class: local
-            parallel: 1     # maximum number of simultaneous runs (for spawn array)
-            sleep: 0        # number of seconds to sleep while polling
-            fork: true      # whether to spawn the (non-custom) worker via forking instead of a subprocess (via a shell)
+            .. autoraw:: profit.run.default.LocalRunner.handle_config
 
-        .. code-block:: yaml
+        .. confval:: class: slurm
 
-            class: slurm
-            parallel: null      # maximum number of simultaneous runs (for spawn array)
-            sleep: 0            # number of seconds to sleep while (internally) polling
-            poll: 60            # number of seconds between external polls (to catch failed runs), use with care!
-            path: slurm.bash    # the path to the generated batch script (relative to the base directory)
-            custom: false       # whether a custom batch script is already provided at 'path'
-            prefix: srun        # prefix for the command
-            job-name: profit    # the name of the submitted jobs
-            OpenMP: false       # whether to set OMP_NUM_THREADS and OMP_PLACES
-            cpus: 1             # number of cpus (including hardware threads) to use (may specify 'all')
+            | :py:class:`profit.run.slurm.SlurmRunner`
+
+            .. autoraw:: profit.run.slurm.SlurmRunner
+
+            .. autoraw:: profit.run.slurm.SlurmRunner.handle_config
 
     .. confval:: interface
+        :type: dictionary (specifying the Runner-Worker Interface)
+            **or** identifier (string) as shortcut for interface/class + default values
+        :default: ``memmap``
 
-        | dictionary, specifying the runner-worker interface
-        | *or*: an identifier (string) -> shortcut for interface/class + default values
+        .. confval:: class: memmap
 
-        .. confval:: class
-            :type: identifier (string)
-            :default: ``memmap``
+            | :py:class:`profit.run.default.MemmapRunnerInterface`
+            | :py:class:`profit.run.default.MemmapInterface`
 
-        | other options depend on the class (see some of the choices below)
+            .. autoraw:: profit.run.default.MemmapRunnerInterface
 
-        .. code-block:: yaml
+            .. autoraw:: profit.run.default.MemmapRunnerInterface.handle_config
 
-            class: memmap
-            path: interface.npy     # memory mapped interface file, relative to base directory
-            max-size: null          # maximum number of runs, determines size of the interface file (default = ntrain)
+        .. confval:: class: zeromq
 
-        .. code-block:: yaml
+            | :py:class:`profit.run.zeromq.ZeroMQRunnerInterface`
+            | :py:class:`profit.run.zeromq.ZeroMQInterface`
 
-            class: zeromq
-            transport: tcp      # transport system used by zeromq
-            port: 9000          # port for the interface
-            bind: null          # override bind address used by zeromq
-            connect: null       # override connect address used by zeromq
-            timeout: 2500       # zeromq polling timeout, in ms
-            retries: 3          # number of zeromq connection retries
-            retry-sleep: 1      # sleep between retries, in s
+            .. autoraw:: profit.run.zeromq.ZeroMQRunnerInterface
+
+            .. autoraw:: profit.run.zeromq.ZeroMQRunnerInterface.handle_config
 
     .. confval:: pre
+        :type: dictionary (specifying the worker preprocessor)
+            **or** identifier (string) as shortcut for pre/class + default values
+        :default: ``template``
 
-        | dictionary, specifying the worker preprocessor
-        | *or*: an identifier (string) -> shortcut for pre/class + default values
+        .. confval:: class: template
 
-        .. confval:: class
-            :type: identifier (string)
-            :default: ``template``
+            | :py:class:`profit.run.default.TemplatePreprocessor`
 
-        | other options depend on the class (see some of the choices below)
+            .. autoraw:: profit.run.default.TemplatePreprocessor
 
-        .. code-block:: yaml
-
-            class: template
-            path: template      # directory to copy from, relative to base directory
-            param_files: null   # on which files template substitution should be applied, null means all files
+            .. autoraw:: profit.run.default.TemplatePreprocessor.handle_config
 
     .. confval:: post
+        :type: dictionary (specifying the worker postprocessor)
+            *or* identifier (string) as shortcut for post/class + default values
+        :default: ``json``
 
-        | dictionary, specifying the worker postprocessor
-        | *or*: an identifier (string) -> shortcut for post/class + default values
+        .. confval:: class: json
 
-        .. confval:: class
-            :type: identifier (string)
-            :default: ``json``
+            | :py:class:`profit.run.default.JSONPostprocessor`
 
-        | other options depend on the class (see some of the choices below)
+            .. autoraw:: profit.run.default.JSONPostprocessor
 
-        .. code-block:: yaml
+            .. autoraw:: profit.run.default.JSONPostprocessor.handle_config
 
-            class: json
-            path: stdout    # file to read from, relative to the run directory
+        .. confval:: class: numpytxt
 
-        .. code-block:: yaml
+            | :py:class:`profit.run.default.NumpytxtPostprocessor`
 
-            class: numpytxt
-            path: stdout    # file to read from, relative to the run directory
-            names: "f g"    # whitespace separated list of output variables in order, default read from config/variables
+            .. autoraw:: profit.run.default.NumpytxtPostprocessor
 
-        .. code-block:: yaml
+            .. autoraw:: profit.run.default.NumpytxtPostprocessor.handle_config
 
-            class: hdf5
-            path: output.hdf5   # file to read from, relative to the run directory
+        .. confval:: class: hdf5
+
+            | :py:class:`profit.run.default.HDF5Postprocessor`
+
+            .. autoraw:: profit.run.default.HDF5Postprocessor
+
+            .. autoraw:: profit.run.default.HDF5Postprocessor.handle_config
 
     .. confval:: command
         :type: shell/bash command
@@ -338,14 +319,14 @@ The following gives an overview of all possible parameters
         :type: ``null`` or path
         :default: ``stdout``
 
-        | where the simulation's stdout should be redirected to (relative to run directory)
+        | where the simulation's stdout should be redirected to (relative to the run directory)
         | ``null`` means insertion into the worker's stdout
 
     .. confval:: stderr
         :type: ``null`` or path
         :default: ``null``
 
-        | where the simulation's stderr should be redirected to (relative to run directory)
+        | where the simulation's stderr should be redirected to (relative to the run directory)
         | ``null`` means insertion into the worker's stderr
 
     .. confval:: clean
@@ -360,6 +341,12 @@ The following gives an overview of all possible parameters
 
         | whether to record the computation time (using the key ``TIME``)
         | currently this information is not added to the output data
+
+    .. confval:: log_path
+        :type: path
+        :default: ``log``
+
+        | the directory where the Worker logs should be saved to (relative to the run directory)
 
     .. confval:: include
         :type: path or list of paths
@@ -472,7 +459,7 @@ The following gives an overview of all possible parameters
 
     .. confval:: plot_marginal_variance
         :type: boolean
-        :type: ``false``
+        :default: ``false``
 
         | If a subplot of the marginal variance should be included in the plots.
 

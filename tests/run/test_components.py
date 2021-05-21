@@ -25,7 +25,7 @@ def chdir_pytest():
 
 def assert_wif(wif):
     assert wif.input.dtype.names == ('u', 'v')
-    assert wif.output.dtype.names == ('f',)
+    assert wif.output.dtype.names == ('f', 'g')
     assert wif.input.shape == ()
     assert wif.output.shape == ()
     assert wif.input['u'] == VALUE_U
@@ -94,3 +94,19 @@ def test_zeromq():
     wt.start()
     wt.join()
     rt.join()
+
+
+def test_numpytxt():
+    from numpy import array
+    from profit.run.default import NumpytxtPostprocessor
+
+    BASE_CONFIG = Config.from_file('numpy.yaml')
+    config = {'class': 'numpytxt', 'path': 'numpytxt.csv', 'options': {'delimiter': ','}}
+    data = array([0], dtype=[('f', float, (3,)), ('g', float)])[0]
+
+    NumpytxtPostprocessor.handle_config(config, BASE_CONFIG)
+    post = NumpytxtPostprocessor(config)
+    post(data)
+
+    assert all(data['f'] == [1.4, 1.3, 1.2])
+    assert data['g'] == 10

@@ -223,6 +223,8 @@ def load_includes(paths):
     import logging
     for path in paths:
         name = f"profit_include_{os.path.basename(path).split('.')[0]}"
+        if name in sys.modules:  # do not reload modules
+            continue
         try:
             spec = spec_from_file_location(name, path)
         except FileNotFoundError:

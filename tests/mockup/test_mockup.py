@@ -91,9 +91,14 @@ def multi_test_1d(study, config_file, output_file):
         clean(config)
 
 
-def test_custom_post():
+def test_custom_post1():
     """ test 1D with custom postprocessor """
-    multi_test_1d('./study_custom_post', 'profit_custom_post.yaml', 'output_custom_post.hdf5')
+    multi_test_1d('./study_custom_post1', 'profit_custom_post1.yaml', 'output_custom_post1.hdf5')
+
+
+def test_custom_post2():
+    """ test 1D with custom postprocessor (wrap syntax) """
+    multi_test_1d('./study_custom_post2', 'profit_custom_post2.yaml', 'output_custom_post2.hdf5')
 
 
 def test_custom_worker1():
@@ -109,6 +114,11 @@ def test_custom_worker2():
 def test_custom_worker3():
     """ test 1D with custom worker (integrated, custom run) """
     multi_test_1d('./study_custom_worker3', 'profit_custom_worker3.yaml', 'output_custom_worker3.hdf5')
+
+
+def test_custom_worker4():
+    """ test 1D with custom worker (integrated, custom run) """
+    multi_test_1d('./study_custom_worker4', 'profit_custom_worker4.yaml', 'output_custom_worker4.hdf5')
 
 
 def test_multi_output():
