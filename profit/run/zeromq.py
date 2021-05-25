@@ -130,9 +130,7 @@ class ZeroMQInterface(Interface):
         self.socket = zmq.Context.instance().socket(zmq.REQ)
         self.socket.setsockopt(zmq.IDENTITY, f'req_{self.run_id}'.encode())
         if self.config['connect'] is None:
-            address = os.environ.get('PROFIT_RUNNER_ADDRESS')
-            if address is None:
-                address = 'localhost'
+            address = os.environ.get('PROFIT_RUNNER_ADDRESS') or 'localhost'
             connect = f'{self.config["transport"]}://{address}:{self.config["port"]}'
         else:
             connect = self.config['connect']

@@ -130,7 +130,7 @@ Available options by default
       - Work in progress
 
 Possible parameters
------------------------
+-------------------
 
 The following gives an overview of all possible parameters
 
@@ -511,18 +511,23 @@ Environment variables
 proFit uses environment variables internally to configure ``profit-worker``. Users don't have to deal with them.
 
 .. list-table:: Environment variables
-    :widths: 25 80
+    :widths: 25 80 25
     :header-rows: 1
 
     * - VARIABLE
       - Description
     * - ``PROFIT_CONFIG_PATH``
-      - path to the config file (required)
+      - path to the config file
+      - required
     * - ``PROFIT_BASE_DIR``
-      - path to the base directory (unused)
+      - path to the base directory
+      - unused
     * - ``PROFIT_RUN_ID``
-      - designated run id (required)
+      - designated run id
+      - required
     * - ``PROFIT_ARRAY_ID``
-      - modifier of the designated run id for arrays of runs (optional)
+      - modifier of the designated run id for arrays of runs
+      - optional
     * - ``PROFIT_RUNNER_ADDRESS``
-      - address on which the runner can be reached (optional)
+      - address on which the runner can be reached
+      - optional
