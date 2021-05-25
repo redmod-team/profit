@@ -504,3 +504,25 @@ Possible variable distributions
     | E.g. f(t)
 * ActiveLearning
     | Initialized as NaN and filled during training.
+
+Environment variables
+---------------------
+
+proFit uses environment variables internally to configure ``profit-worker``. Users don't have to deal with them.
+
+.. list-table:: Environment variables
+    :widths: 25 80
+    :header-rows: 1
+
+    * - VARIABLE
+      - Description
+    * - ``PROFIT_CONFIG_PATH``
+      - path to the config file (required)
+    * - ``PROFIT_BASE_DIR``
+      - path to the base directory (unused)
+    * - ``PROFIT_RUN_ID``
+      - designated run id (required)
+    * - ``PROFIT_ARRAY_ID``
+      - modifier of the designated run id for arrays of runs (optional)
+    * - ``PROFIT_RUNNER_ADDRESS``
+      - address on which the runner can be reached (optional)
