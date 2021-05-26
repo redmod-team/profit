@@ -16,7 +16,5 @@ run:
     interface:
         class: zeromq
         port: 9100
-    post:
-        class: numpytxt
-        path: mockup.out
-    command: python3 mockup.py
+    include: ../mockup.py
+    worker: mockup
