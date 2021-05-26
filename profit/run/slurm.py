@@ -26,6 +26,7 @@ class SlurmRunner(Runner):
     """
     def __init__(self, interface_class, config, base_config):
         super().__init__(interface_class, config, base_config)
+        self.env['SBATCH_EXPORT'] = 'ALL'
         if self.config['custom']:
             if not os.path.exists(self.config['path']):
                 self.logger.error(f'flag for custom script is set, but could not be found at '
