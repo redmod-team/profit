@@ -606,14 +606,14 @@ class GPySurrogate(GaussianProcess):
             self.model = models.GPRegression.from_dict(sur_dict['model'])
             self.Xtrain = sur_dict['Xtrain']
             self.ytrain = sur_dict['ytrain']
-            self.encoder = [Encoder(func, cols, out) for func, cols, out in eval(sur_dict['encoder'])]
+            self.encoder = [Encoder[func](cols, out) for func, cols, out in eval(sur_dict['encoder'])]
         except (OSError, FileNotFoundError):
             from pickle import load as pload
             from os.path import splitext
             # Load multi-output model from pickle file
             print("File {} not found. Trying to find a .pkl file with multi-output instead.".format(path))
             self.model, self.Xtrain, self.ytrain, encoder_str = pload(open(splitext(path)[0] + '.pkl', 'rb'))
-            self.encoder = [Encoder(func, cols, out) for func, cols, out in eval(encoder_str)]
+            self.encoder = [Encoder[func](cols, out) for func, cols, out in eval(encoder_str)]
             self.output_ndim = int(max(self.model.X[:, -1])) + 1
             self.multi_output = True
 

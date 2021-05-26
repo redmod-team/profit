@@ -1,30 +1,26 @@
+from abc import ABC, abstractmethod
 import numpy as np
 
 
-class Encoder:
-    r"""Class to handle encoding and decoding of the input and output data before creating the surrogate model.
+class Encoder(ABC):
+    r"""Base class to handle encoding and decoding of the input and output data before creating the surrogate model.
 
-    Work in progress!
-    TODO: This should be implemented thoroughly in v0.5.
+    The base class itself does nothing. It delegates the encoding process to the childs
+    which are called by their registered labels.
 
     Parameters:
-        function_str (str): label for the encoding function. Currently only 'log10' and 'normalization'
-            is supported.
         columns (list of int): Dimensions of the data the encoder acts on.
         output (bool): True if the encoder is for output data, False if the encoder works on input data.
 
     Attributes:
-        label (str): Label for the encoding function.
-        encode_func (function): Function used for encoding the data. E.g. $\log_{10}$.
-        decode_func (function): Inverse transform of the encoding function. For an encoding of $\log_{10}(x)$ this
-            would be $10^x$.
+        label (str): Label of the encoder class.
         variables (dict): Miscellaneous variables stored during encoding, which are needed for decoding. E.g. the
             scaling factor during normalization.
     """
+    _encoders = {}
 
-    def __init__(self, function_str, columns, output=False):
-        self.label = function_str
-        self.encode_func, self.decode_func = self.get_function_from_str()
+    def __init__(self, columns, output=False):
+        self.label = self.__class__.get_label()
         self.variables = {}
         self.columns = columns
         self.output = output
@@ -38,7 +34,7 @@ class Encoder:
             x (ndarray): Array to which the encoding is applied.
 
         Returns:
-            ndarray: A copy of the encoded array x.
+            ndarray: An encoded copy of the array x.
         """
         _x = x.copy()
         _x[:, self.columns] = self.encode_func(_x[:, self.columns])
@@ -51,32 +47,80 @@ class Encoder:
             x (ndarray): Array to which the decoding is applied.
 
         Returns:
-            ndarray: A copy of the decoded array x.
+            ndarray: A decoded copy of the array x.
         """
         _x = x.copy()
         _x[:, self.columns] = self.decode_func(_x[:, self.columns])
         return _x
 
-    def get_function_from_str(self):
-        """Returns the encoding and decoding functions according to the identifier label.
-
+    @property
+    @abstractmethod
+    def encode_func(self):
+        r"""
         Returns:
-            tuple: a tuple containing:
-                - encoding_func (function): The function to encode data.
-                - decoding_func (function): The inverse of the encoding function to decode the data again.
+            function: Function used for decoding the data. E.g. $\log_{10}$.
         """
-        if self.label.lower() == "log10":
-            return np.log10, lambda x: 10**x
+        pass
 
-        elif self.label.lower() == "normalization":
-            def normalization(x):
-                self.variables['xmax'] = abs(x).max(axis=0)
-                return x / self.variables['xmax']
+    @property
+    @abstractmethod
+    def decode_func(self):
+        r"""
+        Returns:
+            function: Inverse transform of the encoding function. For an encoding of $\log_{10}(x)$ this
+                would be $10^x$.
+        """
+        pass
 
-            def scaling(x):
-                return x * self.variables['xmax']
+    @classmethod
+    def register(cls, label):
+        """Decorator to register new encoder classes."""
 
-            return normalization, scaling
+        def decorator(encoder):
+            if label in cls._encoders:
+                raise KeyError(f'registering duplicate label {label} for encoder.')
+            cls._encoders[label] = encoder
+            return encoder
 
-        else:
-            raise NotImplementedError("The encoding {} is not implemented yet.".format(self.label))
+        return decorator
+
+    @classmethod
+    def get_label(cls):
+        """Returns the string label of a encoder class object."""
+        for label, item in cls._encoders.items():
+            if item == cls:
+                return label
+        raise NotImplementedError("Class {} is not implemented.".format(cls))
+
+    def __class_getitem__(cls, item):
+        """Returns the child encoder."""
+        return cls._encoders[item]
+
+
+@Encoder.register('Log10')
+class Log10Encoder(Encoder):
+
+    @property
+    def encode_func(self):
+        return np.log10
+
+    @property
+    def decode_func(self):
+        return lambda x: 10**x
+
+
+@Encoder.register('Normalization')
+class Normalization(Encoder):
+
+    def encode(self, x):
+        if self.variables.get('xmax') is None:
+            self.variables['xmax'] = abs(x[:, self.columns]).max(axis=0)
+        return super().encode(x)
+
+    @property
+    def encode_func(self):
+        return lambda x: x / self.variables['xmax']
+
+    @property
+    def decode_func(self):
+        return lambda x: x * self.variables['xmax']

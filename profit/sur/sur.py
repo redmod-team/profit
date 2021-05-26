@@ -92,10 +92,7 @@ class Surrogate(ABC):
         """
         for enc in self.encoder:
             if not enc.output:
-                if enc.label == 'normalization':
-                    x[:, enc.columns] = x[:, enc.columns] / enc.variables['xmax']
-                else:
-                    x = enc.encode(x)
+                x = enc.encode(x)
         return x
 
     def decode_predict_data(self, ym, yv):
@@ -113,11 +110,10 @@ class Surrogate(ABC):
 
         for enc in self.encoder[::-1]:
             if enc.output:
-                if enc.label == 'normalization':
-                    ym = ym * enc.variables['xmax']
+                if enc.label == 'Normalization':
+                    # TODO: Move this somewhere inside the Encoder with a flag like 'work_on_variance'?
                     yv = yv * enc.variables['xmax'] ** 2
-                else:
-                    ym = enc.decode(ym)
+                ym = enc.decode(ym)
         return ym, yv
 
     @abstractmethod
@@ -199,7 +195,7 @@ class Surrogate(ABC):
             child_instance.output_ndim = len(base_config['output'])
             child_instance.multi_output = len(base_config['output']) > 1
             child_instance.fixed_sigma_n = config['fixed_sigma_n']
-        child_instance.encoder = [Encoder(func, cols, out) for func, cols, out in config['encoder']]
+            child_instance.encoder = [Encoder[func](cols, out) for func, cols, out in config['encoder']]
         return child_instance
 
     @classmethod
@@ -221,9 +217,9 @@ class Surrogate(ABC):
             out_dims = list(range(len(base_config['output'].keys())))
             log_input = [idx for idx, value in enumerate(base_config['input'].values())
                          if value['kind'] == 'LogUniform']
-            config['encoder'] = [['log10', log_input, False],
-                                 ['normalization', in_dims, False],
-                                 ['normalization', out_dims, True]]
+            config['encoder'] = [['Log10', log_input, False],
+                                 ['Normalization', in_dims, False],
+                                 ['Normalization', out_dims, True]]
 
         for mode in ('save', 'load'):
             if config.get(mode):
