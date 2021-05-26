@@ -43,6 +43,7 @@ def init_app(config):
     headline_sty = {'text-align': 'center', 'display': 'block', 'width': col_width-25}
     input_div_sty = {'height': 40}
     input_sty = {'width': 125}
+    filter_col = {'padding-left':5, 'padding-right':5}
 
     # try to load model with 'save' and 'fit' config option
     path = config['fit']['save'] or config['fit']['load']
@@ -199,7 +200,6 @@ def init_app(config):
                 ),
                 html.Button("Add Filter", id='add-filter', n_clicks=0),
             ], style={'display': 'flex'})),
-            html.Td(html.Button("Clear Filter", id='clear-filter', n_clicks=0)),
             html.Td(html.Button("Clear all Filter", id='clear-all-filter', n_clicks=0)),
             html.Td(dcc.Slider(id='scale-slider',
                                min=-0.5, max=0.5,
@@ -221,18 +221,20 @@ def init_app(config):
                     html.Th("filter active"),
                     html.Th("#digits"),
                     html.Th("reset"),
+                    html.Th(""),
                 ]),
             ]),
             html.Tbody(id='param-table-body', children=[
                 html.Tr(children=[
-                    html.Td(html.Div(id='param-text-div', children=[])),
-                    html.Td(html.Div(id='param-log-div', children=[])),
-                    html.Td(html.Div(id='param-slider-div', children=[])),
-                    html.Td(html.Div(id='param-range-div', children=[])),
-                    html.Td(html.Div(id='param-center-div', children=[])),
-                    html.Td(html.Div(id='param-active-div', children=[])),
-                    html.Td(html.Div(id='param-digits-div', children=[])),
-                    html.Td(html.Div(id='param-reset-div', children=[])),
+                    html.Td(html.Div(id='param-text-div', children=[]), style=filter_col),
+                    html.Td(html.Div(id='param-log-div', children=[]), style=filter_col),
+                    html.Td(html.Div(id='param-slider-div', children=[]), style=filter_col),
+                    html.Td(html.Div(id='param-range-div', children=[]), style=filter_col),
+                    html.Td(html.Div(id='param-center-div', children=[]), style=filter_col),
+                    html.Td(html.Div(id='param-active-div', children=[]), style=filter_col),
+                    html.Td(html.Div(id='param-digits-div', children=[]), style=filter_col),
+                    html.Td(html.Div(id='param-reset-div', children=[]), style=filter_col),
+                    html.Td(html.Div(id='param-clear-div', children=[]), style=filter_col),
                 ]),
             ]),
         ])),
@@ -247,10 +249,11 @@ def init_app(config):
          Output('param-center-div', 'children'),
          Output('param-active-div', 'children'),
          Output('param-digits-div', 'children'),
-         Output('param-reset-div', 'children'), ],
+         Output('param-reset-div', 'children'),
+         Output('param-clear-div', 'children'), ],
         [Input('add-filter', 'n_clicks'),
-         Input('clear-filter', 'n_clicks'),
-         Input('clear-all-filter', 'n_clicks')],
+         Input('clear-all-filter', 'n_clicks'),
+         Input({'type': 'param-clear', 'index': ALL}, 'n_clicks')],
         [State('filter-dropdown', 'value'),
          State('param-text-div', 'children'),
          State('param-log-div', 'children'),
@@ -259,33 +262,28 @@ def init_app(config):
          State('param-center-div', 'children'),
          State('param-active-div', 'children'),
          State('param-digits-div', 'children'),
-         State('param-reset-div', 'children')],
+         State('param-reset-div', 'children'),
+         State('param-clear-div', 'children')],
     )
-    def add_filterrow(n_clicks, clear, clear_all, filter_dd, text, log, slider, range_div, center_div, active_div, dig_div, reset_div):
+    def add_filterrow(n_clicks, clear_all, clear_clicks, filter_dd, text, log, slider, range_div, center_div, active_div, dig_div, reset_div, clear_div):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
+        print(trigger_id, type(trigger_id))
+        try:
+            print('t0', trigger_id[0])
+            print(trigger_id.split(',')[1].split('"')[-2])
+        except:
+            print('N/A')
         if trigger_id == 'clear-all-filter':
-            return [], [], [], [], [], [], [], []
-        elif trigger_id == 'clear-filter':
-            for i in range(len(text)):
-                if text[i]['props']['children'][0] == filter_dd:
-                    text.pop(i)
-                    log.pop(i)
-                    slider.pop(i)
-                    range_div.pop(i)
-                    center_div.pop(i)
-                    active_div.pop(i)
-                    dig_div.pop(i)
-                    reset_div.pop(i)
-                    break
+            return [], [], [], [], [], [], [], [], []
         elif trigger_id == 'add-filter':
             for i in range(len(text)):
                 if text[i]['props']['children'][0] == filter_dd:
-                    return text, log, slider, range_div, center_div, active_div, dig_div, reset_div
+                    return text, log, slider, range_div, center_div, active_div, dig_div, reset_div, clear_div
             ind = invars.index(filter_dd)
             txt = filter_dd
             new_text = html.Div(id={'type': 'dyn-text', 'index': ind}, children=[txt], style={**input_div_sty, **input_sty})
-            new_log = html.Div(id={'type': 'dyn-log', 'index': ind}, style=input_div_sty, children=[
+            new_log = html.Div(id={'type': 'dyn-log', 'index': ind}, style={**input_div_sty, 'text-align':'center'}, children=[
                 dcc.Checklist(id={'type': 'param-log', 'index': ind}, options=[{'label': '', 'value': 'log'}])], )
             new_slider = html.Div(id={'type': 'dyn-slider', 'index': ind}, style=input_div_sty, children=[
                 create_slider(txt)], )
@@ -306,9 +304,14 @@ def init_app(config):
                                   ])
             new_dig = html.Div(id={'type': 'dyn-dig', 'index': ind}, children=[
                 dcc.Input(id={'type': 'param-dig', 'index': ind}, type='number', value=5, min=0, style={'width':100})
-            ])
+            ], style={'height':40})
             new_reset = html.Div(id={'type': 'dyn-reset', 'index': ind}, children=[
-                html.Button("reset", id={'type': 'param-reset', 'index': ind}, n_clicks=0)
+                html.Button("reset", id={'type': 'param-reset', 'index': ind}, n_clicks=0,
+                            style={'padding-left':15, 'padding-right':15})
+            ])
+            new_clear = html.Div(id={'type': 'dyn-clear', 'index': ind}, children=[
+                html.Button("x", id={'type': 'param-clear', 'index': ind}, n_clicks=0,
+                            style={'border':'none', 'padding-left':5, 'padding-right':5})
             ])
             text.append(new_text)
             log.append(new_log)
@@ -318,7 +321,19 @@ def init_app(config):
             active_div.append(new_active)
             dig_div.append(new_dig)
             reset_div.append(new_reset)
-        return text, log, slider, range_div, center_div, active_div, dig_div, reset_div
+            clear_div.append(new_clear)
+        elif len(trigger_id) >=1 and trigger_id[0] == "{":
+            ind = int(trigger_id.split(',')[0].split(':')[1])
+            text.pop(ind)
+            log.pop(ind)
+            slider.pop(ind)
+            range_div.pop(ind)
+            center_div.pop(ind)
+            active_div.pop(ind)
+            dig_div.pop(ind)
+            reset_div.pop(ind)
+            clear_div.pop(ind)
+        return text, log, slider, range_div, center_div, active_div, dig_div, reset_div, clear_div
 
 
     @app.callback(
