@@ -20,8 +20,6 @@ def init_app(config):
     indata = load(config['files']['input']).flatten()
     outdata = load(config['files']['output']).flatten()
 
-    # data = pd.concat([indata, outdata], 1) # TODO: data in table
-
     invars = indata.dtype.names
     outvars = outdata.dtype.names
     dd_opts_in = [{'label': invar, 'value': invar} for invar in invars]
@@ -43,7 +41,9 @@ def init_app(config):
     headline_sty = {'text-align': 'center', 'display': 'block', 'width': col_width-25}
     input_div_sty = {'height': 40}
     input_sty = {'width': 125}
-    filter_col = {'padding-left':5, 'padding-right':5}
+    col_sty = {'padding-left':5, 'padding-right':5}
+    col_sty_th = {**col_sty, 'text-align':'center'}
+    button_sty = {'padding-left':15, 'padding-right':15}
 
     # try to load model with 'save' and 'fit' config option
     path = config['fit']['save'] or config['fit']['load']
@@ -198,43 +198,43 @@ def init_app(config):
                     value=invars[0],
                     style={'width': 200, 'margin-right': 10},
                 ),
-                html.Button("Add Filter", id='add-filter', n_clicks=0),
-            ], style={'display': 'flex'})),
-            html.Td(html.Button("Clear all Filter", id='clear-all-filter', n_clicks=0)),
+                html.Button("Add Filter", id='add-filter', n_clicks=0, style=button_sty),
+            ], style={'display': 'flex'}), style={**col_sty, 'border-bottom-width':0}),
+            html.Td(html.Button("Clear all Filter", id='clear-all-filter', n_clicks=0, style=button_sty), style={**col_sty, 'border-bottom-width':0}),
             html.Td(dcc.Slider(id='scale-slider',
                                min=-0.5, max=0.5,
                                value=0, step=0.01,
                                marks={i: f'{100*i:.0f}%' for i in [-0.5, -0.25, 0, 0.25, 0.5]},
                                ),
-                    style={'width': 500}
+                    style={**col_sty, 'width': 500, 'border-bottom-width':0}
             ),
-            html.Td(html.Button("Scale Filter span", id='scale', n_clicks=0)),
+            html.Td(html.Button("Scale Filter span", id='scale', n_clicks=0, style=button_sty), style={**col_sty, 'border-bottom-width':0}),
         ])])),
         html.Div(html.Table(id='param-table', children=[
             html.Thead(id='param-table-head', children=[
                 html.Tr(children=[
-                    html.Th("Parameter", style=input_sty),
-                    html.Th("log"),
-                    html.Th("Slider", style={'width': 300}),
-                    html.Th("Range (min/max)"),
-                    html.Th("center/span"),
-                    html.Th("filter active"),
-                    html.Th("#digits"),
-                    html.Th("reset"),
-                    html.Th(""),
+                    html.Th("Parameter", style={**col_sty, **input_sty}),
+                    html.Th("log", style=col_sty_th),
+                    html.Th("Slider", style={**col_sty_th, 'width': 300}),
+                    html.Th("Range (min/max)", style=col_sty_th),
+                    html.Th("center/span", style=col_sty_th),
+                    html.Th("filter active", style=col_sty_th),
+                    html.Th("#digits", style=col_sty_th),
+                    html.Th("reset", style=col_sty_th),
+                    html.Th("", style=col_sty_th),
                 ]),
             ]),
             html.Tbody(id='param-table-body', children=[
                 html.Tr(children=[
-                    html.Td(html.Div(id='param-text-div', children=[]), style=filter_col),
-                    html.Td(html.Div(id='param-log-div', children=[]), style=filter_col),
-                    html.Td(html.Div(id='param-slider-div', children=[]), style=filter_col),
-                    html.Td(html.Div(id='param-range-div', children=[]), style=filter_col),
-                    html.Td(html.Div(id='param-center-div', children=[]), style=filter_col),
-                    html.Td(html.Div(id='param-active-div', children=[]), style=filter_col),
-                    html.Td(html.Div(id='param-digits-div', children=[]), style=filter_col),
-                    html.Td(html.Div(id='param-reset-div', children=[]), style=filter_col),
-                    html.Td(html.Div(id='param-clear-div', children=[]), style=filter_col),
+                    html.Td(html.Div(id='param-text-div', children=[]), style=col_sty),
+                    html.Td(html.Div(id='param-log-div', children=[]), style=col_sty),
+                    html.Td(html.Div(id='param-slider-div', children=[]), style=col_sty),
+                    html.Td(html.Div(id='param-range-div', children=[]), style=col_sty),
+                    html.Td(html.Div(id='param-center-div', children=[]), style=col_sty),
+                    html.Td(html.Div(id='param-active-div', children=[]), style=col_sty),
+                    html.Td(html.Div(id='param-digits-div', children=[]), style=col_sty),
+                    html.Td(html.Div(id='param-reset-div', children=[]), style=col_sty),
+                    html.Td(html.Div(id='param-clear-div', children=[]), style=col_sty),
                 ]),
             ]),
         ])),
@@ -757,7 +757,7 @@ def init_app(config):
         else:
             fig.update_scenes(**comb_dict)
         # color
-        if color_use == ['true']: # TODO: trigger-detection no new fig just update
+        if color_use == ['true']:
             if fit_use == ['show'] and (graph_type=='2D' and (fit_color=='multi-fit' and color_dd==fit_dd)):
                 fig.update_traces(
                     marker=dict(
