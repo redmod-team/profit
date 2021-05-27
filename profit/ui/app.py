@@ -14,8 +14,8 @@ def init_app(config):
     external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
     app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
-    server = app.server
     app.config.suppress_callback_exceptions = False
+    server = app.server
 
     indata = load(config['files']['input']).flatten()
     outdata = load(config['files']['output']).flatten()
@@ -268,12 +268,6 @@ def init_app(config):
     def add_filterrow(n_clicks, clear_all, clear_clicks, filter_dd, text, log, slider, range_div, center_div, active_div, dig_div, reset_div, clear_div):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
-        print(trigger_id, type(trigger_id))
-        try:
-            print('t0', trigger_id[0])
-            print(trigger_id.split(',')[1].split('"')[-2])
-        except:
-            print('N/A')
         if trigger_id == 'clear-all-filter':
             return [], [], [], [], [], [], [], [], []
         elif trigger_id == 'add-filter':
@@ -855,7 +849,7 @@ def init_app(config):
                     fit_params[invars.index(ax_in)] = np.linspace(ax_min, ax_max, num_samples)
             grid = np.meshgrid(*fit_params) # generate grid
             x_pred = np.vstack([g.flatten() for g in grid]).T  # extract vector for predict
-            fit_data, fit_var = sur.predict(x_pred, add_noise_var == ['add']) # generate fit data an variance
+            fit_data, fit_var = sur.predict(x_pred, add_noise_var == ['add']) # generate fit data and variance
             # generated data
             new_mesh_in = np.array([[grid[invars.index(invar)].flatten() for invar in invars]])
             new_mesh_out = np.array([fit_data[:, outvars.index(outvar)]])
@@ -896,4 +890,5 @@ def init_app(config):
             c_scal = (c-cmin)/(cmax-cmin)
         return color2hex(colormaps.cividis(c_scal))
 
+    app.run_server(debug=True)
     return app
