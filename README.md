@@ -73,17 +73,29 @@ for Linux (WSL2)* with the Ubuntu 20.04 LTS distribution ([install guide](https:
 
 After the installation of WSL2 execute the following steps in your Linux terminal (when asked press `y` to continue):
 
-1. Make sure you have the right version of Python installed and the basic developer toolset available
+Make sure you have the right version of Python installed and the basic developer toolset available
    ```bash
    sudo apt update
    sudo apt install python3 python3-pip python3-dev build-essential
    ```
 
-2. To install proFit from Git, make sure that the project is located in the Linux file system
-not the Windows system, and follow the steps in the next section.
+To install proFit from Git (see below), make sure that the project is located in the Linux file system
+not the Windows system.
 
 To configure the Python interpreter available in your Linux distribution in pycharm
 (tested with professional edition) follow this [guide](https://www.jetbrains.com/help/pycharm/using-wsl-as-a-remote-interpreter.html).
+
+### Installation from PyPI
+To install the latest stable version of proFit, use
+```bash
+pip install profit
+```
+
+For the latest pre-release, use
+```bash
+pip install --pre profit
+```
+
 
 ### Installation from Git
 To install proFit for the current user (`--user`) in development-mode (`-e`) use:
