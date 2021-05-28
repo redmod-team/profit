@@ -14,8 +14,8 @@ def init_app(config):
     external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
     app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
-    app.config.suppress_callback_exceptions = False
     server = app.server
+    app.config.suppress_callback_exceptions = False
 
     indata = load(config['files']['input']).flatten()
     outdata = load(config['files']['output']).flatten()
@@ -317,16 +317,19 @@ def init_app(config):
             reset_div.append(new_reset)
             clear_div.append(new_clear)
         elif len(trigger_id) >=1 and trigger_id[0] == "{":
-            ind = int(trigger_id.split(',')[0].split(':')[1])
-            text.pop(ind)
-            log.pop(ind)
-            slider.pop(ind)
-            range_div.pop(ind)
-            center_div.pop(ind)
-            active_div.pop(ind)
-            dig_div.pop(ind)
-            reset_div.pop(ind)
-            clear_div.pop(ind)
+            for i in range(len(text)):
+                # search table row to delete
+                if int(text[i]['props']['id']['index']) == int(trigger_id.split(',')[0].split(':')[1]):
+                    text.pop(i)
+                    log.pop(i)
+                    slider.pop(i)
+                    range_div.pop(i)
+                    center_div.pop(i)
+                    active_div.pop(i)
+                    dig_div.pop(i)
+                    reset_div.pop(i)
+                    clear_div.pop(i)
+                    break
         return text, log, slider, range_div, center_div, active_div, dig_div, reset_div, clear_div
 
 
@@ -890,5 +893,4 @@ def init_app(config):
             c_scal = (c-cmin)/(cmax-cmin)
         return color2hex(colormaps.cividis(c_scal))
 
-    app.run_server(debug=True)
     return app
