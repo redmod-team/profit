@@ -1,25 +1,12 @@
 User Interface
 ##############
 
-The goal of the user interface (UI) is to visualise the output data and the fitted response model. In addition a
-variety of options for the user to select and restrict the displayed range of data as well as a control
-interface for the fit parameters should be provided. The UI consists of three major sections:
-
-* axis / fit options
-* graph
-* filter options
-
-The UI provides four different plot types, namely 1D, 2D, 2D contour and 3D plots. The functionality of the
-UI includes coloring the markers and fits, display of errors (1D & 2D), display the response model
-with its uncertainty (variable σ-confidence) in 1D & 2D and limiting the range of the displayed input variables.
-A more detailed description of the functionality can be found below.
-
-
-User documentation
-******************
+The goal of the user interface (UI) is to visualize the output data and the fitted response model. A variety of
+options are provided for the user, ranging from the selection and restriction of the displayed data over
+color-scales and error-bars to specifications for the fit parameters.
 
 Starting of the UI
-==================
+******************
 
 The UI is started via the terminal with the following command:
 
@@ -27,26 +14,27 @@ The UI is started via the terminal with the following command:
 
     profit ui
 
-Then the dash app will be started and can be viewed in the web-browser of your choice under
-`http://127.0.0.1:8050/ <http://127.0.0.1:8050/>`_ which equals `localhost <http://localhost:8050/>`_ at port 8050.
+Then the dash app will be started and can be viewed in the web-browser of your choice at
+`http://127.0.0.1:8050/ <http://127.0.0.1:8050/>`_.
 
 General structure
-=================
+*****************
 
-In order to visualise the data and provide a as straightforward as possible user experience in adjusting the options
-a three section layout is used. The sections are listed below and shown in the figure.
+To visualise the data and to grant a straightforward user experience, the layout is divided into the following three
+sections:
 
 * axis / fit options
 * graph
 * filter options
 
 .. figure:: pics/layout.png
+  :align: center
 
-  Layout of the user interface with the three major sections: *axis/fit options*, *graph* and *filter options*.
+  Layout of the user interface with the three major sections: *axis/fit options* (red), *graph* (green) and *filter options* (blue).
 
 .. _axis-fit-options:
 Axis/Fit options
-----------------
+================
 In this section of the layout the following three different types of options can be controlled:
 
 * graph-type
@@ -61,7 +49,7 @@ In this section of the layout the following three different types of options can
 
 .. _graph-type:
 Graph-type
-^^^^^^^^^^
+----------
 
 There are four different graph-types available:
 
@@ -106,7 +94,7 @@ The four graph-types are shown below with sample data and a sample response mode
 
 .. _axis options:
 Axis options
-^^^^^^^^^^^^
+------------
 
 .. figure:: pics/ex_axis_opt_2D.png
   :align: center
@@ -115,7 +103,7 @@ Axis options
   Example of the axis options for a 2D graph-type.
 
 
-The section **axis options** contains all control options concerning the selection and the display of the data.
+The section **axis options** contains all the control options concerning the selection and the display of the data.
 Depending on the graph-type different options are available.
 
 .. confval:: x | y | z
@@ -144,12 +132,12 @@ Depending on the graph-type different options are available.
   :default: *OUTPUT* & activated
   :available: 1D | 2D | 2D contour
   | **3D:** same as :confval:`output`
-  | Option *OUTPUT* is always synchronised with the :confval:`output`.
+  | The option *OUTPUT* is always synchronised with the :confval:`output`.
   .. figure:: pics/color_dd.png
     :align: center
     :width: 250
 
-    Example of dropdown options for the color consisting of *OUTPUT* and all in- and output-variables.
+    Example of the dropdown options for the color consisting of *OUTPUT* and all in- and output-variables.
 
 .. confval:: error
 
@@ -167,7 +155,7 @@ Depending on the graph-type different options are available.
 
 .. _fit options:
 Fit options
-^^^^^^^^^^^
+-----------
 
 The section **fit options** contains the configuration for the fit based on the loaded response model.
 Depending on the graph-type this includes the following:
@@ -179,7 +167,7 @@ Depending on the graph-type this includes the following:
 
 .. confval:: multi-fit
 
-  | select dimension (variable) along which the number of fits specified in :confval:`#fits` will be constructed (only relevant if :confval:`#fits` > ``1``)
+  | select the dimension (variable) along which the number of fits specified in :confval:`#fits` will be constructed (only relevant if :confval:`#fits` > ``1``)
   :type: dropdown
   :options: input-variables
   :default: last input-variable
@@ -191,11 +179,11 @@ Depending on the graph-type this includes the following:
   :type: input
   :default: 1
   :available: 1D | 2D | 3D
-  | **Caution:** In 3D the top and bottom isosurface is possibly only partly visible.  As a workaround increase :confval:`#fits` by 2.
+  | **Caution:** It is possible that in 3D the top and bottom isosurface may only be partly visible.  As a workaround increase :confval:`#fits` by 2.
 
 .. confval:: σ-confidence
 
-  | width of confidence interval
+  | width of the confidence interval
   :type: input
   :default: 2
   :available: 1D | 2D
@@ -205,15 +193,15 @@ Depending on the graph-type this includes the following:
 
 .. confval:: add noise covariance
 
-  | takes uncertainty of underlying data into account for the response model
+  | takes uncertainty of underlying data for the response model into account
   :type: checkbox
   :default: deactivated
   :available: 1D | 2D
-  | **Caution:** Not supported for all surrogate models
+  | **Caution:** Not supported for all surrogate models.
 
 .. confval:: fit-color
 
-  | controls dimension (variable) for the colorscale in 2D
+  | controls the dimension (variable) for the colorscale in 2D
   :type: radiobutton & checkbox
   :options: :confval:`output-variable` | :confval:`multi-fit` | :confval:`marker color`
   :default: output & activated
@@ -239,11 +227,11 @@ Depending on the graph-type this includes the following:
 
 
 Depending on the graph-type the fit will be a line (1D), a surface (2D) or an isosurface (3D).
-The details how the parameters for the fits are selected can be found below in section `response model/fit`_.
+The details for the selection of the fit parameters can be found below in the section `response model/fit`_.
 
 .. _graph:
 Graph
------
+=====
 This section contains the actual graph. Since the graph is generated out of the plotly-library all the plotly
 tools are available in the upper right corner. This tools include a png-download, zoom, pan, box and lasso select,
 zoom in/out, autoscale, reset axis and various hover/selection tools.
@@ -254,13 +242,13 @@ zoom in/out, autoscale, reset axis and various hover/selection tools.
 
   Graph tools provided by plotly.
 
-There are different specific properties of the different graph-types described below. In all graph-types the axis
+The different specific properties of the graph-types are described below. In all graph-types the axis
 are titled according to the selected variable.
 
 1D
-^^
+--
 The 1D graph offers a range-slider beneath the plot. With the range-slider the displayed range of data can be defined
-and moved along the axis. The alternative to the range-slider is to click&drag in the graph to select a certain
+and moved around along the axis. The alternative to the range-slider is to click&drag in the graph to select a certain
 area. By using this method, however the viewed area can only be decreased.
 
 .. figure:: pics/rangeslider.png
@@ -269,53 +257,53 @@ area. By using this method, however the viewed area can only be decreased.
   Range-slider on the bottom of the 1D graph.
 
 2D/3D
-^^^^^
-In the 2D and 3D graph the graph can be rotated and tilted by click&drag. Unfortunately the camera position resets as
+-----
+The 2D and 3D graph can be rotated and tilted by click&drag. The camera position resets as
 soon as an option is changed.
 
 2D contour
-^^^^^^^^^^
-In the 2D contour plot one fit is displayed. In addition all points in this area are also displayed.
+----------
+In the 2D contour plot a fit surface of the 2D graph is shown from above. In addition all points in this area are displayed.
 Because all points (even the points with non-axis parameters far off the fit parameters) are displayed it is
 recommended to limit the span of the non-axis parameters via the **filter-table**.
 
 .. _filter options:
 Filter options
---------------
+==============
 The main function of the **filter options** is to limit the range of the input-variables for the display in the plot
-and the determination of the parameters for the prediction of the fit based on the response model.
+and to determine the parameters for the prediction of the fit based on the response model.
 
 .. figure:: pics/filter_table_n.png
   :align: center
   :width: 500
 
-  Example of the **filter options** with element numbers according to element list.
+  The **filter-table** with the control elements (numbers according to list).
 
 
-The filter options are designed as a table. The controls for the entries of the table are located at the table
+The filter options are designed as a table. The controls for the entries are located at the table
 head and consists of the following:
 
 1. variable-dropdown: select the input-variable to interact
 2. add-filter-button: add selected dropdown-option to table
-3. clear-filter-button: remove selected dropdown-option from table
-4. clear-all-button: remove all filters from table
-5. scale-factor-slider: select a scaling factor
-6. scale-filter-span-button: apply scaling factor to al filter spans
+3. clear-all-button: remove all filters from table
+4. scale-factor-slider: select a scaling factor
+5. scale-filter-span-button: apply scaling factor to al filter spans
 
-If an variable is added to the filter table a new row appears in the table. The table consists of the following
+If an variable is added to the filter table a new row appears. The table consists of the following
 columns:
 
-* **Parameter:** name of the variable (dimension).
+* **Parameter:** name of the variable (dimension)
 * **log:** checkbox to activate log-scale for the whole row (default: deactivated)
 * **Slider:** slider to limit the range
-* **Range (min/max):** input-fields for limit of the range.
-* **center/span:** input-fields for center and span of the range.
+* **Range (min/max):** input-fields for the limit of the range.
+* **center/span:** input-fields for the center and the span of the range.
 * **filter active:** checkbox to activate/deactivate the filter. (default: activated)
 * **#digits:** input-field for the number of digits
 * **reset:** button to reset the range to the default values (minimum to maximum).
+* ``x``-button to remove filter-row
 
 Changes to the the values in the different columns will automatically trigger a recalculation of the other values.
-If the log-checkbox is activated the axis is mapped to a log-scale.
+If the **log**-checkbox is activated the axis is mapped to a log-scale.
 
 In addition the center values determine the value of the parameter used for the prediction of the fit as described
 in `response model/fit`_.
