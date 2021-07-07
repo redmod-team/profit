@@ -1,8 +1,6 @@
 from os import path, getcwd
-from re import match, split
 import yaml
 from collections import OrderedDict
-from typing import Mapping
 
 from profit.run import Runner
 from profit.sur import Surrogate
@@ -134,7 +132,7 @@ class Config(OrderedDict):
     def from_file(cls, filename='profit.yaml'):
         """ Load configuration from .yaml or .py file.
         The default filename is profit.yaml """
-        from profit.util import variable_kinds, safe_str, get_class_methods
+        from profit.util.variable_kinds import Variable, VariableGroup
 
         self = cls(base_dir=path.split(filename)[0])
 
@@ -153,87 +151,22 @@ class Config(OrderedDict):
         else:
             self['config_path'] = path.abspath(path.join(getcwd(), filename))
 
-        """ Variable configuration
-        kind: Independent, Uniform, etc.
-        range: (start, end, step=1) or {'dependent variable': (start, end, step=1)} for output
-        dtype: float64
-        """
-
-        halton_dim = []
+        # Variable configuration as dict
+        variables = VariableGroup(self['ntrain'])
+        vars = []
         for k, v in self['variables'].items():
-            if isinstance(v, str):
-                # match word(comma seperated list of int or float)
-                parsed = split('[()]', v)
-                kind = parsed[0]
-                args = parsed[1] if len(parsed) >= 2 else ''
-                entries = tuple(try_parse(a) for a in args.split(',')) if args != '' else tuple()
-
-                if isinstance(try_parse(v), (int, float)):  # PyYaml has problems parsing scientific notation
-                    kind = 'Constant'
-                    entries = (try_parse(v),)
-
-                self['variables'][k] = {'kind': kind}
-
-                if safe_str(kind) == 'output':
-                    spl = split('[()]', v)
-                    if len(spl) >= 3:
-                        dependent = [var.strip() for var in split(',', spl[1])]
-                    else:
-                        dependent = []
-                    self['variables'][k]['depend'] = tuple(dependent)
-                    self['variables'][k]['range'] = {k: None for k in dependent}
-                else:
-                    try:
-                        func = getattr(variable_kinds, safe_str(kind))
-                        if safe_str(kind) == 'halton':
-                            halton_dim.append((k, entries))
-                        elif safe_str(kind) == 'independent':
-                            self['variables'][k]['range'] = func(*entries, size=self['ntrain']) if entries else None
-                        elif safe_str(kind) == 'activelearning':
-                            self['variables'][k]['range'] = func(size=self['ntrain'])  # to insert nan in input file
-                            self['variables'][k]['al_range'] = entries  # range between active learning should happen
-                        else:
-                            self['variables'][k]['range'] = func(*entries, size=self['ntrain'])
-                            self['variables'][k]['dtype'] = str(self['variables'][k]['range'].dtype)
-                    except AttributeError:
-                        raise RuntimeError(f"Variable kind {kind} not defined.\n"
-                                           f"Valid Functions: {get_class_methods(variable_kinds)}")
-            elif isinstance(v, (int, float)):
-                self['variables'][k] = {'kind': 'constant', 'range': variable_kinds.constant(v, size=self['ntrain'])}
-                self['variables'][k]['dtype'] = str(self['variables'][k]['range'].dtype)
-            elif isinstance(v, Mapping) and 'kind' in v:  # assume config dictionary is valid
-                self['variables'][k] = v
+            if type(v) in (str, int, float):
+                if isinstance(try_parse(v), (int, float)):
+                    v = 'Constant({})'.format(try_parse(v))
+                vars.append(Variable.create_from_str(k, (self['ntrain'], 1), v))
             else:
-                raise TypeError(f'cannot interpret variable {k} with value {v}')
-
-            # Process data types
-            if 'dtype' not in self['variables'][k].keys():
-                self['variables'][k]['dtype'] = 'float64'
-
-            # Add to corresponding variables 'output', 'independent' or 'input'
-            kind = self['variables'][k]['kind'].lower()
-            kind = kind if kind in ('output', 'independent') else 'input'
-            if self['variables'][k].get('range') is not None:
-                self[kind][k] = self['variables'][k]
-
-        # Fill halton variables with single dimensions of n-D halton
-        if halton_dim:
-            halton = variable_kinds.halton(size=(self['ntrain'], len(halton_dim)))
-            for d, (k, entries) in enumerate(halton_dim):
-                diff = (entries[1] - entries[0]) if entries else 1
-                low = entries[0] if entries else 0
-                self['variables'][k]['range'] = diff * halton[:, d].reshape(-1, 1) + low
-                self['input'][k] = self['variables'][k]
-
-        # Fill range of output vector
-        for k, v in self['output'].items():
-            if not isinstance(v['range'], dict):
-                v['range'] = {d: None for d in v['range']}
-            shape = []
-            for d in v['range']:
-                self['output'][k]['range'][d] = self['variables'][d]['range']
-                shape.append(self['variables'][d]['range'].shape[0])
-            self['output'][k]['shape'] = tuple(shape)
+                vars.append(Variable.create(name=k, size=(self['ntrain'],1), **v))
+        variables.add(vars)
+        self['variables'] = variables.as_dict
+        self['input'] = {k: v for k, v in self['variables'].items()
+                         if not any(k in v['kind'].lower() for k in ('output', 'independent'))}
+        self['output'] = {k: v for k, v in self['variables'].items() if 'output' in v['kind'].lower()}
+        self['independent'] = {k: v for k, v in self['variables'].items() if 'independent' in v['kind'].lower()}
 
         # Run configuration
         if 'run' not in self:

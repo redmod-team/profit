@@ -9,7 +9,8 @@ from argparse import ArgumentParser, RawTextHelpFormatter
 import logging
 
 from profit.config import Config
-from profit.util import safe_path_to_file, safe_str
+from profit.util import safe_path_to_file
+from profit.util.variable_kinds import VariableGroup, Variable
 
 from profit.run import Runner
 
@@ -57,20 +58,28 @@ def main():
 
     sys.path.append(config['base_dir'])
 
+    variables = VariableGroup(config['ntrain'])
+    vars = []
+    for k, v in config['variables'].items():
+        if isinstance(v, str):
+            vars.append(Variable.create_from_str(k, (config['ntrain'], 1), v))
+        else:
+            vars.append(Variable.create(**v))
+    variables.add(vars)
+
     if args.mode == 'run':
         from tqdm import tqdm
-        from profit.pre import get_eval_points, write_input
         from profit.util import save
 
         runner = Runner.from_config(config['run'], config)
 
-        eval_points = get_eval_points(config)
-        write_input(config['files']['input'], eval_points)
 
-        if 'activelearning' in (safe_str(v['kind']) for v in config['input'].values()):
+        save(config['files']['input'], variables.named_input)
+
+        if 'activelearning' in (v.kind.lower() for v in variables.list):
             from profit.fit import ActiveLearning
             from profit.sur.sur import Surrogate
-            runner.fill(eval_points)
+            runner.fill(variables.named_input)
             if 'active_learning' not in config:
                 config['active_learning'] = {}
             ActiveLearning.handle_config(config['active_learning'], config)
@@ -83,7 +92,7 @@ def main():
             if config['fit'].get('save'):
                 al.save(config['fit']['save'])
         else:
-            params_array = [row[0] for row in eval_points]
+            params_array = [row[0] for row in variables.named_input]
             try:
                 runner.spawn_array(tqdm(params_array), blocking=True)
             finally:

@@ -62,6 +62,10 @@ def test_yaml_py_config():
             elif type(value1) is ndarray:
                 assert value1.dtype == value2.dtype
                 assert value1.shape == value2.shape
+            elif type(value1) is list:
+                for v1, v2 in zip(value1, value2):
+                    if type(value1) is dict:
+                        assert_dict(v1.items(), v2.items())
             elif key1 != 'config_path':
                 assert value1 == value2
 

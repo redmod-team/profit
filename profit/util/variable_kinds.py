@@ -3,6 +3,9 @@ from .util import check_ndim
 import numpy as np
 
 
+EXCLUDE_FROM_HALTON = ('output', 'constant', 'uniform', 'loguniform', 'normal', 'linear', 'independent', 'activelearning')
+
+
 def halton(size=(1, 1)):
     if isinstance(size, (tuple, list, np.ndarray)):
         return _halton_base(*size)
@@ -19,7 +22,7 @@ def loguniform(start=1e-6, end=1, size=None):
 
 
 def normal(mu=0, std=1, size=None):
-    return check_ndim(mu + std * np.random.randn(size))
+    return check_ndim(np.random.normal(mu, std, size))
 
 
 def linear(start=0, end=1, step=1, size=None):
@@ -30,9 +33,226 @@ def independent(start=0, end=1, step=1, size=None):
     return linear(start, end, step)
 
 
-def activelearning(size=None):
+def activelearning(start=0, end=1, size=None):
     return check_ndim(np.full(size, np.nan))
 
 
 def constant(value=0, size=None):
     return check_ndim(np.full(size, value))
+
+
+class VariableGroup:
+
+    def __init__(self, samples):
+        self.samples = samples
+        self.list = []
+
+    @property
+    def all(self):
+        """Not working yet for vector output."""
+        values = np.hstack([v.value for v in self.list])
+        dtypes = [(v.name, v.dtype) for v in self.list]
+        return values.view(dtype=dtypes)
+
+    @property
+    def as_dict(self):
+        input_dict = {k: v.as_dict() for k, v in self.input_dict.items()}
+        independent_dict = {v.name: v.as_dict() for v in self.list if v.kind.lower() == 'independent'}
+        output_dict = {k: v.as_dict() for k, v in self.output_dict.items()}
+        return {**input_dict, **independent_dict, **output_dict}
+
+    @property
+    def input(self):
+        return np.hstack([v.value for v in self.list if not any(s in v.kind.lower() for s in ('output', 'independent'))])
+
+    @property
+    def named_input(self):
+        dtypes = [(v.name, v.dtype) for v in self.list if not any(s in v.kind.lower() for s in ('output', 'independent'))]
+        return self.input.view(dtype=dtypes)
+
+    @property
+    def input_dict(self):
+        return {v.name: v for v in self.list if not any(s in v.kind.lower() for s in ('output', 'independent'))}
+
+    @property
+    def output(self):
+        return np.hstack([v.value for v in self.list if 'output' in v.kind.lower()])
+
+    @property
+    def named_output(self):
+        dtypes = [(v.name, v.dtype) for v in self.list if 'output' in v.kind.lower()]
+        return self.output.view(dtype=dtypes)
+
+    @property
+    def output_dict(self):
+        return {v.name: v for v in self.list if 'output' in v.kind.lower()}
+
+    def add(self, variables):
+        if not isinstance(variables, (list, tuple)):
+            variables = [variables]
+
+        for v in variables:
+            if isinstance(v, Variable):
+                self.list.append(v)
+            elif isinstance(v, dict):
+                self.list.append(Variable.create(**v))
+            else:
+                raise NotImplementedError
+
+        self.generate_from_halton()
+        for v in self.list:
+            if any(e in v.kind.lower() for e in EXCLUDE_FROM_HALTON) and 'output' not in v.kind.lower():
+                v.generate_values()
+        self.resolve_dependent()
+
+    def delete_variable(self, columns):
+        if not isinstance(columns, (list, tuple)):
+            columns = [columns]
+        for col in columns:
+            if isinstance(col, str):
+                col = [i for i, v in enumerate(self.list) if v.name == col][0]
+            self.list.pop(col)
+
+    def delete_sample(self, rows):
+        if not isinstance(rows, (list, tuple)):
+            rows = [rows]
+        for v in self.list:
+            v.value = np.delete(v.value, rows, axis=0)
+
+    def generate_from_halton(self):
+        halton_variables = [v for v in self.list if v.kind.lower() not in EXCLUDE_FROM_HALTON]
+        if halton_variables:
+            nd_halton_seq = halton((self.samples, len(halton_variables)))
+            for idx, v in enumerate(halton_variables):
+                v.generate_values(nd_halton_seq[:, idx])
+
+    def resolve_dependent(self):
+        output = [v for v in self.list if 'output' in v.kind.lower() and v.dependent]
+        for o in output:
+            dvars = []
+            for d in o.dependent:
+                dv = [v for v in self.list if v.name == d][0]
+                o.size = (o.size[0], dv.value.shape[0])
+                o.value = np.full(o.size, np.nan)
+                dvars.append(dv)
+            o.dependent = dvars
+
+
+class Variable:
+
+    def __init__(self):
+        self.name = ''
+        self.kind = ''
+        self.size = (1, 1)
+        self.value = np.array([[]])
+        self.dtype = np.float64
+
+    @property
+    def named_value(self):
+        return np.array(self.value, dtype=[(self.name, self.dtype)])
+
+    @classmethod
+    def create_from_str(cls, name, size, v_str):
+        from re import split
+
+        def try_parse(s):
+            funcs = [int, float]
+            for f in funcs:
+                try:
+                    return f(s)
+                except ValueError:
+                    pass
+            return s
+
+        parsed = split('[()]', v_str)
+        kind = parsed[0]
+        args = parsed[1] if len(parsed) >= 2 else ''
+        entries = tuple(try_parse(a) for a in args.split(',')) if args != '' else tuple()
+
+        if isinstance(try_parse(v_str), (int, float)):  # PyYaml has problems parsing scientific notation
+            kind = 'Constant'
+            entries = (try_parse(v_str),)
+
+        v_dict = {'name': name, 'kind': kind, 'size': size, 'entries': entries}
+        return cls.create(**v_dict)
+
+    @classmethod
+    def create(cls, name, kind, size, entries=(0, 1), value=np.array([[]]), dtype=np.float64):
+        if 'output' in kind.lower():
+            dependent = entries if len(entries) > 0 and isinstance(entries[0], (str, Variable)) else ()
+            return OutputVariable.create(name, kind, size, dependent, value, dtype)
+        else:
+            constraints = entries if entries else (0, 1)
+            if 'independent' in kind.lower():
+                return IndependentVariable.create(name, kind, size, constraints, value, dtype)
+            return InputVariable.create(name, kind, size, constraints, value, dtype)
+
+    def as_dict(self):
+        return {k: v for k, v in vars(self).items()}
+
+
+class InputVariable(Variable):
+
+    def __init__(self):
+        super().__init__()
+        self.constraints = (0, 1)
+    
+    @classmethod
+    def create(cls, name, kind, size, entries=(0, 1), value=np.array([[]]), dtype=np.float64):
+        self = cls()
+        self.name = name
+        self.kind = kind
+        self.size = size
+        self.dtype = dtype
+        self.constraints = entries
+        if value.size > 0:
+            self.value = value
+            assert self.value.shape == self.size
+        return self
+
+    def generate_values(self, halton_seq=None):
+        if halton_seq is None:
+            self.value = globals().get(self.kind.lower())(*self.constraints, size=self.size)
+        else:
+            self.value = check_ndim((self.constraints[1] - self.constraints[0]) * halton_seq + self.constraints[0])
+
+    def as_dict(self):
+        return {k if k != 'constraints' else 'entries': v for k, v in vars(self).items()}
+
+
+class IndependentVariable(InputVariable):
+
+    @classmethod
+    def create(cls, name, kind, size, entries=(0, 1), value=np.array([[]]), dtype=np.float64):
+        self = cls()
+        self.name = name
+        self.kind = kind
+        self.dtype = dtype
+        self.constraints = entries
+        if value.size > 0:
+            self.value = value
+        else:
+            self.generate_values()
+        self.size = self.value.shape
+        return self
+
+
+class OutputVariable(Variable):
+
+    def __init__(self):
+        super().__init__()
+        self.dependent = ()
+
+    @classmethod
+    def create(cls, name, kind, size, entries=(), value=np.array([[]]), dtype=np.float64):
+        self = cls()
+        self.name = name
+        self.kind = kind
+        self.size = size
+        self.dtype = dtype
+        self.dependent = entries
+        self.value = value if value.size > 0 else np.full(self.size, np.nan)
+        return self
+
+    def as_dict(self):
+        return {k if k != 'dependent' else 'entries': v if k != 'dependent' else [vi.as_dict() for vi in v] for k, v in vars(self).items()}

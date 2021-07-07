@@ -27,7 +27,8 @@ class RunnerInterface:
             self.logger.parent = logger_parent
 
         self.input_vars = [(variable, spec['dtype']) for variable, spec in input_config.items()]
-        self.output_vars = [(variable, spec['dtype'], spec['shape']) for variable, spec in output_config.items()]
+        self.output_vars = [(variable, spec['dtype'], () if spec['size'] == (1, 1) else (spec['size'][-1],))
+                            for variable, spec in output_config.items()]
 
         self.input = np.zeros(size, dtype=self.input_vars)
         self.output = np.zeros(size, dtype=self.output_vars)

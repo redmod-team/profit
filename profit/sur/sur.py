@@ -289,7 +289,7 @@ class Surrogate(ABC):
             # 2D with one input parameter and one independent variable.
             if self.ndim == 1 and ypred.ndim == 2:
                 ax = axes or plt.axes(projection='3d')
-                xind = np.hstack([v['range'] for k, v in independent.items()])
+                xind = np.hstack([v['value'] for v in independent.values()])
                 xtgrid = np.meshgrid(*[xind, self.Xtrain])
                 xgrid = np.meshgrid(*[xind, Xpred])
                 for i in range(self.Xtrain.shape[0]):
