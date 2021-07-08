@@ -18,4 +18,3 @@ files:
     output: output_1D.txt
 fit:
     save: model_1D.hdf5
-    multi_output: True

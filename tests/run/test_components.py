@@ -3,8 +3,9 @@ Testcases for run components
  - Interface, Preprocessor, Postprocessor
 """
 
-from profit.config import Config
+from profit.config import BaseConfig
 from pytest import fixture
+from copy import deepcopy
 
 CONFIG_FILE = 'numpy.yaml'
 RUN_ID = 1
@@ -36,7 +37,7 @@ def test_memmap():
     from profit.run.default import MemmapInterface, MemmapRunnerInterface
     import os
 
-    BASE_CONFIG = Config.from_file('numpy.yaml')
+    BASE_CONFIG = BaseConfig.from_file(CONFIG_FILE).as_dict()
     MAX_IDS = BASE_CONFIG['ntrain']
     config = {'class': 'memmap'}
     try:
@@ -62,7 +63,7 @@ def test_zeromq():
     from time import sleep
     from profit.run.zeromq import ZeroMQInterface, ZeroMQRunnerInterface
 
-    BASE_CONFIG = Config.from_file('numpy.yaml')
+    BASE_CONFIG = BaseConfig.from_file(CONFIG_FILE).as_dict()
     MAX_IDS = BASE_CONFIG['ntrain']
     config = {'class': 'zeromq'}
     ZeroMQRunnerInterface.handle_config(config, BASE_CONFIG)
@@ -100,7 +101,7 @@ def test_numpytxt():
     from numpy import array
     from profit.run.default import NumpytxtPostprocessor
 
-    BASE_CONFIG = Config.from_file('numpy.yaml')
+    BASE_CONFIG = BaseConfig.from_file(CONFIG_FILE).as_dict()
     config = {'class': 'numpytxt', 'path': 'numpytxt.csv', 'options': {'delimiter': ','}}
     data = array([0], dtype=[('f', float, (3,)), ('g', float)])[0]
 
