@@ -141,6 +141,7 @@ class ActiveLearning:
         if config.get('save'):
             from os import path
             config['save'] = path.join(base_config['base_dir'], config['save'])
+        return config
 
     @staticmethod
     def f(u):

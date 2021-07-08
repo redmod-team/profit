@@ -176,6 +176,7 @@ class Runner(ABC):
             run_config['interface'] = {'class': run_config['interface']}
         RunnerInterface[run_config['interface']['class']].handle_config(run_config['interface'], base_config)
         Worker[run_config['worker']].handle_config(run_config, base_config)
+        return run_config
 
     @classmethod
     def handle_config(cls, config, base_config):

@@ -8,7 +8,7 @@ import sys
 from argparse import ArgumentParser, RawTextHelpFormatter
 import logging
 
-from profit.config import Config
+from profit.config import BaseConfig
 from profit.util import safe_path_to_file
 from profit.util.variable_kinds import VariableGroup, Variable
 from profit.defaults import base_dir as default_base_dir, config_file as default_config_file
@@ -116,9 +116,9 @@ def main():
 
         if config['fit'].get('save'):
             sur.save_model(config['fit']['save'])
-        if config['fit'].get('plot'):
+        if config['ui']['plot']:
             try:
-                xpred = [arange(minv, maxv, step) for minv, maxv, step in config['fit']['plot'].get('Xpred')]
+                xpred = [arange(minv, maxv, step) for minv, maxv, step in config['ui']['plot'].get('Xpred')]
                 xpred = hstack([xi.flatten().reshape(-1, 1) for xi in meshgrid(*xpred)])
             except AttributeError:
                 xpred = None

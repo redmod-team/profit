@@ -194,8 +194,8 @@ class Worker:
 
     @classmethod
     def from_env(cls, label='run'):
-        from profit.config import Config
-        base_config = Config.from_file(checkenv('PROFIT_CONFIG_PATH'))
+        from profit.config import BaseConfig
+        base_config = BaseConfig.from_file(checkenv('PROFIT_CONFIG_PATH')).as_dict()
         config = base_config[label]
         if config['custom']:
             cls.handle_config(config, base_config)

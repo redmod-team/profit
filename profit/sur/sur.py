@@ -231,6 +231,7 @@ class Surrogate(ABC):
         if config.get('load'):
             config['save'] = False
         Surrogate[config['surrogate']].handle_subconfig(config, base_config)
+        return config
 
     @classmethod
     @abstractmethod

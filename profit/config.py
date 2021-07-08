@@ -1,9 +1,8 @@
-from os import path, getcwd
+from os import path
 import yaml
 from collections import OrderedDict
-
-from profit.run import Runner
-from profit.sur import Surrogate
+from profit import defaults
+from abc import ABC
 
 VALID_FORMATS = ('.yaml', '.py')
 
@@ -56,85 +55,125 @@ def load_config_from_py(filename):
     return {name: value for name, value in f.__dict__.items() if not name.startswith('_')}
 
 
-class Config(OrderedDict):
+class AbstractConfig(ABC):
     """
-    Configuration class
-    This class provides a dictionary with possible configuration parameters for
-    simulation, fitting and uncertainty quantification.
+    Abstract base class with general methods.
+    """
+    _sub_configs = {}
 
-    Possible parameters in .yaml:
+    def update(self, **entries):
+        for name, value in entries.items():
+            if name.lower() in (name.lower() for name in self._sub_configs):
+                pass
+            elif hasattr(self, name):
+                self.__setattr__(name, value)
+            else:
+                raise AttributeError("Config parameter {} is not available.".format(name))
 
-    base_dir: .
-    run_dir: .
-    uq: # TODO: implement
-    interface: ./interface.py
-    files:
-        input: ./input.txt
-        output: ./output.txt
-    ntrain: 30
-    variables:
-        input1:
-            kind: Normal
-            range: (0, 1)
-            dtype: float
-        ...
-        independent1:
-            kind: Independent
-            range: (0, 10, 1)
-            dtype: int
-        ...
-        output1:
-            kind: Output
-            range: independent1
-            dtype: float
-    run:
-        cmd: python3 ../simulation.py
-        ntask: 4
-    fit:
-        surrogate: GPy
-        kernel: RBF
-        sigma_n: None
-        sigma_f: 1e-6
-        save: ./model.hdf5
-        load: ./model.hdf5
-        plot: Bool
-            xpred: ((0, 1, 0.01), (0, 10, 0.1))
-        plot_searching_phase: Bool
+    def as_dict(self):
+        return {name: getattr(self, name)
+                if name not in map(str.lower, self._sub_configs.keys()) or getattr(self, name) is None
+                else getattr(self, name).as_dict() for name in vars(self)}
+
+    def set_defaults(self, default_dict):
+        for name, value in default_dict.items():
+            setattr(self, name, value)
+
+
+class BaseConfig(AbstractConfig):
+    """
+    This class and its modular subclasses provide all possible configuration parameters.
+
+    Parts of the Config:
+        - base_dir
+        - run_dir
+        - config_file
+        - ntrain
+        - variables
+        - files
+            - input
+            - output
+        - run
+        - fit
+            - surrogate
+            - save / load
+            - fixed_sigma_n
+        - active_learning
+        - ui
+
+    Base configuration for fundamental parameters.
+
+    Parameters:
+        base_dir (str): Base directory.
+        run_dir (str): Run directory.
+        config_path (str): Path to configuration file.
+        files (dict): Paths for input and output files.
+        ntrain (int): Number of training samples.
+        variables (dict): All variables.
+        input (dict): Input variables.
+        output (dict): Output variables.
+        independent (dict): Independent variables, if the result of the simulation is a vector.
     """
 
-    def __init__(self, base_dir=getcwd(), **entries):
-        super(Config, self).__init__()
-        self['base_dir'] = path.abspath(base_dir)
-        self['run_dir'] = self['base_dir']
-        self['uq'] = {}
-        self['variables'] = {}
-        self['fit'] = {'surrogate': 'GPy',
-                       'kernel': 'RBF'}
-        self['files'] = {'input': path.join(self['base_dir'], 'input.txt'),
-                         'output': path.join(self['base_dir'], 'output.txt')}
+    def __init__(self, base_dir=defaults.base_dir, **entries):
+        self.base_dir = path.abspath(base_dir)
+        self.run_dir = self.base_dir
+        self.config_path = path.join(self.base_dir, defaults.config_file)
+        self.ntrain = defaults.ntrain
+        self.variables = defaults.variables
+        self.input = {}
+        self.output = {}
+        self.independent = {}
+        self.files = defaults.files
 
-        # Not to fill directly in file
-        self['independent'] = {}
-        self['input'] = {}
-        self['output'] = {}
-        self.update(entries)
+        # Create sub configs
+        entries_lower = {key.lower(): entry for key, entry in entries.items()}
+        for name, sub_config in self._sub_configs.items():
+            sub_config_label = name.lower()
+            if name.lower() in entries_lower:
+                sub = sub_config(**entries_lower[name.lower()])
+                self.__setattr__(sub_config_label, sub)
+            else:
+                self.__setattr__(sub_config_label, sub_config())
 
-    def write_yaml(self, filename='profit.yaml'):
-        """ Dump UQ configuration to a yaml file.
-        The default filename is profit.yaml
-        """
-        dumpdict = dict(self)
-        self._remove_nones(dumpdict)
-        with open(filename,'w') as file:
-            yaml.dump(dumpdict,file,default_flow_style=False)
+        self.update(**entries)  # Update the attributes with given entries.
+        self.process_entries()  # Postprocess the attributes to standardize different user entries.
 
-    @classmethod
-    def from_file(cls, filename='profit.yaml'):
-        """ Load configuration from .yaml or .py file.
-        The default filename is profit.yaml """
+    def process_entries(self):
         from profit.util.variable_kinds import Variable, VariableGroup
 
-        self = cls(base_dir=path.split(filename)[0])
+        # Set absolute paths
+        self.files['input'] = path.join(self.base_dir, self.files.get('input', defaults.files['input']))
+        self.files['output'] = path.join(self.base_dir, self.files.get('output', defaults.files['output']))
+
+        # Variable configuration as dict
+        variables = VariableGroup(self.ntrain)
+        vars = []
+        for k, v in self.variables.items():
+            if type(v) in (str, int, float):
+                if isinstance(try_parse(v), (int, float)):
+                    v = 'Constant({})'.format(try_parse(v))
+                vars.append(Variable.create_from_str(k, (self.ntrain, 1), v))
+            else:
+                vars.append(Variable.create(name=k, size=(self.ntrain,1), **v))
+        variables.add(vars)
+
+        self.variables = variables.as_dict
+        self.input = {k: v for k, v in self.variables.items()
+                         if not any(k in v['kind'].lower() for k in ('output', 'independent'))}
+        self.output = {k: v for k, v in self.variables.items()
+                       if 'output' in v['kind'].lower()}
+        self.independent = {k: v for k, v in self.variables.items()
+                            if 'independent' in v['kind'].lower() and v['size'] != (1, 1)}
+
+        # Process sub configurations
+        for name in self._sub_configs:
+            sub = getattr(self, name.lower())
+            if sub:
+                sub.process_entries(self)
+
+    @classmethod
+    def from_file(cls, filename=defaults.config_file):
 
         if filename.endswith('.yaml'):
             with open(filename) as f:
@@ -144,61 +183,75 @@ class Config(OrderedDict):
         else:
             raise TypeError("Not supported file extension .{} for config file.\n"
                             "Valid file formats: {}".format(filename.split('.')[-1], VALID_FORMATS))
-        self.update(entries)
-
-        if path.isabs(filename):
-            self['config_path'] = filename
-        else:
-            self['config_path'] = path.abspath(path.join(getcwd(), filename))
-
-        # Variable configuration as dict
-        variables = VariableGroup(self['ntrain'])
-        vars = []
-        for k, v in self['variables'].items():
-            if type(v) in (str, int, float):
-                if isinstance(try_parse(v), (int, float)):
-                    v = 'Constant({})'.format(try_parse(v))
-                vars.append(Variable.create_from_str(k, (self['ntrain'], 1), v))
-            else:
-                vars.append(Variable.create(name=k, size=(self['ntrain'],1), **v))
-        variables.add(vars)
-        self['variables'] = variables.as_dict
-        self['input'] = {k: v for k, v in self['variables'].items()
-                         if not any(k in v['kind'].lower() for k in ('output', 'independent'))}
-        self['output'] = {k: v for k, v in self['variables'].items() if 'output' in v['kind'].lower()}
-        self['independent'] = {k: v for k, v in self['variables'].items() if 'independent' in v['kind'].lower()}
-
-        # Run configuration
-        if 'run' not in self:
-            self['run'] = {}
-        if isinstance(self['run'], str):
-            self['run'] = {'command': self['run']}
-        Runner.handle_run_config(self)
-
-        if self.get('fit'):
-            Surrogate.handle_config(self['fit'], self)
-
-        # Set missing mandatory dict entries to default
-        if not self['files'].get('input'):
-            self['files']['input'] = path.join(self['base_dir'], 'input.txt')
-        if not self['files'].get('output'):
-            self['files']['output'] = path.join(self['base_dir'], 'output.txt')
-
-        # Set absolute paths
-        self['files']['input'] = path.join(self['base_dir'], self['files']['input'])
-        self['files']['output'] = path.join(self['base_dir'], self['files']['output'])
-        if self['fit'].get('load'):
-            self['fit']['load'] = path.join(self['base_dir'], self['fit']['load'])
-        if self['fit'].get('save'):
-            self['fit']['save'] = path.join(self['base_dir'], self['fit']['save'])
+        self = cls(base_dir=path.split(filename)[0], **entries)
+        self.config_path = path.join(self.base_dir, filename)
         return self
 
-    def _remove_nones(self,config=None):
-        if config==None: config=self.__dict__
-        for key in list(config):
-            if type(config[key]) is dict:
-                self._remove_nones(config[key])
-            #elif (type(config[key]) is not list) and (config[key] is None):
-            else:
-                if config[key] is None:
-                    del config[key]
+    @classmethod
+    def register(cls, label):
+        def decorator(config):
+            if label in cls._sub_configs:
+                raise KeyError(f'registering duplicate label {label} for Interface')
+            cls._sub_configs[label] = config
+            return config
+        return decorator
+
+
+@BaseConfig.register("Run")
+class RunConfig(AbstractConfig):
+
+    def __init__(self, **entries):
+        self.set_defaults(defaults.run)
+        self.update(**entries)
+
+    def process_entries(self, base_config):
+        from profit.run import Runner
+        sub = Runner.handle_run_config(base_config.as_dict(), self.as_dict())
+        self.update(**sub)
+
+
+@BaseConfig.register("Fit")
+class FitConfig(AbstractConfig):
+
+    def __init__(self, **entries):
+        from profit.sur import Surrogate
+        from profit.sur.gaussian_process import GaussianProcess
+        self.set_defaults(defaults.fit)
+
+        if issubclass(Surrogate._surrogates[self.surrogate], GaussianProcess):
+            self.set_defaults(defaults.fit_gaussian_process)
+
+        self.update(**entries)
+
+    def process_entries(self, base_config):
+        from profit.sur import Surrogate
+        if self.load:
+            self.load = path.join(base_config.base_dir, self.load)
+        if self.save:
+            self.save = path.join(base_config.base_dir, self.save)
+        sub = Surrogate.handle_config(self.as_dict(), base_config.as_dict())
+        self.update(**sub)
+
+
+@BaseConfig.register("Active_Learning")
+class ALConfig(AbstractConfig):
+
+    def __init__(self, **entries):
+        self.set_defaults(defaults.active_learning)
+        self.update(**entries)
+
+    def process_entries(self, base_config):
+        from profit.fit import ActiveLearning
+        sub = ActiveLearning.handle_config(self.as_dict(), base_config.as_dict)
+        self.update(**sub)
+
+
+@BaseConfig.register("UI")
+class UIConfig(AbstractConfig):
+
+    def __init__(self, **entries):
+        self.plot = defaults.ui['plot']
+        self.update(**entries)
+
+    def process_entries(self, base_config):
+        pass
