@@ -11,19 +11,11 @@ import logging
 from profit.config import Config
 from profit.util import safe_path_to_file
 from profit.util.variable_kinds import VariableGroup, Variable
+from profit.defaults import base_dir as default_base_dir, config_file as default_config_file
 
 from profit.run import Runner
 
 yes = False  # always answer 'y'
-
-
-def fill_uq(self, krun, content):
-    params_fill = SafeDict()
-    kp = 0
-    for item in self.params:
-        params_fill[item] = self.eval_points[kp, krun]
-        kp = kp+1
-    return content.format_map(params_fill)
 
 
 def main():
@@ -47,14 +39,14 @@ def main():
     parser.add_argument('base_dir',
                         metavar='base-dir',
                         help='path to config file (default: current working directory)',
-                        default=getcwd(), nargs='?')
+                        default=default_base_dir, nargs='?')
     args = parser.parse_args()
 
     print(args)
 
-    """ Instantiate Config class from the given file """
-    config_file = safe_path_to_file(args.base_dir, default='profit.yaml')
-    config = Config.from_file(config_file)
+    """Instantiate Config from the given file."""
+    config_file = safe_path_to_file(args.base_dir, default=default_config_file)
+    config = BaseConfig.from_file(config_file).as_dict()
 
     sys.path.append(config['base_dir'])
 
