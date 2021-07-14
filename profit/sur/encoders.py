@@ -53,18 +53,14 @@ class Encoder(ABC):
         _x[:, self.columns] = self.decode_func(_x[:, self.columns])
         return _x
 
-    @property
-    @abstractmethod
-    def encode_func(self):
+    def encode_func(self, x):
         r"""
         Returns:
             function: Function used for decoding the data. E.g. $\log_{10}$.
         """
         pass
 
-    @property
-    @abstractmethod
-    def decode_func(self):
+    def decode_func(self, x):
         r"""
         Returns:
             function: Inverse transform of the encoding function. For an encoding of $\log_{10}(x)$ this
@@ -97,30 +93,43 @@ class Encoder(ABC):
         return cls._encoders[item]
 
 
+@Encoder.register("Exclude")
+class ExcludeEncoder(Encoder):
+
+    def encode(self, x):
+        self.variables['excluded_values'] = x[:, self.columns]
+        return x[:, [i for i in range(x.shape[-1]) if i not in self.columns]]
+
+    def decode(self, x):
+        np.insert(x, self.columns, self.variables['excluded_values'])
+        return x
+
+    def encode_func(self, x):
+        pass
+
+    def decode_func(self, x):
+        pass
+
+
 @Encoder.register('Log10')
 class Log10Encoder(Encoder):
 
-    @property
-    def encode_func(self):
-        return np.log10
+    def encode_func(self, x):
+        return np.log10(x)
 
-    @property
-    def decode_func(self):
-        return lambda x: 10**x
+    def decode_func(self, x):
+        return 10**x
 
 
 @Encoder.register('Normalization')
 class Normalization(Encoder):
-
     def encode(self, x):
         if self.variables.get('xmax') is None:
             self.variables['xmax'] = abs(x[:, self.columns]).max(axis=0)
         return super().encode(x)
 
-    @property
-    def encode_func(self):
-        return lambda x: x / self.variables['xmax']
+    def encode_func(self, x):
+        return x / self.variables['xmax']
 
-    @property
-    def decode_func(self):
-        return lambda x: x * self.variables['xmax']
+    def decode_func(self, x):
+        return x * self.variables['xmax']

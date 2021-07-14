@@ -29,7 +29,11 @@ fit = {'surrogate': 'GPy',
        'save': './model.hdf5',
        'load': False,
        'fixed_sigma_n': False,
-       'encoder': []}
+       'encoder': [['Exclude', 'Constant', False],
+                   ['Log10', 'LogUniform', False],
+                   ['Normalization', 'all', False],
+                   ['Normalization', 'all', True]]}
+
 fit_gaussian_process = {'surrogate': 'GPy',
                         'kernel': 'RBF',
                         'hyperparameters': {'length_scale': None,  # Hyperparameters are inferred from training data
