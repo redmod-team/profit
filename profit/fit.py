@@ -123,26 +123,6 @@ class ActiveLearning:
         self.Xpred = config.get('Xpred')
         return self
 
-    @classmethod
-    def handle_config(cls, config, base_config):
-        """Sets default values in the configuration if the parameter is not existent.
-
-        Parameters:
-            config (dict): Only the 'active_learning' part of the base_config.
-            base_config (dict): The whole configuration parameters.
-        """
-        if config is None:
-            config = {'ActiveLearning': {}}
-
-        for key, default in cls._defaults.items():
-            if key not in config:
-                config[key] = default
-
-        if config.get('save'):
-            from os import path
-            config['save'] = path.join(base_config['base_dir'], config['save'])
-        return config
-
     @staticmethod
     def f(u):
         r"""Example function for debugging.

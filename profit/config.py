@@ -3,6 +3,7 @@ import yaml
 from collections import OrderedDict
 from profit import defaults
 from abc import ABC
+import warnings
 
 VALID_FORMATS = ('.yaml', '.py')
 
@@ -63,21 +64,56 @@ class AbstractConfig(ABC):
 
     def update(self, **entries):
         for name, value in entries.items():
-            if name.lower() in (name.lower() for name in self._sub_configs):
-                pass
-            elif hasattr(self, name):
-                self.__setattr__(name, value)
+            if hasattr(self, name) or name in map(str.lower, self._sub_configs):
+                setattr(self, name, value)
             else:
-                raise AttributeError("Config parameter {} is not available.".format(name))
+                message = "Config parameter '{}' for {} configuration may be unused.".format(name, self.__class__.__name__)
+                warnings.warn(message)
+                setattr(self, name, value)
 
-    def as_dict(self):
-        return {name: getattr(self, name)
-                if name not in map(str.lower, self._sub_configs.keys()) or getattr(self, name) is None
-                else getattr(self, name).as_dict() for name in vars(self)}
+    def process_entries(self, base_config):
+        pass
 
     def set_defaults(self, default_dict):
         for name, value in default_dict.items():
             setattr(self, name, value)
+
+    def create_subconfigs(self, **entries):
+        entries_lower = {key.lower(): entry for key, entry in entries.items()}
+        for name, sub_config in self._sub_configs.items():
+            sub_config_label = name.lower()
+            if name.lower() in entries_lower:
+                entry = entries_lower[name.lower()]
+                if isinstance(entry, str):
+                    entry = {'class': entry}
+                sub = sub_config(**entry)
+                setattr(self, sub_config_label, sub)
+            else:
+                setattr(self, sub_config_label, sub_config())
+
+    def __getitem__(self, item):
+        attr = getattr(self, item)
+        if item in self._sub_configs.keys():
+            return {key: attr[key] for key, _ in attr.items()}
+        return getattr(self, item)
+
+    def items(self):
+        return [(key, self[key]) for key in vars(self)]
+
+    def get(self, item, default=None):
+        try:
+            return self[item]
+        except AttributeError:
+            return default
+
+    @classmethod
+    def register(cls, label):
+        def decorator(config):
+            if label in cls._sub_configs:
+                raise KeyError(f'registering duplicate label {label} for Interface')
+            cls._sub_configs[label] = config
+            return config
+        return decorator
 
 
 class BaseConfig(AbstractConfig):
@@ -126,17 +162,8 @@ class BaseConfig(AbstractConfig):
         self.independent = {}
         self.files = defaults.files
 
-        # Create sub configs
-        entries_lower = {key.lower(): entry for key, entry in entries.items()}
-        for name, sub_config in self._sub_configs.items():
-            sub_config_label = name.lower()
-            if name.lower() in entries_lower:
-                sub = sub_config(**entries_lower[name.lower()])
-                self.__setattr__(sub_config_label, sub)
-            else:
-                self.__setattr__(sub_config_label, sub_config())
-
         self.update(**entries)  # Update the attributes with given entries.
+        self.create_subconfigs(**entries)
         self.process_entries()  # Postprocess the attributes to standardize different user entries.
 
     def process_entries(self):
@@ -187,30 +214,240 @@ class BaseConfig(AbstractConfig):
         self.config_path = path.join(self.base_dir, filename)
         return self
 
-    @classmethod
-    def register(cls, label):
-        def decorator(config):
-            if label in cls._sub_configs:
-                raise KeyError(f'registering duplicate label {label} for Interface')
-            cls._sub_configs[label] = config
-            return config
-        return decorator
 
-
-@BaseConfig.register("Run")
+@BaseConfig.register("run")
 class RunConfig(AbstractConfig):
+    _sub_configs = {}
 
     def __init__(self, **entries):
         self.set_defaults(defaults.run)
         self.update(**entries)
 
+        for key, sub_config in self._sub_configs.items():
+            attr = getattr(self, key.lower())
+            if isinstance(attr, str):
+                attr = {'class': attr}
+            try:
+                setattr(self, key.lower(), sub_config._sub_configs[attr['class']](**attr))
+            except KeyError:
+                setattr(self, key.lower(), sub_config._sub_configs['default'](**attr))
+
     def process_entries(self, base_config):
-        from profit.run import Runner
-        sub = Runner.handle_run_config(base_config.as_dict(), self.as_dict())
-        self.update(**sub)
+        from profit.util import load_includes
+
+        if isinstance(self.include, str):
+            self.include = [self.include]
+
+        for p, include_path in enumerate(self.include):
+            if not path.isabs(include_path):
+                self.include[p] = path.abspath(path.join(base_config.base_dir, include_path))
+        load_includes(self.include)
+
+        if not path.isabs(self.log_path):
+            self.log_path = path.abspath(path.join(base_config.base_dir, self.log_path))
+
+        for key in self._sub_configs:
+            getattr(self, key.lower()).process_entries(base_config)
 
 
-@BaseConfig.register("Fit")
+@RunConfig.register("runner")
+class RunnerConfig(AbstractConfig):
+    _sub_configs = {}
+
+    def __init__(self, **entries):
+        for key, value in self._sub_configs.items():
+            if value.__name__ == self.__class__.__name__:
+                self.set_defaults(getattr(defaults, f"run_runner_{key}"))
+                self.update(**entries)
+                break
+
+
+@RunnerConfig.register("local")
+class LocalRunnerConfig(RunnerConfig):
+    """
+    Example:
+        .. code-block:: yaml
+
+            class: local
+            parallel: all   # maximum number of simultaneous runs (for spawn array)
+            sleep: 0        # number of seconds to sleep while polling
+            fork: true      # whether to spawn the worker via forking instead of a subprocess (via a shell)
+    """
+    pass
+
+
+@RunnerConfig.register("slurm")
+class SlurmRunnerConfig(RunnerConfig):
+    """
+    Example:
+        .. code-block:: yaml
+
+               class: slurm
+               parallel: null      # maximum number of simultaneous runs (for spawn array)
+               sleep: 0            # number of seconds to sleep while (internally) polling
+               poll: 60            # number of seconds between external polls (to catch failed runs), use with care!
+               path: slurm.bash    # the path to the generated batch script (relative to the base directory)
+               custom: false       # whether a custom batch script is already provided at 'path'
+               prefix: srun        # prefix for the command
+               OpenMP: false       # whether to set OMP_NUM_THREADS and OMP_PLACES
+               cpus: 1             # number of cpus (including hardware threads) to use (may specify 'all')
+               options:            # (long) options to be passed to slurm: e.g. time, mem-per-cpu, account, constraint
+                   job-name: profit
+            """
+
+    def process_entries(self, base_config):
+        # convert path to absolute path
+        if not path.isabs(self.path):
+            self.path = path.abspath(path.join(base_config.base_dir, self.path))
+        # check type of 'cpus'
+        if (type(self.cpus) is not int or self.cpus < 1) and self.cpus != 'all':
+            raise ValueError(f'config option "cpus" may only be a positive integer or "all" and not {self.cpus}')
+
+
+@RunConfig.register("interface")
+class InterfaceConfig(AbstractConfig):
+    _sub_configs = {}
+
+    def __init__(self, **entries):
+        for key, value in self._sub_configs.items():
+            if value.__name__ == self.__class__.__name__:
+                self.set_defaults(getattr(defaults, f"run_interface_{key}"))
+                self.update(**entries)
+                break
+
+
+@InterfaceConfig.register("memmap")
+class MemmapInterfaceConfig(InterfaceConfig):
+    """
+    Example:
+        .. code-block:: yaml
+
+            class: memmap
+            path: interface.npy     # path to memory mapped interface file, relative to base directory
+    """
+
+    def process_entries(self, base_config):
+        # 'path' is relative to base_dir, convert to absolute path
+        if not path.isabs(self.path):
+            self.path = path.abspath(path.join(base_config.base_dir, self.path))
+
+
+@InterfaceConfig.register("zeromq")
+class ZeroMQInterfaceConfig(InterfaceConfig):
+    """
+    Example:
+        .. code-block:: yaml
+
+            class: zeromq
+            transport: tcp      # transport system used by zeromq
+            port: 9000          # port for the interface
+            address: null       # override bind address used by zeromq
+            connect: null       # override connect address used by zeromq
+            timeout: 2500       # zeromq polling timeout, in ms
+            retries: 3          # number of zeromq connection retries
+            retry-sleep: 1      # sleep between retries, in s
+    """
+    pass
+
+
+@RunConfig.register("pre")
+class PreConfig(AbstractConfig):
+    _sub_configs = {}
+
+    def __init__(self, **entries):
+        for key, value in self._sub_configs.items():
+            if value.__name__ == self.__class__.__name__:
+                self.set_defaults(getattr(defaults, f"run_pre_{key}"))
+                self.update(**entries)
+                break
+
+
+@PreConfig.register("template")
+class TemplatePreConfig(PreConfig):
+    """
+    Example:
+        .. code-block:: yaml
+
+            class: template
+            path: template      # directory to copy from, relative to base directory
+            param_files: null   # files in template which contain placeholders for variables, null means all files
+                                # can be a filename or a list of filenames
+    """
+
+    def process_entries(self, base_config):
+        # 'path' is relative to base_dir, convert to absolute path
+        if not path.isabs(self.path):
+            self.path = path.abspath(path.join(base_config.base_dir, self.path))
+
+        if isinstance(self.param_files, str):
+            self.param_files = [self.param_files]
+
+
+@RunConfig.register("post")
+class PostConfig(AbstractConfig):
+    _sub_configs = {}
+
+    def __init__(self, **entries):
+        for key, value in self._sub_configs.items():
+            if value.__name__ == self.__class__.__name__:
+                self.set_defaults(getattr(defaults, f"run_post_{key}"))
+                self.update(**entries)
+                break
+
+
+@PostConfig.register("json")
+class JsonPostConfig(PostConfig):
+    """
+    Example:
+        .. code-block:: yaml
+
+            class: json
+            path: stdout    # file to read from, relative to the run directory
+    """
+    pass
+
+
+@PostConfig.register("numpytxt")
+class NumpytxtPostConfig(PostConfig):
+    """
+    Example:
+        .. code-block:: yaml
+
+            class: numpytxt
+            path: stdout    # file to read from, relative to the run directory
+            names: "f g"    # list or string of output variables in order, default read from config/variables
+            options:        # options which are passed on to numpy.genfromtxt() (fname & dtype are used internally)
+                deletechars: ""
+    """
+
+    def process_entries(self, base_config):
+        if isinstance(self.names, str):
+            self.names = list(base_config.output.keys()) if self.names == 'all' else self.names.split()
+
+
+@PostConfig.register("hdf5")
+class HDF5PostConfig(PostConfig):
+    """
+    Example:
+        .. code-block:: yaml
+
+            class: hdf5
+            path: output.hdf5   # file to read from, relative to the run directory
+    """
+    pass
+
+
+@RunnerConfig.register("default")
+@InterfaceConfig.register("default")
+@PreConfig.register("default")
+@PostConfig.register("default")
+class DefaultConfig(AbstractConfig):
+
+    def __init__(self, **entries):
+        self.update(**entries)
+
+
+@BaseConfig.register("fit")
 class FitConfig(AbstractConfig):
 
     def __init__(self, **entries):
@@ -224,34 +461,41 @@ class FitConfig(AbstractConfig):
         self.update(**entries)
 
     def process_entries(self, base_config):
-        from profit.sur import Surrogate
+        for mode_str in ('save', 'load'):
+            mode = getattr(self, mode_str)
+            if mode:
+                setattr(self, mode, path.abspath(path.join(base_config.base_dir, mode)))
+                if self.surrogate not in mode:
+                    filepath = mode.rsplit('.', 1)
+                    setattr(self, mode_str, ''.join(filepath[:-1]) + f'_{self.surrogate}.' + filepath[-1])
+
         if self.load:
-            self.load = path.join(base_config.base_dir, self.load)
-        if self.save:
-            self.save = path.join(base_config.base_dir, self.save)
-        sub = Surrogate.handle_config(self.as_dict(), base_config.as_dict())
-        self.update(**sub)
+            self.save = False
+
+        for enc in getattr(self, 'encoder'):
+            cols = enc[1]
+            out = enc[2]
+            if isinstance(cols, str):
+                variables = getattr(base_config, 'output' if out else 'input')
+                if cols.lower() == 'all':
+                    enc[1] = list(range(len(variables)))
+                elif cols.lower() in [v['kind'] for v in variables.values()]:
+                    enc[1] = [idx for idx, v in enumerate(variables.values()) if v['kind'].lower() == cols.lower()]
+                else:
+                    enc[1] = []
 
 
-@BaseConfig.register("Active_Learning")
+@BaseConfig.register("active_learning")
 class ALConfig(AbstractConfig):
 
     def __init__(self, **entries):
         self.set_defaults(defaults.active_learning)
         self.update(**entries)
 
-    def process_entries(self, base_config):
-        from profit.fit import ActiveLearning
-        sub = ActiveLearning.handle_config(self.as_dict(), base_config.as_dict)
-        self.update(**sub)
 
-
-@BaseConfig.register("UI")
+@BaseConfig.register("ui")
 class UIConfig(AbstractConfig):
 
     def __init__(self, **entries):
         self.plot = defaults.ui['plot']
         self.update(**entries)
-
-    def process_entries(self, base_config):
-        pass

@@ -49,7 +49,7 @@ def test_1D():
     """Test a simple function f(u) = cos(10*u) + u."""
 
     config_file = 'study_1D/profit_1D.yaml'
-    config = BaseConfig.from_file(config_file).as_dict()
+    config = BaseConfig.from_file(config_file)
     model_file = './study_1D/model_1D_Custom.hdf5'
     try:
         run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
@@ -70,7 +70,7 @@ def test_2D():
     """Test a Rosenbrock 2D function with two random inputs."""
 
     config_file = 'study_2D/profit_2D.yaml'
-    config = BaseConfig.from_file(config_file).as_dict()
+    config = BaseConfig.from_file(config_file)
     model_file = './study_2D/model_2D_Custom.hdf5'
     try:
         run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)

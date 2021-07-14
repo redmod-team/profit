@@ -58,7 +58,7 @@ def test_1D():
     """Test a simple function f(u) = cos(10*u) + u."""
 
     config_file = 'study_1D/profit_1D.yaml'
-    config = BaseConfig.from_file(config_file).as_dict()
+    config = BaseConfig.from_file(config_file)
     model_file = config['fit'].get('save')
     try:
         run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
@@ -80,7 +80,7 @@ def multi_test_1d(study, config_file, output_file):
     """ test 1D with different config files """
     config_file = path.join(study, config_file)
     output_file = path.join(study, output_file)
-    config = BaseConfig.from_file(config_file).as_dict()
+    config = BaseConfig.from_file(config_file)
     try:
         run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
         output = load(output_file)
@@ -124,7 +124,7 @@ def test_custom_worker4():
 def test_multi_output():
     """Test a 1D function with two outputs."""
     config_file = 'study_multi_output/profit_multi_output.yaml'
-    config = BaseConfig.from_file(config_file).as_dict()
+    config = BaseConfig.from_file(config_file)
     model_file = config['fit'].get('save')
     try:
         run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
@@ -150,7 +150,7 @@ def test_2D():
     """Test a Rosenbrock 2D function with two random inputs."""
 
     config_file = 'study_2D/profit_2D.yaml'
-    config = BaseConfig.from_file(config_file).as_dict()
+    config = BaseConfig.from_file(config_file)
     model_file = config['fit'].get('save')
     try:
         run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
@@ -173,7 +173,7 @@ def test_2D_independent():
     """Test a Fermi function which returns a vector over energy and is sampled over different temperatures."""
 
     config_file = 'study_independent/profit_independent.yaml'
-    config = BaseConfig.from_file(config_file).as_dict()
+    config = BaseConfig.from_file(config_file)
     model_file = config['fit'].get('save')
     try:
         run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)

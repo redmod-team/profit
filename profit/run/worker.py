@@ -89,10 +89,6 @@ class Preprocessor(ABC):
         return self.pre(data, run_dir)
 
     @classmethod
-    def handle_config(cls, config, base_config):
-        pass
-
-    @classmethod
     def register(cls, label):
         def decorator(pre):
             if label in cls.preprocessors:
@@ -132,10 +128,6 @@ class Postprocessor(ABC):
 
     def __call__(self, data: MutableMapping):
         return self.post(data)
-
-    @classmethod
-    def handle_config(cls, config, base_config):
-        pass
 
     @classmethod
     def register(cls, label):
@@ -195,36 +187,10 @@ class Worker:
     @classmethod
     def from_env(cls, label='run'):
         from profit.config import BaseConfig
-        base_config = BaseConfig.from_file(checkenv('PROFIT_CONFIG_PATH')).as_dict()
+        base_config = BaseConfig.from_file(checkenv('PROFIT_CONFIG_PATH'))
         config = base_config[label]
-        if config['custom']:
-            cls.handle_config(config, base_config)
         run_id = int(checkenv('PROFIT_RUN_ID')) + int(os.environ.get('PROFIT_ARRAY_ID', 0))
         return cls.from_config(config, run_id)
-
-    @classmethod
-    def handle_config(cls, config, base_config):
-        """ handle the config dict, fill in defaults & delegate to the children
-
-        :param config: dict read from config file, ~base_config['run'] usually
-
-        ToDo: check for correct types & valid paths
-        ToDo: give warnings
-        """
-        defaults = {'pre': 'template', 'post': 'json', 'command': './simulation', 'stdout': 'stdout', 'stderr': None,
-                    'clean': True, 'time': True, 'log_path': 'log'}
-        for key, default in defaults.items():
-            if key not in config:
-                config[key] = default
-
-        if not os.path.isabs(config['log_path']):
-            config['log_path'] = os.path.abspath(os.path.join(base_config['base_dir'], config['log_path']))
-        if not isinstance(config['pre'], MutableMapping):
-            config['pre'] = {'class': config['pre']}
-        Preprocessor[config['pre']['class']].handle_config(config['pre'], base_config)
-        if not isinstance(config['post'], MutableMapping):
-            config['post'] = {'class': config['post']}
-        Postprocessor[config['post']['class']].handle_config(config['post'], base_config)
 
     @classmethod
     def register(cls, label):

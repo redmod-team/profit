@@ -199,52 +199,6 @@ class Surrogate(ABC):
         return child_instance
 
     @classmethod
-    def handle_config(cls, config, base_config):
-        """Fills the configuration parameters with defaults, if not existent, and delegates to child.
-
-        If saving or loading is enabled, the class label is included in the filename to identify the
-        surrogate class. Relative paths are referenced to the base directory.
-
-        Parameters:
-            config (dict): Only the 'fit' part of the base_config.
-            base_config (dict): The whole configuration parameters.
-        """
-        for key, default in cls._defaults.items():
-            if key not in config:
-                config[key] = default
-        if not config['encoder']:
-            in_dims = [idx for idx, value in enumerate(base_config['input'].values()) if value['kind'] != 'constant']
-            out_dims = list(range(len(base_config['output'].keys())))
-            log_input = [idx for idx, value in enumerate(base_config['input'].values())
-                         if value['kind'] == 'LogUniform']
-            config['encoder'] = [['Log10', log_input, False],
-                                 ['Normalization', in_dims, False],
-                                 ['Normalization', out_dims, True]]
-
-        for mode in ('save', 'load'):
-            if config.get(mode):
-                from os.path import abspath, join
-                config[mode] = abspath(join(base_config['base_dir'], config[mode]))
-                if config['surrogate'] not in config[mode]:
-                    filepath = config[mode].rsplit('.', 1)
-                    config[mode] = ''.join(filepath[:-1]) + f'_{config["surrogate"]}.' + filepath[-1]
-        if config.get('load'):
-            config['save'] = False
-        Surrogate[config['surrogate']].handle_subconfig(config, base_config)
-        return config
-
-    @classmethod
-    @abstractmethod
-    def handle_subconfig(cls, config, base_config):
-        """Fills configuration parameters with child's defaults.
-
-        Parameters:
-            config (dict): Only the 'fit' part of the base_config.
-            base_config (dict): The whole configuration parameters.
-        """
-        pass
-
-    @classmethod
     def register(cls, label):
         """Decorator to register new surrogate classes."""
         def decorator(surrogate):

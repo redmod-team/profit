@@ -208,26 +208,6 @@ class GaussianProcess(Surrogate, ABC):
         self.hyperparameters = config['hyperparameters']
         return self
 
-    @classmethod
-    def handle_subconfig(cls, config, base_config):
-        """Sets default parameters if not existent.
-
-        Does this recursively for each element of the hyperparameter dict.
-
-        Parameters:
-            config (dict): Only the 'fit' part of the base_config.
-            base_config (dict): The whole configuration parameters.
-        """
-
-        for key, default in cls._defaults.items():
-            if key not in config:
-                config[key] = default
-            else:
-                if isinstance(default, dict):
-                    for kkey, ddefault in default.items():
-                        if kkey not in config[key]:
-                            config[key][kkey] = ddefault
-
     @abstractmethod
     def select_kernel(self, kernel):
         """Convert the name of the kernel as string to the kernel class object of the surrogate.

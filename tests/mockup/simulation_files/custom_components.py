@@ -11,10 +11,6 @@ class MockupPostprocessor(Postprocessor):
         raw = np.loadtxt('mockup.out')
         data['f'] = raw
 
-    @classmethod
-    def handle_config(cls, config, base_config):
-        pass
-
 
 @Postprocessor.wrap('mockup_post2')
 def post(data):

@@ -77,28 +77,6 @@ class ZeroMQRunnerInterface(RunnerInterface):
         self.logger.debug('cleaning: closing socket')
         self.socket.close(0)
 
-    @classmethod
-    def handle_config(cls, config, base_config):
-        """
-        Example:
-            .. code-block:: yaml
-
-                class: zeromq
-                transport: tcp      # transport system used by zeromq
-                port: 9000          # port for the interface
-                address: null       # override bind address used by zeromq
-                connect: null       # override connect address used by zeromq
-                timeout: 2500       # zeromq polling timeout, in ms
-                retries: 3          # number of zeromq connection retries
-                retry-sleep: 1      # sleep between retries, in s
-
-        """
-        defaults = dict(transport='tcp', port=9000, address=None, connect=None, timeout=2500, retries=3)
-        defaults['retry-sleep'] = 1
-        for key, value in defaults.items():
-            if key not in config:
-                config[key] = value
-
 
 @Interface.register('zeromq')
 class ZeroMQInterface(Interface):

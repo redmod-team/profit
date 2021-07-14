@@ -139,52 +139,6 @@ class SlurmRunner(Runner):
             if direntry.is_file() and direntry.name.startswith('slurm-') and direntry.name.endswith('.out'):
                 os.remove(os.path.join(self.base_config['run_dir'], direntry.path))
 
-    @classmethod
-    def handle_config(cls, config, base_config):
-        """
-        Example:
-            .. code-block:: yaml
-
-                class: slurm
-                parallel: null      # maximum number of simultaneous runs (for spawn array)
-                sleep: 0            # number of seconds to sleep while (internally) polling
-                poll: 60            # number of seconds between external polls (to catch failed runs), use with care!
-                path: slurm.bash    # the path to the generated batch script (relative to the base directory)
-                custom: false       # whether a custom batch script is already provided at 'path'
-                prefix: srun        # prefix for the command
-                OpenMP: false       # whether to set OMP_NUM_THREADS and OMP_PLACES
-                cpus: 1             # number of cpus (including hardware threads) to use (may specify 'all')
-                options:            # (long) options to be passed to slurm: e.g. time, mem-per-cpu, account, constraint
-                    job-name: profit
-
-        """
-        defaults = {'parallel': None,
-                    'sleep': 0,
-                    'poll': 60,
-                    'path': 'slurm.bash',
-                    'custom': False,
-                    'prefix': 'srun',
-                    'OpenMP': False,
-                    'cpus': 1,
-                    }
-        options = {'job-name': 'profit'}
-
-        for key, value in defaults.items():
-            if key not in config:
-                config[key] = value
-        if 'options' not in config:
-            config['options'] = {}
-        for key, value in options.items():
-            if key not in config['options']:
-                config['options'][key] = value
-
-        # convert path to absolute path
-        if not os.path.isabs(config['path']):
-            config['path'] = os.path.abspath(os.path.join(base_config['base_dir'], config['path']))
-        # check type of 'cpus'
-        if (type(config['cpus']) is not int or config['cpus'] < 1) and config['cpus'] != 'all':
-            raise ValueError(f'config option "cpus" may only be a positive integer or "all" and not {config["cpus"]}')
-
     def generate_script(self):
         text = f"""\
 #!/bin/bash

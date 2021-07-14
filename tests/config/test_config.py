@@ -51,8 +51,8 @@ def test_yaml_py_config():
 
     yaml_file = '././study/profit.yaml'
     py_file = '././study/profit_config.py'
-    config_yaml = BaseConfig.from_file(yaml_file).as_dict()
-    config_py = BaseConfig.from_file(py_file).as_dict()
+    config_yaml = BaseConfig.from_file(yaml_file)
+    config_py = BaseConfig.from_file(py_file)
 
     def assert_dict(dict_items1, dict_items2):
         for (key1, value1), (key2, value2) in zip(dict_items1, dict_items2):
@@ -76,7 +76,7 @@ def test_txt_input():
     """Tests if the input files in the single run directories are created from the template."""
 
     config_file = './study/profit.yaml'
-    config = BaseConfig.from_file(config_file).as_dict()
+    config = BaseConfig.from_file(config_file)
     run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
     assert path.isfile('./study/run_000/mockup.in')
     clean(config)
@@ -86,7 +86,7 @@ def test_txt_json_input():
     """Checks if the numpy arrays resulting from a text and a json input are equal."""
 
     config_file = './study/profit_json.yaml'
-    config = BaseConfig.from_file(config_file).as_dict()
+    config = BaseConfig.from_file(config_file)
     try:
         run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
         with open(path.join(config['run_dir'], 'run_000', 'mockup_json.in')) as jf:
@@ -104,7 +104,7 @@ def test_hdf5_input_output():
     """Checks the data inside a .hdf5 input file."""
 
     config_file = './study/profit_hdf5.yaml'
-    config = BaseConfig.from_file(config_file).as_dict()
+    config = BaseConfig.from_file(config_file)
     try:
         run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
         data_in = load(config['files'].get('input'))
@@ -118,7 +118,7 @@ def test_symlinks():
     """Checks if relative symbolic links are handled correctly."""
 
     config_file = './study/profit_symlink.yaml'
-    config = BaseConfig.from_file(config_file).as_dict()
+    config = BaseConfig.from_file(config_file)
     base_file = './study/run_000/mockup.in'
     link_file = './study/run_000/some_subdir/symlink_link.txt'
     try:
@@ -140,7 +140,7 @@ def test_default_values():
 
     # First with simple configuration
     config_file = './study/profit_default.yaml'
-    config = BaseConfig.from_file(config_file).as_dict()
+    config = BaseConfig.from_file(config_file)
     assert config.get('base_dir') == path.abspath('./study')
     assert config.get('run_dir') == config.get('base_dir')
     assert config['files'].get('input') == path.join(config.get('base_dir'), defaults.files['input'])
@@ -150,7 +150,7 @@ def test_default_values():
 
     # Now check when dicts are only partially set
     config_file = './study/profit_default_2.yaml'
-    config = BaseConfig.from_file(config_file).as_dict()
+    config = BaseConfig.from_file(config_file)
     assert config['files'].get('input') == path.join(config.get('base_dir'), 'custom_input.in')
     assert config['files'].get('output') == path.join(config.get('base_dir'), defaults.files['output'])
     assert config['fit'].get('surrogate') == defaults.fit['surrogate']

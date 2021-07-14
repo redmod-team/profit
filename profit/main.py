@@ -46,7 +46,7 @@ def main():
 
     """Instantiate Config from the given file."""
     config_file = safe_path_to_file(args.base_dir, default=default_config_file)
-    config = BaseConfig.from_file(config_file).as_dict()
+    config = BaseConfig.from_file(config_file)
 
     sys.path.append(config['base_dir'])
 
@@ -72,9 +72,6 @@ def main():
             from profit.fit import ActiveLearning
             from profit.sur.sur import Surrogate
             runner.fill(variables.named_input)
-            if 'active_learning' not in config:
-                config['active_learning'] = {}
-            ActiveLearning.handle_config(config['active_learning'], config)
             al = ActiveLearning.from_config(runner, config['active_learning'], config)
             try:
                 al.run_first()
