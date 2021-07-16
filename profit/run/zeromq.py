@@ -26,7 +26,7 @@ class ZeroMQRunnerInterface(RunnerInterface):
     """
     def __init__(self, config, size, input_config, output_config, *, logger_parent: Logger = None):
         if 'FLAGS' not in [var[0] for var in self.internal_vars]:
-            self.internal_vars += [('FLAGS', np.byte)]
+            self.internal_vars += [('FLAGS', np.byte.__name__)]
         super().__init__(config, size, input_config, output_config, logger_parent=logger_parent)
         self.socket = zmq.Context.instance().socket(zmq.ROUTER)
         if self.config['address'] is None:
