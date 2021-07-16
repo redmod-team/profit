@@ -1,3 +1,4 @@
+"""Global default configuration values."""
 from os import path, getcwd, cpu_count
 
 # Base Config

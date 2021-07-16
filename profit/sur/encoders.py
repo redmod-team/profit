@@ -56,14 +56,14 @@ class Encoder(ABC):
     def encode_func(self, x):
         r"""
         Returns:
-            function: Function used for decoding the data. E.g. $\log_{10}$.
+            ndarray: Function used for decoding the data. E.g. $\log_{10}(x)$.
         """
         pass
 
     def decode_func(self, x):
         r"""
         Returns:
-            function: Inverse transform of the encoding function. For an encoding of $\log_{10}(x)$ this
+            ndarray: Inverse transform of the encoding function. For an encoding of $\log_{10}(x)$ this
                 would be $10^x$.
         """
         pass
@@ -95,6 +95,7 @@ class Encoder(ABC):
 
 @Encoder.register("Exclude")
 class ExcludeEncoder(Encoder):
+    """Excludes specific columns from the fit. Afterwards they are inserted at the same position."""
 
     def encode(self, x):
         self.variables['excluded_values'] = x[:, self.columns]
@@ -113,6 +114,7 @@ class ExcludeEncoder(Encoder):
 
 @Encoder.register('Log10')
 class Log10Encoder(Encoder):
+    r"""Transforms the specified columns with $log_{10}$. This is done for LogUniform variables by default."""
 
     def encode_func(self, x):
         return np.log10(x)
@@ -123,6 +125,9 @@ class Log10Encoder(Encoder):
 
 @Encoder.register('Normalization')
 class Normalization(Encoder):
+    """Normalization of the specified columns. Usually this is done for all input and output,
+        so the surrogate can fit on a (-1, 1) scale."""
+
     def encode(self, x):
         if self.variables.get('xmax') is None:
             self.variables['xmax'] = abs(x[:, self.columns]).max(axis=0)

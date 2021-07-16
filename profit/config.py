@@ -57,12 +57,15 @@ def load_config_from_py(filename):
 
 
 class AbstractConfig(ABC):
-    """
-    Abstract base class with general methods.
-    """
+    """General class with methods which are useful for all Config classes."""
     _sub_configs = {}
 
     def update(self, **entries):
+        """Updates the attributes with user inputs. A warning is issued if the attribute set by the user is unknown.
+
+        Parameters:
+            entries (dict): User input of the config parameters.
+        """
         for name, value in entries.items():
             if hasattr(self, name) or name in map(str.lower, self._sub_configs):
                 setattr(self, name, value)
@@ -72,13 +75,26 @@ class AbstractConfig(ABC):
                 setattr(self, name, value)
 
     def process_entries(self, base_config):
+        """After the attributes are set, they are formatted and edited to standardize the user inputs.
+
+        Parameters:
+            base_config (BaseConfig): In sub configs, the data from the base config is needed.
+        """
         pass
 
     def set_defaults(self, default_dict):
+        """Default values are set from a default dictionary, which is usually located
+        in the global profit.defaults file.
+        """
         for name, value in default_dict.items():
             setattr(self, name, value)
 
     def create_subconfigs(self, **entries):
+        """Instances of sub configs are created from a string or a dictionary.
+
+        Parameters:
+            entries (dict): User input parameters.
+        """
         entries_lower = {key.lower(): entry for key, entry in entries.items()}
         for name, sub_config in self._sub_configs.items():
             sub_config_label = name.lower()
@@ -92,15 +108,37 @@ class AbstractConfig(ABC):
                 setattr(self, sub_config_label, sub_config())
 
     def __getitem__(self, item):
+        """Implements the dictionary like get method with brackets.
+
+        Parameters:
+            item (str): Label of the attribute to return.
+
+        Returns:
+            Attribute or if the attribute is a sub config, a dictionary of the sub config items.
+        """
         attr = getattr(self, item)
         if item in self._sub_configs.keys():
             return {key: attr[key] for key, _ in attr.items()}
         return getattr(self, item)
 
     def items(self):
+        """Implements the dictionary like self.items() method.
+
+        Returns:
+            list: List of (key, value) tuples of the class attributes.
+        """
         return [(key, self[key]) for key in vars(self)]
 
     def get(self, item, default=None):
+        """Implements the dictionary like get method with a default value.
+
+        Parameters:
+            item (str): Label of the attribute to return.
+            default: Default value, if the attribute is not found.
+
+        Returns:
+            Attribute or the default value.
+        """
         try:
             return self[item]
         except AttributeError:
@@ -108,6 +146,7 @@ class AbstractConfig(ABC):
 
     @classmethod
     def register(cls, label):
+        """Registeres sub configs with a specific label."""
         def decorator(config):
             if label in cls._sub_configs:
                 raise KeyError(f'registering duplicate label {label} for Interface')
@@ -130,6 +169,10 @@ class BaseConfig(AbstractConfig):
             - input
             - output
         - run
+            - runner
+            - interface
+            - pre
+            - post
         - fit
             - surrogate
             - save / load
@@ -167,6 +210,7 @@ class BaseConfig(AbstractConfig):
         self.process_entries()  # Postprocess the attributes to standardize different user entries.
 
     def process_entries(self):
+        """Sets absolute paths, creates variables and delegates to the sub configs."""
         from profit.util.variable_kinds import Variable, VariableGroup
 
         # Set absolute paths
@@ -201,6 +245,7 @@ class BaseConfig(AbstractConfig):
 
     @classmethod
     def from_file(cls, filename=defaults.config_file):
+        """Creates a configuration class from a .yaml or .py file."""
 
         if filename.endswith('.yaml'):
             with open(filename) as f:
@@ -217,6 +262,35 @@ class BaseConfig(AbstractConfig):
 
 @BaseConfig.register("run")
 class RunConfig(AbstractConfig):
+    """Run configuration with the following sub classes:
+        - runner
+            - local
+            - slurm
+        - interface
+            - memmap
+            - zeromq
+        - pre
+            - template
+        - post
+            - json
+            - numpytxt
+            - hdf5
+
+    A default sub class which just updates the entries from a user input is also implemented and used if the
+    class from the user input is not found.
+
+    Custom config classes can also be registered, e.g. as a custom runner:
+
+    .. code-block:: python
+
+        @RunnerConfig.register("custom")
+        class CustomRunner(LocalRunnerConfig):
+            def process_entries(self, base_config):
+                # do something else than the usual LocalRunnerConfig
+                pass
+
+    Default values from the global profit.defaults.py file are loaded.
+    """
     _sub_configs = {}
 
     def __init__(self, **entries):
@@ -233,6 +307,7 @@ class RunConfig(AbstractConfig):
                 setattr(self, key.lower(), sub_config._sub_configs['default'](**attr))
 
     def process_entries(self, base_config):
+        """Set 'include' and paths and process entries of sub configs."""
         from profit.util import load_includes
 
         if isinstance(self.include, str):
@@ -252,6 +327,7 @@ class RunConfig(AbstractConfig):
 
 @RunConfig.register("runner")
 class RunnerConfig(AbstractConfig):
+    """Base Runner config."""
     _sub_configs = {}
 
     def __init__(self, **entries):
@@ -293,19 +369,21 @@ class SlurmRunnerConfig(RunnerConfig):
                cpus: 1             # number of cpus (including hardware threads) to use (may specify 'all')
                options:            # (long) options to be passed to slurm: e.g. time, mem-per-cpu, account, constraint
                    job-name: profit
-            """
+    """
 
     def process_entries(self, base_config):
-        # convert path to absolute path
+        """Converts paths to absolute and check type of 'cpus'"""
+        # Convert path to absolute path
         if not path.isabs(self.path):
             self.path = path.abspath(path.join(base_config.base_dir, self.path))
-        # check type of 'cpus'
+        # Check type of 'cpus'
         if (type(self.cpus) is not int or self.cpus < 1) and self.cpus != 'all':
             raise ValueError(f'config option "cpus" may only be a positive integer or "all" and not {self.cpus}')
 
 
 @RunConfig.register("interface")
 class InterfaceConfig(AbstractConfig):
+    """Base runner interface config."""
     _sub_configs = {}
 
     def __init__(self, **entries):
@@ -327,7 +405,7 @@ class MemmapInterfaceConfig(InterfaceConfig):
     """
 
     def process_entries(self, base_config):
-        # 'path' is relative to base_dir, convert to absolute path
+        """Converts 'path' to absolute."""
         if not path.isabs(self.path):
             self.path = path.abspath(path.join(base_config.base_dir, self.path))
 
@@ -352,6 +430,7 @@ class ZeroMQInterfaceConfig(InterfaceConfig):
 
 @RunConfig.register("pre")
 class PreConfig(AbstractConfig):
+    """Base config for preprocessors."""
     _sub_configs = {}
 
     def __init__(self, **entries):
@@ -375,7 +454,7 @@ class TemplatePreConfig(PreConfig):
     """
 
     def process_entries(self, base_config):
-        # 'path' is relative to base_dir, convert to absolute path
+        """Convert 'path' to absolute and set 'param_files'."""
         if not path.isabs(self.path):
             self.path = path.abspath(path.join(base_config.base_dir, self.path))
 
@@ -385,6 +464,7 @@ class TemplatePreConfig(PreConfig):
 
 @RunConfig.register("post")
 class PostConfig(AbstractConfig):
+    """Base class for postprocessor configs."""
     _sub_configs = {}
 
     def __init__(self, **entries):
@@ -421,6 +501,7 @@ class NumpytxtPostConfig(PostConfig):
     """
 
     def process_entries(self, base_config):
+        """Sets the included names of variables. The Keyword 'all' includes all variables."""
         if isinstance(self.names, str):
             self.names = list(base_config.output.keys()) if self.names == 'all' else self.names.split()
 
@@ -442,6 +523,7 @@ class HDF5PostConfig(PostConfig):
 @PreConfig.register("default")
 @PostConfig.register("default")
 class DefaultConfig(AbstractConfig):
+    """Default config for all run sub configs which just updates the attributes with user entries."""
 
     def __init__(self, **entries):
         self.update(**entries)
@@ -449,6 +531,7 @@ class DefaultConfig(AbstractConfig):
 
 @BaseConfig.register("fit")
 class FitConfig(AbstractConfig):
+    """Configuration for the surrogate and encoder. Currently, the only sub config is for the GaussianProcess classes."""
 
     def __init__(self, **entries):
         from profit.sur import Surrogate
@@ -461,6 +544,7 @@ class FitConfig(AbstractConfig):
         self.update(**entries)
 
     def process_entries(self, base_config):
+        """Set 'load' and 'save' as well as the encoder."""
         for mode_str in ('save', 'load'):
             mode = getattr(self, mode_str)
             if mode:
@@ -487,6 +571,7 @@ class FitConfig(AbstractConfig):
 
 @BaseConfig.register("active_learning")
 class ALConfig(AbstractConfig):
+    """Active learning configuration."""
 
     def __init__(self, **entries):
         self.set_defaults(defaults.active_learning)
@@ -495,6 +580,7 @@ class ALConfig(AbstractConfig):
 
 @BaseConfig.register("ui")
 class UIConfig(AbstractConfig):
+    """Configuration for the Graphical User Interface."""
 
     def __init__(self, **entries):
         self.plot = defaults.ui['plot']
