@@ -201,7 +201,8 @@ class VariableGroup:
 
 
 class Variable:
-    """Class for a single variable.
+    """Base class for a single variable.
+    To create input, independent and output variables, use the cls.create() or cls.create_from_str() methods.
 
     Attributes:
         name (str): Name of the variable.
@@ -211,12 +212,13 @@ class Variable:
         dtype (dtype): Datatype.
     """
 
-    def __init__(self):
-        self.name = ''
-        self.kind = ''
-        self.size = (1, 1)
-        self.value = np.array([[]])
-        self.dtype = np.float64
+    def __init__(self, name, kind, size, value=None, dtype=np.float64):
+        self.name = name
+        self.kind = kind
+        self.size = size
+        self.value = value if value is not None else np.empty(size)
+        assert self.value.shape == size
+        self.dtype = dtype
 
     @property
     def named_value(self):
@@ -262,7 +264,7 @@ class Variable:
         return cls.create(**v_dict)
 
     @classmethod
-    def create(cls, name, kind, size, entries=(0, 1), value=np.array([[]]), dtype=np.float64):
+    def create(cls, name, kind, size, entries=(0, 1), value=None, dtype=np.float64):
         """Directly creates a variable from keyword entries.
 
         Parameters:
@@ -279,12 +281,12 @@ class Variable:
         """
         if 'output' in kind.lower():
             dependent = entries if len(entries) > 0 and isinstance(entries[0], (str, Variable)) else ()
-            return OutputVariable.create(name, kind, size, dependent, value, dtype)
+            return OutputVariable(name, kind, size, dependent, value, dtype)
         else:
             constraints = entries if entries else (0, 1)
             if 'independent' in kind.lower():
-                return IndependentVariable.create(name, kind, size, constraints, value, dtype)
-            return InputVariable.create(name, kind, size, constraints, value, dtype)
+                return IndependentVariable(name, kind, size, constraints, value, dtype)
+            return InputVariable(name, kind, size, constraints, value, dtype)
 
     def as_dict(self):
         """Dictionary of the variable attributes."""
@@ -294,22 +296,9 @@ class Variable:
 class InputVariable(Variable):
     """Sub class for input variables."""
 
-    def __init__(self):
-        super().__init__()
-        self.constraints = (0, 1)
-    
-    @classmethod
-    def create(cls, name, kind, size, entries=(0, 1), value=np.array([[]]), dtype=np.float64):
-        self = cls()
-        self.name = name
-        self.kind = kind
-        self.size = size
-        self.dtype = dtype
+    def __init__(self, name, kind, size, entries=(0, 1), value=None, dtype=np.float64):
+        super().__init__(name, kind, size, value, dtype)
         self.constraints = entries
-        if value.size > 0:
-            self.value = value
-            assert self.value.shape == self.size
-        return self
 
     def generate_values(self, halton_seq=None):
         if halton_seq is None:
@@ -324,38 +313,20 @@ class InputVariable(Variable):
 class IndependentVariable(InputVariable):
     """Sub class for independent variables."""
 
-    @classmethod
-    def create(cls, name, kind, size, entries=(0, 1), value=np.array([[]]), dtype=np.float64):
-        self = cls()
-        self.name = name
-        self.kind = kind
-        self.dtype = dtype
-        self.constraints = entries
-        if value.size > 0:
-            self.value = value
-        else:
+    def __init__(self, name, kind, size, entries=(0, 1), value=None, dtype=np.float64):
+        super().__init__(name, kind, size, entries, value, dtype)
+        if value is None:
             self.generate_values()
-        self.size = self.value.shape
-        return self
+            self.size = self.value.shape
 
 
 class OutputVariable(Variable):
     """Sub class for output variables."""
 
-    def __init__(self):
-        super().__init__()
-        self.dependent = ()
-
-    @classmethod
-    def create(cls, name, kind, size, entries=(), value=np.array([[]]), dtype=np.float64):
-        self = cls()
-        self.name = name
-        self.kind = kind
-        self.size = size
-        self.dtype = dtype
+    def __init__(self, name, kind, size, entries=(), value=None, dtype=np.float64):
+        super().__init__(name, kind, size, value, dtype)
         self.dependent = entries
-        self.value = value if value.size > 0 else np.full(self.size, np.nan)
-        return self
+        self.value = value if value is not None else np.full(self.size, np.nan)
 
     def as_dict(self):
         return {k if k != 'dependent' else 'entries': v if k != 'dependent' else [vi.as_dict() for vi in v] for k, v in vars(self).items()}
