@@ -96,24 +96,6 @@ class LocalRunner(Runner):
                 process.terminate()
         self.runs = {}
 
-    @classmethod
-    def handle_config(cls, config, base_config):
-        """
-        Example:
-            .. code-block:: yaml
-
-                class: local
-                parallel: all   # maximum number of simultaneous runs (for spawn array)
-                sleep: 0        # number of seconds to sleep while polling
-                fork: true      # whether to spawn the worker via forking instead of a subprocess (via a shell)
-        """
-        if 'parallel' not in config or config['parallel'] == 'all':
-            config['parallel'] = os.cpu_count()
-        if 'sleep' not in config:
-            config['sleep'] = 0
-        if 'fork' not in config:
-            config['fork'] = True
-
 
 # === Numpy Memmap Inerface === #
 
@@ -148,22 +130,7 @@ class MemmapRunnerInterface(RunnerInterface):
 
     def clean(self):
         if os.path.exists(self.config['path']):
-            os.remove(self.config['path'])
-
-    @classmethod
-    def handle_config(cls, config, base_config):
-        """
-        Example:
-            .. code-block:: yaml
-
-                class: memmap
-                path: interface.npy     # path to memory mapped interface file, relative to base directory
-        """
-        if 'path' not in config:
-            config['path'] = 'interface.npy'
-        # 'path' is relative to base_dir, convert to absolute path
-        if not os.path.isabs(config['path']):
-            config['path'] = os.path.abspath(os.path.join(base_config['base_dir'], config['path']))
+            os.remove(self.config['path'])#
 
 
 @Interface.register('memmap')
@@ -230,27 +197,6 @@ class TemplatePreprocessor(Preprocessor):
                             param_files=self.config['param_files'])
         os.chdir(run_dir)
 
-    @classmethod
-    def handle_config(cls, config, base_config):
-        """
-        Example:
-            .. code-block:: yaml
-
-                class: template
-                path: template      # directory to copy from, relative to base directory
-                param_files: null   # files in template which contain placeholders for variables, null means all files
-                                    # can be a filename or a list of filenames
-        """
-        if 'path' not in config:
-            config['path'] = 'template'
-        # 'path' is relative to base_dir, convert to absolute path
-        if not os.path.isabs(config['path']):
-            config['path'] = os.path.abspath(os.path.join(base_config['base_dir'], config['path']))
-        if 'param_files' not in config:
-            config['param_files'] = None
-        if isinstance(config['param_files'], str):
-            config['param_files'] = [config['param_files']]
-
 
 # === JSON Postprocessor === #
 
@@ -268,18 +214,6 @@ class JSONPostprocessor(Postprocessor):
             output = json.load(f)
         for key, value in output.items():
             data[key] = value
-
-    @classmethod
-    def handle_config(cls, config, base_config):
-        """
-        Example:
-            .. code-block:: yaml
-
-                class: json
-                path: stdout    # file to read from, relative to the run directory
-        """
-        if 'path' not in config:
-            config['path'] = 'stdout'
 
 
 # === Numpy Text Postprocessor === #
@@ -310,29 +244,6 @@ class NumpytxtPostprocessor(Postprocessor):
             if key in data.dtype.names:
                 data[key] = raw[key]
 
-    @classmethod
-    def handle_config(cls, config, base_config):
-        """
-        Example:
-            .. code-block:: yaml
-
-                class: numpytxt
-                path: stdout    # file to read from, relative to the run directory
-                names: "f g"    # list or string of output variables in order, default read from config/variables
-                options:        # options which are passed on to numpy.genfromtxt() (fname & dtype are used internally)
-                    deletechars: ""
-        """
-        if 'path' not in config:
-            config['path'] = 'stdout'
-        if 'names' not in config:
-            config['names'] = list(base_config['output'].keys())
-        if isinstance(config['names'], str):
-            config['names'] = config['names'].split()
-        if 'options' not in config:
-            config['options'] = {}
-        if 'deletechars' not in config['options']:
-            config['options']['deletechars'] = ""
-
 
 # === HDF5 Postprocessor === #
 
@@ -349,15 +260,3 @@ class HDF5Postprocessor(Postprocessor):
         with h5py.File(self.config['path'], 'r') as f:
             for key in f.keys():
                 data[key] = f[key]
-
-    @classmethod
-    def handle_config(cls, config, base_config):
-        """
-        Example:
-            .. code-block:: yaml
-
-                class: hdf5
-                path: output.hdf5   # file to read from, relative to the run directory
-        """
-        if 'path' not in config:
-            config['path'] = 'output.hdf5'

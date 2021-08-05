@@ -179,14 +179,14 @@ def spread_struct_horizontal(struct_array: np.ndarray, variable_config: Mapping)
     # prepare dtype
     for variable in struct_array.dtype.names:
         spec = variable_config[variable]
-        if len(spec['shape']) == 0:
+        if spec['size'][-1] == 1:
             dtype.append((variable, spec['dtype']))
             columns[variable] = [variable]
         else:
             ranges = []
             columns[variable] = []
-            for dep in spec['depend']:
-                ranges.append(spec['range'][dep])
+            for dep in spec['entries']:
+                ranges.append(dep['value'])
             meshes = [m.flatten() for m in np.meshgrid(*ranges)]
             for i in range(meshes[0].size):
                 name = variable + '(' + ', '.join([f'{m[i]}' for m in meshes]) + ')'
@@ -195,8 +195,8 @@ def spread_struct_horizontal(struct_array: np.ndarray, variable_config: Mapping)
     # fill data
     output = np.zeros(struct_array.shape, dtype=dtype)
     for variable, spec in variable_config.items():
-        if len(spec['shape']) == 0:
-            output[variable] = struct_array[variable]
+        if spec['size'][-1] == 1:
+            output[variable] = struct_array[variable].flatten()
         else:
             for i in range(struct_array.size):
                 output[columns[variable]][i] = tuple(struct_array[variable][i])

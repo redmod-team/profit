@@ -8,7 +8,7 @@ Testcases for some configuration features:
 - default config values
 """
 
-from profit.config import Config
+from profit.config import BaseConfig
 from profit.util import load
 from json import load as jload
 from os import path, remove, chdir, getcwd
@@ -51,8 +51,8 @@ def test_yaml_py_config():
 
     yaml_file = '././study/profit.yaml'
     py_file = '././study/profit_config.py'
-    config_yaml = Config.from_file(yaml_file)
-    config_py = Config.from_file(py_file)
+    config_yaml = BaseConfig.from_file(yaml_file)
+    config_py = BaseConfig.from_file(py_file)
 
     def assert_dict(dict_items1, dict_items2):
         for (key1, value1), (key2, value2) in zip(dict_items1, dict_items2):
@@ -62,6 +62,10 @@ def test_yaml_py_config():
             elif type(value1) is ndarray:
                 assert value1.dtype == value2.dtype
                 assert value1.shape == value2.shape
+            elif type(value1) is list:
+                for v1, v2 in zip(value1, value2):
+                    if type(value1) is dict:
+                        assert_dict(v1.items(), v2.items())
             elif key1 != 'config_path':
                 assert value1 == value2
 
@@ -72,7 +76,7 @@ def test_txt_input():
     """Tests if the input files in the single run directories are created from the template."""
 
     config_file = './study/profit.yaml'
-    config = Config.from_file(config_file)
+    config = BaseConfig.from_file(config_file)
     run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
     assert path.isfile('./study/run_000/mockup.in')
     clean(config)
@@ -82,7 +86,7 @@ def test_txt_json_input():
     """Checks if the numpy arrays resulting from a text and a json input are equal."""
 
     config_file = './study/profit_json.yaml'
-    config = Config.from_file(config_file)
+    config = BaseConfig.from_file(config_file)
     try:
         run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
         with open(path.join(config['run_dir'], 'run_000', 'mockup_json.in')) as jf:
@@ -100,7 +104,7 @@ def test_hdf5_input_output():
     """Checks the data inside a .hdf5 input file."""
 
     config_file = './study/profit_hdf5.yaml'
-    config = Config.from_file(config_file)
+    config = BaseConfig.from_file(config_file)
     try:
         run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
         data_in = load(config['files'].get('input'))
@@ -114,7 +118,7 @@ def test_symlinks():
     """Checks if relative symbolic links are handled correctly."""
 
     config_file = './study/profit_symlink.yaml'
-    config = Config.from_file(config_file)
+    config = BaseConfig.from_file(config_file)
     base_file = './study/run_000/mockup.in'
     link_file = './study/run_000/some_subdir/symlink_link.txt'
     try:
@@ -132,21 +136,23 @@ def test_default_values():
     """ Tests the default values of the configuration file. First with a simple configuration
     and then with some parameters customized, to check if missing dict entries are set correctly. """
 
+    from profit import defaults
+
     # First with simple configuration
     config_file = './study/profit_default.yaml'
-    config = Config.from_file(config_file)
+    config = BaseConfig.from_file(config_file)
     assert config.get('base_dir') == path.abspath('./study')
     assert config.get('run_dir') == config.get('base_dir')
-    assert config['files'].get('input') == path.join(config.get('base_dir'), 'input.txt')
-    assert config['files'].get('output') == path.join(config.get('base_dir'), 'output.txt')
-    assert config['fit'].get('surrogate') == 'GPy'
-    assert config['fit'].get('kernel') == 'RBF'
+    assert config['files'].get('input') == path.join(config.get('base_dir'), defaults.files['input'])
+    assert config['files'].get('output') == path.join(config.get('base_dir'), defaults.files['output'])
+    assert config['fit'].get('surrogate') == defaults.fit['surrogate']
+    assert config['fit'].get('kernel') == defaults.fit_gaussian_process['kernel']
 
     # Now check when dicts are only partially set
     config_file = './study/profit_default_2.yaml'
-    config = Config.from_file(config_file)
+    config = BaseConfig.from_file(config_file)
     assert config['files'].get('input') == path.join(config.get('base_dir'), 'custom_input.in')
-    assert config['files'].get('output') == path.join(config.get('base_dir'), 'output.txt')
-    assert config['fit'].get('surrogate') == 'GPy'
-    assert config['fit'].get('kernel') == 'RBF'
-    assert config['fit'].get('plot') is True
+    assert config['files'].get('output') == path.join(config.get('base_dir'), defaults.files['output'])
+    assert config['fit'].get('surrogate') == defaults.fit['surrogate']
+    assert config['fit'].get('kernel') == defaults.fit_gaussian_process['kernel']
+    assert config['ui'].get('plot') is True

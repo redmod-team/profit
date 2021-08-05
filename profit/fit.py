@@ -50,7 +50,7 @@ class ActiveLearning:
         self.sur = surrogate
         self.inputs = inputs
         self.al_keys = [key for key in self.inputs if self.inputs[key]['kind'] == 'ActiveLearning']
-        self.al_ranges = [self.inputs[key]['al_range'] for key in self.al_keys]
+        self.al_ranges = [self.inputs[key]['entries'] for key in self.al_keys]
         self.X = self.runner.flat_input_data
         self.y = None
         self.Xpred = None
@@ -122,29 +122,6 @@ class ActiveLearning:
         self.plot_marginal_variance = config['plot_marginal_variance']
         self.Xpred = config.get('Xpred')
         return self
-
-    @classmethod
-    def handle_config(cls, config, base_config):
-        """Sets default values in the configuration if the parameter is not existent.
-
-        Parameters:
-            config (dict): Only the 'active_learning' part of the base_config.
-            base_config (dict): The whole configuration parameters.
-        """
-        if config is None:
-            config = {'ActiveLearning': {}}
-
-        for key, default in cls._defaults.items():
-            if key not in config:
-                config[key] = default
-
-        for key, value in base_config['input'].items():
-            if value['kind'] == 'ActiveLearning':
-                if not value.get('al_range'):
-                    value['al_range'] = cls._defaults['al_range']
-        if config.get('save'):
-            from os import path
-            config['save'] = path.join(base_config['base_dir'], config['save'])
 
     @staticmethod
     def f(u):

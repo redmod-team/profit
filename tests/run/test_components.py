@@ -3,8 +3,9 @@ Testcases for run components
  - Interface, Preprocessor, Postprocessor
 """
 
-from profit.config import Config
+from profit.config import BaseConfig
 from pytest import fixture
+from copy import deepcopy
 
 CONFIG_FILE = 'numpy.yaml'
 RUN_ID = 1
@@ -34,13 +35,15 @@ def assert_wif(wif):
 
 def test_memmap():
     from profit.run.default import MemmapInterface, MemmapRunnerInterface
+    from profit.config import MemmapInterfaceConfig
     import os
 
-    BASE_CONFIG = Config.from_file('numpy.yaml')
+    BASE_CONFIG = BaseConfig.from_file(CONFIG_FILE)
     MAX_IDS = BASE_CONFIG['ntrain']
     config = {'class': 'memmap'}
     try:
-        MemmapRunnerInterface.handle_config(config, BASE_CONFIG)
+        config = MemmapInterfaceConfig(**config)
+        config.process_entries(BASE_CONFIG)
 
         rif = MemmapRunnerInterface(config, MAX_IDS, BASE_CONFIG['input'], BASE_CONFIG['output'])
         rif.input[['u', 'v']][1] = VALUE_U, VALUE_V
@@ -53,7 +56,7 @@ def test_memmap():
         assert rif.internal['TIME'][RUN_ID] == VALUE_T
         assert rif.internal['DONE'][RUN_ID]
     finally:
-        if 'path' in config and os.path.exists(config['path']):
+        if config.get('path') and os.path.exists(config['path']):
             os.remove(config['path'])
 
 
@@ -61,11 +64,13 @@ def test_zeromq():
     from threading import Thread
     from time import sleep
     from profit.run.zeromq import ZeroMQInterface, ZeroMQRunnerInterface
+    from profit.config import ZeroMQInterfaceConfig
 
-    BASE_CONFIG = Config.from_file('numpy.yaml')
+    BASE_CONFIG = BaseConfig.from_file(CONFIG_FILE)
     MAX_IDS = BASE_CONFIG['ntrain']
     config = {'class': 'zeromq'}
-    ZeroMQRunnerInterface.handle_config(config, BASE_CONFIG)
+    config = ZeroMQInterfaceConfig(**config)
+    config.process_entries(BASE_CONFIG)
 
     def runner():
         rif = ZeroMQRunnerInterface(config, MAX_IDS, BASE_CONFIG['input'], BASE_CONFIG['output'])
@@ -99,12 +104,14 @@ def test_zeromq():
 def test_numpytxt():
     from numpy import array
     from profit.run.default import NumpytxtPostprocessor
+    from profit.config import NumpytxtPostConfig
 
-    BASE_CONFIG = Config.from_file('numpy.yaml')
+    BASE_CONFIG = BaseConfig.from_file(CONFIG_FILE)
     config = {'class': 'numpytxt', 'path': 'numpytxt.csv', 'options': {'delimiter': ','}}
     data = array([0], dtype=[('f', float, (3,)), ('g', float)])[0]
 
-    NumpytxtPostprocessor.handle_config(config, BASE_CONFIG)
+    config = NumpytxtPostConfig(**config)
+    config.process_entries(BASE_CONFIG)
     post = NumpytxtPostprocessor(config)
     post(data)
 

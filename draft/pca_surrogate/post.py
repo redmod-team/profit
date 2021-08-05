@@ -9,6 +9,3 @@ class SimulationPostprocessor(Postprocessor):
     def post(self, data):
         data['f'] = np.loadtxt('result.out')
 
-    @classmethod
-    def handle_config(cls, config, base_config):
-        pass

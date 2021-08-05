@@ -20,5 +20,5 @@ run:
 files:
     input: custom_input.in
 
-fit:
+ui:
     plot: True

@@ -26,7 +26,7 @@ class ZeroMQRunnerInterface(RunnerInterface):
     """
     def __init__(self, config, size, input_config, output_config, *, logger_parent: Logger = None):
         if 'FLAGS' not in [var[0] for var in self.internal_vars]:
-            self.internal_vars += [('FLAGS', np.byte)]
+            self.internal_vars += [('FLAGS', np.byte.__name__)]
         super().__init__(config, size, input_config, output_config, logger_parent=logger_parent)
         self.socket = zmq.Context.instance().socket(zmq.ROUTER)
         if self.config['address'] is None:
@@ -76,28 +76,6 @@ class ZeroMQRunnerInterface(RunnerInterface):
     def clean(self):
         self.logger.debug('cleaning: closing socket')
         self.socket.close(0)
-
-    @classmethod
-    def handle_config(cls, config, base_config):
-        """
-        Example:
-            .. code-block:: yaml
-
-                class: zeromq
-                transport: tcp      # transport system used by zeromq
-                port: 9000          # port for the interface
-                address: null       # override bind address used by zeromq
-                connect: null       # override connect address used by zeromq
-                timeout: 2500       # zeromq polling timeout, in ms
-                retries: 3          # number of zeromq connection retries
-                retry-sleep: 1      # sleep between retries, in s
-
-        """
-        defaults = dict(transport='tcp', port=9000, address=None, connect=None, timeout=2500, retries=3)
-        defaults['retry-sleep'] = 1
-        for key, value in defaults.items():
-            if key not in config:
-                config[key] = value
 
 
 @Interface.register('zeromq')

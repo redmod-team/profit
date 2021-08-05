@@ -26,8 +26,9 @@ class RunnerInterface:
         if logger_parent is not None:
             self.logger.parent = logger_parent
 
-        self.input_vars = [(variable, spec['dtype']) for variable, spec in input_config.items()]
-        self.output_vars = [(variable, spec['dtype'], spec['shape']) for variable, spec in output_config.items()]
+        self.input_vars = [(variable, spec['dtype'].__name__) for variable, spec in input_config.items()]
+        self.output_vars = [(variable, spec['dtype'].__name__, () if spec['size'] == (1, 1) else (spec['size'][-1],))
+                            for variable, spec in output_config.items()]
 
         self.input = np.zeros(size, dtype=self.input_vars)
         self.output = np.zeros(size, dtype=self.output_vars)
@@ -38,10 +39,6 @@ class RunnerInterface:
 
     def clean(self):
         self.logger.debug('cleaning')
-
-    @classmethod
-    def handle_config(cls, config, base_config):
-        pass
 
     @classmethod
     def register(cls, label):
@@ -139,46 +136,6 @@ class Runner(ABC):
     def flat_output_data(self):
         return flatten_struct(self.output_data)
 
-    @classmethod
-    def handle_run_config(cls, base_config, run_config=None):
-        """ handle the config dict, fill in defaults & delegate to the children
-
-        Arguments:
-            run_config: dict read from config file, ~base_config['run'] usually
-            base_config: base dict read from config file
-
-        handles: include, runner, interface, custom, worker
-        all other config options need to be handled by the called worker (or other components)
-
-        ToDo: check for correct types & valid paths
-        ToDo: give warnings
-        """
-        run_config = run_config or base_config['run']
-        if 'include' not in run_config:
-            run_config['include'] = []
-        elif isinstance(run_config['include'], str):
-            run_config['include'] = [run_config['include']]
-        for p, path in enumerate(run_config['include']):
-            if not os.path.isabs(path):
-                run_config['include'][p] = os.path.abspath(os.path.join(base_config['base_dir'], path))
-        load_includes(run_config['include'])
-
-        defaults = {'runner': 'local', 'interface': 'memmap', 'custom': False, 'worker': None}
-        for key, default in defaults.items():
-            if key not in run_config:
-                run_config[key] = default
-
-        if not isinstance(run_config['runner'], MutableMapping):
-            run_config['runner'] = {'class': run_config['runner']}
-        Runner[run_config['runner']['class']].handle_config(run_config['runner'], base_config)
-        if not isinstance(run_config['interface'], MutableMapping):
-            run_config['interface'] = {'class': run_config['interface']}
-        RunnerInterface[run_config['interface']['class']].handle_config(run_config['interface'], base_config)
-        Worker[run_config['worker']].handle_config(run_config, base_config)
-
-    @classmethod
-    def handle_config(cls, config, base_config):
-        pass
 
     @classmethod
     def register(cls, label):

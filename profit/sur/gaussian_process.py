@@ -208,26 +208,6 @@ class GaussianProcess(Surrogate, ABC):
         self.hyperparameters = config['hyperparameters']
         return self
 
-    @classmethod
-    def handle_subconfig(cls, config, base_config):
-        """Sets default parameters if not existent.
-
-        Does this recursively for each element of the hyperparameter dict.
-
-        Parameters:
-            config (dict): Only the 'fit' part of the base_config.
-            base_config (dict): The whole configuration parameters.
-        """
-
-        for key, default in cls._defaults.items():
-            if key not in config:
-                config[key] = default
-            else:
-                if isinstance(default, dict):
-                    for kkey, ddefault in default.items():
-                        if kkey not in config[key]:
-                            config[key][kkey] = ddefault
-
     @abstractmethod
     def select_kernel(self, kernel):
         """Convert the name of the kernel as string to the kernel class object of the surrogate.
@@ -606,14 +586,14 @@ class GPySurrogate(GaussianProcess):
             self.model = models.GPRegression.from_dict(sur_dict['model'])
             self.Xtrain = sur_dict['Xtrain']
             self.ytrain = sur_dict['ytrain']
-            self.encoder = [Encoder(func, cols, out) for func, cols, out in eval(sur_dict['encoder'])]
+            self.encoder = [Encoder[func](cols, out) for func, cols, out in eval(sur_dict['encoder'])]
         except (OSError, FileNotFoundError):
             from pickle import load as pload
             from os.path import splitext
             # Load multi-output model from pickle file
             print("File {} not found. Trying to find a .pkl file with multi-output instead.".format(path))
             self.model, self.Xtrain, self.ytrain, encoder_str = pload(open(splitext(path)[0] + '.pkl', 'rb'))
-            self.encoder = [Encoder(func, cols, out) for func, cols, out in eval(encoder_str)]
+            self.encoder = [Encoder[func](cols, out) for func, cols, out in eval(encoder_str)]
             self.output_ndim = int(max(self.model.X[:, -1])) + 1
             self.multi_output = True
 
