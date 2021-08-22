@@ -19,13 +19,16 @@ class Encoder(ABC):
     """
     _encoders = {}
 
-    def __init__(self, columns, output=False):
+    def __init__(self, columns, output=False, variables=None):
         self.label = self.__class__.get_label()
-        self.variables = {}
+        self.variables = {key: np.array(values) for key, values in variables.items()} if variables else {}
         self.columns = columns
         self.output = output
 
-        self.repr = [self.label, self.columns, self.output]
+    @property
+    def repr(self):
+        # TODO: Write docstring
+        return [self.label, self.columns, self.output, {key: values.tolist() for key, values in self.variables.items()}]
 
     def encode(self, x):
         """Applies the encoding function on given columns.
@@ -52,6 +55,10 @@ class Encoder(ABC):
         _x = x.copy()
         _x[:, self.columns] = self.decode_func(_x[:, self.columns])
         return _x
+
+    def decode_hyperparameters(self, key, value):
+        # TODO: Write docstring
+        return value
 
     def encode_func(self, x):
         r"""
@@ -102,8 +109,7 @@ class ExcludeEncoder(Encoder):
         return x[:, [i for i in range(x.shape[-1]) if i not in self.columns]]
 
     def decode(self, x):
-        np.insert(x, self.columns, self.variables['excluded_values'])
-        return x
+        return np.insert(x, self.columns, self.variables['excluded_values'], axis=1)
 
     def encode_func(self, x):
         pass
@@ -125,16 +131,33 @@ class Log10Encoder(Encoder):
 
 @Encoder.register('Normalization')
 class Normalization(Encoder):
-    """Normalization of the specified columns. Usually this is done for all input and output,
-        so the surrogate can fit on a (-1, 1) scale."""
+    r"""Normalization of the specified columns. Usually this is done for all input and output,
+        so the surrogate can fit on a (0, 1)^n cube.
+
+        $$
+        \begin{align}
+        x' &= (x - x_{min}) / (x_{max} - x_{min}) \\
+        x & = (x_{max} - x_{min}) * x' + x_{min}
+        \end{align}
+        $$
+    """
 
     def encode(self, x):
         if self.variables.get('xmax') is None:
-            self.variables['xmax'] = abs(x[:, self.columns]).max(axis=0)
+            self.variables['xmax'] = x[:, self.columns].max(axis=0)
+            self.variables['xmin'] = x[:, self.columns].min(axis=0)
         return super().encode(x)
 
     def encode_func(self, x):
-        return x / self.variables['xmax']
+        return (x - self.variables['xmin']) / (self.variables['xmax'] - self.variables['xmin'])
 
     def decode_func(self, x):
-        return x * self.variables['xmax']
+        return x * (self.variables['xmax'] - self.variables['xmin']) + self.variables['xmin']
+
+    def decode_hyperparameters(self, key, value):
+        if key == 'length_scale':
+            return (value * (self.variables['xmax'] - self.variables['xmin']) + self.variables['xmin']) if not self.output else value
+        elif key == 'sigma_n' or key == 'sigma_f':
+            return (value * (self.variables['xmax'] - self.variables['xmin']) + self.variables['xmin']) if self.output else value
+        else:
+            return value

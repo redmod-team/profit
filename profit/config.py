@@ -568,10 +568,16 @@ class FitConfig(AbstractConfig):
                 variables = getattr(base_config, 'output' if out else 'input')
                 if cols.lower() == 'all':
                     enc[1] = list(range(len(variables)))
-                elif cols.lower() in [v['kind'] for v in variables.values()]:
+                elif cols.lower() in [v['kind'].lower() for v in variables.values()]:
                     enc[1] = [idx for idx, v in enumerate(variables.values()) if v['kind'].lower() == cols.lower()]
                 else:
                     enc[1] = []
+
+        # Delete excluded columns from other encoders
+        [enc2[1].pop(col)
+         for i, enc in enumerate(self.encoder) if enc[0].lower() == 'exclude'
+         for enc2 in self.encoder[i+1:] if enc[2] == enc2[2]
+         for col in enc[1] if col in enc2[1]]
 
 
 @BaseConfig.register("active_learning")
