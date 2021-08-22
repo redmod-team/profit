@@ -105,6 +105,10 @@ class VariableGroup:
         return {v.name: v for v in self.list if not any(s in v.kind.lower() for s in ('output', 'independent'))}
 
     @property
+    def input_list(self):
+        return [v for v in self.list if v.__class__ is InputVariable]
+
+    @property
     def output(self):
         """
         Returns:
@@ -128,6 +132,13 @@ class VariableGroup:
             Dictionary of the output variables.
         """
         return {v.name: v for v in self.list if 'output' in v.kind.lower()}
+
+    def __getitem__(self, item):
+        if isinstance(item, str):
+            item = [i for i, v in enumerate(self.list) if item == v.name]
+            if len(item) > 0:
+                item = item[0]
+        return self.list[item]
 
     def add(self, variables):
         """Adds a single or a list of variables to the table.

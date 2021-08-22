@@ -652,6 +652,8 @@ class GPySurrogate(GaussianProcess):
 
         self.model.optimize(**opt_kwargs)
         self._set_hyperparameters_from_model()
+        self.print_hyperparameters("Optimized")
+
 
     def _set_hyperparameters_from_model(self):
         r"""Helper function to set the hyperparameter dict from the model.

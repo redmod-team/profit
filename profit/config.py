@@ -27,7 +27,7 @@ def represent_ordereddict(dumper, data):
 
 
 def try_parse(s):
-    funcs = [int, float]
+    funcs = [float]
     for f in funcs:
         try:
             return f(s)
@@ -68,7 +68,12 @@ class AbstractConfig(ABC):
         """
         for name, value in entries.items():
             if hasattr(self, name) or name in map(str.lower, self._sub_configs):
-                setattr(self, name, value)
+                attr = getattr(self, name, None)
+                if isinstance(attr, dict):
+                    attr.update(value)
+                    setattr(self, name, attr)
+                else:
+                    setattr(self, name, value)
             else:
                 message = "Config parameter '{}' for {} configuration may be unused.".format(name, self.__class__.__name__)
                 warnings.warn(message)
@@ -199,11 +204,11 @@ class BaseConfig(AbstractConfig):
         self.run_dir = self.base_dir
         self.config_path = path.join(self.base_dir, defaults.config_file)
         self.ntrain = defaults.ntrain
-        self.variables = defaults.variables
+        self.variables = defaults.variables.copy()
         self.input = {}
         self.output = {}
         self.independent = {}
-        self.files = defaults.files
+        self.files = defaults.files.copy()
 
         self.update(**entries)  # Update the attributes with given entries.
         self.create_subconfigs(**entries)
@@ -546,12 +551,12 @@ class FitConfig(AbstractConfig):
     def process_entries(self, base_config):
         """Set 'load' and 'save' as well as the encoder."""
         for mode_str in ('save', 'load'):
-            mode = getattr(self, mode_str)
-            if mode:
-                setattr(self, mode, path.abspath(path.join(base_config.base_dir, mode)))
-                if self.surrogate not in mode:
-                    filepath = mode.rsplit('.', 1)
-                    setattr(self, mode_str, ''.join(filepath[:-1]) + f'_{self.surrogate}.' + filepath[-1])
+            filepath = getattr(self, mode_str)
+            if filepath:
+                if self.surrogate not in filepath:
+                    filepath = filepath.rsplit('.', 1)
+                    filepath = ''.join(filepath[:-1]) + f'_{self.surrogate}.' + filepath[-1]
+                setattr(self, mode_str, path.abspath(path.join(base_config.base_dir, filepath)))
 
         if self.load:
             self.save = False
