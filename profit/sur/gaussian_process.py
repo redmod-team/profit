@@ -343,6 +343,9 @@ class GPSurrogate(GaussianProcess):
         self.Xtrain = np.concatenate([self.Xtrain, X], axis=0)
         self.ytrain = np.concatenate([self.ytrain, y], axis=0)
 
+    def set_ytrain(self, ydata):
+        self.ytrain = np.atleast_2d(ydata.copy())
+
     def get_marginal_variance(self, Xpred):
         r"""Calculates the marginal variance to infer the next point in active learning.
 
@@ -509,7 +512,15 @@ class GPySurrogate(GaussianProcess):
         """
         self.Xtrain = np.concatenate([self.Xtrain, X], axis=0)
         self.ytrain = np.concatenate([self.ytrain, y], axis=0)
+        self.encode_training_data()
         self.model.set_XY(self.Xtrain, self.ytrain)
+        self.decode_training_data()
+
+    def set_ytrain(self, ydata):
+        self.ytrain = np.atleast_2d(ydata.copy())
+        self.encode_training_data()
+        self.model.set_XY(self.Xtrain, self.ytrain)
+        self.decode_training_data()
 
     def predict(self, Xpred, add_data_variance=True):
         Xpred = super().prepare_predict(Xpred)
@@ -734,6 +745,9 @@ class SklearnGPSurrogate(GaussianProcess):
         """
         self.Xtrain = np.concatenate([self.Xtrain, X], axis=0)
         self.ytrain = np.concatenate([self.ytrain, y], axis=0)
+
+    def set_ytrain(self, ydata):
+        self.ytrain = np.atleast_2d(ydata.copy())
 
     def predict(self, Xpred, add_data_variance=True):
         Xpred = super().prepare_predict(Xpred)

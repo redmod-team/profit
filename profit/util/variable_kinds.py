@@ -3,7 +3,7 @@ from .util import check_ndim
 import numpy as np
 
 # TODO: Sample all variables from halton.
-EXCLUDE_FROM_HALTON = ('output', 'constant', 'uniform', 'loguniform', 'normal', 'linear', 'independent', 'activelearning')
+EXCLUDE_FROM_HALTON = ('output', 'constant', 'uniform', 'loguniform', 'normal', 'linear', 'independent')
 
 
 def halton(size=(1, 1)):
@@ -312,7 +312,7 @@ class InputVariable(Variable):
         self.constraints = entries
 
     def generate_values(self, halton_seq=None):
-        if halton_seq is None:
+        if halton_seq is None or self.kind.lower() == 'activelearning':
             self.value = globals().get(self.kind.lower())(*self.constraints, size=self.size)
         else:
             self.value = check_ndim((self.constraints[1] - self.constraints[0]) * halton_seq + self.constraints[0])

@@ -22,5 +22,5 @@ fit:
     save: model_1D.hdf5
 
 active_learning:
-    nrand: 3
-    Xpred: [[0, 1, 0.01]]
+    nwarm: 3
+    acquisition_function: simple_exploration
