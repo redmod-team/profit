@@ -13,6 +13,14 @@ import numpy as np
 
 
 class AcquisitionFunction(ABC):
+    """Base class for acquisition functions.
+
+    Parameters:
+        Xpred (np.array): Matrix of possible training points.
+        surrogate (profit.sur.Surrogate): Surrogate.
+        variables (profit.util.variable_kinds.VariableGroup): Variables.
+        parameters: Miscellaneous parameters for the specified function. E.g. 'exploration_factor'.
+    """
     _acquisition_functions = {}
 
     def __init__(self, Xpred, surrogate, variables, **parameters):
@@ -24,19 +32,17 @@ class AcquisitionFunction(ABC):
 
     @property
     def loss(self):
+        """Current loss with current surrogate and variables."""
         return self.calculate_loss()
 
     @abstractmethod
     def calculate_loss(self):
+        """Calculates the loss of the acquisition function."""
         pass
 
     def find_next_candidates(self, batch_size):
+        """Finds the next training input points which minimize the loss/maximize improvement."""
         pass
-
-    def plot_loss2D(self, loss):
-        import matplotlib.pyplot as plt
-        plt.figure()
-        plt.contour(self.Xpred[:200, 0], np.sort(self.Xpred[::200, 1]), loss.reshape(10, 200))
 
     @classmethod
     def register(cls, label):
@@ -50,11 +56,14 @@ class AcquisitionFunction(ABC):
 
     @classmethod
     def __class_getitem__(cls, item):
+        """Returns the child acquisition function.
+        """
         return cls._acquisition_functions[item]
 
 
 @AcquisitionFunction.register("simple_exploration")
 class SimpleExploration(AcquisitionFunction):
+    """Minimizes the local variance, which means the next points are generated at points of high variance."""
 
     def calculate_loss(self):
         _, variance = self.surrogate.predict(self.Xpred)
@@ -75,6 +84,11 @@ class SimpleExploration(AcquisitionFunction):
 
 @AcquisitionFunction.register("exploration_with_distance_penalty")
 class ExplorationWithDistancePenalty(SimpleExploration):
+    r"""Enhanced variance minimization by adding an exponential penalty for neighboring candidates.
+
+    Variables:
+        weight (float): Exponential penalty factor: $penalty = 1 - exp(c1 * |X_{pred} - X_{last}|)$.
+    """
 
     def __init__(self, Xpred, surrogate, variables, weight=10):
         super().__init__(Xpred, surrogate, variables, weight=weight)
@@ -90,6 +104,11 @@ class ExplorationWithDistancePenalty(SimpleExploration):
 
 @AcquisitionFunction.register("weighted_exploration")
 class WeightedExploration(AcquisitionFunction):
+    """Combination of exploration and optimization.
+
+    Variables:
+        weight (float): Factor to favor maximization of the target function over exploration.
+    """
 
     def __init__(self, Xpred, surrogate, variables, weight=0.2):
         super().__init__(Xpred, surrogate, variables, weight=weight)
@@ -106,6 +125,9 @@ class WeightedExploration(AcquisitionFunction):
 
 @AcquisitionFunction.register("probability_of_improvement")
 class ProbabilityOfImprovement(AcquisitionFunction):
+    """Maximizes the probability of improvement.
+    See https://math.stackexchange.com/questions/4230985/probability-of-improvement-pi-acquisition-function-for-bayesian-optimization
+    """
 
     def calculate_loss(self):
         mu, variance = self.surrogate.predict(self.Xpred)
@@ -117,6 +139,14 @@ class ProbabilityOfImprovement(AcquisitionFunction):
 
 @AcquisitionFunction.register("expected_improvement")
 class ExpectedImprovement(AcquisitionFunction):
+    """Maximising the expected improvement.
+    See https://krasserm.github.io/2018/03/21/bayesian-optimization/
+
+    To be able to execute this funciton with batches of data, some simplifications are made:
+    The optimization part (prediction mean) is only calculated once for the first point. Thereafter, it is assumed
+    that the data coincides with the prediction. For the next points in the batch, only the variance part is calculated
+    as this does not need an evaluation of the function.
+    """
 
     def __init__(self, Xpred, surrogate, variables, exploration_factor=0.01, find_min=False):
         super().__init__(Xpred, surrogate, variables, exploration_factor=exploration_factor, find_min=find_min)
@@ -157,6 +187,9 @@ class ExpectedImprovement(AcquisitionFunction):
 
 @AcquisitionFunction.register("expected_improvement_2")
 class ExpectedImprovement2(AcquisitionFunction):
+    """Simplified batch expected improvement where the first point is calculated using normal expected improvement,
+    while the others are found using the minimization of local variance acquisition function.
+    """
 
     def __init__(self, Xpred, surrogate, variables, exploration_factor=0.01, find_min=False):
         super().__init__(Xpred, surrogate, variables, exploration_factor=exploration_factor, find_min=find_min)

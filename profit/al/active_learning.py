@@ -3,11 +3,36 @@ from tqdm import tqdm
 from abc import ABC
 
 """
-TODO: Write extensive doc.
+For computationally expensive simulations or experiments it is crucial to get the most information out of every
+training point. This is not the case in the standard procedure of randomly selecting the training points.
+In order to get the most out of the least number of training points, the next point is inferred by calculating an
+acquisition function like the minimization of local variance or expected improvement.
 """
 
 
 class ActiveLearning(ABC):
+    """Active learning base class.
+
+    Parameters:
+        runner (profit.run.Runner): Runner to dynamically start runs.
+        surrogate (profit.sur.Surrogate): Surrogate used for fitting.
+        variables (profit.util.variable_kinds.VariableGroup): Variables.
+        ntrain (int): Total number of training points.
+        nwarm (int): Number of warmup (random) initialization points.
+        batch_size (int): Number of training samples learned in parallel.
+        acquisition_function (str/profit.al.acquisition_functions.AcquisitionFunction): Acquisition function used for
+            selecting the next candidates.
+        convergence_criterion (float): AL is stopped when the loss of the acquisition function is lower than this
+            criterion. Not implemented yet.
+        nsearch_points (int): Number of possible candidate points in each dimension.
+        make_plot (bool): Flat indicating if the AL progress is plotted.
+
+    Attributes:
+        search_space (dict[str, np.array]): np.linspace for each AL input variable.
+        Xpred (np.array): Matrix of the candidate points built with np.meshgrid.
+        krun (int): Current training cycle.
+    """
+
     _models = {}
 
     def __init__(self, runner, surrogate, variables, ntrain, nwarm=1, batch_size=1,
@@ -98,25 +123,23 @@ class ActiveLearning(ABC):
             show()
 
     def find_next_candidates(self):
-        """
-        This function should be implemented as abstract method, as every acqisition function needs different inputs (variance of the surrogate, etc.)
-        1. evaluate acquisition function
-        2. find the indices of the first batch_size maximum (or minimum?) values
-        3. return these indices
+        """Find the next candidates using the acquisition function's method find_next_candidates.
+
+        Returns:
+            np.array: Next training points.
         """
 
-        """
-        if loss.max() - loss.min() < 1e-5:
-            rand = np.random.randint(0, len(self.Xpred), size=self.batch_size)
-            candidates = self.Xpred[rand]
-            print("\nNo preference. Next random: {}".format(candidates))
-        else:
-        """
         candidates = self.acquisition_function.find_next_candidates(self.batch_size)
         print("\nNext candidates: {}".format(candidates))
         return candidates
 
     def update_run(self, candidates):
+        """Run a batch of simulations with the new candidates.
+
+        Parameters:
+            candidates (np.array): Input points to run the simulation on.
+        """
+
         params_array = [{} for _ in range(self.batch_size)]
 
         for key, values in zip(self.variables.named_input.dtype.names, candidates.T):
@@ -127,15 +150,23 @@ class ActiveLearning(ABC):
         self.update_data()
 
     def update_data(self):
+        """Update the variables with the runner data."""
+
         for key in self.runner.input_data.dtype.names:
             self.variables[key].value = self.runner.input_data[key].reshape(-1, 1)
         for key in self.runner.output_data.dtype.names:
             self.variables[key].value = self.runner.output_data[key].reshape(-1, 1)
 
     def save(self, path):
+        """Save the surrogate model.
+
+        Parameters:
+            path (str): Path where the model is saved.
+        """
         self.surrogate.save_model(path)
 
     def plot(self):
+        """Plot the progress of the AL learning."""
         from matplotlib.pyplot import figure, scatter
         figure()
         self.surrogate.plot(self.Xpred)

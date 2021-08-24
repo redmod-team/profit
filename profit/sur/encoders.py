@@ -9,13 +9,13 @@ class Encoder(ABC):
     which are called by their registered labels.
 
     Parameters:
-        columns (list of int): Dimensions of the data the encoder acts on.
+        columns (list[int]): Columns of the data the encoder acts on.
         output (bool): True if the encoder is for output data, False if the encoder works on input data.
+        variables (dict): Miscellaneous variables stored during encoding, which are needed for decoding. E.g. the
+            scaling factor during normalization.
 
     Attributes:
         label (str): Label of the encoder class.
-        variables (dict): Miscellaneous variables stored during encoding, which are needed for decoding. E.g. the
-            scaling factor during normalization.
     """
     _encoders = {}
 
@@ -27,7 +27,11 @@ class Encoder(ABC):
 
     @property
     def repr(self):
-        # TODO: Write docstring
+        """Easy to handle representation of the encoder for saving and loading.
+        Returns:
+            list: List of all relevant information to reconstruct the encoder.
+                (label, columns, output flag, variable dict)
+        """
         return [self.label, self.columns, self.output, {key: values.tolist() for key, values in self.variables.items()}]
 
     def encode(self, x):
@@ -57,7 +61,15 @@ class Encoder(ABC):
         return _x
 
     def decode_hyperparameters(self, key, value):
-        # TODO: Write docstring
+        """Decoder for the surrogate hyperparameters, as the direct model uses encoded values.
+        As a default, the unchanged value is returned.
+
+        Parameters:
+            key (str): The hyperparameter key, e.g. "length_scale".
+            value (np.array): The (encoded) value of the hyperparameter.
+        Returns:
+            np.array: Decoded value.
+        """
         return value
 
     def encode_func(self, x):
@@ -102,7 +114,11 @@ class Encoder(ABC):
 
 @Encoder.register("Exclude")
 class ExcludeEncoder(Encoder):
-    """Excludes specific columns from the fit. Afterwards they are inserted at the same position."""
+    """Excludes specific columns from the fit. Afterwards they are inserted at the same position.
+
+    Variables:
+        excluded_values (np.array): Slice of the input data which is excluded.
+    """
 
     def encode(self, x):
         self.variables['excluded_values'] = x[:, self.columns]
@@ -140,6 +156,10 @@ class Normalization(Encoder):
         x & = (x_{max} - x_{min}) * x' + x_{min}
         \end{align}
         $$
+
+    Variables:
+        xmax (np.array): Max. value of the data for each column.
+        xmin (np.array): Min. value of the data for each column.
     """
 
     def encode(self, x):
@@ -155,6 +175,16 @@ class Normalization(Encoder):
         return x * (self.variables['xmax'] - self.variables['xmin']) + self.variables['xmin']
 
     def decode_hyperparameters(self, key, value):
+        """The normalization has to distinguish between the input and output normalization and the corresponding
+        hyperparemeters length_scale, sigma_n, and sigma_f. Only if the hyperparameter key and output flag match,
+        the decoding takes place. Otherwise the unchanged value is returned.
+
+        Parameters:
+            key (str): The hyperparameter key, e.g. "length_scale".
+            value (np.array): The (encoded) value of the hyperparameter.
+        Returns:
+            np.array: Decoded value.
+        """
         if key == 'length_scale':
             return (value * (self.variables['xmax'] - self.variables['xmin']) + self.variables['xmin']) if not self.output else value
         elif key == 'sigma_n' or key == 'sigma_f':

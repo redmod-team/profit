@@ -106,6 +106,10 @@ class VariableGroup:
 
     @property
     def input_list(self):
+        """
+        Returns:
+            List of input variables without independent variables.
+        """
         return [v for v in self.list if v.__class__ is InputVariable]
 
     @property
@@ -134,6 +138,13 @@ class VariableGroup:
         return {v.name: v for v in self.list if 'output' in v.kind.lower()}
 
     def __getitem__(self, item):
+        """Implements dict like behavior to get a variable by its identifier or index.
+
+        Parameters:
+            item (int/str): Index or label of variable.
+        Returns:
+            Variable.
+        """
         if isinstance(item, str):
             item = [i for i, v in enumerate(self.list) if item == v.name]
             if len(item) > 0:

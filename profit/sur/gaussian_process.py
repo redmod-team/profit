@@ -344,6 +344,11 @@ class GPSurrogate(GaussianProcess):
         self.ytrain = np.concatenate([self.ytrain, y], axis=0)
 
     def set_ytrain(self, ydata):
+        """Set the observed training outputs. This is important for active learning.
+
+        Parameters:
+            ydata (np.array): Full training output data.
+        """
         self.ytrain = np.atleast_2d(ydata.copy())
 
     def get_marginal_variance(self, Xpred):
@@ -517,6 +522,11 @@ class GPySurrogate(GaussianProcess):
         self.decode_training_data()
 
     def set_ytrain(self, ydata):
+        """Set the observed training outputs. This is important for active learning.
+
+        Parameters:
+        ydata (np.array): Full training output data.
+        """
         self.ytrain = np.atleast_2d(ydata.copy())
         self.encode_training_data()
         self.model.set_XY(self.Xtrain, self.ytrain)
@@ -691,6 +701,8 @@ class GPySurrogate(GaussianProcess):
         self.decode_hyperparameters()
 
     def decode_hyperparameters(self):
+        """Decodes the hyperparameters, as encoded ones are used in the surrogate model."""
+
         for key, value in self.hyperparameters.items():
             new_value = value
             for enc in self.encoder:
@@ -747,6 +759,11 @@ class SklearnGPSurrogate(GaussianProcess):
         self.ytrain = np.concatenate([self.ytrain, y], axis=0)
 
     def set_ytrain(self, ydata):
+        """Set the observed training outputs. This is important for active learning.
+
+        Parameters:
+            ydata (np.array): Full training output data.
+        """
         self.ytrain = np.atleast_2d(ydata.copy())
 
     def predict(self, Xpred, add_data_variance=True):
@@ -878,6 +895,8 @@ class SklearnGPSurrogate(GaussianProcess):
         self.decode_hyperparameters()
 
     def decode_hyperparameters(self):
+        """Decodes the hyperparameters, as encoded ones are used in the surrogate model."""
+
         for key, value in self.hyperparameters.items():
             new_value = value
             for enc in self.encoder:
