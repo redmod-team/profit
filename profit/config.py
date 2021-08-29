@@ -26,16 +26,6 @@ def represent_ordereddict(dumper, data):
     return yaml.nodes.MappingNode(u'tag:yaml.org,2002:map', value)
 
 
-def try_parse(s):
-    funcs = [float]
-    for f in funcs:
-        try:
-            return f(s)
-        except ValueError:
-            pass
-    return s
-
-
 def dict_constructor(loader, node):
     return OrderedDict(loader.construct_pairs(node))
 
@@ -226,9 +216,9 @@ class BaseConfig(AbstractConfig):
         variables = VariableGroup(self.ntrain)
         vars = []
         for k, v in self.variables.items():
-            if type(v) in (str, int, float):
-                if isinstance(try_parse(v), (int, float)):
-                    v = 'Constant({})'.format(try_parse(v))
+            if isinstance(v, (int, float)):
+                v = 'Constant({})'.format(v)
+            if isinstance(v, str):
                 vars.append(Variable.create_from_str(k, (self.ntrain, 1), v))
             else:
                 vars.append(Variable.create(name=k, size=(self.ntrain,1), **v))

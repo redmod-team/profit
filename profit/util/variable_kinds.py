@@ -94,7 +94,8 @@ class VariableGroup:
             Ndarray with dtype of the input variables.
         """
         dtypes = [(v.name, v.dtype) for v in self.list if not any(s in v.kind.lower() for s in ('output', 'independent'))]
-        return self.input.view(dtype=dtypes)
+        return np.rec.fromarrays([v.value for v in self.list
+                                  if not any(s in v.kind.lower() for s in ('output', 'independent'))], dtype=dtypes)
 
     @property
     def input_dict(self):
@@ -273,16 +274,16 @@ class Variable:
                     pass
             return s
 
+        if isinstance(try_parse(v_str), (int, float)):
+            v_str = 'Constant({})'.format(try_parse(v_str))
+
         parsed = split('[()]', v_str)
         kind = parsed[0]
         args = parsed[1] if len(parsed) >= 2 else ''
         entries = tuple(try_parse(a) for a in args.split(',')) if args != '' else tuple()
+        dtype = type(entries[0]) if kind.lower() == 'constant' else np.float64
 
-        if isinstance(try_parse(v_str), (int, float)):  # PyYaml has problems parsing scientific notation
-            kind = 'Constant'
-            entries = (try_parse(v_str),)
-
-        v_dict = {'name': name, 'kind': kind, 'size': size, 'entries': entries}
+        v_dict = {'name': name, 'kind': kind, 'size': size, 'entries': entries, 'dtype': dtype}
         return cls.create(**v_dict)
 
     @classmethod
