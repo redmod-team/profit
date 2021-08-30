@@ -69,13 +69,15 @@ def main():
         save(config['files']['input'], variables.named_input)
 
         if 'activelearning' in (v.kind.lower() for v in variables.list):
-            from profit.fit import ActiveLearning
+            from profit.al.active_learning import ActiveLearning
             from profit.sur.sur import Surrogate
             runner.fill(variables.named_input)
-            al = ActiveLearning.from_config(runner, config['active_learning'], config)
+            sur = Surrogate.from_config(config['fit'], config)
+            al = ActiveLearning.from_config(runner, sur, variables, config['active_learning'], config)
             try:
-                al.run_first()
+                al.warmup()
                 al.learn()
+                save(config['files']['input'], variables.named_input)
             finally:
                 runner.cancel_all()
             if config['fit'].get('save'):
@@ -95,6 +97,9 @@ def main():
             save(config['files']['output'], data.reshape(data.size, 1))
         else:
             save(config['files']['output'], runner.output_data)
+
+        # Save input file again after active learning
+        save(config['files']['input'], variables.named_input)
 
     elif args.mode == 'fit':
         from numpy import arange, hstack, meshgrid

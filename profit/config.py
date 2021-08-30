@@ -26,16 +26,6 @@ def represent_ordereddict(dumper, data):
     return yaml.nodes.MappingNode(u'tag:yaml.org,2002:map', value)
 
 
-def try_parse(s):
-    funcs = [int, float]
-    for f in funcs:
-        try:
-            return f(s)
-        except ValueError:
-            pass
-    return s
-
-
 def dict_constructor(loader, node):
     return OrderedDict(loader.construct_pairs(node))
 
@@ -68,7 +58,12 @@ class AbstractConfig(ABC):
         """
         for name, value in entries.items():
             if hasattr(self, name) or name in map(str.lower, self._sub_configs):
-                setattr(self, name, value)
+                attr = getattr(self, name, None)
+                if isinstance(attr, dict):
+                    attr.update(value)
+                    setattr(self, name, attr)
+                else:
+                    setattr(self, name, value)
             else:
                 message = "Config parameter '{}' for {} configuration may be unused.".format(name, self.__class__.__name__)
                 warnings.warn(message)
@@ -199,11 +194,11 @@ class BaseConfig(AbstractConfig):
         self.run_dir = self.base_dir
         self.config_path = path.join(self.base_dir, defaults.config_file)
         self.ntrain = defaults.ntrain
-        self.variables = defaults.variables
+        self.variables = defaults.variables.copy()
         self.input = {}
         self.output = {}
         self.independent = {}
-        self.files = defaults.files
+        self.files = defaults.files.copy()
 
         self.update(**entries)  # Update the attributes with given entries.
         self.create_subconfigs(**entries)
@@ -221,9 +216,9 @@ class BaseConfig(AbstractConfig):
         variables = VariableGroup(self.ntrain)
         vars = []
         for k, v in self.variables.items():
-            if type(v) in (str, int, float):
-                if isinstance(try_parse(v), (int, float)):
-                    v = 'Constant({})'.format(try_parse(v))
+            if isinstance(v, (int, float)):
+                v = 'Constant({})'.format(v)
+            if isinstance(v, str):
                 vars.append(Variable.create_from_str(k, (self.ntrain, 1), v))
             else:
                 vars.append(Variable.create(name=k, size=(self.ntrain,1), **v))
@@ -546,12 +541,12 @@ class FitConfig(AbstractConfig):
     def process_entries(self, base_config):
         """Set 'load' and 'save' as well as the encoder."""
         for mode_str in ('save', 'load'):
-            mode = getattr(self, mode_str)
-            if mode:
-                setattr(self, mode, path.abspath(path.join(base_config.base_dir, mode)))
-                if self.surrogate not in mode:
-                    filepath = mode.rsplit('.', 1)
-                    setattr(self, mode_str, ''.join(filepath[:-1]) + f'_{self.surrogate}.' + filepath[-1])
+            filepath = getattr(self, mode_str)
+            if filepath:
+                if self.surrogate not in filepath:
+                    filepath = filepath.rsplit('.', 1)
+                    filepath = ''.join(filepath[:-1]) + f'_{self.surrogate}.' + filepath[-1]
+                setattr(self, mode_str, path.abspath(path.join(base_config.base_dir, filepath)))
 
         if self.load:
             self.save = False
@@ -563,10 +558,16 @@ class FitConfig(AbstractConfig):
                 variables = getattr(base_config, 'output' if out else 'input')
                 if cols.lower() == 'all':
                     enc[1] = list(range(len(variables)))
-                elif cols.lower() in [v['kind'] for v in variables.values()]:
+                elif cols.lower() in [v['kind'].lower() for v in variables.values()]:
                     enc[1] = [idx for idx, v in enumerate(variables.values()) if v['kind'].lower() == cols.lower()]
                 else:
                     enc[1] = []
+
+        # Delete excluded columns from other encoders
+        [enc2[1].pop(col)
+         for i, enc in enumerate(self.encoder) if enc[0].lower() == 'exclude'
+         for enc2 in self.encoder[i+1:] if enc[2] == enc2[2]
+         for col in enc[1] if col in enc2[1]]
 
 
 @BaseConfig.register("active_learning")

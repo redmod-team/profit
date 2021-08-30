@@ -343,6 +343,14 @@ class GPSurrogate(GaussianProcess):
         self.Xtrain = np.concatenate([self.Xtrain, X], axis=0)
         self.ytrain = np.concatenate([self.ytrain, y], axis=0)
 
+    def set_ytrain(self, ydata):
+        """Set the observed training outputs. This is important for active learning.
+
+        Parameters:
+            ydata (np.array): Full training output data.
+        """
+        self.ytrain = np.atleast_2d(ydata.copy())
+
     def get_marginal_variance(self, Xpred):
         r"""Calculates the marginal variance to infer the next point in active learning.
 
@@ -509,7 +517,20 @@ class GPySurrogate(GaussianProcess):
         """
         self.Xtrain = np.concatenate([self.Xtrain, X], axis=0)
         self.ytrain = np.concatenate([self.ytrain, y], axis=0)
+        self.encode_training_data()
         self.model.set_XY(self.Xtrain, self.ytrain)
+        self.decode_training_data()
+
+    def set_ytrain(self, ydata):
+        """Set the observed training outputs. This is important for active learning.
+
+        Parameters:
+        ydata (np.array): Full training output data.
+        """
+        self.ytrain = np.atleast_2d(ydata.copy())
+        self.encode_training_data()
+        self.model.set_XY(self.Xtrain, self.ytrain)
+        self.decode_training_data()
 
     def predict(self, Xpred, add_data_variance=True):
         Xpred = super().prepare_predict(Xpred)
@@ -586,14 +607,14 @@ class GPySurrogate(GaussianProcess):
             self.model = models.GPRegression.from_dict(sur_dict['model'])
             self.Xtrain = sur_dict['Xtrain']
             self.ytrain = sur_dict['ytrain']
-            self.encoder = [Encoder[func](cols, out) for func, cols, out in eval(sur_dict['encoder'])]
+            self.encoder = [Encoder[func](cols, out, variables) for func, cols, out, variables in eval(sur_dict['encoder'])]
         except (OSError, FileNotFoundError):
             from pickle import load as pload
             from os.path import splitext
             # Load multi-output model from pickle file
             print("File {} not found. Trying to find a .pkl file with multi-output instead.".format(path))
             self.model, self.Xtrain, self.ytrain, encoder_str = pload(open(splitext(path)[0] + '.pkl', 'rb'))
-            self.encoder = [Encoder[func](cols, out) for func, cols, out in eval(encoder_str)]
+            self.encoder = [Encoder[func](cols, out, variables) for func, cols, out, variables in eval(encoder_str)]
             self.output_ndim = int(max(self.model.X[:, -1])) + 1
             self.multi_output = True
 
@@ -602,8 +623,8 @@ class GPySurrogate(GaussianProcess):
         self.decode_training_data()
 
         self.kernel = self.model.kern
-        self._set_hyperparameters_from_model()
         self.ndim = self.Xtrain.shape[-1]
+        self._set_hyperparameters_from_model()
         self.trained = True
         self.print_hyperparameters("Loaded")
         return self
@@ -652,6 +673,8 @@ class GPySurrogate(GaussianProcess):
 
         self.model.optimize(**opt_kwargs)
         self._set_hyperparameters_from_model()
+        self.print_hyperparameters("Optimized")
+
 
     def _set_hyperparameters_from_model(self):
         r"""Helper function to set the hyperparameter dict from the model.
@@ -675,6 +698,18 @@ class GPySurrogate(GaussianProcess):
             noise_var = self.model.likelihood.gaussian_variance(
                 self.model.Y_metadata).reshape(-1, self.output_ndim, order='F')
             self.hyperparameters['sigma_n'] = np.sqrt(np.max(noise_var, axis=0))
+        self.decode_hyperparameters()
+
+    def decode_hyperparameters(self):
+        """Decodes the hyperparameters, as encoded ones are used in the surrogate model."""
+
+        for key, value in self.hyperparameters.items():
+            new_value = value
+            for enc in self.encoder:
+                new_value = enc.decode_hyperparameters(key, new_value)
+                if key == 'length_scale' and self.ndim > 1 and not self.model.kern.ARD:
+                    new_value = np.atleast_1d(np.linalg.norm(new_value))
+            self.hyperparameters[key] = new_value
 
 
 @Surrogate.register('Sklearn')
@@ -722,6 +757,14 @@ class SklearnGPSurrogate(GaussianProcess):
         """
         self.Xtrain = np.concatenate([self.Xtrain, X], axis=0)
         self.ytrain = np.concatenate([self.ytrain, y], axis=0)
+
+    def set_ytrain(self, ydata):
+        """Set the observed training outputs. This is important for active learning.
+
+        Parameters:
+            ydata (np.array): Full training output data.
+        """
+        self.ytrain = np.atleast_2d(ydata.copy())
 
     def predict(self, Xpred, add_data_variance=True):
         Xpred = super().prepare_predict(Xpred)
@@ -792,8 +835,12 @@ class SklearnGPSurrogate(GaussianProcess):
             return_hess_inv (bool): Is not considered currently.
             opt_kwargs: Keyword arguments used directly in the Sklearn base optimization.
         """
+        self.encode_training_data()
         self.model.fit(self.Xtrain, self.ytrain, **opt_kwargs)
+        self.decode_training_data()
         self._set_hyperparameters_from_model()
+        self.print_hyperparameters("Optimized")
+
 
     def select_kernel(self, kernel):
         """Get the sklearn.gaussian_process.kernels kernel by matching the given kernel identifier.
@@ -845,7 +892,16 @@ class SklearnGPSurrogate(GaussianProcess):
             self.hyperparameters['length_scale'] = np.atleast_1d(self.model.kernel_.k1.k1.length_scale)
             self.hyperparameters['sigma_f'] = np.sqrt(np.atleast_1d(1 / self.model.kernel_.k1.k2.constant_value))
             self.hyperparameters['sigma_n'] = np.sqrt(np.atleast_1d(self.model.kernel_.k2.noise_level))
+        self.decode_hyperparameters()
 
+    def decode_hyperparameters(self):
+        """Decodes the hyperparameters, as encoded ones are used in the surrogate model."""
+
+        for key, value in self.hyperparameters.items():
+            new_value = value
+            for enc in self.encoder:
+                new_value = enc.decode_hyperparameters(key, new_value)
+            self.hyperparameters[key] = new_value
 
 
 # Draft for Scikit-learn implementation of LinearEmbedding kernel of Garnett (2014)

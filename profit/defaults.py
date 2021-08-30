@@ -87,12 +87,27 @@ fit_gaussian_process = {'surrogate': 'GPy',
                                             'sigma_f': None}}
 
 # Active Learning Config
-active_learning = {'nrand': 3,
-                   'optimize_every': 1,
-                   'plot_every': False,
-                   'plot_marginal_variance': False,
-                   'al_range': (0, 1), 'save': False,
-                   'Xpred': [[0, 1, 0.01]]}
+active_learning = {'nwarm': 3,
+                   'batch_size': 1,
+                   'acquisition_function': 'simple_exploration',
+                   'convergence_criterion': 1e-5,
+                   'nsearch_points': 50,
+                   'make_plot': False
+                   }
+
+al_acquisition_function_simple_exploration = {'class': 'simple_exploration'}
+al_acquisition_function_exploration_with_distance_penalty = {'class': 'exploration_with_distance_penalty',
+                                                             'weight': 10}
+al_acquisition_function_weighted_exploration = {'class': 'weighted_exploration',
+                                                'weight': 0.5}
+al_acquisition_function_probability_of_improvement = {'class': 'probability_of_improvement'}
+al_acquisition_function_expected_improvement = {'class': 'expected_improvement',
+                                                'exploration_factor': 0.01,
+                                                'find_min': False}
+al_acquisition_function_expected_improvement_2 = {'class': 'expected_improvement_2',
+                                                  'exploration_factor': 0.01,
+                                                  'find_min': False}
+
 
 # UI Config
 ui = {'plot': False}

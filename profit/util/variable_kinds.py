@@ -3,7 +3,7 @@ from .util import check_ndim
 import numpy as np
 
 # TODO: Sample all variables from halton.
-EXCLUDE_FROM_HALTON = ('output', 'constant', 'uniform', 'loguniform', 'normal', 'linear', 'independent', 'activelearning')
+EXCLUDE_FROM_HALTON = ('output', 'constant', 'uniform', 'loguniform', 'normal', 'linear', 'independent')
 
 
 def halton(size=(1, 1)):
@@ -94,7 +94,8 @@ class VariableGroup:
             Ndarray with dtype of the input variables.
         """
         dtypes = [(v.name, v.dtype) for v in self.list if not any(s in v.kind.lower() for s in ('output', 'independent'))]
-        return self.input.view(dtype=dtypes)
+        return np.rec.fromarrays([v.value for v in self.list
+                                  if not any(s in v.kind.lower() for s in ('output', 'independent'))], dtype=dtypes)
 
     @property
     def input_dict(self):
@@ -103,6 +104,14 @@ class VariableGroup:
             Dictionary of the input variables.
         """
         return {v.name: v for v in self.list if not any(s in v.kind.lower() for s in ('output', 'independent'))}
+
+    @property
+    def input_list(self):
+        """
+        Returns:
+            List of input variables without independent variables.
+        """
+        return [v for v in self.list if v.__class__ is InputVariable]
 
     @property
     def output(self):
@@ -128,6 +137,20 @@ class VariableGroup:
             Dictionary of the output variables.
         """
         return {v.name: v for v in self.list if 'output' in v.kind.lower()}
+
+    def __getitem__(self, item):
+        """Implements dict like behavior to get a variable by its identifier or index.
+
+        Parameters:
+            item (int/str): Index or label of variable.
+        Returns:
+            Variable.
+        """
+        if isinstance(item, str):
+            item = [i for i, v in enumerate(self.list) if item == v.name]
+            if len(item) > 0:
+                item = item[0]
+        return self.list[item]
 
     def add(self, variables):
         """Adds a single or a list of variables to the table.
@@ -251,16 +274,16 @@ class Variable:
                     pass
             return s
 
+        if isinstance(try_parse(v_str), (int, float)):
+            v_str = 'Constant({})'.format(try_parse(v_str))
+
         parsed = split('[()]', v_str)
         kind = parsed[0]
         args = parsed[1] if len(parsed) >= 2 else ''
         entries = tuple(try_parse(a) for a in args.split(',')) if args != '' else tuple()
+        dtype = type(entries[0]) if kind.lower() == 'constant' else np.float64
 
-        if isinstance(try_parse(v_str), (int, float)):  # PyYaml has problems parsing scientific notation
-            kind = 'Constant'
-            entries = (try_parse(v_str),)
-
-        v_dict = {'name': name, 'kind': kind, 'size': size, 'entries': entries}
+        v_dict = {'name': name, 'kind': kind, 'size': size, 'entries': entries, 'dtype': dtype}
         return cls.create(**v_dict)
 
     @classmethod
@@ -301,7 +324,7 @@ class InputVariable(Variable):
         self.constraints = entries
 
     def generate_values(self, halton_seq=None):
-        if halton_seq is None:
+        if halton_seq is None or self.kind.lower() == 'activelearning':
             self.value = globals().get(self.kind.lower())(*self.constraints, size=self.size)
         else:
             self.value = check_ndim((self.constraints[1] - self.constraints[0]) * halton_seq + self.constraints[0])
