@@ -14,6 +14,7 @@ Welcome to proFit's documentation!
    config
    cluster
    ui
+   run_system
    CONTRIBUTING
 
 

@@ -1,11 +1,18 @@
 The Run System
-==============
+##############
 
-A core feature of  is the ability to start and manage simulations. This
-part of  is referred to as the *run system*. A particular design
+This documentation was taken directly from: R. Babin, "Generic system to 
+manage simulation runs and result collection for distributed parameter 
+studies", Bachelor's Thesis (Graz University of Technology, Graz, Austria, 
+2021)
+
+--------------
+
+A core feature of *proFit* is the ability to start and manage simulations. This
+part of *proFit* is referred to as the *run system*. A particular design
 challenge is the balancing of two often conflicting interests: on one
-side,  should do as much as possible automatically to reduce the work
-which the user has to do and on the other side,  should be customizable
+side, *proFit* should do as much as possible automatically to reduce the work
+which the user has to do and on the other side, *proFit* should be customizable
 to meet specific needs a user might have.
 
 Requirements
@@ -21,15 +28,15 @@ future an interactive user interface should allow starting new
 simulations as well as monitoring currently scheduled or running ones.
 
 It should not be necessary to adjust the simulation to be able to use it
-with . Therefore it has to be possible to configure how  supplies the
+with . Therefore it has to be possible to configure how *proFit* supplies the
 simulation with input arguments and how the output data is collected. In
 addition to supporting a few common methods, the user should have the
-possibility to customize  to support any simulation.
+possibility to customize *proFit* to support any simulation.
 
 Large simulations require many resources and are mostly run on clusters.
 The run system should be designed to schedule jobs on a given cluster
 and needs to be able to communicate with the simulations in a
-distributed manner. The other extreme use case for  would be a large
+distributed manner. The other extreme use case for *proFit* would be a large
 number of inexpensive simulations running locally, which require the run
 system to have as little overhead as possible.
 
@@ -49,12 +56,11 @@ collects its output after it has completed. To make the previously
 generated or user supplied parameters available to the simulation and to
 collect all the outputs together, the *Runner* needs to communicate with
 all simultaneously running *Workers*. This preliminary design is drawn
-in figure [fig:run1].
+in figure 1.
 
-.. figure:: profit-run-req
-   :alt: Preliminary design of the  run system.
-
-   Preliminary design of the  run system.
+.. figure:: pics/run_req.png
+   
+   Figure 1: Preliminary design of the *proFit* run system.
 
 To support arbitrary simulations, the processes of preparing the input
 for the simulation and collecting its output need to be handled by
@@ -65,13 +71,12 @@ the *Runner*) and the method of communication need to be adaptable.
 Finally, for reasons of symmetry and to reduce the overhead for
 simulations written in *Python*, the *Worker* should be generic and
 adaptable as well. To meet these requirements, the run system was
-divided into five generic components (see figure [fig:run2]) which can
+divided into five generic components (see figure 2) which can
 come in different variations.
 
-.. figure:: profit-run-components-4
-   :alt: The components of the  run system.
-
-   The components of the  run system.
+.. figure:: pics/run_components.png
+   
+   Figure 2: The components of the *proFit* run system.
 
 The central component is the *Runner* which interacts with the user and
 manages the individual runs. Each simulation run is represented by a
@@ -102,7 +107,7 @@ identifier. Each component (except for the *Worker*) has its independent
 section in the configuration. A user can add custom variants in the
 exact same way the default components are implemented by specifying the
 file with the custom components in the configuration. As this approach
-allows the user to execute arbitrary code,  should never be run in a
+allows the user to execute arbitrary code, *proFit* should never be run in a
 privileged mode.
 
 Implementation
@@ -121,20 +126,20 @@ custom variant of a component, a class-decorator was provided for each
 component which registers the new variant so that it can be called using
 its identifier. To select a specific variant of a component, it’s
 identifier has to be selected in the configuration as the respective
-component’s *class* (see for example listing [lst:json-conf]). For the
+component’s *class* (see for example listing 2). For the
 most commonly customized components *Preprocessor*, *Postprocessor* and
 *Worker*, which all override only a single method in most cases, an
 additional function-decorator was provided which wraps a given function
 to provide the same functionality as the subclass with minimal effort
-(see for example listing [lst:wrap]).
+(see for example listing 3).
 
-The default components of  are implemented using the same decorators and
+The default components of *proFit* are implemented using the same decorators and
 one of the default components, the *JSON Postprocessor* is given in
-listing [lst:json-post]. The *post* method is the main method which is
+listing 1. The *post* method is the main method which is
 called to process the simualtion’s output while *handle\_config* is used
 to process the *post*-section of the config file. An example of this
 *post*-section where the *JSON Postprocessor* was selected is given in
-listing [lst:json-conf].
+listing 2.
 
 ::
 
@@ -164,6 +169,8 @@ listing [lst:json-conf].
             if 'path' not in config:
                 config['path'] = 'stdout'
 
+*Listing 1: Registering a Postprocessor with the identifier json, to read simulation output in the JSON file format. Part of the default components of proFit* [proFit]_.
+
 ::
 
     run:
@@ -172,14 +179,16 @@ listing [lst:json-conf].
             path: simulation_output.json
         include: path/to/my_custom_json_postprocessor.py
 
+*Listing 2: The post-section of the YAML-configuration file to select the JSON Postprocessor defined in listing 1.*
+
 Usually a user shouldn’t have to create a custom *Worker*, but to reduce
 the overhead for a simulation or for testing purposes it might be
 beneficial to let the *Worker* call a *Python* function directly instead
 of starting a simulation via a system call. An example for a *Worker*
 subclass, which uses a simple function instead of a complicated
-simulation, is given in listing [lst:wrap], using the *wrap*-decorator
+simulation, is given in listing 3, using the *wrap*-decorator
 discussed earlier to reduce the necessary code overhead (see
-listing [lst:wrap-conf] for the corresponding configuration).
+listing 4 for the corresponding configuration).
 
 ::
 
@@ -187,11 +196,16 @@ listing [lst:wrap-conf] for the corresponding configuration).
     def simulation(u):
         return np.cos(10 * u) + u
 
+*Listing 3: Registering a new Worker with the identifier python_worker, the input parameter u and output value f = cos(10 u) + u using the wrapper. Adapted from the tests of proFit* [proFit]_.
+
 ::
 
     run:
         worker: new_worker
         include: path/to/my_custom_worker.py
+
+*Listing 4: The YAML configuration to select the custom Worker defined in listing 3. Adapted from the tests of proFit* [proFit]_.
+
 
 Components
 ----------
@@ -206,7 +220,7 @@ The *Template Preprocessor* copies a given template directory for each
 run and replaces special template variables within the files with the
 generated values for this run. Simulations which read input parameters
 from files can be supplied with different variables in this way easily.
-This functionality has been a part of  before, but has been adapted to
+This functionality has been a part of *proFit* before, but has been adapted to
 the new system and received some small improvements. With this default
 component all current *Preprocessor* requirements are fulfilled and no
 additional variant is needed.
@@ -272,3 +286,6 @@ communication across the network.
 
 .. [2]
    The homepage of *ZeroMQ* is found at https://zeromq.org
+
+.. [proFit]
+   C. Albert, R. Babin, M. Hadwiger, M. Kendler, M. Khallaayoune, K. Rath, and B. Rubino-Moyner, "proFit v0.4: Probabilistic Response Model Fitting with Interactive Tools", 10.5281/zenodo.4849489 (2021)
