@@ -33,6 +33,19 @@ class RunnerInterface:
         self.input = np.zeros(size, dtype=self.input_vars)
         self.output = np.zeros(size, dtype=self.output_vars)
         self.internal = np.zeros(size, dtype=self.internal_vars)
+    
+    def resize(self, size):
+        if size <= self.size:
+            self.logger.warn('shrinking RunnerInterface is not supported')
+            return
+        self.input.resize(size)  # filled with 0 by default
+        self.output.resize(size)
+        self.internal.resize(size)
+        
+    @property
+    def size(self):
+        assert self.input.size == self.output.size == self.internal.size
+        return self.input.size
 
     def poll(self):
         self.logger.debug('polling')
@@ -83,6 +96,8 @@ class Runner(ABC):
         return child(interface_class, config, base_config)
 
     def fill(self, params_array, offset=0):
+        if offset + len(params_array) - 1 >= self.interface.size:
+            self.interface.resize(max(offset + len(params_array), 2 * self.interface.size))
         for r, row in enumerate(params_array):
             mapping = params2map(row)
             for key, value in mapping.items():
@@ -95,6 +110,8 @@ class Runner(ABC):
         :param params: a mapping which defines input parameters to be set
         :param wait: whether to wait for the run to complete
         """
+        if self.next_run_id >= self.interface.size:
+            self.interface.resize(2 * self.interface.size)
         mapping = params2map(params)
         for key, value in mapping.items():
             self.interface.input[key][self.next_run_id] = value
