@@ -136,7 +136,11 @@ class MemmapRunnerInterface(RunnerInterface):
         Any Workers which have this file mapped will run into severe problems.
         Possible future workarounds: multiple files or multiple headers in one file.
         """
-        self.logger.warn('resizing MemmapRnnerInterface is dangerous')
+        if size <= self.size:
+            self.logger.warning('shrinking RunnerInterface is not supported')
+            return
+        
+        self.logger.warning('resizing MemmapRunnerInterface is dangerous')
         self.clean()
         init_data = np.zeros(size, dtype=self.input_vars + self.internal_vars + self.output_vars)
         np.save(self.config['path'], init_data)

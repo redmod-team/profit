@@ -36,7 +36,7 @@ class RunnerInterface:
     
     def resize(self, size):
         if size <= self.size:
-            self.logger.warn('shrinking RunnerInterface is not supported')
+            self.logger.warning('shrinking RunnerInterface is not supported')
             return
         self.input.resize(size)  # filled with 0 by default
         self.output.resize(size)

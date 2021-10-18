@@ -33,28 +33,6 @@ def assert_wif(wif):
     assert wif.input['v'] == VALUE_V
 
 
-def test_resize_memmap():
-    from profit.run.default import MemmapInterface, MemmapRunnerInterface
-    from profit.config import MemmapInterfaceConfig
-    import os
-
-    BASE_CONFIG = BaseConfig.from_file(CONFIG_FILE)
-    MAX_IDS = BASE_CONFIG['ntrain']
-    config = MemmapInterfaceConfig(**{'class': 'memmap'})
-    config.process_entries(BASE_CONFIG)
-    
-    try:
-        rif = MemmapRunnerInterface(config, MAX_IDS, BASE_CONFIG['input'], BASE_CONFIG['output'])
-        assert rif.size == MAX_IDS
-        rif.resize(MAX_IDS - 5)  # shrinking (not supported)
-        assert rif.size == MAX_IDS
-        rif.resize(MAX_IDS + 5)  # expanding
-        assert rif.size == MAX_IDS + 5
-    finally:
-        if config.get('path') and os.path.exists(config['path']):
-            os.remove(config['path'])
-
-
 def test_memmap():
     from profit.run.default import MemmapInterface, MemmapRunnerInterface
     from profit.config import MemmapInterfaceConfig
@@ -121,6 +99,49 @@ def test_zeromq():
     wt.start()
     wt.join()
     rt.join()
+
+
+def test_resize_memmap():
+    from profit.run.default import MemmapInterface, MemmapRunnerInterface
+    from profit.config import MemmapInterfaceConfig
+    import os
+
+    BASE_CONFIG = BaseConfig.from_file(CONFIG_FILE)
+    MAX_IDS = BASE_CONFIG['ntrain']
+    config = MemmapInterfaceConfig(**{'class': 'memmap'})
+    config.process_entries(BASE_CONFIG)
+    
+    try:
+        rif = MemmapRunnerInterface(config, MAX_IDS, BASE_CONFIG['input'], BASE_CONFIG['output'])
+        assert rif.size == MAX_IDS
+        rif.resize(MAX_IDS - 5)  # shrinking (not supported)
+        assert rif.size == MAX_IDS
+        rif.resize(MAX_IDS + 5)  # expanding
+        assert rif.size == MAX_IDS + 5
+    finally:
+        if config.get('path') and os.path.exists(config['path']):
+            os.remove(config['path'])
+
+
+def test_resize_zeromq():
+    from profit.run.zeromq import ZeroMQInterface, ZeroMQRunnerInterface
+    from profit.config import ZeroMQInterfaceConfig
+    import os
+
+    BASE_CONFIG = BaseConfig.from_file(CONFIG_FILE)
+    MAX_IDS = BASE_CONFIG['ntrain']
+    config = ZeroMQInterfaceConfig(**{'class': 'zeromq'})
+    config.process_entries(BASE_CONFIG)
+    
+    try:
+        rif = ZeroMQRunnerInterface(config, MAX_IDS, BASE_CONFIG['input'], BASE_CONFIG['output'])
+        assert rif.size == MAX_IDS
+        rif.resize(MAX_IDS - 5)  # shrinking (not supported)
+        assert rif.size == MAX_IDS
+        rif.resize(MAX_IDS + 5)  # expanding
+        assert rif.size == MAX_IDS + 5
+    finally:
+        rif.clean()
 
 
 def test_numpytxt():
