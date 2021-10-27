@@ -127,6 +127,34 @@ class MemmapRunnerInterface(RunnerInterface):
         self.input = self._memmap[[v[0] for v in self.input_vars]]
         self.output = self._memmap[[v[0] for v in self.output_vars]]
         self.internal = self._memmap[[v[0] for v in self.internal_vars]]
+    
+    def resize(self, size):
+        """ Resizing Memmap Runner Interfac
+        
+        Attention: this is dangerous and may lead to unexpected errors!
+        The problem is that the memory mapped file is overwritten.
+        Any Workers which have this file mapped will run into severe problems.
+        Possible future workarounds: multiple files or multiple headers in one file.
+        """
+        if size <= self.size:
+            self.logger.warning('shrinking RunnerInterface is not supported')
+            return
+        
+        self.logger.warning('resizing MemmapRunnerInterface is dangerous')
+        self.clean()
+        init_data = np.zeros(size, dtype=self.input_vars + self.internal_vars + self.output_vars)
+        np.save(self.config['path'], init_data)
+
+        try:
+            self._memmap = np.load(self.config['path'], mmap_mode='r+')
+        except FileNotFoundError:
+            self.runner.logger.error(
+                f'{self.__class__.__name__} could not load {self.config["path"]} (cwd: {os.getcwd()})')
+            raise
+
+        self.input = self._memmap[[v[0] for v in self.input_vars]]
+        self.output = self._memmap[[v[0] for v in self.output_vars]]
+        self.internal = self._memmap[[v[0] for v in self.internal_vars]]
 
     def clean(self):
         if os.path.exists(self.config['path']):
