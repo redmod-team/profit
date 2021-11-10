@@ -7,6 +7,7 @@ from os import getcwd
 import sys
 from argparse import ArgumentParser, RawTextHelpFormatter
 import logging
+from platform import python_version
 
 from profit.config import BaseConfig
 from profit.util import safe_path_to_file
@@ -32,14 +33,17 @@ def main():
     parser.add_argument('mode',  # ToDo: subparsers?
                         metavar='mode',
                         choices=['run', 'fit', 'ui', 'clean'],
-                        help='run ... start simulation runs \n'
-                             'fit ... fit data with Gaussian Process \n'
-                             'ui ... visualise results \n'
+                        help='run   ... start simulation runs\n'
+                             'fit   ... fit data with Gaussian Process\n'
+                             'ui    ... visualise results\n'
                              'clean ... remove run directories and input/output files')
     parser.add_argument('base_dir',
                         metavar='base-dir',
                         help='path to config file (default: current working directory)',
                         default=default_base_dir, nargs='?')
+    
+    from profit import __version__  # delayed to prevent cyclic import
+    print(f"proFit {__version__} for python {python_version()}")
     args = parser.parse_args()
 
     print(args)
