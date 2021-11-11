@@ -344,7 +344,11 @@ class LocalRunnerConfig(RunnerConfig):
             sleep: 0        # number of seconds to sleep while polling
             fork: true      # whether to spawn the worker via forking instead of a subprocess (via a shell)
     """
-    pass
+    def process_entries(self, base_config):
+        """Converts `parallel: all` to number of available cpus"""
+        from os import sched_getaffinity
+        if self.parallel == 'all':
+            self.parallel = len(sched_getaffinity(0))
 
 
 @RunnerConfig.register("slurm")
