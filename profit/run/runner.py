@@ -74,11 +74,19 @@ class Runner(ABC):
 
     # for now, implement the runner straightforward with less overhead
     # restructuring is always possible
-    def __init__(self, interface_class, run_config, base_config):
+    def __init__(self, interface_class, run_config, base_config, handle_logging=True):
         self.base_config = base_config
         self.run_config = run_config
         self.config = self.run_config['runner']
         self.logger = logging.getLogger('Runner')
+        if handle_logging:
+            log_handler = logging.FileHandler('runner.log', mode='w')
+            log_formatter = logging.Formatter('{asctime} {levelname:8s} {name}: {message}', style='{')
+            log_handler.setFormatter(log_formatter)
+            self.logger.addHandler(log_handler)
+            self.logger.propagate = False
+        if self.run_config['debug']:
+            self.logger.setLevel(logging.DEBUG)
         self.interface: RunnerInterface = interface_class(self.run_config['interface'], self.base_config['ntrain'],
                                                           self.base_config['input'], self.base_config['output'],
                                                           logger_parent=self.logger)

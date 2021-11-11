@@ -6,7 +6,6 @@ This script is called when running the `profit` command.
 from os import getcwd
 import sys
 from argparse import ArgumentParser, RawTextHelpFormatter
-import logging
 from platform import python_version
 
 from profit.config import BaseConfig
@@ -45,8 +44,6 @@ def main():
     from profit import __version__  # delayed to prevent cyclic import
     print(f"proFit {__version__} for python {python_version()}")
     args = parser.parse_args()
-
-    print(args)
 
     """Instantiate Config from the given file."""
     config_file = safe_path_to_file(args.base_dir, default=default_config_file)
@@ -165,6 +162,8 @@ def main():
             rmtree(config['run']['log_path'])
         except FileNotFoundError:
             pass
+        if path.exists('runner.log'):
+            remove('runner.log')
 
 
 if __name__ == '__main__':
