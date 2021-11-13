@@ -8,11 +8,12 @@
     - expected improvement
 * mixed exploration and bayesian optimization
 """
-from abc import ABC, abstractmethod
+from abc import abstractmethod
+from profit.util.base_class import CustomABC
 import numpy as np
 
 
-class AcquisitionFunction(ABC):
+class AcquisitionFunction(CustomABC):
     """Base class for acquisition functions.
 
     Parameters:
@@ -21,7 +22,7 @@ class AcquisitionFunction(ABC):
         variables (profit.util.variable_kinds.VariableGroup): Variables.
         parameters: Miscellaneous parameters for the specified function. E.g. 'exploration_factor'.
     """
-    _acquisition_functions = {}
+    labels = {}
 
     def __init__(self, Xpred, surrogate, variables, **parameters):
         self.parameters = parameters
@@ -43,22 +44,6 @@ class AcquisitionFunction(ABC):
     def find_next_candidates(self, batch_size):
         """Finds the next training input points which minimize the loss/maximize improvement."""
         pass
-
-    @classmethod
-    def register(cls, label):
-        """Decorator to register new acquisition classes."""
-        def decorator(acquisition_function):
-            if label in cls._acquisition_functions:
-                raise KeyError(f'registering duplicate label {label} for {cls.__name__}.')
-            cls._acquisition_functions[label] = acquisition_function
-            return acquisition_function
-        return decorator
-
-    @classmethod
-    def __class_getitem__(cls, item):
-        """Returns the child acquisition function.
-        """
-        return cls._acquisition_functions[item]
 
 
 @AcquisitionFunction.register("simple_exploration")

@@ -7,8 +7,8 @@ Goal: a class to manage and deploy runs
 import os
 import shutil
 import logging
-from abc import ABC, abstractmethod  # Abstract Base Class
-from collections.abc import MutableMapping
+from abc import abstractmethod
+from profit.util.base_class import CustomABC  # Abstract Base Class
 
 from .worker import Preprocessor, Postprocessor, Worker
 from profit.util import load_includes, params2map, spread_struct_horizontal, flatten_struct
@@ -16,8 +16,8 @@ from profit.util import load_includes, params2map, spread_struct_horizontal, fla
 import numpy as np
 
 
-class RunnerInterface:
-    interfaces = {}  # ToDo: rename to registry?
+class RunnerInterface(CustomABC):
+    labels = {}
     internal_vars = [('DONE', np.bool8), ('TIME', np.uint32)]
 
     def __init__(self, config, size, input_config, output_config, *, logger_parent: logging.Logger = None):
@@ -53,24 +53,12 @@ class RunnerInterface:
     def clean(self):
         self.logger.debug('cleaning')
 
-    @classmethod
-    def register(cls, label):
-        def decorator(interface):
-            if label in cls.interfaces:
-                raise KeyError(f'registering duplicate label {label} for Interface')
-            cls.interfaces[label] = interface
-            return interface
-        return decorator
-
-    def __class_getitem__(cls, item):
-        return cls.interfaces[item]
-
 
 # === Runner === #
 
 
-class Runner(ABC):
-    systems = {}
+class Runner(CustomABC):
+    labels = {}
 
     # for now, implement the runner straightforward with less overhead
     # restructuring is always possible
@@ -160,17 +148,3 @@ class Runner(ABC):
     @property
     def flat_output_data(self):
         return flatten_struct(self.output_data)
-
-
-    @classmethod
-    def register(cls, label):
-        def decorator(interface):
-            if label in cls.systems:
-                raise KeyError(f'registering duplicate label {label} for Runner')
-            cls.systems[label] = interface
-            return interface
-
-        return decorator
-
-    def __class_getitem__(cls, item):
-        return cls.systems[item]

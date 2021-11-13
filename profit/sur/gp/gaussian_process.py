@@ -25,12 +25,12 @@ Literature:
     Osborne 2012: Active Learning of Hyperparameters
 """
 
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 import numpy as np
 from profit.sur.sur import Surrogate
 
 
-class GaussianProcess(Surrogate, ABC):
+class GaussianProcess(Surrogate):
     r"""This is the base class for all Gaussian Process models.
 
     Attributes:

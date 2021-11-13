@@ -1,7 +1,6 @@
 import numpy as np
 from tqdm import tqdm
-from abc import ABC
-
+from profit.util.base_class import CustomABC
 """
 For computationally expensive simulations or experiments it is crucial to get the most information out of every
 training point. This is not the case in the standard procedure of randomly selecting the training points.
@@ -10,7 +9,7 @@ acquisition function like the minimization of local variance or expected improve
 """
 
 
-class ActiveLearning(ABC):
+class ActiveLearning(CustomABC):
     """Active learning base class.
 
     Parameters:
@@ -33,7 +32,7 @@ class ActiveLearning(ABC):
         krun (int): Current training cycle.
     """
 
-    _models = {}
+    labels = {}
 
     def __init__(self, runner, surrogate, variables, ntrain, nwarm=1, batch_size=1,
                  acquisition_function='simple_exploration', convergence_criterion=1e-5, nsearch_points=50, make_plot=False):
@@ -193,13 +192,3 @@ class ActiveLearning(ABC):
                    convergence_criterion=config['convergence_criterion'], nsearch_points=config['nsearch_points'],
                    make_plot=base_config['ui']['plot'])
         return self
-
-    @classmethod
-    def register(cls, label):
-        """Decorator to register new active learning classes."""
-        def decorator(surrogate):
-            if label in cls._models:
-                raise KeyError(f'registering duplicate label {label} for {cls.__name__}.')
-            cls._models[label] = surrogate
-            return surrogate
-        return decorator

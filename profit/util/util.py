@@ -8,6 +8,7 @@ from typing import Union
 from collections.abc import MutableMapping, Mapping
 import numpy as np
 
+
 def save(filename, data, header=None, fmt=None):
 
     if filename.endswith('.txt'):

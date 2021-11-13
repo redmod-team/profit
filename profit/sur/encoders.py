@@ -1,8 +1,8 @@
-from abc import ABC, abstractmethod
+from profit.util.base_class import CustomABC
 import numpy as np
 
 
-class Encoder(ABC):
+class Encoder(CustomABC):
     r"""Base class to handle encoding and decoding of the input and output data before creating the surrogate model.
 
     The base class itself does nothing. It delegates the encoding process to the childs
@@ -17,7 +17,7 @@ class Encoder(ABC):
     Attributes:
         label (str): Label of the encoder class.
     """
-    _encoders = {}
+    labels = {}
 
     def __init__(self, columns, output=False, variables=None):
         self.label = self.__class__.get_label()
@@ -86,30 +86,6 @@ class Encoder(ABC):
                 would be $10^x$.
         """
         pass
-
-    @classmethod
-    def register(cls, label):
-        """Decorator to register new encoder classes."""
-
-        def decorator(encoder):
-            if label in cls._encoders:
-                raise KeyError(f'registering duplicate label {label} for encoder.')
-            cls._encoders[label] = encoder
-            return encoder
-
-        return decorator
-
-    @classmethod
-    def get_label(cls):
-        """Returns the string label of a encoder class object."""
-        for label, item in cls._encoders.items():
-            if item == cls:
-                return label
-        raise NotImplementedError("Class {} is not implemented.".format(cls))
-
-    def __class_getitem__(cls, item):
-        """Returns the child encoder."""
-        return cls._encoders[item]
 
 
 @Encoder.register("Exclude")

@@ -14,11 +14,12 @@ Class structure:
         - Linear regression surrogates (Work in progress)
 """
 
-from abc import ABC, abstractmethod
+from abc import abstractmethod
+from profit.util.base_class import CustomABC
 import numpy as np
 
 
-class Surrogate(ABC):
+class Surrogate(CustomABC):
     """Base class for all surrogate models.
 
     Attributes:
@@ -42,7 +43,7 @@ class Surrogate(ABC):
             ['normalization', [output_cols], True]]
     """
 
-    _surrogates = {}  # All surrogates are registered here
+    labels = {}  # All surrogates are registered here
     _defaults = {'surrogate': 'GPy',  # Default surrogate configuration parameters
                  'save': './model.hdf5',
                  'load': False,
@@ -166,7 +167,7 @@ class Surrogate(ABC):
         Returns:
             profit.sur.Surrogate: Instantiated surrogate model.
         """
-        label = next(filter(lambda l: l in path, cls._surrogates), cls._defaults['surrogate'])
+        label = next(filter(lambda l: l in path, cls.labels), cls._defaults['surrogate'])
         return cls[label].load_model(path)
 
     @classmethod
@@ -192,28 +193,6 @@ class Surrogate(ABC):
             child_instance.fixed_sigma_n = config['fixed_sigma_n']
             child_instance.encoder = [Encoder[func](cols, out) for func, cols, out in config['encoder']]
         return child_instance
-
-    @classmethod
-    def register(cls, label):
-        """Decorator to register new surrogate classes."""
-        def decorator(surrogate):
-            if label in cls._surrogates:
-                raise KeyError(f'registering duplicate label {label} for surrogate.')
-            cls._surrogates[label] = surrogate
-            return surrogate
-        return decorator
-
-    def __class_getitem__(cls, item):
-        """Returns the child surrogate."""
-        return cls._surrogates[item]
-
-    @classmethod
-    def get_label(cls):
-        """Returns the string label of a surrogate class object."""
-        for label, item in cls._surrogates.items():
-            if item == cls:
-                return label
-        raise NotImplementedError("Class {} is not implemented.".format(cls))
 
     def plot(self, Xpred=None, independent=None, show=False, ref=None, add_data_variance=True, axes=None):
         r"""Simple plotting for dimensions <= 2.
