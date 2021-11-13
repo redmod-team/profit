@@ -1,5 +1,6 @@
 # similar to 1D
 ntrain: 7
+include: ../simulation_files/custom_components.py
 variables:
     u: Halton()
     f: Output
@@ -12,7 +13,6 @@ run:
         class: numpytxt
         path: mockup.out
     worker: mockup_worker4
-    include: ../simulation_files/custom_components.py
 
 files:
     input: input_custom_worker4.hdf5

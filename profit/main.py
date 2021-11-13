@@ -1,31 +1,25 @@
 """proFit main script.
 
-This script is called when running the `profit` command.
+This script is called when running the `profit` command inside a shell.
 """
 
-from os import getcwd
 import sys
 from argparse import ArgumentParser, RawTextHelpFormatter
 from platform import python_version
 
 from profit.config import BaseConfig
-from profit.util import safe_path_to_file
+from profit.util import safe_path
 from profit.util.variable import VariableGroup, Variable
 from profit.defaults import base_dir as default_base_dir, config_file as default_config_file
-
 from profit.run import Runner
 
-yes = False  # always answer 'y'
+YES = False  # always answer 'y'
 
 
 def main():
-    """
-    Main command line interface
-    sys.argv is an array whose values are the entered series of command
-    (e.g.: sys.argv=['profit','run', '--active-learning', '/home/user/example'])
-    """
+    """Main command line interface"""
 
-    """ Get parameters from argv """
+    # Get parameters from shell input
     parser = ArgumentParser(usage='profit <mode> (base-dir)',
                             description="Probabilistic Response Model Fitting with Interactive Tools",
                             formatter_class=RawTextHelpFormatter)
@@ -40,17 +34,20 @@ def main():
                         metavar='base-dir',
                         help='path to config file (default: current working directory)',
                         default=default_base_dir, nargs='?')
-    
+
     from profit import __version__  # delayed to prevent cyclic import
     print(f"proFit {__version__} for python {python_version()}")
     args = parser.parse_args()
 
-    """Instantiate Config from the given file."""
-    config_file = safe_path_to_file(args.base_dir, default=default_config_file)
+    print(args)
+
+    # Instantiate Config from the given file
+    config_file = safe_path(args.base_dir, default=default_config_file)
     config = BaseConfig.from_file(config_file)
 
     sys.path.append(config['base_dir'])
 
+    # Create variables
     variables = VariableGroup(config['ntrain'])
     vars = []
     for k, v in config['variables'].items():
@@ -60,36 +57,39 @@ def main():
             vars.append(Variable.create(**v))
     variables.add(vars)
 
+    # Select mode
     if args.mode == 'run':
         from tqdm import tqdm
         from profit.util import check_ndim
-        from profit.util import save
+        from profit.util.file_handler import FileHandler
 
-        runner = Runner.from_config(config['run'], config)
+        runner = Runner.from_config(config['run'], config)  # Instantiate the runner
 
-        save(config['files']['input'], variables.named_input)
+        FileHandler.save(config['files']['input'], variables.named_input)  # Save variables to input file
 
+        # Check if active learning needs to be done instead of executing a normal run
         if 'activelearning' in (v.kind.lower() for v in variables.list):
             from profit.al.active_learning import ActiveLearning
             from profit.sur.sur import Surrogate
-            runner.fill(variables.named_input)
-            sur = Surrogate.from_config(config['fit'], config)
-            al = ActiveLearning.from_config(runner, sur, variables, config['active_learning'], config)
+
+            runner.fill(variables.named_input)  # Prepare runner with input variables
+            sur = Surrogate.from_config(config['fit'], config)  # Instantiate surrogate model
+            al = ActiveLearning.from_config(runner, sur, variables, config['active_learning'], config)  # Instantiate active learning algorithm
             try:
-                al.warmup()
-                al.learn()
-                save(config['files']['input'], variables.named_input)
+                al.warmup()  # Execute warmup cycles
+                al.learn()  # Execute main learning loop
+                FileHandler.save(config['files']['input'], variables.named_input)  # Save learned input variables
             finally:
-                runner.cancel_all()
-                # Writing the output data into the variables has to be done inside the AL algorithm.
-            if config['fit'].get('save'):
-                al.save(config['fit']['save'])
+                runner.cancel_all()  # Close all run processes
+            if config['fit']['save']:
+                al.save(config['fit']['save'])  # Save surrogate model
         else:
-            params_array = [row[0] for row in variables.named_input]
+            # Normal (parallel) run
+            params_array = [row[0] for row in variables.named_input]  # Structured array of input values
             try:
-                runner.spawn_array(tqdm(params_array), blocking=True)
+                runner.spawn_array(tqdm(params_array), blocking=True)  # Start runs
             finally:
-                runner.cancel_all()
+                runner.cancel_all()  # Close all run processes
 
                 # Write runner output data into variables
                 for key in runner.output_data.dtype.names:
@@ -98,36 +98,34 @@ def main():
         if config['run']['clean']:
             runner.clean()
 
-        if config['files']['output'].endswith('.txt'):
-            # Format output data for txt file and save
-            data = variables.formatted_output \
-                if config['files']['output'].endswith('.txt') else variables.named_output
-            save(config['files']['output'], data.reshape(data.size, 1))
-        else:
-            save(config['files']['output'], runner.output_data)
-
-        # Save input file again after active learning
-        save(config['files']['input'], variables.named_input)
+        # Format output data for txt file and save
+        formatted_output_data = variables.formatted_output \
+            if config['files']['output'].endswith('.txt') else variables.named_output
+        FileHandler.save(config['files']['output'], formatted_output_data)
 
     elif args.mode == 'fit':
         from numpy import arange, hstack, meshgrid
-        from profit.util import load
+        from profit.util.file_handler import FileHandler
         from profit.sur.sur import Surrogate
 
-        sur = Surrogate.from_config(config['fit'], config)
+        sur = Surrogate.from_config(config['fit'], config)  # Instantiate surrogate model
 
+        # Train model if not yet trained
         if not sur.trained:
-            x = load(config['files']['input'])
-            y = load(config['files']['output'])
-            x = hstack([x[key] for key in x.dtype.names])
+            x = FileHandler.load(config['files']['input'])
+            y = FileHandler.load(config['files']['output'])
+            x = hstack([x[key] for key in x.dtype.names])  # Convert structured to normal array
             y = hstack([y[key] for key in y.dtype.names])
 
             sur.train(x, y)
 
-        if config['fit'].get('save'):
-            sur.save_model(config['fit']['save'])
+        if config['fit']['save']:
+            sur.save_model(config['fit']['save'])  # Save surrogate model
         if config['ui']['plot']:
+            # Make a simple plot of data and surrogate model
+            # TODO: Rename to 'simple_plot' and introduce more options
             try:
+                # Get prediction range from input or infer from training data
                 xpred = [arange(minv, maxv, step) for minv, maxv, step in config['ui']['plot'].get('Xpred')]
                 xpred = hstack([xi.flatten().reshape(-1, 1) for xi in meshgrid(*xpred)])
             except AttributeError:
@@ -137,7 +135,7 @@ def main():
     elif args.mode == 'ui':
         from profit.ui import init_app
         app = init_app(config)
-        app.run_server(debug=True)
+        app.run_server(debug=True)  # Start Dash server on localhost
 
     elif args.mode == 'clean':
         from shutil import rmtree
@@ -146,26 +144,30 @@ def main():
 
         question = "Are you sure you want to remove the run directories in {} " \
                    "and input/output files? (y/N) ".format(config['run_dir'])
-        if yes:
+        if YES:
             print(question + 'y')
         else:
             answer = input(question)
             if not answer.lower().startswith('y'):
                 print('exit...')
                 sys.exit()
-
+        # Remove single run directories
         for krun in range(config['ntrain']):
             single_run_dir = path.join(run_dir, f'run_{krun:03d}')
             if path.exists(single_run_dir):
                 rmtree(single_run_dir)
+
+        # Remove input and output files
         if path.exists(config['files']['input']):
             remove(config['files']['input'])
         if path.exists(config['files']['output']):
             remove(config['files']['output'])
 
+        # Cleanup runner
         runner = Runner.from_config(config['run'], config)
         runner.clean()
         try:
+            # Remove log
             rmtree(config['run']['log_path'])
         except FileNotFoundError:
             pass

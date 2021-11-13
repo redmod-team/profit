@@ -9,7 +9,7 @@ Testcases for some configuration features:
 """
 
 from profit.config import BaseConfig
-from profit.util import load
+from profit.util.file_handler import FileHandler
 from json import load as jload
 from os import path, remove, chdir, getcwd
 from subprocess import run
@@ -107,7 +107,7 @@ def test_hdf5_input_output():
     config = BaseConfig.from_file(config_file)
     try:
         run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
-        data_in = load(config['files'].get('input'))
+        data_in = FileHandler.load(config['files'].get('input'))
         assert data_in.shape == (2, 1)
         assert data_in.dtype.names == ('u', 'v', 'w')
     finally:

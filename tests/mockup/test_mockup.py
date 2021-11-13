@@ -15,7 +15,7 @@ Testcases for mockup simulations:
 
 from profit.config import BaseConfig
 from profit.sur import Surrogate
-from profit.util import load
+from profit.util.file_handler import FileHandler
 from os import path, remove, chdir, getcwd
 from subprocess import run
 from numpy import array, allclose
@@ -83,7 +83,7 @@ def multi_test_1d(study, config_file, output_file):
     config = BaseConfig.from_file(config_file)
     try:
         run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
-        output = load(output_file)
+        output = FileHandler.load(output_file)
         assert output.shape == (7, 1)
         assert all(output['f'] - array([0.7836, -0.5511, 1.0966, 0.4403, 1.6244, -0.4455, 0.0941]).reshape((7, 1))
                    < 1e-4)

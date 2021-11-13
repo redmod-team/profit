@@ -125,14 +125,14 @@ class GPSurrogate(GaussianProcess):
         Parameters:
             path (str): Path including the file name, where the model should be saved.
         """
-        from profit.util import save_hdf
+        from profit.util.file_handler import FileHandler
         save_dict = {attr: getattr(self, attr)
                      for attr in ('trained', 'fixed_sigma_n', 'Xtrain', 'ytrain', 'ndim', 'kernel', 'hyperparameters')}
 
         # Convert the kernel class object to a string, to be able to save it in the .hdf5 file
         if not isinstance(save_dict['kernel'], str):
             save_dict['kernel'] = self.kernel.__name__
-        save_hdf(path, save_dict)
+        FileHandler.save(path, save_dict)
 
     @classmethod
     def load_model(cls, path):
@@ -145,9 +145,9 @@ class GPSurrogate(GaussianProcess):
             profit.sur.gaussian_process.GPSurrogate: Instantiated surrogate model.
         """
 
-        from profit.util import load_hdf
+        from profit.util.file_handler import FileHandler
 
-        sur_dict = load_hdf(open(path, 'rb'), astype='dict')
+        sur_dict = FileHandler.load(path, as_type='dict')
         self = cls()
 
         for attr, value in sur_dict.items():

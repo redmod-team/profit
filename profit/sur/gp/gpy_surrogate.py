@@ -66,12 +66,12 @@ class GPySurrogate(GaussianProcess):
             path (str): Path including the file name, where the model should be saved.
         """
 
-        from profit.util import save
+        from profit.util.file_handler import FileHandler
 
         sur_dict = {attr: getattr(self, attr) for attr in ('Xtrain', 'ytrain')}
         sur_dict['model'] = self.model.to_dict()
         sur_dict['encoder'] = str([enc.repr for enc in self.encoder])
-        save(path, sur_dict)
+        FileHandler.save(path, sur_dict)
 
     @classmethod
     def load_model(cls, path):
@@ -85,12 +85,12 @@ class GPySurrogate(GaussianProcess):
             GPy.models: Instantiated surrogate model.
         """
 
-        from profit.util import load
+        from profit.util.file_handler import FileHandler
         from profit.sur.encoders import Encoder
         from GPy import models
 
         self = cls()
-        sur_dict = load(path, as_type='dict')
+        sur_dict = FileHandler.load(path, as_type='dict')
         self.model = models.GPRegression.from_dict(sur_dict['model'])
         self.Xtrain, self.ytrain = sur_dict['Xtrain'], sur_dict['ytrain']
         self.encoder = [Encoder[func](cols, out, variables) for func, cols, out, variables in eval(sur_dict['encoder'])]

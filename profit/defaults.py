@@ -5,6 +5,7 @@ from os import path, getcwd
 base_dir = path.abspath(getcwd())
 run_dir = base_dir
 config_file = 'profit.yaml'
+include = []
 files = {'input': 'input.txt',
          'output': 'output.txt'}
 ntrain = 10
@@ -22,7 +23,6 @@ run = {'runner': 'local',
        'time': True,
        'debug': False,
        'log_path': 'log',
-       'include': [],
        'custom': False,
        'worker': None}
 

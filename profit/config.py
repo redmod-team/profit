@@ -148,6 +148,7 @@ class BaseConfig(AbstractConfig):
         - base_dir
         - run_dir
         - config_file
+        - include
         - ntrain
         - variables
         - files
@@ -171,6 +172,7 @@ class BaseConfig(AbstractConfig):
         base_dir (str): Base directory.
         run_dir (str): Run directory.
         config_path (str): Path to configuration file.
+        include (list): Paths to custom files which are loaded in the beginning.
         files (dict): Paths for input and output files.
         ntrain (int): Number of training samples.
         variables (dict): All variables.
@@ -184,6 +186,7 @@ class BaseConfig(AbstractConfig):
         self.base_dir = path.abspath(base_dir)
         self.run_dir = self.base_dir
         self.config_path = path.join(self.base_dir, defaults.config_file)
+        self.include = defaults.include
         self.ntrain = defaults.ntrain
         self.variables = defaults.variables.copy()
         self.input = {}
@@ -192,6 +195,7 @@ class BaseConfig(AbstractConfig):
         self.files = defaults.files.copy()
 
         self.update(**entries)  # Update the attributes with given entries.
+        self.load_includes()
         self.create_subconfigs(**entries)
         self.process_entries()  # Postprocess the attributes to standardize different user entries.
 
@@ -245,6 +249,17 @@ class BaseConfig(AbstractConfig):
         self.config_path = path.join(self.base_dir, filename)
         return self
 
+    def load_includes(self):
+        from profit.util import load_includes
+
+        if isinstance(self.include, str):
+            self.include = [self.include]
+
+        for p, include_path in enumerate(self.include):
+            if not path.isabs(include_path):
+                self.include[p] = path.abspath(path.join(self.base_dir, include_path))
+        load_includes(self.include)
+
 
 @BaseConfig.register("run")
 class RunConfig(AbstractConfig):
@@ -293,16 +308,7 @@ class RunConfig(AbstractConfig):
                 setattr(self, key.lower(), sub_config.labels['default'](**attr))
 
     def process_entries(self, base_config):
-        """Set 'include' and paths and process entries of sub configs."""
-        from profit.util import load_includes
-
-        if isinstance(self.include, str):
-            self.include = [self.include]
-
-        for p, include_path in enumerate(self.include):
-            if not path.isabs(include_path):
-                self.include[p] = path.abspath(path.join(base_config.base_dir, include_path))
-        load_includes(self.include)
+        """Set paths and process entries of sub configs."""
 
         if not path.isabs(self.log_path):
             self.log_path = path.abspath(path.join(base_config.base_dir, self.log_path))
@@ -516,7 +522,21 @@ class DefaultConfig(AbstractConfig):
     """Default config for all run sub configs which just updates the attributes with user entries."""
 
     def __init__(self, **entries):
+        name = entries.get('class', self.__class__.__name__)
+        warnings.warn(f"Using default config for '{name}'.")
         self.update(**entries)
+
+    def update(self, **entries):
+        for name, value in entries.items():
+            if hasattr(self, name) or name in map(str.lower, self.labels):
+                attr = getattr(self, name, None)
+                if isinstance(attr, dict):
+                    attr.update(value)
+                    setattr(self, name, attr)
+                else:
+                    setattr(self, name, value)
+            else:
+                setattr(self, name, value)
 
 
 @BaseConfig.register("fit")

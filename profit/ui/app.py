@@ -5,7 +5,7 @@ import plotly.graph_objs as go
 from dash.dependencies import Input, Output, State, MATCH, ALL
 from math import log10
 import numpy as np
-from profit.util import load
+from profit.util.file_handler import FileHandler
 from profit.sur import Surrogate
 from matplotlib import cm as colormaps
 from matplotlib.colors import to_hex as color2hex
@@ -17,8 +17,8 @@ def init_app(config):
     server = app.server
     app.config.suppress_callback_exceptions = False
 
-    indata = load(config['files']['input']).flatten()
-    outdata = load(config['files']['output']).flatten()
+    indata = FileHandler.load(config['files']['input']).flatten()
+    outdata = FileHandler.load(config['files']['output']).flatten()
 
     invars = indata.dtype.names
     outvars = outdata.dtype.names
