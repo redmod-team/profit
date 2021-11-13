@@ -13,13 +13,13 @@ ext_kwargs = {
                                '-g', '-fbacktrace']}
 
 ext_gpfunc = Extension(
-    name='profit.sur.backend.gpfunc',
-    sources=['profit/sur/backend/gpfunc.f90'],
+    name='profit.sur.gp.backend.gpfunc',
+    sources=['profit/sur/gp/backend/gpfunc.f90'],
     **ext_kwargs)
 
 ext_kernels = Extension(
-    name='profit.sur.backend.kernels',
-    sources=['profit/sur/backend/kernels.f90', 'profit/sur/backend/kernels_base.f90'],
+    name='profit.sur.gp.backend.kernels',
+    sources=['profit/sur/gp/backend/kernels.f90', 'profit/sur/gp/backend/kernels_base.f90'],
     **ext_kwargs)
 
 

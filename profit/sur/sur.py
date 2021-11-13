@@ -29,8 +29,6 @@ class Surrogate(ABC):
             Vector output is supported for independent variables only.
         ndim (int): Dimension of input data.
         output_ndim (int): Dimension of output data.
-        multi_output (bool): True, if more than one output variable is defined in the
-            config file. If False, excess output dimensions are used as independent supporting points.
         encoder (list of profit.sur.encoders.Encoder): For now, inputs of kind 'LogUniform' are encoded with 'log10'
             and all input and output data is normalized. Can be modified in the config file using the format
             e.g. [['log10', [0], False], ['normalization', [0, 1], False]].
@@ -54,7 +52,6 @@ class Surrogate(ABC):
     def __init__(self):
         self.trained = False
         self.fixed_sigma_n = False
-        self.multi_output = False  # Inferred from output variables in config.
 
         self.Xtrain = None
         self.ytrain = None
@@ -117,7 +114,7 @@ class Surrogate(ABC):
         return ym, yv
 
     @abstractmethod
-    def train(self, X, y, fixed_sigma_n=False, multi_output=False):
+    def train(self, X, y, fixed_sigma_n=False):
         r"""Trains the surrogate on input points X and model outputs y.
 
         Depending on the surrogate, the signature can vary.
@@ -126,7 +123,6 @@ class Surrogate(ABC):
             X (ndarray): Input training points.
             y (ndarray): Observed output data.
             fixed_sigma_n (bool): Whether the noise $\sigma_n$ is fixed during optimization.
-            multi_output (bool): Whether a multi output model should be used for fitting.
         """
         pass
 
@@ -193,7 +189,6 @@ class Surrogate(ABC):
             # Set global attributes
             child_instance.ndim = len(base_config['input'])
             child_instance.output_ndim = len(base_config['output'])
-            child_instance.multi_output = len(base_config['output']) > 1
             child_instance.fixed_sigma_n = config['fixed_sigma_n']
             child_instance.encoder = [Encoder[func](cols, out) for func, cols, out in config['encoder']]
         return child_instance

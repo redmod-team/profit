@@ -3,7 +3,7 @@ import numpy as np
 from time import time
 from scipy.optimize import minimize
 from profit.util.halton import halton
-from profit.sur.backend.gp_functions_old import nll_chol
+from profit.sur.gp.backend import nll_chol
 
 ntrain = 32
 xtrain = halton(ntrain, 2)

@@ -186,8 +186,8 @@ class Normalization(Encoder):
             np.array: Decoded value.
         """
         if key == 'length_scale':
-            return (value * (self.variables['xmax'] - self.variables['xmin']) + self.variables['xmin']) if not self.output else value
+            return value * (self.variables['xmax'] - self.variables['xmin']) if not self.output else value
         elif key == 'sigma_n' or key == 'sigma_f':
-            return (value * (self.variables['xmax'] - self.variables['xmin']) + self.variables['xmin']) if self.output else value
+            return value * (self.variables['xmax'] - self.variables['xmin']) if self.output else value
         else:
             return value

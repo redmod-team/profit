@@ -1,5 +1,4 @@
 from profit.sur import Surrogate
-from profit.sur.gaussian_process import GPySurrogate
 import numpy as np
 
 
@@ -8,10 +7,10 @@ ytrain = np.array([5, 6, 7, 8]).reshape(-1, 1)
 
 
 def test_default_hyperparameters():
-    from profit.sur.gaussian_process import GPySurrogate
+    from profit.sur.gp import GPySurrogate
 
     sur = GPySurrogate()
-    sur.prepare_train(Xtrain, ytrain)
+    sur.pre_train(Xtrain, ytrain)
     assert sur.hyperparameters['length_scale'] == [0.625]
     assert sur.hyperparameters['sigma_n'] == [0.03]
     assert sur.hyperparameters['sigma_f'] == np.std(ytrain, axis=0)
@@ -38,8 +37,8 @@ def test_add_training_data():
 
 
 def test_select_kernel():
-    from profit.sur.backend.python_kernels import RBF as cRBF
-    from GPy.kern import RBF as gRBF, Matern52 as gMatern52
+    from profit.sur.gp.backend.python_kernels import RBF as cRBF
+    from GPy.kern import RBF as gRBF
     sur = Surrogate['Custom']()
     assert sur.select_kernel('RBF') == cRBF
 
@@ -52,6 +51,7 @@ def test_select_kernel():
 def test_set_hyperparameters():
     from GPy.models import GPRegression
     from GPy.kern import RBF as gRBF, Matern52
+    from profit.sur.gp import GPySurrogate
 
     expected_hyperparameters = {'length_scale': np.array([1]), 'sigma_n': np.array([1]), 'sigma_f': np.array([1])}
 
@@ -69,7 +69,7 @@ def test_set_hyperparameters():
 
 
 def test_default_Xpred():
-    from profit.sur.gaussian_process import GPySurrogate
+    from profit.sur.gp import GPySurrogate
 
     # Instantiate surrogate and set relevant attributes.
     sur = GPySurrogate()

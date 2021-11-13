@@ -1,9 +1,9 @@
 import numpy as np
 import time
 from scipy.optimize import minimize
-from profit.sur.backend.gpfunc import gpfunc
-from profit.sur.backend.gp_functions import negative_log_likelihood_cholesky, solve_cholesky
-from profit.sur.backend.python_kernels import RBF
+from profit.sur.gp.backend.gpfunc import gpfunc
+from profit.sur.gp.backend.gp_functions import negative_log_likelihood_cholesky, solve_cholesky
+from profit.sur.gp.backend.python_kernels import RBF
 from profit.util.halton import halton
 
 

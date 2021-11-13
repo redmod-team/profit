@@ -1,6 +1,6 @@
 import numpy as np
-from profit.sur.backend.gp_functions import solve_cholesky
-from profit.sur.backend.python_kernels import RBF
+from profit.sur.gp.backend.gp_functions import solve_cholesky
+from profit.sur.gp.backend.python_kernels import RBF
 
 def f(x):
     return np.sin(x)

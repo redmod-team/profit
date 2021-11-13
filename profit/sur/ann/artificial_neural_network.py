@@ -1,5 +1,5 @@
 from abc import ABC
-from .sur import Surrogate
+from profit.sur.sur import Surrogate
 import numpy as np
 
 

@@ -3,7 +3,7 @@
 
 import numpy as np
 
-from profit.sur.gaussian_process import GPySurrogate
+from profit.sur.gp import GPySurrogate
 
 
 def f(x):

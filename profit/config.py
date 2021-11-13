@@ -534,7 +534,7 @@ class FitConfig(AbstractConfig):
 
     def __init__(self, **entries):
         from profit.sur import Surrogate
-        from profit.sur.gaussian_process import GaussianProcess
+        from profit.sur.gp.gaussian_process import GaussianProcess
         self.set_defaults(defaults.fit)
 
         if issubclass(Surrogate._surrogates[self.surrogate], GaussianProcess):
