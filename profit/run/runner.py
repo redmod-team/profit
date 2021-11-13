@@ -11,7 +11,7 @@ from abc import abstractmethod
 from profit.util.base_class import CustomABC  # Abstract Base Class
 
 from .worker import Preprocessor, Postprocessor, Worker
-from profit.util import load_includes, params2map, spread_struct_horizontal, flatten_struct
+from profit.util import load_includes, params2map
 
 import numpy as np
 
@@ -134,17 +134,5 @@ class Runner(CustomABC):
         return self.interface.input[self.interface.internal['DONE']]
 
     @property
-    def flat_input_data(self):
-        return flatten_struct(self.input_data)
-
-    @property
     def output_data(self):
         return self.interface.output[self.interface.internal['DONE']]
-
-    @property
-    def structured_output_data(self):
-        return spread_struct_horizontal(self.output_data, self.base_config['output'])
-
-    @property
-    def flat_output_data(self):
-        return flatten_struct(self.output_data)

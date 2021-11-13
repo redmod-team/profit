@@ -1,7 +1,7 @@
 ntrain: 10
 variables:
     T: Halton()
-    E: Independent(0, 10, 0.1)
+    E: Independent(0, 10, 100)
     n_f: Output(E)
 
 run:

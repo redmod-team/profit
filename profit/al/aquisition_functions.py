@@ -19,7 +19,7 @@ class AcquisitionFunction(CustomABC):
     Parameters:
         Xpred (np.array): Matrix of possible training points.
         surrogate (profit.sur.Surrogate): Surrogate.
-        variables (profit.util.variable_kinds.VariableGroup): Variables.
+        variables (profit.util.variable.VariableGroup): Variables.
         parameters: Miscellaneous parameters for the specified function. E.g. 'exploration_factor'.
     """
     labels = {}

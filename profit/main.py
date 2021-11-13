@@ -10,7 +10,7 @@ from platform import python_version
 
 from profit.config import BaseConfig
 from profit.util import safe_path_to_file
-from profit.util.variable_kinds import VariableGroup, Variable
+from profit.util.variable import VariableGroup, Variable
 from profit.defaults import base_dir as default_base_dir, config_file as default_config_file
 
 from profit.run import Runner
@@ -62,10 +62,10 @@ def main():
 
     if args.mode == 'run':
         from tqdm import tqdm
+        from profit.util import check_ndim
         from profit.util import save
 
         runner = Runner.from_config(config['run'], config)
-
 
         save(config['files']['input'], variables.named_input)
 
@@ -81,6 +81,7 @@ def main():
                 save(config['files']['input'], variables.named_input)
             finally:
                 runner.cancel_all()
+                # Writing the output data into the variables has to be done inside the AL algorithm.
             if config['fit'].get('save'):
                 al.save(config['fit']['save'])
         else:
@@ -90,11 +91,17 @@ def main():
             finally:
                 runner.cancel_all()
 
+                # Write runner output data into variables
+                for key in runner.output_data.dtype.names:
+                    variables[key].value = check_ndim(runner.output_data[key])
+
         if config['run']['clean']:
             runner.clean()
 
         if config['files']['output'].endswith('.txt'):
-            data = runner.structured_output_data
+            # Format output data for txt file and save
+            data = variables.formatted_output \
+                if config['files']['output'].endswith('.txt') else variables.named_output
             save(config['files']['output'], data.reshape(data.size, 1))
         else:
             save(config['files']['output'], runner.output_data)

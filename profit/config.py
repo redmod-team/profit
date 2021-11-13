@@ -197,7 +197,7 @@ class BaseConfig(AbstractConfig):
 
     def process_entries(self):
         """Sets absolute paths, creates variables and delegates to the sub configs."""
-        from profit.util.variable_kinds import Variable, VariableGroup
+        from profit.util.variable import Variable, VariableGroup
 
         # Set absolute paths
         self.files['input'] = path.join(self.base_dir, self.files.get('input', defaults.files['input']))
@@ -553,8 +553,9 @@ class FitConfig(AbstractConfig):
                 variables = getattr(base_config, 'output' if out else 'input')
                 if cols.lower() == 'all':
                     enc[1] = list(range(len(variables)))
-                elif cols.lower() in [v['kind'].lower() for v in variables.values()]:
-                    enc[1] = [idx for idx, v in enumerate(variables.values()) if v['kind'].lower() == cols.lower()]
+                elif cols.lower() in [v.get('distr', v['kind']).lower() for v in variables.values()]:
+                    enc[1] = [idx for idx, v in enumerate(variables.values()) if
+                              v.get('distr', v['kind']).lower() == cols.lower()]
                 else:
                     enc[1] = []
 

@@ -2,7 +2,6 @@ ntrain: 10
 variables:
     u: ActiveLearning(4.7, 5.3)
     v: ActiveLearning(0.55, 0.6)
-    r: Independent
     f: Output
 
 run:

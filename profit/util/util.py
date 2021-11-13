@@ -174,48 +174,6 @@ def params2map(params: Union[None, MutableMapping, np.ndarray, np.void]):
     raise TypeError('params are not a Mapping')
 
 
-def spread_struct_horizontal(struct_array: np.ndarray, variable_config: Mapping):
-    dtype = []
-    columns = {}
-    # prepare dtype
-    for variable in struct_array.dtype.names:
-        spec = variable_config[variable]
-        if spec['size'][-1] == 1:
-            dtype.append((variable, spec['dtype']))
-            columns[variable] = [variable]
-        else:
-            ranges = []
-            columns[variable] = []
-            for dep in spec['entries']:
-                ranges.append(dep['value'])
-            meshes = [m.flatten() for m in np.meshgrid(*ranges)]
-            for i in range(meshes[0].size):
-                name = variable + '(' + ', '.join([f'{m[i]}' for m in meshes]) + ')'
-                dtype.append((name, spec['dtype']))
-                columns[variable].append(name)
-    # fill data
-    output = np.zeros(struct_array.shape, dtype=dtype)
-    for variable, spec in variable_config.items():
-        if spec['size'][-1] == 1:
-            output[variable] = struct_array[variable].flatten()
-        else:
-            for i in range(struct_array.size):
-                output[columns[variable]][i] = tuple(struct_array[variable][i])
-    return output
-
-
-# ToDo: spread struct vertical
-#  -> independent variables get new columns
-#  -> 1 original row gets spread across several (with duplicate entries)
-
-
-def flatten_struct(struct_array: np.ndarray):
-    # per default vector entries are spread across several columns
-    if not struct_array.size:
-        return np.array([[]])
-    return np.vstack([np.hstack([row[key].flatten() for key in struct_array.dtype.names]) for row in struct_array])
-
-
 def load_includes(paths):
     """ load python modules from the specified paths """
     import os

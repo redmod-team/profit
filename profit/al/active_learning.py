@@ -15,7 +15,7 @@ class ActiveLearning(CustomABC):
     Parameters:
         runner (profit.run.Runner): Runner to dynamically start runs.
         surrogate (profit.sur.Surrogate): Surrogate used for fitting.
-        variables (profit.util.variable_kinds.VariableGroup): Variables.
+        variables (profit.util.variable.VariableGroup): Variables.
         ntrain (int): Total number of training points.
         nwarm (int): Number of warmup (random) initialization points.
         batch_size (int): Number of training samples learned in parallel.
@@ -72,7 +72,7 @@ class ActiveLearning(CustomABC):
         """
         To get data for active learning, sample initial points randomly.
         """
-        from profit.util.variable_kinds import halton
+        from profit.util.variable import halton
         params_array = [{} for _ in range(self.nwarm)]
         halton_seq = halton(size=(self.nwarm, self.variables.input.shape[-1]))
         for idx, values in enumerate(self.variables.named_input[:self.nwarm]):
@@ -180,7 +180,7 @@ class ActiveLearning(CustomABC):
         Parameters:
             runner (profit.run.runner.Runner): Runner instance.
             surrogate (profit.sur.sur.Surrogate): Surrogate instance.
-            variables (profit.util.variable_kinds.VariableGroup): Variables.
+            variables (profit.util.variable.VariableGroup): Variables.
             config (dict): Only the 'active_learning' part of the base_config.
             base_config (dict): The whole configuration parameters.
 

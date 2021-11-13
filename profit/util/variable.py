@@ -1,6 +1,8 @@
-from .halton import halton as _halton_base
-from .util import check_ndim
+from profit.util.halton import halton as _halton_base
+from profit.util import check_ndim
 import numpy as np
+from profit.util.base_class import CustomABC
+
 
 # TODO: Sample all variables from halton.
 EXCLUDE_FROM_HALTON = ('output', 'constant', 'uniform', 'loguniform', 'normal', 'linear', 'independent')
@@ -25,17 +27,12 @@ def normal(mu=0, std=1, size=None):
     return check_ndim(np.random.normal(mu, std, size))
 
 
-def linear(start=0, end=1, step=1, size=None):
-    return check_ndim(np.arange(start, end, step))
+def linear(start=0, end=1, size=1):
+    return check_ndim(np.linspace(start, end, size))
 
 
-def independent(start=0, end=1, step=1, size=None):
-    return linear(start, end, step)
-
-
-def activelearning(start=0, end=1, size=None):
-    return check_ndim(np.full(size, np.nan))
-
+def independent(start=0, end=1, size=1):
+    return linear(start, end, size)
 
 def constant(value=0, size=None):
     return check_ndim(np.full(size, value))
@@ -75,7 +72,7 @@ class VariableGroup:
             View of all variables as a dictionary.
         """
         input_dict = {k: v.as_dict() for k, v in self.input_dict.items()}
-        independent_dict = {v.name: v.as_dict() for v in self.list if v.kind.lower() == 'independent'}
+        independent_dict = {v.name: v.as_dict() for v in self.list if v.__class__ == IndependentVariable}
         output_dict = {k: v.as_dict() for k, v in self.output_dict.items()}
         return {**input_dict, **independent_dict, **output_dict}
 
@@ -85,7 +82,7 @@ class VariableGroup:
         Returns:
             View of the input variables only. Also excluded are independent variables.
         """
-        return np.hstack([v.value for v in self.list if not any(s in v.kind.lower() for s in ('output', 'independent'))])
+        return np.hstack([v.value for v in self.list if v.__class__ in (InputVariable, ActiveLearningVariable)])
 
     @property
     def named_input(self):
@@ -93,9 +90,9 @@ class VariableGroup:
         Returns:
             Ndarray with dtype of the input variables.
         """
-        dtypes = [(v.name, v.dtype) for v in self.list if not any(s in v.kind.lower() for s in ('output', 'independent'))]
+        dtypes = [(v.name, v.dtype) for v in self.list if v.__class__ in (InputVariable, ActiveLearningVariable)]
         return np.rec.fromarrays([v.value for v in self.list
-                                  if not any(s in v.kind.lower() for s in ('output', 'independent'))], dtype=dtypes)
+                                  if v.__class__ in (InputVariable, ActiveLearningVariable)], dtype=dtypes)
 
     @property
     def input_dict(self):
@@ -103,7 +100,7 @@ class VariableGroup:
         Returns:
             Dictionary of the input variables.
         """
-        return {v.name: v for v in self.list if not any(s in v.kind.lower() for s in ('output', 'independent'))}
+        return {v.name: v for v in self.list if v.__class__ in (InputVariable, ActiveLearningVariable)}
 
     @property
     def input_list(self):
@@ -111,7 +108,7 @@ class VariableGroup:
         Returns:
             List of input variables without independent variables.
         """
-        return [v for v in self.list if v.__class__ is InputVariable]
+        return [v for v in self.list if v.__class__ in (InputVariable, ActiveLearningVariable)]
 
     @property
     def output(self):
@@ -119,7 +116,7 @@ class VariableGroup:
         Returns:
             View on the output variables only.
         """
-        return np.hstack([v.value for v in self.list if 'output' in v.kind.lower()])
+        return np.hstack([v.value for v in self.list if v.__class__ == OutputVariable])
 
     @property
     def named_output(self):
@@ -127,8 +124,39 @@ class VariableGroup:
         Returns:
             Ndarray with dtype of the output variables.
         """
-        dtypes = [(v.name, v.dtype) for v in self.list if 'output' in v.kind.lower()]
+        dtypes = [(v.name, v.dtype) for v in self.list if v.__class__ == OutputVariable]
         return self.output.view(dtype=dtypes)
+
+    @property
+    def formatted_output(self):
+        dtype = []
+        columns = {}
+        # prepare dtype
+        for key in self.output_dict:
+            spec = self[key]
+            if spec.size[-1] == 1:
+                dtype.append((key, spec.dtype))
+                columns[key] = [key]
+            else:
+                ranges = []
+                columns[key] = []
+                for dep in spec.dependent:
+                    ranges.append(dep.value)
+                meshes = [m.flatten() for m in np.meshgrid(*ranges)]
+                for i in range(meshes[0].size):
+                    name = key + '(' + ', '.join([f'{m[i]}' for m in meshes]) + ')'
+                    dtype.append((name, spec.dtype))
+                    columns[key].append(name)
+        # fill data
+        output = np.zeros(len(self.named_output), dtype=dtype)
+        for key, spec in self.output_dict.items():
+            if spec.size[-1] == 1:
+                output[key] = self.named_output[key].flatten()
+            else:
+                for i, values in enumerate(self.named_output):
+                    output[columns[key]][i] = tuple(values[key])
+        output = output.reshape(-1, 1)
+        return output
 
     @property
     def output_dict(self):
@@ -136,7 +164,7 @@ class VariableGroup:
         Returns:
             Dictionary of the output variables.
         """
-        return {v.name: v for v in self.list if 'output' in v.kind.lower()}
+        return {v.name: v for v in self.list if v.__class__ == OutputVariable}
 
     def __getitem__(self, item):
         """Implements dict like behavior to get a variable by its identifier or index.
@@ -173,9 +201,15 @@ class VariableGroup:
 
         self.generate_from_halton()
         for v in self.list:
-            if any(e in v.kind.lower() for e in EXCLUDE_FROM_HALTON) and 'output' not in v.kind.lower():
+            if any(e in v.kind.lower() for e in EXCLUDE_FROM_HALTON) and v.__class__ != OutputVariable:
                 v.generate_values()
-        self.resolve_dependent()
+
+        for v in self.list:
+            if v.__class__ == OutputVariable:
+                dep = [v if isinstance(v, str) else v['name'] for v in v.dependent]
+                ind = [i for i in self.list if i.__class__ == IndependentVariable and i.name in dep]
+                if ind:
+                    v.resolve_dependent(ind)
 
     def delete_variable(self, columns):
         """Deletes one or more variables from the table.
@@ -210,20 +244,8 @@ class VariableGroup:
             for idx, v in enumerate(halton_variables):
                 v.generate_values(nd_halton_seq[:, idx])
 
-    def resolve_dependent(self):
-        """Create a Variable instance for the independent variables of vector outputs."""
-        output = [v for v in self.list if 'output' in v.kind.lower() and v.dependent]
-        for o in output:
-            dvars = []
-            for d in o.dependent:
-                dv = [v for v in self.list if v.name == d][0]
-                o.size = (o.size[0], dv.value.shape[0])
-                o.value = np.full(o.size, np.nan)
-                dvars.append(dv)
-            o.dependent = dvars
 
-
-class Variable:
+class Variable(CustomABC):
     """Base class for a single variable.
     To create input, independent and output variables, use the cls.create() or cls.create_from_str() methods.
 
@@ -234,6 +256,8 @@ class Variable:
         value (ndarray): Data.
         dtype (dtype): Datatype.
     """
+
+    labels = {}
 
     def __init__(self, name, kind, size, value=None, dtype=np.float64):
         self.name = name
@@ -281,75 +305,118 @@ class Variable:
         kind = parsed[0]
         args = parsed[1] if len(parsed) >= 2 else ''
         entries = tuple(try_parse(a) for a in args.split(',')) if args != '' else tuple()
+        entries_dict = cls.labels.get(kind.lower(), cls.labels['input']).parse_entries(entries) \
+            if len(entries) > 0 else {}
+
         dtype = type(entries[0]) if kind.lower() == 'constant' else np.float64
 
-        v_dict = {'name': name, 'kind': kind, 'size': size, 'entries': entries, 'dtype': dtype}
+        v_dict = {'name': name, 'kind': kind, 'size': size, 'dtype': dtype}
+        v_dict = {**v_dict, **entries_dict}
         return cls.create(**v_dict)
 
     @classmethod
-    def create(cls, name, kind, size, entries=(0, 1), value=None, dtype=np.float64):
+    def create(cls, name, kind, size, value=None, dtype=np.float64, **kwargs):
         """Directly creates a variable from keyword entries.
 
         Parameters:
             name (str): Name of the variable.
             kind (str): Distribution of input variables, 'Output' or 'Independent'.
             size (tuple): Size as (nsamples, ndim).
-            entries (tuple/str): Tuple for input variables used to create them from their distribution,
-                or str for output variables for their dependent variable.
+            kwargs (tuple/str): Keyword arguments depending on the sub variables.
+                E.g. constraints for input variables, a search distribution for active learning variables or
+                dependent variables of outputs.
             value (ndarray): Data.
             dtype (dtype): Datatype.
 
         Returns:
             Variable.
         """
-        if 'output' in kind.lower():
-            dependent = entries if len(entries) > 0 and isinstance(entries[0], (str, Variable)) else ()
-            return OutputVariable(name, kind, size, dependent, value, dtype)
-        else:
-            constraints = entries if entries else (0, 1)
-            if 'independent' in kind.lower():
-                return IndependentVariable(name, kind, size, constraints, value, dtype)
-            return InputVariable(name, kind, size, constraints, value, dtype)
+        if isinstance(dtype, str) and kind.lower() != 'constant':
+            dtype = np.dtype(dtype).type
+        return cls.labels.get(kind.lower(), cls.labels['input'])(name=name, kind=kind, size=size,
+                                                                 value=value, dtype=dtype, **kwargs)
 
     def as_dict(self):
         """Dictionary of the variable attributes."""
         return {k: v for k, v in vars(self).items()}
 
 
+@Variable.register("input")
 class InputVariable(Variable):
     """Sub class for input variables."""
 
-    def __init__(self, name, kind, size, entries=(0, 1), value=None, dtype=np.float64):
+    def __init__(self, name, kind, size, constraints=(0, 1), value=None, dtype=np.float64):
         super().__init__(name, kind, size, value, dtype)
-        self.constraints = entries
+        self.constraints = constraints
 
     def generate_values(self, halton_seq=None):
-        if halton_seq is None or self.kind.lower() == 'activelearning':
-            self.value = globals().get(self.kind.lower())(*self.constraints, size=self.size)
+        if halton_seq is None:
+            if len(self.constraints) == 3:
+                self.value = globals().get(self.kind.lower())(*self.constraints).astype(self.dtype)
+            else:
+                self.value = globals().get(self.kind.lower())(*self.constraints, size=self.size).astype(self.dtype)
         else:
-            self.value = check_ndim((self.constraints[1] - self.constraints[0]) * halton_seq + self.constraints[0])
+            self.value = check_ndim((self.constraints[1] - self.constraints[0]) * halton_seq + self.constraints[0]).astype(self.dtype)
 
-    def as_dict(self):
-        return {k if k != 'constraints' else 'entries': v for k, v in vars(self).items()}
+    @classmethod
+    def parse_entries(cls, entries):
+        return {'constraints': entries}
 
 
+@Variable.register("independent")
 class IndependentVariable(InputVariable):
     """Sub class for independent variables."""
 
-    def __init__(self, name, kind, size, entries=(0, 1), value=None, dtype=np.float64):
-        super().__init__(name, kind, size, entries, value, dtype)
+    def __init__(self, name, kind, size, constraints=(0, 1), value=None, dtype=np.float64):
+        super().__init__(name, kind, size, constraints, value, dtype)
         if value is None:
             self.generate_values()
             self.size = self.value.shape
 
 
+@Variable.register("activelearning")
+class ActiveLearningVariable(InputVariable):
+    """Sub class for active learning variables."""
+
+    def __init__(self, name, kind, size, distr='uniform', constraints=(0, 1), value=None, dtype=np.float64):
+        if value is None:
+            value = np.full(size, np.nan)
+        super().__init__(name, kind, size, constraints, value, dtype)
+        self.distr = distr
+
+    @classmethod
+    def parse_entries(cls, entries):
+        return {'constraints': entries[:2], 'distr': entries[2].strip() if len(entries) == 3 else 'uniform'}
+
+    def generate_values(self, halton_seq=None):
+        return check_ndim(np.full(self.size, np.nan))
+
+
+@Variable.register("output")
 class OutputVariable(Variable):
     """Sub class for output variables."""
 
-    def __init__(self, name, kind, size, entries=(), value=None, dtype=np.float64):
+    def __init__(self, name, kind, size, dependent=(), value=None, dtype=np.float64):
         super().__init__(name, kind, size, value, dtype)
-        self.dependent = entries
+        self.dependent = dependent
         self.value = value if value is not None else np.full(self.size, np.nan)
 
+    @classmethod
+    def parse_entries(cls, entries):
+        return {'dependent': entries}
+
+    def resolve_dependent(self, ind):
+        """Create a Variable instance for the independent variables of vector outputs."""
+
+        dvars = []
+        for d in self.dependent:
+            if isinstance(d, str):
+                d = {'name': d}
+            dv = [v for v in ind if v.name == d['name']][0]
+            self.size = (self.size[0], dv.value.shape[0])
+            self.value = np.full(self.size, np.nan)
+            dvars.append(dv)
+        self.dependent = dvars
+
     def as_dict(self):
-        return {k if k != 'dependent' else 'entries': v if k != 'dependent' else [vi.as_dict() for vi in v] for k, v in vars(self).items()}
+        return {k: v if k != 'dependent' else [vi.as_dict() for vi in v] for k, v in vars(self).items()}

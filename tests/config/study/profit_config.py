@@ -2,8 +2,8 @@ ntrain = 2
 variables = {'u': 'Halton()',
              'v': 'Uniform(0.55, 0.6)',
              'w': 'ActiveLearning()',
-             'r': 'Independent(0, 1, 0.1)',
-             'f': {'kind': 'Output', 'entries': ('r',)},
+             'r': 'Independent(0, 1, 10)',
+             'f': {'kind': 'Output', 'dependent': ('r',)},
              'g': 'Output(r)'}
 
 files = {'input': 'input.txt',

@@ -52,7 +52,7 @@ def test_memmap():
         wif.output['f'] = VALUE_F
         wif.time = VALUE_T
         wif.done()
-        assert rif.output['f'][RUN_ID] == VALUE_F
+        assert all(rif.output['f'][RUN_ID] == VALUE_F)
         assert rif.internal['TIME'][RUN_ID] == VALUE_T
         assert rif.internal['DONE'][RUN_ID]
     finally:
@@ -79,7 +79,7 @@ def test_zeromq():
             for i in range(3):
                 rif.poll()
                 sleep(0.5)
-            assert rif.output['f'][RUN_ID] == VALUE_F
+            assert all(rif.output['f'][RUN_ID] == VALUE_F)
             assert rif.internal['TIME'][RUN_ID] == VALUE_T
             assert rif.internal['DONE'][RUN_ID]
         finally:
