@@ -65,7 +65,7 @@ class Surrogate(CustomABC):
         """Encodes the input and output training data.
         """
         for enc in self.encoder:
-            if enc.output:
+            if enc.work_on_output:
                 self.ytrain = enc.encode(self.ytrain)
             else:
                 self.Xtrain = enc.encode(self.Xtrain)
@@ -74,7 +74,7 @@ class Surrogate(CustomABC):
         """Applies the decoding function of the encoder in reverse order on the input and output training data.
         """
         for enc in self.encoder[::-1]:
-            if enc.output:
+            if enc.work_on_output:
                 self.ytrain = enc.decode(self.ytrain)
             else:
                 self.Xtrain = enc.decode(self.Xtrain)
@@ -89,7 +89,7 @@ class Surrogate(CustomABC):
             ndarray: Encoded and normalized prediction points.
         """
         for enc in self.encoder:
-            if not enc.output:
+            if not enc.work_on_output:
                 x = enc.encode(x)
         return x
 
@@ -107,7 +107,7 @@ class Surrogate(CustomABC):
         """
 
         for enc in self.encoder[::-1]:
-            if enc.output:
+            if enc.work_on_output:
                 if enc.label == 'Normalization':
                     # TODO: Move this somewhere inside the Encoder with a flag like 'work_on_variance'?
                     yv = yv * enc.variables['xmax'] ** 2

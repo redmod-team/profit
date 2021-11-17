@@ -81,7 +81,7 @@ class GPSurrogate(GaussianProcess):
         Xpred = super().pre_predict(Xpred)
         # Encoding is not supported yet for this surrogate.
         for enc in self.encoder[::-1]:
-            if not enc.output:
+            if not enc.work_on_output:
                 Xpred = enc.decode(Xpred)
 
         # Skip data noise sigma_n in hyperparameters

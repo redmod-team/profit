@@ -555,10 +555,14 @@ class FitConfig(AbstractConfig):
                     enc[1] = []
 
         # Delete excluded columns from other encoders
-        [enc2[1].pop(col)
-         for i, enc in enumerate(self.encoder) if enc[0].lower() == 'exclude'
-         for enc2 in self.encoder[i+1:] if enc[2] == enc2[2]
-         for col in enc[1] if col in enc2[1]]
+        for i, enc in enumerate(self.encoder):
+            if enc[0].lower() == 'exclude':
+                for enc2 in self.encoder[i + 1:]:
+                    if enc[2] == enc2[2]:
+                        for col in enc[1]:
+                            if col in enc2[1]:
+                                idx = enc2[1].index(col)
+                                enc2[1].pop(idx)
 
 
 @BaseConfig.register("active_learning")
