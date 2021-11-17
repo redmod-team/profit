@@ -167,7 +167,10 @@ class Surrogate(CustomABC):
         Returns:
             profit.sur.Surrogate: Instantiated surrogate model.
         """
-        label = next(filter(lambda l: l in path, cls.labels), cls._defaults['surrogate'])
+        label = cls._defaults['surrogate']
+        for f in filter(lambda l: l in path, cls.labels):
+            if len(f) > len(label):
+                label = f
         return cls[label].load_model(path)
 
     @classmethod

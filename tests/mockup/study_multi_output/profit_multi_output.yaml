@@ -16,5 +16,7 @@ run:
 files:
     input: input_1D.txt
     output: output_1D.txt
+
 fit:
+    surrogate: CustomMO
     save: model_1D.hdf5

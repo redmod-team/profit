@@ -182,3 +182,82 @@ class GPySurrogate(GaussianProcess):
             return np.atleast_1d(np.linalg.norm(value))
         else:
             return value
+
+
+@Surrogate.register("CoregionalizedGPy")
+class CoregionalizedGPySurrogate(GPySurrogate):
+
+    def pre_train(self, X, y, kernel=None, hyperparameters=None, fixed_sigma_n=False):
+        super().pre_train(X, y, kernel, hyperparameters, fixed_sigma_n)
+        self.output_ndim = self.ytrain.shape[-1]
+
+    def train(self, X, y, kernel=None, hyperparameters=None, fixed_sigma_n=False):
+        self.pre_train(X, y, kernel, hyperparameters, fixed_sigma_n)
+        icm = self.GPy.util.multioutput.ICM(input_dim=self.ndim, num_outputs=self.output_ndim, kernel=self.kernel)
+        _X = self.output_ndim * [self.Xtrain]
+        _y = [self.ytrain[:, d].reshape(-1, 1) for d in range(self.output_ndim)]
+        self.model = self.GPy.models.GPCoregionalizedRegression(_X, _y, kernel=icm)
+        self.optimize()
+        self.post_train()
+
+    def predict(self, Xpred, add_data_variance=True):
+        Xpred = super().pre_predict(Xpred)
+        ymean = np.empty((Xpred.shape[0], self.output_ndim))
+        yvar = ymean.copy()
+        for d in range(self.output_ndim):
+            newX = np.hstack([Xpred, np.ones((Xpred.shape[0], 1)) * d])
+            noise_dict = {'output_index': newX[:, self.ndim:].astype(int)}
+            ym, yv = self.model.predict(newX, Y_metadata=noise_dict)
+            ymean[:, d], yvar[:, d] = ym.flatten(), yv.flatten()
+        ymean, yvar = self.decode_predict_data(ymean, yvar)
+        return ymean, yvar
+
+    def save_model(self, path):
+        # GPy does not support to_dict method for Coregionalization kernel yet.
+        from profit.util.file_handler import FileHandler
+        from os.path import splitext
+        filepath, ending = splitext(path)
+        if ending != '.pkl':
+            print(f"Saving to '{ending}' not implemented yet for {self.__class__.__name__} surrogate."
+                  " Saving to '.pkl' file instead.")
+        save_list = [self.model, self.Xtrain, self.ytrain, str([enc.repr for enc in self.encoder])]
+        FileHandler.save(filepath + '.pkl', save_list)
+
+    @classmethod
+    def load_model(cls, path):
+        from profit.util.file_handler import FileHandler
+        from profit.sur.encoders import Encoder
+
+        self = cls()
+        try:
+            self.model, self.Xtrain, self.ytrain, encoder_str = FileHandler.load(path)
+        except (OSError, FileNotFoundError):
+            from os.path import splitext
+            print("File not found. Try changing file ending to '.pkl'!")
+            path = splitext(path)[0] + '.pkl'
+            # Load multi-output model from pickle file
+            self.model, self.Xtrain, self.ytrain, encoder_str = FileHandler.load(path)
+        self.encoder = [Encoder[func](cols, out, variables) for func, cols, out, variables in eval(encoder_str)]
+        self.output_ndim = int(max(self.model.X[:, -1])) + 1
+
+        # Initialize the encoder by encoding and decoding the training data once.
+        self.encode_training_data()
+        self.decode_training_data()
+
+        self.kernel = self.model.kern
+        self.ndim = self.Xtrain.shape[-1]
+        self._set_hyperparameters_from_model()
+        self.trained = True
+        self.print_hyperparameters("Loaded")
+        return self
+
+    def decode_hyperparameters(self):
+        for key, value in self.hyperparameters.items():
+            new_value = value
+            for enc in self.encoder:
+                new_value = enc.decode_hyperparameters(key, new_value)
+                if key == 'W' or key == 'kappa':
+                    # TODO: Review W and kappa encoding
+                    new_value = value * (enc.variables['xmax'] - enc.variables['xmin']) if enc.output else value
+                new_value = self.special_hyperparameter_decoding(key, new_value)
+            self.hyperparameters[key] = new_value

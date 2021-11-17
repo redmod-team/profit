@@ -211,3 +211,85 @@ class GPSurrogate(GaussianProcess):
         self.hyperparameters['sigma_f'] = np.atleast_1d(model_hyperparameters[last_idx])
         if not self.fixed_sigma_n:
             self.hyperparameters['sigma_n'] = np.atleast_1d(model_hyperparameters[-1])
+
+
+@Surrogate.register("CustomMO")
+class MultiOutputGPSurrogate(GaussianProcess):
+
+    def __init__(self, child=GPSurrogate):
+        super().__init__()
+        self.child = child
+        self.models = []
+
+    def pre_train(self, X, y, kernel=None, hyperparameters=None, fixed_sigma_n=False):
+        self.Xtrain, self.ytrain = np.atleast_2d(X), np.atleast_2d(y)
+        self.set_attributes(fixed_sigma_n=fixed_sigma_n, kernel=kernel, hyperparameters=hyperparameters)
+        self.encode_training_data()
+        self.ndim = self.Xtrain.shape[-1]
+        self.output_ndim = self.ytrain.shape[-1]
+        self.decode_training_data()
+        self.models = [self.child() for _ in range(self.output_ndim)]
+
+    def train(self, X, y, kernel=None, hyperparameters=None, fixed_sigma_n=False, return_hess_inv=False):
+        self.pre_train(X, y)
+        for dim, m in enumerate(self.models):
+            m.train(X, y[:, [dim]], self.kernel, self.hyperparameters, self.fixed_sigma_n,
+                    False, return_hess_inv)
+        self.trained = True
+
+    def predict(self, Xpred, add_data_variance=True):
+        ypred = np.empty((Xpred.shape[0], self.output_ndim))
+        yvar = np.empty_like(ypred)
+
+        for dim, m in enumerate(self.models):
+            ypred[:, [dim]], yvar[:, [dim]] = m.predict(Xpred, add_data_variance)
+        return ypred, yvar
+
+    def add_training_data(self, X, y):
+        for dim, m in enumerate(self.models):
+            m.add_training_data(X, y[:, [dim]])
+
+    def set_ytrain(self, y):
+        for dim, m in enumerate(self.models):
+            m.set_ytrain(y[:, [dim]])
+
+    def save_model(self, path):
+        """Saves the model as dict to a .hdf5 file.
+
+        Parameters:
+            path (str): Path including the file name, where the model should be saved.
+        """
+
+        from profit.util.file_handler import FileHandler
+        save_dict = {attr: getattr(self, attr) for attr in ('trained', 'output_ndim',)}
+        for i, m in enumerate(self.models):
+            save_dict[i] = {attr: getattr(m, attr)
+                            for attr in
+                            ('trained', 'fixed_sigma_n', 'Xtrain', 'ytrain',
+                             'ndim', 'output_ndim', 'kernel', 'hyperparameters')}
+            # Convert the kernel class object to a string, to be able to save it in the .hdf5 file
+            if not isinstance(save_dict[i]['kernel'], str):
+                save_dict[i]['kernel'] = m.kernel.__name__
+        FileHandler.save(path, save_dict)
+
+    @classmethod
+    def load_model(cls, path):
+        from profit.util.file_handler import FileHandler
+
+        load_dict = FileHandler.load(path, as_type='dict')
+        self = cls()
+        self.trained = load_dict['trained']
+        self.output_ndim = load_dict['output_ndim']
+        self.models = [self.child() for _ in range(self.output_ndim)]
+
+        for i, m in enumerate(self.models):
+            for attr, value in load_dict[str(i)].items():
+                setattr(m, attr, value)
+            # Convert the kernel string back to the class object
+            m.kernel = m.select_kernel(m.kernel)
+            m.print_hyperparameters("Loaded")
+        return self
+
+    def optimize(self, **opt_kwargs):
+        for m in self.models:
+            m.optimize(**opt_kwargs)

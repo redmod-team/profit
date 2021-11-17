@@ -220,7 +220,6 @@ class GaussianProcess(Surrogate):
         self.hyperparameters = config['hyperparameters']
         return self
 
-    @abstractmethod
     def select_kernel(self, kernel):
         """Convert the name of the kernel as string to the kernel class object of the surrogate.
 

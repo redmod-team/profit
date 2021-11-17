@@ -124,3 +124,20 @@ class HDF5Handler(FileHandler):
 
         recursive_hdf2dict(dataset, load_dict)
         return load_dict
+
+
+@FileHandler.register("pkl")
+class PickleHandler(FileHandler):
+
+    @classmethod
+    def save(cls, filename, data, **kwargs):
+        from pickle import dump
+        write_method = 'wb' if not 'method' in kwargs else kwargs['method']
+        dump(data, open(filename, write_method))
+
+    @classmethod
+    def load(cls, filename, as_type='raw', read_method='rb'):
+        from pickle import load
+        if as_type != 'raw':
+            return NotImplemented
+        return load(open(filename, read_method))

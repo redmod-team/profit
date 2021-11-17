@@ -121,7 +121,7 @@ def test_custom_worker4():
     multi_test_1d('./study_custom_worker4', 'profit_custom_worker4.yaml', 'output_custom_worker4.hdf5')
 
 
-def no_test_multi_output():
+def test_multi_output():
     """Test a 1D function with two outputs."""
     config_file = 'study_multi_output/profit_multi_output.yaml'
     config = BaseConfig.from_file(config_file)
@@ -130,13 +130,16 @@ def no_test_multi_output():
         run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
         run(f"profit fit {config_file}", shell=True, timeout=TIMEOUT)
         sur = Surrogate.load_model(model_file)
-        assert sur.get_label() == 'GPy'
+        assert sur.get_label() == 'CustomMO'
         assert sur.trained
-        assert sur.model.kern.name == 'ICM'
-        assert allclose(sur.model.likelihood.likelihoods_list[0].variance[0], 0.00032075301845035454, atol=NLL_ATOL)
-        assert allclose(sur.model.likelihood.likelihoods_list[0].variance[0], 3.773865299540149e-09, atol=NLL_ATOL)
-        assert allclose(sur.model.kern.rbf.variance[0], 0.52218353, rtol=PARAM_RTOL)
-        assert allclose(sur.model.kern.rbf.lengthscale, 0.20184872, rtol=PARAM_RTOL)
+        length_scale = [0.22920459, 0.204117]
+        sigma_f = [1.38501625, 1.20300593]
+        sigma_n = [3.37481098e-05, 8.76414971e-05]
+        for i, m in enumerate(sur.models):
+            assert m.kernel.__name__ == 'RBF'
+            assert allclose(m.hyperparameters['length_scale'], length_scale[i], rtol=PARAM_RTOL)
+            assert allclose(m.hyperparameters['sigma_f'], sigma_f[i], rtol=PARAM_RTOL)
+            assert allclose(m.hyperparameters['sigma_n'], sigma_n[i], rtol=PARAM_RTOL)
     finally:
         clean(config)
         from os.path import splitext
