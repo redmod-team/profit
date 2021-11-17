@@ -75,3 +75,9 @@ def load_includes(paths):
         module = module_from_spec(spec)
         sys.modules[name] = module
         spec.loader.exec_module(module)
+
+def flatten_struct(struct_array: np.ndarray):
+    # per default vector entries are spread across several columns
+    if not struct_array.size:
+        return np.array([[]])
+    return np.vstack([np.hstack([row[key].flatten() for key in struct_array.dtype.names]) for row in struct_array])

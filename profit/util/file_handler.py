@@ -41,13 +41,16 @@ class TxtHandler(FileHandler):
     @classmethod
     def save(cls, filename, data, header=None, fmt=None):
         from numpy import hstack, savetxt
-        if not header:
-            header = " ".join(data.dtype.names)
-        data = hstack([data[key] for key in data.dtype.names])
-        if fmt:
-            savetxt(filename, data, header=header, fmt=fmt)
-        else:
-            savetxt(filename, data, header=header)
+        try:
+            if not header:
+                header = " ".join(data.dtype.names)
+            data = hstack([data[key] for key in data.dtype.names])
+            if fmt:
+                savetxt(filename, data, header=header, fmt=fmt)
+            else:
+                savetxt(filename, data, header=header)
+        except TypeError:
+            savetxt(filename, data)
 
     @classmethod
     def load(cls, filename, as_type='dtype'):

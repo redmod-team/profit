@@ -97,7 +97,17 @@ active_learning = {'algorithm': 'simple',
                    }
 
 al_algorithm_simple = {'class': 'simple',
-                       'acquisition_function': 'simple_exploration'}
+                       'acquisition_function': 'simple_exploration',
+                       'save': True}
+al_algorithm_mcmc = {'class': 'mcmc',
+                     'reference_data': './yref.txt',
+                     'warmup_cycles': 1,
+                     'target_acceptance_rate': 0.35,
+                     'sigma_n': 0.05,
+                     'initial_points': None,
+                     'last_percent': 0.25,
+                     'save': './mcmc_model.hdf5',
+                     'delayed_acceptance': False}
 
 al_acquisition_function_simple_exploration = {'class': 'simple_exploration'}
 al_acquisition_function_exploration_with_distance_penalty = {'class': 'exploration_with_distance_penalty',

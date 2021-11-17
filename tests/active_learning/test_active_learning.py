@@ -104,3 +104,51 @@ def test_log():
         clean(config)
         if path.exists(model_file):
             remove(model_file)
+
+
+def test_mcmc():
+    """Test a simple function with two random inputs using MCMC."""
+    from profit.util.file_handler import FileHandler
+    stats_file = 'study_mcmc/mcmc_stats.txt'
+    log_likelihood_file = 'study_mcmc/log_likelihood.txt'
+    config_file = 'study_mcmc/profit_mcmc.yaml'
+    config = BaseConfig.from_file(config_file)
+    try:
+        run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
+        stats = FileHandler.load(stats_file)
+        assert allclose(stats['Xmean'][0], 1.15, atol=2 * stats['Xstd'][0])
+        assert allclose(stats['Xmean'][1], 1.4, atol=2 * stats['Xstd'][1])
+
+    finally:
+        clean(config)
+        if path.exists(stats_file):
+            remove(stats_file)
+        if path.exists(log_likelihood_file):
+            remove(log_likelihood_file)
+
+
+def not_test_delayed_acceptance_mcmc():
+    """Test a simple function with two random inputs using MCMC."""
+    from profit.util.file_handler import FileHandler
+    from time import time
+    from numpy import mean
+    stats_file = 'study_mcmc/mcmc_stats.txt'
+    log_likelihood_file = 'study_mcmc/log_likelihood.txt'
+    config_file = 'study_mcmc/profit_mcmc.yaml'
+    config = BaseConfig.from_file(config_file)
+    try:
+        runtimes = []
+        for iteration in range(1):
+            st = time()
+            run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
+            runtimes.append(time() - st)
+        #stats = FileHandler.load(stats_file)
+        #assert allclose(stats['Xmean'][0] + stats['Xstd'][0], 1.15, atol=0.1)
+        #assert allclose(stats['Xmean'][1] + stats['Xstd'][1], 1.4, atol=0.1)
+        print("Runtime mean: ", mean(runtimes))
+    finally:
+        clean(config)
+        if path.exists(stats_file):
+            remove(stats_file)
+        if path.exists(log_likelihood_file):
+            remove(log_likelihood_file)

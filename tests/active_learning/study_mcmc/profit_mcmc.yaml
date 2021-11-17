@@ -1,0 +1,27 @@
+ntrain: 100
+variables:
+    u: ActiveLearning(1.0, 2.0)
+    v: ActiveLearning(1.0, 2.0)
+    t: Independent(0, 1.992, 250)
+    f: Output(t)
+
+include: ../template/mockup_mcmc.py
+run:
+    worker: mockup_mcmc
+
+files:
+    input: input_mcmc.txt
+    output: output_mcmc.txt
+
+fit:
+    surrogate: Custom
+    save: model_mcmc.hdf5
+
+active_learning:
+    algorithm:
+        class: mcmc
+        reference_data: ./y_experimental.txt
+        warmup_cycles: 3
+        delayed_acceptance: True
+    nwarmup: 30
+    make_plot: False

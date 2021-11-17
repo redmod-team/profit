@@ -80,8 +80,8 @@ def main():
                 FileHandler.save(config['files']['input'], variables.named_input)  # Save learned input variables
             finally:
                 runner.cancel_all()  # Close all run processes
-            if config['fit']['save']:
-                al.save(config['fit']['save'])  # Save surrogate model
+            if config['active_learning']['algorithm']['save']:
+                al.save(config['active_learning']['algorithm']['save'])  # Save AL model
         else:
             # Normal (parallel) run
             params_array = [row[0] for row in variables.named_input]  # Structured array of input values

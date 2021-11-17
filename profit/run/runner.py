@@ -136,3 +136,8 @@ class Runner(CustomABC):
     @property
     def output_data(self):
         return self.interface.output[self.interface.internal['DONE']]
+
+    @property
+    def flat_output_data(self):
+        from profit.util import flatten_struct
+        return flatten_struct(self.output_data)

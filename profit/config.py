@@ -612,6 +612,10 @@ class SimpleALConfig(AlgorithmALConfig):
             except KeyError:
                 setattr(self, key.lower(), sub_config.labels['simple'](**attr))
 
+    def process_entries(self, base_config):
+        if self.save:
+            self.save = base_config['fit']['save']
+
     @classmethod
     def register(cls, sublabel):
         """Decorator to register new classes."""
@@ -623,6 +627,14 @@ class SimpleALConfig(AlgorithmALConfig):
             return obj
 
         return decorator
+
+
+@AlgorithmALConfig.register("mcmc")
+class McmcConfig(AlgorithmALConfig):
+
+    def process_entries(self, base_config):
+        self.save = path.abspath(path.join(base_config.base_dir, self.save))
+        self.reference_data = path.abspath(path.join(base_config.base_dir, self.reference_data))
 
 
 @SimpleALConfig.register("acquisition_function")
