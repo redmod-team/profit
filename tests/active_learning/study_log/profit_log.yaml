@@ -1,0 +1,23 @@
+ntrain: 40
+variables:
+    u: ActiveLearning(1, 100, Log)
+    f: Output
+
+include: ../template/mockup_log.py
+run:
+    worker: LogMockupWorker
+
+files:
+    input: input_log.hdf5
+    output: output_log.hdf5
+
+fit:
+    surrogate: GPy
+    save: model_log.hdf5
+
+active_learning:
+    algorithm:
+        class: simple
+        acquisition_function:
+            class: simple_exploration
+    nwarmup: 3

@@ -23,6 +23,4 @@ fit:
     save: model_2D.hdf5
 
 active_learning:
-    nwarm: 5
-    batch_size: 1
-    acquisition_function: simple_exploration
+    nwarmup: 5

@@ -22,5 +22,7 @@ fit:
     save: model_1D.hdf5
 
 active_learning:
-    nwarm: 3
-    acquisition_function: simple_exploration
+    algorithm:
+        class: simple
+        acquisition_function: simple_exploration
+    nwarmup: 3

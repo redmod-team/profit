@@ -391,6 +391,15 @@ class ActiveLearningVariable(InputVariable):
     def generate_values(self, halton_seq=None):
         return check_ndim(np.full(self.size, np.nan))
 
+    def create_Xpred(self, size):
+        if not isinstance(size, tuple):
+            size = (size, 1)
+        if self.distr.lower() == 'log':
+            return self.constraints[0] * np.exp((np.log(self.constraints[1]) - np.log(self.constraints[0]))
+                                                           * np.linspace(0, 1, size[0])).reshape(size)
+        else:
+            return np.linspace(*self.constraints, size[0]).reshape(size)
+
 
 @Variable.register("output")
 class OutputVariable(Variable):

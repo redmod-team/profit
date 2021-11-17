@@ -23,6 +23,7 @@ class AcquisitionFunction(CustomABC):
         parameters: Miscellaneous parameters for the specified function. E.g. 'exploration_factor'.
     """
     labels = {}
+    al_parameters = {}
 
     def __init__(self, Xpred, surrogate, variables, **parameters):
         self.parameters = parameters
@@ -31,19 +32,32 @@ class AcquisitionFunction(CustomABC):
         self.surrogate = surrogate
         self.variables = variables
 
+    def set_al_parameters(self, **kwargs):
+        for key, value in kwargs.items():
+            if key in self.al_parameters:
+                self.al_parameters[key] = value
+            else:
+                print(f"Skipped setting AL parameter {key}.")
+
     @property
     def loss(self):
         """Current loss with current surrogate and variables."""
         return self.calculate_loss()
 
-    @abstractmethod
     def calculate_loss(self):
         """Calculates the loss of the acquisition function."""
         pass
 
     def find_next_candidates(self, batch_size):
         """Finds the next training input points which minimize the loss/maximize improvement."""
-        pass
+        candidates = np.empty((batch_size, self.Xpred.shape[-1]))
+        y_placeholder = np.zeros((1, self.surrogate.ytrain.shape[-1]))
+        for n in range(batch_size):
+            loss = self.calculate_loss()
+            idx = np.argmax(loss)
+            candidates[n] = self.Xpred[idx.flatten()]
+            self.surrogate.add_training_data(candidates[n].reshape(1, -1), y_placeholder)
+        return candidates
 
 
 @AcquisitionFunction.register("simple_exploration")
@@ -55,16 +69,6 @@ class SimpleExploration(AcquisitionFunction):
         variance /= variance.max()
         loss = variance
         return loss
-
-    def find_next_candidates(self, batch_size):
-        candidates = np.empty((batch_size, self.Xpred.shape[-1]))
-        y_placeholder = np.zeros((1, self.surrogate.ytrain.shape[-1]))
-        for n in range(batch_size):
-            loss = self.calculate_loss()
-            idx = np.argmax(loss)
-            candidates[n] = self.Xpred[idx.flatten()]
-            self.surrogate.add_training_data(candidates[n].reshape(1, -1), y_placeholder)
-        return candidates
 
 
 @AcquisitionFunction.register("exploration_with_distance_penalty")
@@ -102,9 +106,8 @@ class WeightedExploration(AcquisitionFunction):
         weight = self.parameters['weight']
 
         mu, variance = self.surrogate.predict(self.Xpred)
-        mu /= mu.max()
-        variance /= variance.max()
         loss = weight * mu + (1 - weight) * variance
+        loss = np.sum(loss, axis=1)
         return loss
 
 
@@ -118,8 +121,7 @@ class ProbabilityOfImprovement(AcquisitionFunction):
         mu, variance = self.surrogate.predict(self.Xpred)
         improvement = mu + np.sqrt(variance) * np.random.standard_normal(mu.shape) - self.variables.output.max(axis=0)
         improvement[improvement < 0] = 0
-        improvement /= improvement.max()
-        return improvement
+        return np.sum(improvement, axis=1)
 
 
 @AcquisitionFunction.register("expected_improvement")
@@ -143,8 +145,7 @@ class ExpectedImprovement(AcquisitionFunction):
         z = self.improvement / self.sigma
         expected_improvement = self.improvement * norm.cdf(z) + self.sigma * norm.pdf(z)
         expected_improvement[self.sigma == 0] = 0
-        expected_improvement /= expected_improvement.max()
-        return expected_improvement
+        return np.sum(expected_improvement, axis=1)
 
     def mu_part(self):
         xi = self.parameters['exploration_factor']
@@ -190,8 +191,7 @@ class ExpectedImprovement2(AcquisitionFunction):
         z = improvement / sigma
         expected_improvement = improvement * norm.cdf(z) + sigma * norm.pdf(z)
         expected_improvement[sigma == 0] = 0
-        expected_improvement /= expected_improvement.max()
-        return expected_improvement
+        return np.sum(expected_improvement, axis=1)
 
     def find_next_candidates(self, batch_size):
         candidates = np.empty((batch_size, self.Xpred.shape[-1]))
@@ -209,5 +209,26 @@ class ExpectedImprovement2(AcquisitionFunction):
             simple_exploration.surrogate.add_training_data(candidates[n].reshape(1, -1), y_placeholder)
         return candidates
 
-# TODO: Changing exploration and exploitation with krun
+
+@AcquisitionFunction.register("alternating_exploration")
+class AlternatingAF(AcquisitionFunction):
+
+    al_parameters = {'krun': 0}
+
+    def __init__(self, Xpred, surrogate, variables, exploration_factor=0.01, find_min=False, alternating_freq=1):
+        super().__init__(Xpred, surrogate, variables, alternating_freq=alternating_freq)
+        self.exploration = SimpleExploration(Xpred, surrogate, variables)
+        self.expected_improvement = ExpectedImprovement(Xpred, surrogate, variables,
+                                                        exploration_factor=exploration_factor, find_min=find_min)
+        self.current_af = self.exploration
+
+    def find_next_candidates(self, batch_size):
+        if not self.al_parameters['krun'] % self.parameters['alternating_freq']:
+            if self.current_af == self.exploration:
+                self.current_af = self.expected_improvement
+            else:
+                self.current_af = self.exploration
+        candidates = self.current_af.find_next_candidates(batch_size)
+        return candidates
+
 # TODO: MCMC

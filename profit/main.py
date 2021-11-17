@@ -73,8 +73,7 @@ def main():
             from profit.sur.sur import Surrogate
 
             runner.fill(variables.named_input)  # Prepare runner with input variables
-            sur = Surrogate.from_config(config['fit'], config)  # Instantiate surrogate model
-            al = ActiveLearning.from_config(runner, sur, variables, config['active_learning'], config)  # Instantiate active learning algorithm
+            al = ActiveLearning.from_config(runner, variables, config['active_learning'], config)  # Instantiate the active learning algorithm
             try:
                 al.warmup()  # Execute warmup cycles
                 al.learn()  # Execute main learning loop

@@ -112,9 +112,9 @@ class AbstractConfig(CustomABC):
             Attribute or if the attribute is a sub config, a dictionary of the sub config items.
         """
         attr = getattr(self, item)
-        if item in self.labels.keys():
+        if item in self.labels.keys() or hasattr(self, 'sublabels') and item in self.sublabels:
             return {key: attr[key] for key, _ in attr.items()}
-        return getattr(self, item)
+        return attr
 
     def items(self):
         """Implements the dictionary like self.items() method.
@@ -514,31 +514,6 @@ class HDF5PostConfig(PostConfig):
     pass
 
 
-@RunnerConfig.register("default")
-@InterfaceConfig.register("default")
-@PreConfig.register("default")
-@PostConfig.register("default")
-class DefaultConfig(AbstractConfig):
-    """Default config for all run sub configs which just updates the attributes with user entries."""
-
-    def __init__(self, **entries):
-        name = entries.get('class', self.__class__.__name__)
-        warnings.warn(f"Using default config for '{name}'.")
-        self.update(**entries)
-
-    def update(self, **entries):
-        for name, value in entries.items():
-            if hasattr(self, name) or name in map(str.lower, self.labels):
-                attr = getattr(self, name, None)
-                if isinstance(attr, dict):
-                    attr.update(value)
-                    setattr(self, name, attr)
-                else:
-                    setattr(self, name, value)
-            else:
-                setattr(self, name, value)
-
-
 @BaseConfig.register("fit")
 class FitConfig(AbstractConfig):
     """Configuration for the surrogate and encoder. Currently, the only sub config is for the GaussianProcess classes."""
@@ -589,10 +564,108 @@ class FitConfig(AbstractConfig):
 @BaseConfig.register("active_learning")
 class ALConfig(AbstractConfig):
     """Active learning configuration."""
+    labels = {}
 
     def __init__(self, **entries):
         self.set_defaults(defaults.active_learning)
         self.update(**entries)
+
+        for key, sub_config in self.labels.items():
+            attr = getattr(self, key.lower())
+            if isinstance(attr, str):
+                attr = {'class': attr}
+            setattr(self, key.lower(), sub_config.labels[attr['class']](**attr))
+
+    def process_entries(self, base_config):
+        for key in self.labels:
+            getattr(self, key.lower()).process_entries(base_config)
+
+
+@ALConfig.register("algorithm")
+class AlgorithmALConfig(AbstractConfig):
+    labels = {}
+
+    def __init__(self, **entries):
+        for key, value in self.labels.items():
+            if value.__name__ == self.__class__.__name__:
+                self.set_defaults(getattr(defaults, f"al_algorithm_{key}"))
+                self.update(**entries)
+                break
+
+
+@AlgorithmALConfig.register("simple")
+class SimpleALConfig(AlgorithmALConfig):
+    sublabels = {}
+
+    def __init__(self, **entries):
+        super().__init__(**entries)
+        for key, sub_config in self.sublabels.items():
+            attr = getattr(self, key.lower())
+            if isinstance(attr, str):
+                attr = {'class': attr}
+            try:
+                setattr(self, key.lower(), sub_config.labels[attr['class']](**attr))
+            except KeyError:
+                setattr(self, key.lower(), sub_config.labels['simple'](**attr))
+
+    @classmethod
+    def register(cls, sublabel):
+        """Decorator to register new classes."""
+
+        def decorator(obj):
+            if sublabel in cls.sublabels:
+                raise KeyError(f"registering duplicate label '{sublabel}' for {cls.__name__}.")
+            cls.sublabels[sublabel] = obj
+            return obj
+
+        return decorator
+
+
+@SimpleALConfig.register("acquisition_function")
+class AcquisitionFunctionConfig(AbstractConfig):
+    """Acquisition function configuration."""
+    labels = {}
+
+    def __init__(self, **entries):
+        for key, value in self.labels.items():
+            if value.__name__ == self.__class__.__name__:
+                self.set_defaults(getattr(defaults, f"al_acquisition_function_{key}"))
+                self.update(**entries)
+                break
+
+
+@AcquisitionFunctionConfig.register("simple_exploration")
+class SimpleExplorationConfig(AcquisitionFunctionConfig):
+    pass
+
+
+@AcquisitionFunctionConfig.register("exploration_with_distance_penalty")
+class ExplorationWithDistancePenaltyConfig(AcquisitionFunctionConfig):
+    pass
+
+
+@AcquisitionFunctionConfig.register("weighted_exploration")
+class WeightedExplorationConfig(AcquisitionFunctionConfig):
+    pass
+
+
+@AcquisitionFunctionConfig.register("probability_of_improvement")
+class ProbabilityOfImprovementConfig(AcquisitionFunctionConfig):
+    pass
+
+
+@AcquisitionFunctionConfig.register("expected_improvement")
+class ExpectedImprovementConfig(AcquisitionFunctionConfig):
+    pass
+
+
+@AcquisitionFunctionConfig.register("expected_improvement_2")
+class ExpectedImprovement2Config(AcquisitionFunctionConfig):
+    pass
+
+@AcquisitionFunctionConfig.register("alternating_exploration")
+class AlternatingExplorationConfig(AcquisitionFunctionConfig):
+    pass
 
 
 @BaseConfig.register("ui")
@@ -602,3 +675,29 @@ class UIConfig(AbstractConfig):
     def __init__(self, **entries):
         self.plot = defaults.ui['plot']
         self.update(**entries)
+
+
+@RunnerConfig.register("default")
+@InterfaceConfig.register("default")
+@PreConfig.register("default")
+@PostConfig.register("default")
+@AcquisitionFunctionConfig.register("default")
+class DefaultConfig(AbstractConfig):
+    """Default config for all run sub configs which just updates the attributes with user entries."""
+
+    def __init__(self, **entries):
+        name = entries.get('class', self.__class__.__name__)
+        warnings.warn(f"Using default config for '{name}'.")
+        self.update(**entries)
+
+    def update(self, **entries):
+        for name, value in entries.items():
+            if hasattr(self, name) or name in map(str.lower, self.labels):
+                attr = getattr(self, name, None)
+                if isinstance(attr, dict):
+                    attr.update(value)
+                    setattr(self, name, attr)
+                else:
+                    setattr(self, name, value)
+            else:
+                setattr(self, name, value)

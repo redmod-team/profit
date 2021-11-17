@@ -86,3 +86,21 @@ def test_2D():
         clean(config)
         if path.exists(model_file):
             remove(model_file)
+
+
+def test_log():
+    """Test a log function f(u) = log10(u) * sin(10 / u) with a log-transformed AL search space."""
+
+    config_file = 'study_log/profit_log.yaml'
+    config = BaseConfig.from_file(config_file)
+    model_file = './study_log/model_log_GPy.hdf5'
+    try:
+        run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
+        sur = Surrogate.load_model(model_file)
+        assert allclose(sur.hyperparameters['length_scale'], 1.12971188, rtol=PARAM_RTOL)
+        assert allclose(sur.hyperparameters['sigma_f'], 0.26703034, rtol=PARAM_RTOL)
+        assert allclose(sur.hyperparameters['sigma_n'], 5.78397728e-07, rtol=PARAM_RTOL)
+    finally:
+        clean(config)
+        if path.exists(model_file):
+            remove(model_file)
