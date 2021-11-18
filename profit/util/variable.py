@@ -340,6 +340,17 @@ class Variable(CustomABC):
         """Dictionary of the variable attributes."""
         return {k: v for k, v in vars(self).items()}
 
+    def __getitem__(self, item):
+        """Implement dict like behavior to get an attribute by using square brackets.
+
+        Paramters:
+            item (str)
+
+        Returns:
+            Attribute
+        """
+        return getattr(self, item)
+
 
 @Variable.register("input")
 class InputVariable(Variable):
@@ -407,6 +418,8 @@ class OutputVariable(Variable):
 
     def __init__(self, name, kind, size, dependent=(), value=None, dtype=np.float64):
         super().__init__(name, kind, size, value, dtype)
+        if not isinstance(dependent, (list, tuple)):
+            dependent = [dependent]
         self.dependent = dependent
         self.value = value if value is not None else np.full(self.size, np.nan)
 
@@ -415,7 +428,15 @@ class OutputVariable(Variable):
         return {'dependent': entries}
 
     def resolve_dependent(self, ind):
-        """Create a Variable instance for the independent variables of vector outputs."""
+        """Create a :class:`.Variable` instance for the independent variables of vector outputs
+        and set :attr:`dependent`.
+
+        Parameters:
+            ind (profit.util.variable.IndependentVariable or list[profit.util.variable.IndependentVariable]):
+                Independent variables.
+        """
+        if not isinstance(ind, (list, tuple)):
+            ind = [ind]
 
         dvars = []
         for d in self.dependent:

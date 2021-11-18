@@ -28,6 +28,7 @@ Literature:
 from abc import abstractmethod
 import numpy as np
 from profit.sur.sur import Surrogate
+from profit.defaults import fit_gaussian_process as defaults
 
 
 class GaussianProcess(Surrogate):
@@ -64,12 +65,6 @@ class GaussianProcess(Surrogate):
         \end{align}
         $$
     """
-
-    _defaults = {'surrogate': Surrogate._defaults['surrogate'],  # Default parameters for all GP surrogates
-                 'kernel': 'RBF',
-                 'hyperparameters': {'length_scale': None,  # Hyperparameters are inferred from training data
-                                     'sigma_n': None,
-                                     'sigma_f': None}}
 
     def __init__(self):
         super().__init__()
@@ -116,7 +111,7 @@ class GaussianProcess(Surrogate):
     def set_attributes(self, **kwargs):
         for key, value in kwargs.items():
             if not getattr(self, key):
-                new_value = self._defaults.get(key, value) if not value else value
+                new_value = defaults.get(key, value) if not value else value
                 if isinstance(new_value, dict):
                     new_value = new_value.copy()
                 setattr(self, key, new_value)
@@ -168,13 +163,14 @@ class GaussianProcess(Surrogate):
         Returns:
             ndarray: Checked input data or default values inferred from training data.
         """
+        from profit.util import check_ndim
 
         if not self.trained:
             raise RuntimeError("Need to train() before predict()!")
 
         if Xpred is None:
             Xpred = self.default_Xpred()
-        Xpred = np.atleast_2d(Xpred)
+        Xpred = check_ndim(Xpred)
         Xpred = self.encode_predict_data(Xpred)
         return Xpred
 
@@ -251,5 +247,6 @@ class GaussianProcess(Surrogate):
             prefix (str): Usually 'Initialized', 'Loaded' or 'Optimized' to identify the state of the hyperparameters.
         """
 
-        print('\n'.join(["{} hyperparameters:".format(prefix)] +
-                        ["{k}: {v}".format(k=key, v=value) for key, value in self.hyperparameters.items()]))
+        hyperparameter_str = ["{} hyperparameters:".format(prefix)]
+        hyperparameter_str += ["{k}: {v}".format(k=key, v=value) for key, value in self.hyperparameters.items()]
+        print('\n'.join(hyperparameter_str))

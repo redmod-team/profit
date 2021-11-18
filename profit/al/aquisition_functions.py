@@ -230,5 +230,3 @@ class AlternatingAF(AcquisitionFunction):
                 self.current_af = self.exploration
         candidates = self.current_af.find_next_candidates(batch_size)
         return candidates
-
-# TODO: MCMC

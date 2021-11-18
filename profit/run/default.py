@@ -221,12 +221,85 @@ class TemplatePreprocessor(Preprocessor):
     """
     def pre(self, data, run_dir):
         # No call to super()! replaces the default preprocessing
-        from profit.pre import fill_run_dir_single
         if os.path.exists(run_dir):
             rmtree(run_dir)
-        fill_run_dir_single(data, self.config['path'], run_dir, ignore_path_exists=True,
+        self.fill_run_dir_single(data, self.config['path'], run_dir, ignore_path_exists=True,
                             param_files=self.config['param_files'])
         os.chdir(run_dir)
+
+    def fill_run_dir_single(self, params, template_dir, run_dir_single, param_files=None, overwrite=False,
+                            ignore_path_exists=False):
+        if os.path.exists(run_dir_single) and not ignore_path_exists:  # ToDo: make ignore_path_exists default
+            if overwrite:
+                rmtree(run_dir_single)
+            else:
+                raise RuntimeError('Run directory not empty: {}'.format(run_dir_single))
+        self.copy_template(template_dir, run_dir_single)
+
+        self.fill_template(run_dir_single, params, param_files=param_files)
+
+    def copy_template(self, template_dir, out_dir, dont_copy=None):
+        from shutil import copytree, ignore_patterns
+
+        if dont_copy:
+            copytree(template_dir, out_dir, symlinks=True, ignore=ignore_patterns(*dont_copy))
+        else:
+            copytree(template_dir, out_dir, symlinks=True)
+        self.convert_relative_symlinks(template_dir, out_dir)
+
+    @staticmethod
+    def convert_relative_symlinks(template_dir, out_dir):
+        """When copying the template directory to the single run directories,
+         relative paths in symbolic links are converted to absolute paths."""
+        for root, dirs, files in os.walk(out_dir):
+            for filename in files:
+                filepath = os.path.join(root, filename)
+                if os.path.islink(filepath):
+                    linkto = os.readlink(filepath)
+                    if linkto.startswith('.'):
+                        os.remove(filepath)
+                        start_dir = os.path.relpath(root, out_dir)
+                        os.symlink(os.path.join(template_dir, start_dir, filename), filepath)
+
+    def fill_template(self, out_dir, params, param_files=None):
+        """
+        Arguments:
+            param_files(list): a list of filenames which are to be substituted or None for all
+        """
+        if param_files is None:
+            param_files = []
+        for root, dirs, files in os.walk(out_dir):  # by default, walk ignores subdirectories which are links
+            for filename in files:
+                filepath = os.path.join(root, filename)
+                if (not param_files and not os.path.islink(filepath)) or filename in param_files:
+                    self.fill_template_file(filepath, filepath, params)
+
+    def fill_template_file(self, template_filepath, output_filepath, params, copy_link=True):
+        """Fill template in `template_filepath` by `params` and output into
+        `output_filepath`. If `copy_link` is set (default), do not write into
+        symbolic links but copy them instead.
+        """
+        with open(template_filepath, 'r') as f:
+            content = self.replace_template(f.read(), params)
+        if copy_link and os.path.islink(output_filepath):
+            os.remove(output_filepath)  # otherwise the link target would be substituted
+        with open(output_filepath, 'w') as f:
+            f.write(content)
+
+    @staticmethod
+    def replace_template(content, params):
+        """Returns filled template by putting values of `params` in `content`.
+
+        # Escape '{*}' for e.g. json templates by replacing it with '{{*}}'.
+        # Variables then have to be declared as '{{*}}' which is replaced by a single '{*}'.
+        """
+        from profit.util import SafeDict
+        pre, post = '{', '}'
+        if '{{' in content:
+            content = content.replace('{{', '§').replace('}}', '§§') \
+                .replace('{', '{{').replace('}', '}}').replace('§§', '}').replace('§', '{')
+            pre, post = '{{', '}}'
+        return content.format_map(SafeDict.from_params(params, pre=pre, post=post))
 
 
 # === JSON Postprocessor === #

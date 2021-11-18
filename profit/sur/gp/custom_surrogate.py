@@ -126,8 +126,9 @@ class GPSurrogate(GaussianProcess):
             path (str): Path including the file name, where the model should be saved.
         """
         from profit.util.file_handler import FileHandler
-        save_dict = {attr: getattr(self, attr)
-                     for attr in ('trained', 'fixed_sigma_n', 'Xtrain', 'ytrain', 'ndim', 'kernel', 'hyperparameters')}
+
+        saved_attrs = ('trained', 'fixed_sigma_n', 'Xtrain', 'ytrain', 'ndim', 'kernel', 'hyperparameters')
+        save_dict = {attr: getattr(self, attr) for attr in saved_attrs}
 
         # Convert the kernel class object to a string, to be able to save it in the .hdf5 file
         if not isinstance(save_dict['kernel'], str):
@@ -152,6 +153,7 @@ class GPSurrogate(GaussianProcess):
 
         for attr, value in sur_dict.items():
             setattr(self, attr, value)
+
         # Convert the kernel string back to the class object
         self.kernel = self.select_kernel(self.kernel)
         self.print_hyperparameters("Loaded")
@@ -179,7 +181,7 @@ class GPSurrogate(GaussianProcess):
             try:
                 return getattr(fortran_kernels, kernel)
             except AttributeError:
-                raise RuntimeError("Kernel {} not implemented.".format(kernel))
+                raise RuntimeError(f"Kernel {kernel} not implemented.")
 
     def optimize(self, fixed_sigma_n=False, eval_gradient=False, return_hess_inv=False):
         r"""Optimize the hyperparameters length_scale $l$, scale $\sigma_f$ and noise $\sigma_n$.

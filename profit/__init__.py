@@ -5,13 +5,10 @@ Explicit imports:
     profit.run
     profit.sur
     profit.ui
-    profit.uq
 """
 
 from . import main
-from . import pre
 from . import config
-
 from . import util
 
 # Retrieving package version at runtime

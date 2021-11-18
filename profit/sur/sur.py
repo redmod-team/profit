@@ -15,8 +15,9 @@ Class structure:
 """
 
 from abc import abstractmethod
-from profit.util.base_class import CustomABC
 import numpy as np
+from profit.util.base_class import CustomABC
+from profit.defaults import fit as defaults
 
 
 class Surrogate(CustomABC):
@@ -44,11 +45,6 @@ class Surrogate(CustomABC):
     """
 
     labels = {}  # All surrogates are registered here
-    _defaults = {'surrogate': 'GPy',  # Default surrogate configuration parameters
-                 'save': './model.hdf5',
-                 'load': False,
-                 'fixed_sigma_n': False,
-                 'encoder': []}
 
     def __init__(self):
         self.trained = False
@@ -115,7 +111,7 @@ class Surrogate(CustomABC):
         return ym, yv
 
     @abstractmethod
-    def train(self, X, y, fixed_sigma_n=False):
+    def train(self, X, y, fixed_sigma_n=defaults['fixed_sigma_n']):
         r"""Trains the surrogate on input points X and model outputs y.
 
         Depending on the surrogate, the signature can vary.
@@ -167,7 +163,7 @@ class Surrogate(CustomABC):
         Returns:
             profit.sur.Surrogate: Instantiated surrogate model.
         """
-        label = cls._defaults['surrogate']
+        label = defaults['surrogate']
         for f in filter(lambda l: l in path, cls.labels):
             if len(f) > len(label):
                 label = f
