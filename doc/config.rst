@@ -342,6 +342,12 @@ The following gives an overview of all possible parameters
         | whether to record the computation time (using the key ``TIME``)
         | currently this information is not added to the output data
 
+    .. confval:: debug
+        :type: boolean
+        :default: ``false``
+
+        | whether to include debug and info messages in runner.log
+
     .. confval:: log_path
         :type: path
         :default: ``log``

@@ -1,5 +1,5 @@
 """Global default configuration values."""
-from os import path, getcwd, cpu_count
+from os import path, getcwd
 
 # Base Config
 base_dir = path.abspath(getcwd())
@@ -20,6 +20,7 @@ run = {'runner': 'local',
        'stderr': None,
        'clean': True,
        'time': True,
+       'debug': False,
        'log_path': 'log',
        'include': [],
        'custom': False,
@@ -27,7 +28,7 @@ run = {'runner': 'local',
 
 
 run_runner_local = {'class': 'local',
-                    'parallel': cpu_count(),
+                    'parallel': 'all',
                     'sleep': 0,
                     'fork': True}
 

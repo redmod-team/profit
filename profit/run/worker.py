@@ -160,6 +160,7 @@ class Worker:
     def __init__(self, config: Mapping, interface_class, pre_class, post_class, run_id: int):
         self.logger = logging.getLogger('Worker')
         self.logger.setLevel(logging.DEBUG)
+        self.logger.propagate = False
         try:
             os.mkdir(config['log_path'])
         except FileExistsError:

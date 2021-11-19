@@ -44,16 +44,19 @@ class LocalRunner(Runner):
                 self.runs[self.next_run_id].wait()
                 del self.runs[self.next_run_id]
         else:
+            def work():
+                worker = Worker.from_config(self.run_config, self.next_run_id)
+                worker.main()
             os.chdir(self.base_config['run_dir'])
-            worker = Worker.from_config(self.run_config, self.next_run_id)
-            process = Process(target=worker.main)
-            self.runs[self.next_run_id] = (worker, process)
+            process = Process(target=work)
+            self.runs[self.next_run_id] = process
             process.start()
             if wait:
                 process.join()
                 del self.runs[self.next_run_id]
             os.chdir(self.base_config['base_dir'])
         self.next_run_id += 1
+
 
     def spawn_array(self, params_array, blocking=True):
         """ spawn an array of runs, maximum 'parallel' at the same time, blocking until all are done """
@@ -79,7 +82,7 @@ class LocalRunner(Runner):
                 elif poll and process.poll() is not None:
                     del self.runs[run_id]
         else:
-            for run_id, (worker, process) in list(self.runs.items()):  # preserve state before deletions
+            for run_id, process in list(self.runs.items()):  # preserve state before deletions
                 if self.interface.internal['DONE'][run_id]:
                     process.join()  # just to make sure
                     del self.runs[run_id]
@@ -92,7 +95,7 @@ class LocalRunner(Runner):
             for process in self.runs.values():
                 process.terminate()
         else:
-            for worker, process in self.runs.values():
+            for process in self.runs.values():
                 process.terminate()
         self.runs = {}
 
