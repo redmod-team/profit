@@ -24,3 +24,8 @@ fit:
 
 active_learning:
     nwarmup: 5
+    algorithm:
+        class: simple
+        acquisition_function:
+            class: simple_exploration
+            use_marginal_variance: True

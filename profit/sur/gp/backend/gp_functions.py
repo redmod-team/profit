@@ -243,28 +243,31 @@ def invert_cholesky(L):
                             lower=False, check_finite=False)
 
 
-def invert(K, neig=0, tol=1e-10, max_iter=1000):
+def invert(K, neig=0, tol=1e-10, eps=1e-6, max_iter=1000):
     """Inverts a positive-definite matrix using either a Cholesky- or an Eigendecomposition.
 
     The solution method depends on the rapidness of decay of the eigenvalues.
 
     Parameters:
-        K (ndarray): Kernel matrix.
+        K (np.ndarray): Kernel matrix.
         neig (int): Initial number of eigenvalues to calculate if the Cholesky decomposition is not successful.
             This is doubled during every iteration.
         tol (float): Convergence criterion for the eigenvalues.
+        eps (float): Small number to be added to diagonal of kernel matrix to ensure positive definiteness.
         max_iter (int): Maximum number of iterations of the eigenvalue solver until convergence must be reached.
 
     Returns:
-        ndarray: Inverse covariance matrix.
+        np.ndarray: Inverse covariance matrix.
     """
+    from scipy.sparse.linalg import eigsh
 
-    # TODO: Fix this or continue using scipy?
-    """
-    L = np.linalg.cholesky(K)  # Cholesky decomposition of the covariance matrix
+    try:
+        L = np.linalg.cholesky(K)  # Cholesky decomposition of the covariance matrix
+    except np.linalg.LinAlgError:
+        L = np.linalg.cholesky(K + eps * np.eye(K.shape[0], K.shape[1]))
     if neig <= 0 or neig > 0.05 * len(K):  # First try with Cholesky decomposition
         try:
-            return cls.invert_cholesky(L)
+            return invert_cholesky(L)
         except np.linalg.LinAlgError:
             print('Warning! Fallback to eig solver!')
 
@@ -273,7 +276,7 @@ def invert(K, neig=0, tol=1e-10, max_iter=1000):
     for iteration in range(max_iter):  # Iterate until convergence or max_iter
         if neig > 0.05 * len(K):
             try:
-                return cls.invert_cholesky(L)
+                return invert_cholesky(L)
             except np.linalg.LinAlgError:
                 print("Warning! Fallback to eig solver!")
         neig = 2 * neig  # Calculate more eigenvalues
@@ -284,14 +287,10 @@ def invert(K, neig=0, tol=1e-10, max_iter=1000):
             break
     if iteration == max_iter:
         print("Tried maximum number of times.")
-    """
-    from scipy.sparse.linalg import eigsh
-    from scipy.linalg import eigh, inv
-    # w, Q = eigh(K)
-    # negative_eig = (-1e-2 < w) & (w < 0)
-    # w[negative_eig] = 1e-2
-    # K_inv = Q @ (np.diag(1 / w) @ Q.T)
-    K_inv = inv(K, check_finite=True)
+
+    negative_eig = (-1e-2 < w) & (w < 0)
+    w[negative_eig] = 1e-2
+    K_inv = Q @ (np.diag(1 / w) @ Q.T)
     return K_inv
 
 

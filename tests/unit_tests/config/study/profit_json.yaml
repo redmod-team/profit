@@ -9,7 +9,7 @@ variables:
 
 run:
     post:
-        class: numpytxt
+        class: hdf5
         path: mockup.out
     command: python3 mockup.py
     clean: false

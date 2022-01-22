@@ -10,6 +10,6 @@ files = {'input': 'input.txt',
          'output': 'output.txt'}
 
 run = {'pre': {'class': 'template', 'param_files': ['mockup.in']},
-       'post': {'class': 'numpytxt', 'path': 'mockup.out'},
+       'post': {'class': 'hdf5', 'path': 'mockup.out'},
        'command': 'python3 mockup.py',
        'clean': False}

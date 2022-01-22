@@ -1,5 +1,6 @@
 """Mockup domain code."""
 import numpy as np
+from h5py import File
 
 
 def rosenbrock(x, y, a, b):
@@ -14,4 +15,6 @@ params = np.loadtxt('mockup.in')
 r = np.arange(0, 1, 0.1)
 result = f(r, params[0], params[1])
 print(result)
-np.savetxt('mockup.out', np.concatenate([result[0], result[1]]))
+with File('mockup.out', 'w') as fout:
+    fout['f'] = result[0]
+    fout['g'] = result[1]

@@ -16,7 +16,7 @@ run:
         class: template
         param_files: [mockup.in]
     post:
-        class: numpytxt
+        class: hdf5
         path: mockup.out
     command: python3 mockup.py
     clean: false
