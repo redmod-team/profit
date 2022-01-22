@@ -119,6 +119,17 @@ class GPSurrogate(GaussianProcess):
         """
         self.ytrain = np.atleast_2d(ydata.copy())
 
+    def get_marginal_variance(self, Xpred):
+        from .backend.gp_functions import marginal_variance_BBQ
+        self.optimize(fixed_sigma_n=self.fixed_sigma_n, eval_gradient=True,
+                      return_hess_inv=True)
+        assert self.hess_inv is not None
+
+        _, fvar = self.predict(Xpred)
+        return marginal_variance_BBQ(self.Xtrain, self.ytrain, Xpred, self.kernel,
+                                     self.hyperparameters, self.hess_inv, self.fixed_sigma_n,
+                                     alpha=self.alpha, predictive_variance=fvar)
+
     def save_model(self, path):
         """Saves the model as dict to a .hdf5 file.
 
@@ -172,7 +183,10 @@ class GPSurrogate(GaussianProcess):
         """
 
         # TODO: Rewrite fortran kernels and rename them to be explicit, like 'fRBF'
-        from .backend import kernels as fortran_kernels
+        try:
+            from .backend import kernels as fortran_kernels
+        except:
+            pass
         from .backend import python_kernels
 
         try:

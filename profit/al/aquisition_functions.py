@@ -64,10 +64,19 @@ class AcquisitionFunction(CustomABC):
 class SimpleExploration(AcquisitionFunction):
     """Minimizes the local variance, which means the next points are generated at points of high variance."""
 
+    def __init__(self, Xpred, surrogate, variables, use_marginal_variance=False, **parameters):
+        super().__init__(Xpred, surrogate, variables, use_marginal_variance=use_marginal_variance, **parameters)
+
     def calculate_loss(self):
-        _, variance = self.surrogate.predict(self.Xpred)
-        variance /= variance.max()
-        loss = variance
+        if self.parameters['use_marginal_variance']:
+            if hasattr(self.surrogate, 'get_marginal_variance'):
+                variance = self.surrogate.get_marginal_variance(self.Xpred)
+            else:
+                print("Surrogate has no method 'get_marginal_variance'. Using predictive variance instead.")
+                _, variance = self.surrogate.predict(self.Xpred)
+        else:
+            _, variance = self.surrogate.predict(self.Xpred)
+        loss = np.sum(variance, axis=1)
         return loss
 
 
@@ -79,14 +88,15 @@ class ExplorationWithDistancePenalty(SimpleExploration):
         weight (float): Exponential penalty factor: $penalty = 1 - exp(c1 * |X_{pred} - X_{last}|)$.
     """
 
-    def __init__(self, Xpred, surrogate, variables, weight=10):
-        super().__init__(Xpred, surrogate, variables, weight=weight)
+    def __init__(self, Xpred, surrogate, variables, use_marginal_variance=False, weight=10):
+        super().__init__(Xpred, surrogate, variables, use_marginal_variance=use_marginal_variance, weight=weight)
 
     def calculate_loss(self):
         c1 = self.parameters['weight']
         loss = super().calculate_loss()
+        loss_scale = loss.max(axis=0)
         last_point = self.variables.input[np.sum(~np.isnan(self.variables.input), axis=0).min() - 1]
-        loss += 1.0 - np.exp(-c1 * np.linalg.norm(self.Xpred - last_point, axis=1).reshape(-1, 1))
+        loss += loss_scale * (1.0 - np.exp(-c1 * np.linalg.norm(self.Xpred - last_point, axis=1).reshape(-1, 1)))
         loss /= 2
         return loss
 
@@ -215,9 +225,9 @@ class AlternatingAF(AcquisitionFunction):
 
     al_parameters = {'krun': 0}
 
-    def __init__(self, Xpred, surrogate, variables, exploration_factor=0.01, find_min=False, alternating_freq=1):
+    def __init__(self, Xpred, surrogate, variables, use_marginal_variance=False, exploration_factor=0.01, find_min=False, alternating_freq=1):
         super().__init__(Xpred, surrogate, variables, alternating_freq=alternating_freq)
-        self.exploration = SimpleExploration(Xpred, surrogate, variables)
+        self.exploration = SimpleExploration(Xpred, surrogate, variables, use_marginal_variance=use_marginal_variance)
         self.expected_improvement = ExpectedImprovement(Xpred, surrogate, variables,
                                                         exploration_factor=exploration_factor, find_min=find_min)
         self.current_af = self.exploration

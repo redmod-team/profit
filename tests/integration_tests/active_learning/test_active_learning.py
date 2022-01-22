@@ -79,9 +79,9 @@ def test_2D():
         assert sur.trained
         assert sur.kernel.__name__ == 'RBF'
         assert sur.ndim == 2
-        assert allclose(sur.hyperparameters['length_scale'], 0.96472754, rtol=PARAM_RTOL)
-        assert allclose(sur.hyperparameters['sigma_f'], 15.02288291, rtol=PARAM_RTOL)
-        assert allclose(sur.hyperparameters['sigma_n'], 8.83125694e-06, rtol=PARAM_RTOL)
+        assert allclose(sur.hyperparameters['length_scale'], 0.77230696, rtol=PARAM_RTOL)
+        assert allclose(sur.hyperparameters['sigma_f'], 6.1093862, rtol=PARAM_RTOL)
+        assert allclose(sur.hyperparameters['sigma_n'], 0.00706141, rtol=PARAM_RTOL)
     finally:
         clean(config)
         if path.exists(model_file):
@@ -127,7 +127,7 @@ def test_mcmc():
             remove(log_likelihood_file)
 
 
-def not_test_delayed_acceptance_mcmc():
+def test_delayed_acceptance_mcmc():
     """Test a simple function with two random inputs using MCMC."""
     from profit.util.file_handler import FileHandler
     from time import time
@@ -142,10 +142,9 @@ def not_test_delayed_acceptance_mcmc():
             st = time()
             run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
             runtimes.append(time() - st)
-        #stats = FileHandler.load(stats_file)
-        #assert allclose(stats['Xmean'][0] + stats['Xstd'][0], 1.15, atol=0.1)
-        #assert allclose(stats['Xmean'][1] + stats['Xstd'][1], 1.4, atol=0.1)
-        print("Runtime mean: ", mean(runtimes))
+        stats = FileHandler.load(stats_file)
+        assert allclose(stats['Xmean'][0], 1.15, atol=2*stats['Xstd'][0])
+        assert allclose(stats['Xmean'][1], 1.4, atol=2*stats['Xstd'][1])
     finally:
         clean(config)
         if path.exists(stats_file):

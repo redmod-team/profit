@@ -117,14 +117,6 @@ class SimpleAL(ActiveLearning):
         super().update_run(candidates)
         self.update_data()
 
-    def update_data(self):
-        """Update the variables with the runner data."""
-
-        for key in self.runner.input_data.dtype.names:
-            self.variables[key].value = self.runner.input_data[key].reshape(-1, 1)
-        for key in self.runner.output_data.dtype.names:
-            self.variables[key].value = self.runner.output_data[key].reshape(-1, 1)
-
     def save(self, path):
         self.surrogate.save_model(path)
 

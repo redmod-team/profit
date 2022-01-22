@@ -109,10 +109,12 @@ al_algorithm_mcmc = {'class': 'mcmc',
                      'save': './mcmc_model.hdf5',
                      'delayed_acceptance': False}
 
-al_acquisition_function_simple_exploration = {'class': 'simple_exploration'}
+al_acquisition_function_simple_exploration = {'class': 'simple_exploration',
+                                              'use_marginal_variance': False}
 al_acquisition_function_exploration_with_distance_penalty = {'class': 'exploration_with_distance_penalty',
                                                              'weight': 10}
 al_acquisition_function_weighted_exploration = {'class': 'weighted_exploration',
+                                                'use_marginal_variance': False,
                                                 'weight': 0.5}
 al_acquisition_function_probability_of_improvement = {'class': 'probability_of_improvement'}
 al_acquisition_function_expected_improvement = {'class': 'expected_improvement',
@@ -122,6 +124,7 @@ al_acquisition_function_expected_improvement_2 = {'class': 'expected_improvement
                                                   'exploration_factor': 0.01,
                                                   'find_min': False}
 al_acquisition_function_alternating_exploration = {'class': 'alternating_exploration',
+                                                   'use_marginal_variance': False,
                                                    'exploration_factor': 0.01,
                                                    'find_min': False,
                                                    'alternating_freq': 1}
