@@ -83,7 +83,7 @@ class McmcAL(ActiveLearning):
         y_model = x[:,0] * np.sin((t - x[:, 1])**3)
         return y_model
 
-    def warmup(self):
+    def warmup(self, save_intermediate=base_defaults['save_intermediate']):
         """Warmup MCMC."""
         from time import time
         self.Xtrain[0] = self.Xpred[np.random.choice(self.Xpred.shape[0])] \
@@ -128,23 +128,28 @@ class McmcAL(ActiveLearning):
             print(f"Acceptance rate for warmup cycle {cycle+1}: {acceptance_rate}")
             self.dx = self.dx * np.exp(acceptance_rate / self.target_acceptance_rate - 1)
 
+            if self.delayed_acceptance_surrogate:
+                self.delayed_acceptance_surrogate.train(self.Xtrain[:self.nwarmup + 1],
+                                                        self.log_likelihood[:self.nwarmup + 1])
+
+            if save_intermediate:
+                self.save_intermediate(**save_intermediate)
+
             if cycle+1 < self.warmup_cycles:
                 self.Xtrain[0] = self.Xtrain[self.nwarmup]
                 self.ytrain[0] = self.ytrain[self.nwarmup]
                 self.log_likelihood[0] = self.log_likelihood[self.nwarmup]
         print("Runtime warmup: {}".format(time() - st))
 
-        if self.delayed_acceptance_surrogate:
-            self.delayed_acceptance_surrogate.train(self.Xtrain[:self.nwarmup+1], self.log_likelihood[:self.nwarmup+1])
-
-    def learn(self):
+    def learn(self, resume_from=base_defaults['resume_from'], save_intermediate=base_defaults['save_intermediate']):
         from time import time
 
         st = time()
 
-        self.do_mcmc(range(self.nwarmup, self.ntrain))
+        kstart = resume_from if resume_from is not None else self.nwarmup
+        self.do_mcmc(range(kstart, self.ntrain))
         if self.delayed_acceptance_surrogate:
-            print("Surrogate acceptance: ", np.mean(self.accepted_sur[self.nwarmup+1:], axis=0))
+            print("Surrogate acceptance: ", np.mean(self.accepted_sur[kstart+1:], axis=0))
 
         if self.make_plot:
             self.plot_mcmc('learn')
@@ -155,6 +160,9 @@ class McmcAL(ActiveLearning):
         print("Best parameters: {} +- {}".format(mean_Xtrain, std_Xtrain))
 
         self.update_data()
+
+        if save_intermediate:
+            self.save_intermediate(**save_intermediate)
 
         print("Runtime main loop: {}".format(time() - st))
         if self.make_plot:

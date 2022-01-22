@@ -49,7 +49,7 @@ class SimpleAL(ActiveLearning):
         for p in self.acquisition_function.al_parameters:
             self.acquisition_function.al_parameters[p] = getattr(self, p)
 
-    def warmup(self):
+    def warmup(self, save_intermediate=base_defaults['save_intermediate']):
         """To get data for active learning, sample initial points randomly."""
         from profit.util.variable import halton
         params_array = [{} for _ in range(self.nwarmup)]
@@ -69,15 +69,20 @@ class SimpleAL(ActiveLearning):
         self.update_data()
 
         self.surrogate.train(self.variables.input[:self.nwarmup], self.variables.output[:self.nwarmup])
+
+        if save_intermediate:
+            self.save_intermediate(**save_intermediate)
+
         if self.make_plot:
             self.plot()
 
-    def learn(self):
+    def learn(self, resume_from=base_defaults['resume_from'], save_intermediate=base_defaults['save_intermediate']):
         from time import time
         from tqdm import tqdm
 
         st = time()
-        for krun in tqdm(range(self.nwarmup, self.ntrain, self.batch_size)):
+        kstart = resume_from if resume_from is not None else self.nwarmup
+        for krun in tqdm(range(kstart, self.ntrain, self.batch_size)):
             """
             1. find next candidates (and assign input)
             2. update runs
@@ -94,6 +99,10 @@ class SimpleAL(ActiveLearning):
             self.update_run(candidates)
             self.surrogate.set_ytrain(self.variables.output[:krun + self.batch_size])
             self.surrogate.optimize()
+
+            if save_intermediate:
+                self.save_intermediate(**save_intermediate)
+
             if self.make_plot:
                 self.plot()
 

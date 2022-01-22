@@ -99,6 +99,13 @@ class Runner(CustomABC):
             for key, value in mapping.items():
                 self.interface.input[key][r + offset] = value
 
+    def fill_output(self, named_output, offset=0):
+        if offset + len(named_output) - 1 >= self.interface.size:
+            self.interface.resize(max(offset + len(named_output), 2 * self.interface.size))
+        for r, row in enumerate(named_output):
+            for key in row.dtype.names:
+                self.interface.output[key][r + offset] = row[key]
+
     @abstractmethod
     def spawn_run(self, params=None, wait=False):
         """spawn a single run

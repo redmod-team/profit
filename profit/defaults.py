@@ -93,7 +93,11 @@ active_learning = {'algorithm': 'simple',
                    'batch_size': 1,
                    'convergence_criterion': 1e-5,
                    'nsearch': 50,
-                   'make_plot': False
+                   'make_plot': False,
+                   'save_intermediate': {'model_path': './model.hdf5',
+                                         'input_path': './input.txt',
+                                         './output_path': 'output.txt'},
+                   'resume_from': None
                    }
 
 al_algorithm_simple = {'class': 'simple',

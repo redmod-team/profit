@@ -36,7 +36,10 @@ class ActiveLearning(CustomABC):
         self.variables = variables
 
         self.ntrain = ntrain
-        self.nwarmup = nwarmup
+        self.nwarmup = min(nwarmup, ntrain)
+
+        if nwarmup > ntrain:
+            print("WARNING: nwarmup > ntrain. Setting nwarmup=ntrain.")
 
         self.batch_size = batch_size
         if (ntrain - nwarmup) % batch_size:
@@ -48,12 +51,12 @@ class ActiveLearning(CustomABC):
         self.krun = 0
 
     @abstractmethod
-    def warmup(self):
+    def warmup(self, save_intermediate=defaults['save_intermediate']):
         """Warmup cycle before the actual learning starts."""
         pass
 
     @abstractmethod
-    def learn(self):
+    def learn(self, resume_from=defaults['resume_from'], save_intermediate=defaults['save_intermediate']):
         """Main loop for active learning."""
         pass
 
@@ -72,6 +75,15 @@ class ActiveLearning(CustomABC):
         # Start batch
         self.runner.spawn_array(params_array, blocking=True)
 
+    def update_data(self):
+        """Update the variables with the runner data."""
+        from profit.util import check_ndim
+
+        for key in self.runner.input_data.dtype.names:
+            self.variables[key].value = check_ndim(self.runner.interface.input[key])
+        for key in self.runner.output_data.dtype.names:
+            self.variables[key].value = check_ndim(self.runner.interface.output[key])
+
     @abstractmethod
     def save(self, path):
         """Save the AL model.
@@ -80,6 +92,18 @@ class ActiveLearning(CustomABC):
             path (str): Path where the model is saved.
         """
         pass
+
+    def save_intermediate(self, model_path=None, input_path=None, output_path=None):
+        from profit.util.file_handler import FileHandler
+        if model_path:
+            self.save(model_path)
+        if input_path:
+            FileHandler.save(input_path, self.variables.named_input)
+        if output_path:
+            formatted_output_data = self.variables.formatted_output \
+                if output_path.endswith('.txt') else self.variables.named_output
+            FileHandler.save(output_path, formatted_output_data)
+        print('Saved intermediate results.')
 
     @abstractmethod
     def plot(self):

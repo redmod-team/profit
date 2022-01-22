@@ -64,7 +64,14 @@ def main():
         from profit.util.file_handler import FileHandler
 
         runner = Runner.from_config(config['run'], config)  # Instantiate the runner
-
+        if config['active_learning']['resume_from'] is not None:
+            X = FileHandler.load(config['files']['input'])
+            y = FileHandler.load(config['files']['output'])
+            for v in variables.list:
+                if v.name in X.dtype.names:
+                    v.value = X[v.name]
+                else:
+                    v.value = y[v.name]
         FileHandler.save(config['files']['input'], variables.named_input)  # Save variables to input file
 
         # Check if active learning needs to be done instead of executing a normal run
@@ -75,8 +82,17 @@ def main():
             runner.fill(variables.named_input)  # Prepare runner with input variables
             al = ActiveLearning.from_config(runner, variables, config['active_learning'], config)  # Instantiate the active learning algorithm
             try:
-                al.warmup()  # Execute warmup cycles
-                al.learn()  # Execute main learning loop
+                save_intermediate = {'model_path': config['fit']['save'] or config['fit']['load'],
+                                     'input_path': config['files']['input'],
+                                     'output_path': config['files']['output']}
+                if config['active_learning']['resume_from']:
+                    resume_from = config['active_learning']['resume_from']
+                    runner.fill_output(variables.named_output)
+                    runner.next_run_id = resume_from
+                    al.learn(resume_from=resume_from, save_intermediate=save_intermediate)
+                else:
+                    al.warmup(save_intermediate=save_intermediate)  # Execute warmup cycles
+                    al.learn(save_intermediate=save_intermediate)  # Execute main learning loop
                 FileHandler.save(config['files']['input'], variables.named_input)  # Save learned input variables
             finally:
                 runner.cancel_all()  # Close all run processes
