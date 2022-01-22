@@ -18,5 +18,5 @@ files:
     output: output_1D.txt
 
 fit:
-    surrogate: CustomMO
+    surrogate: CustomMultiOutputGP
     save: model_1D.hdf5

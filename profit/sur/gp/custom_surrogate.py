@@ -215,7 +215,7 @@ class GPSurrogate(GaussianProcess):
             self.hyperparameters['sigma_n'] = np.atleast_1d(model_hyperparameters[-1])
 
 
-@Surrogate.register("CustomMO")
+@Surrogate.register("CustomMultiOutputGP")
 class MultiOutputGPSurrogate(GaussianProcess):
 
     def __init__(self, child=GPSurrogate):
@@ -251,9 +251,14 @@ class MultiOutputGPSurrogate(GaussianProcess):
         for dim, m in enumerate(self.models):
             m.add_training_data(X, y[:, [dim]])
 
+        self.Xtrain = np.concatenate([self.Xtrain, X], axis=0)
+        self.ytrain = np.concatenate([self.ytrain, y], axis=0)
+
     def set_ytrain(self, y):
         for dim, m in enumerate(self.models):
             m.set_ytrain(y[:, [dim]])
+
+        self.ytrain = np.atleast_2d(y.copy())
 
     def save_model(self, path):
         """Saves the model as dict to a .hdf5 file.
@@ -263,7 +268,7 @@ class MultiOutputGPSurrogate(GaussianProcess):
         """
 
         from profit.util.file_handler import FileHandler
-        save_dict = {attr: getattr(self, attr) for attr in ('trained', 'output_ndim',)}
+        save_dict = {attr: getattr(self, attr) for attr in ('Xtrain', 'ytrain', 'trained', 'output_ndim',)}
         for i, m in enumerate(self.models):
             save_dict[i] = {attr: getattr(m, attr)
                             for attr in
@@ -282,6 +287,7 @@ class MultiOutputGPSurrogate(GaussianProcess):
         self = cls()
         self.trained = load_dict['trained']
         self.output_ndim = load_dict['output_ndim']
+        self.Xtrain, self.ytrain = load_dict['Xtrain'], load_dict['ytrain']
         self.models = [self.child() for _ in range(self.output_ndim)]
 
         for i, m in enumerate(self.models):

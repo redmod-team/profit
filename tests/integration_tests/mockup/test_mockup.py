@@ -130,7 +130,7 @@ def test_multi_output():
         run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
         run(f"profit fit {config_file}", shell=True, timeout=TIMEOUT)
         sur = Surrogate.load_model(model_file)
-        assert sur.get_label() == 'CustomMO'
+        assert sur.get_label() == 'CustomMultiOutputGP'
         assert sur.trained
         length_scale = [0.22920459, 0.204117]
         sigma_f = [1.38501625, 1.20300593]

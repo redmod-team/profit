@@ -108,7 +108,8 @@ class ExcludeEncoder(Encoder):
 
     def decode(self, x):
         for idx, col in enumerate(self.columns):
-            x = np.insert(x, col, self.variables['excluded_values'][:, idx], axis=1)
+            insert_x = np.full((x.shape[0],), np.nan) if self.work_on_output else self.variables['excluded_values'][:, idx]
+            x = np.insert(x, col, insert_x, axis=1)
         return x
 
 

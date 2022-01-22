@@ -200,13 +200,32 @@ class CoregionalizedGPySurrogate(GPySurrogate):
         self.optimize()
         self.post_train()
 
+    def add_training_data(self, X, y):
+        self.Xtrain, self.ytrain = np.concatenate([self.Xtrain, X], axis=0), np.concatenate([self.ytrain, y], axis=0)
+        self.encode_training_data()
+        new_Xtrain = np.empty((self.Xtrain.shape[0] * self.output_ndim, self.Xtrain.shape[-1] + 1))
+        for d in range(self.output_ndim):
+            start_idx = self.Xtrain.shape[0] * d
+            end_idx = start_idx + self.Xtrain.shape[0]
+            new_Xtrain[start_idx:end_idx] = np.hstack([self.Xtrain, np.ones((self.Xtrain.shape[0], 1)) * d])
+        new_noise_dict = {'output_index': new_Xtrain[:, -1:].astype(int)}
+        self.model.Y_metadata = new_noise_dict
+        self.model.set_XY(new_Xtrain, self.ytrain.reshape(-1, 1, order='F'))
+        self.decode_training_data()
+
+    def set_ytrain(self, y):
+        self.ytrain = np.atleast_2d(y.copy())
+        self.encode_training_data()
+        self.model.set_Y(self.ytrain.reshape(-1, 1, order='F'))
+        self.decode_training_data()
+
     def predict(self, Xpred, add_data_variance=True):
         Xpred = super().pre_predict(Xpred)
         ymean = np.empty((Xpred.shape[0], self.output_ndim))
         yvar = ymean.copy()
         for d in range(self.output_ndim):
             newX = np.hstack([Xpred, np.ones((Xpred.shape[0], 1)) * d])
-            noise_dict = {'output_index': newX[:, self.ndim:].astype(int)}
+            noise_dict = {'output_index': newX[:, -1:].astype(int)}
             ym, yv = self.model.predict(newX, Y_metadata=noise_dict)
             ymean[:, d], yvar[:, d] = ym.flatten(), yv.flatten()
         ymean, yvar = self.decode_predict_data(ymean, yvar)
@@ -230,7 +249,7 @@ class CoregionalizedGPySurrogate(GPySurrogate):
 
         self = cls()
         try:
-            self.model, self.Xtrain, self.ytrain, encoder_str = FileHandler.load(path)
+            self.model, self.Xtrain, self.ytrain, encoder_str = FileHandler.load(path, as_type='raw')
         except (OSError, FileNotFoundError):
             from os.path import splitext
             print("File not found. Try changing file ending to '.pkl'!")
@@ -258,6 +277,12 @@ class CoregionalizedGPySurrogate(GPySurrogate):
                 new_value = enc.decode_hyperparameters(key, new_value)
                 if key == 'W' or key == 'kappa':
                     # TODO: Review W and kappa encoding
-                    new_value = value * (enc.variables['xmax'] - enc.variables['xmin']) if enc.output else value
+                    new_value = value * (enc.variables['xmax'] - enc.variables['xmin']) if enc.work_on_output else value
                 new_value = self.special_hyperparameter_decoding(key, new_value)
             self.hyperparameters[key] = new_value
+
+    def special_hyperparameter_decoding(self, key, value):
+        if key == 'length_scale' and self.ndim > 1 and not self.model.kern.parts[0].ARD:
+            return np.atleast_1d(np.linalg.norm(value))
+        else:
+            return value
