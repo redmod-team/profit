@@ -106,6 +106,8 @@ class SlurmRunner(Runner):
                 job_id, state = line.split('|')[:2]
                 if job_id in lookup:
                     if not (state.startswith('RUNNING') or state.startswith('PENDING')):
+                        # job has crashed or completed -> check backup
+                        self.check_backup(lookup[job_id])
                         self.del_run(lookup[job_id])
 
     def cancel_all(self):

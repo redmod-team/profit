@@ -129,6 +129,25 @@ class Runner(CustomABC):
     def check_runs(self):
         pass
 
+    def check_backup(self, run_id):
+        """ preliminary checking for backup output
+
+        ToDo: rework
+        Works only with ZeroMQ Interface for now
+        """
+        import numpy as np
+        path = os.path.join(self.base_config['run_dir'], f'run_{run_id:03d}')
+        try:
+            with open(os.path.join(path, 'profit_time.txt'), 'r') as file:
+                self.interface.internal['TIME'] = int(file.read())
+        except Exception as e:
+            self.logger.debug(f'check time for run {run_id}: {e}')
+        try:
+            self.interface.output[run_id] = np.load(os.path.join(path, 'profit_results.npy'))
+            self.interface.internal['DONE'][run_id] = True
+        except Exception as e:
+            self.logger.debug(f'check data for run {run_id}: {e}')
+
     @abstractmethod
     def cancel_all(self):
         pass

@@ -57,7 +57,6 @@ class LocalRunner(Runner):
             os.chdir(self.base_config['base_dir'])
         self.next_run_id += 1
 
-
     def spawn_array(self, params_array, blocking=True):
         """ spawn an array of runs, maximum 'parallel' at the same time, blocking until all are done """
         if not blocking:
@@ -80,6 +79,8 @@ class LocalRunner(Runner):
                     process.wait()  # just to make sure
                     del self.runs[run_id]
                 elif poll and process.poll() is not None:
+                    # job has crashed or completed -> check backup
+                    self.check_backup(run_id)
                     del self.runs[run_id]
         else:
             for run_id, process in list(self.runs.items()):  # preserve state before deletions
@@ -88,6 +89,8 @@ class LocalRunner(Runner):
                     del self.runs[run_id]
                 elif poll and process.exitcode is not None:
                     process.terminate()
+                    # job has crashed or completed -> check backup
+                    self.check_backup(run_id)
                     del self.runs[run_id]
 
     def cancel_all(self):
