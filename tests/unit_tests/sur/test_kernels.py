@@ -1,10 +1,12 @@
 import numpy as np
 import time
 from scipy.optimize import minimize
-from profit.sur.gp.backend.gpfunc import gpfunc
+from pytest import importorskip
+
 from profit.sur.gp.backend.gp_functions import negative_log_likelihood_cholesky, solve_cholesky
 from profit.sur.gp.backend.python_kernels import RBF
 from profit.util.halton import halton
+gpfunc = importorskip('profit.sur.gp.backend.gpfunc', reason='Fortran backend not installed').gpfunc
 
 
 def test_kern_sqexp():
