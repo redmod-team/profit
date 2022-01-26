@@ -1,18 +1,20 @@
 # Publish a GitHub Release to PyPI automatically
 # customized from:
 # https://packaging.python.org/guides/publishing-package-distribution-releases-using-github-actions-ci-cd-workflows/
-name: Publish Releases to PyPI
+name: Publish Release to PyPI
 
 on:
   release:
     types: [published]
+  workflow_dispatch:  # starting manually
 
 jobs:
   build-n-publish:
-    name: Build and publish Python distributions to PyPI
+    name: Build and publish to PyPI
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - name: Checkout
+      uses: actions/checkout@v2
     - name: Set up Python 3.7
       uses: actions/setup-python@v2
       with:
