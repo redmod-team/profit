@@ -157,7 +157,8 @@ class SlurmRunner(Runner):
         if self.config['cpus'] == 'all':
             text += """
 #SBATCH --nodes=1
-#SBATCH --exclusive"""
+#SBATCH --exclusive
+#SBATCH --cpus-per-task=$SLURM_CPUS_ON_NODE"""
         elif self.config['cpus'] > 1:
             text += f"""
 #SBATCH --cpus-per-task={self.config['cpus']}"""

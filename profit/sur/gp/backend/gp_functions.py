@@ -40,7 +40,6 @@ def optimize(xtrain, ytrain, a0, kernel, fixed_sigma_n=False, eval_gradient=Fals
         sigma_n = None
 
     a0 = np.log10(a0)
-    bounds = [(None, None)] * len(a0)
 
     # Additional arguments for the negative_log_likelihood function.
     args = [xtrain, ytrain, kernel, eval_gradient, True]
@@ -49,7 +48,7 @@ def optimize(xtrain, ytrain, a0, kernel, fixed_sigma_n=False, eval_gradient=Fals
     if sigma_n is not None:
         args.append(sigma_n)
 
-    opt_result = minimize(negative_log_likelihood, a0, args=tuple(args), bounds=bounds, jac=eval_gradient)
+    opt_result = minimize(negative_log_likelihood, a0, method='bfgs', args=tuple(args), bounds=None, jac=eval_gradient)
     if return_hess_inv:
         return 10**opt_result.x, opt_result.hess_inv
     return 10**opt_result.x
@@ -345,13 +344,13 @@ def marginal_variance_BBQ(Xtrain, ytrain, Xpred, kernel, hyperparameters, hess_i
     if alpha is None:
         alpha = Kyinv @ ytrain
     dalpha_dl = -Kyinv @ (dKy[..., 0] @ alpha)
-    dalpha_ds = -Kyinv @ (np.eye(Xtrain.shape[0]) @ alpha)
+    dalpha_dsigma_f = -Kyinv @ (dKy[..., 1] @ alpha)
+    dalpha_dsigma_n = -Kyinv @ (2 * hyperparameters['sigma_n'] * np.eye(Xtrain.shape[0]) @ alpha)
 
-    # TODO: check derivatives
     dm = np.empty((Xpred.shape[0], len(ordered_hyperparameters), 1))
-    dm[:, 0, :] = dKstar[..., 0] @ alpha - Kstar @ dalpha_dl
-    dm[:, 1, :] = Kstar @ dalpha_ds
-    dm[:, 2, :] = Kstar @ dalpha_ds
+    dm[:, 0, :] = dKstar[..., 0] @ alpha + Kstar @ dalpha_dl
+    dm[:, 1, :] = dKstar[..., 1] @ alpha + Kstar @ dalpha_dsigma_f
+    dm[:, 2, :] = Kstar @ dalpha_dsigma_n
     dm = dm.squeeze()
 
     marginal_variance = dm @ (hess_inv @ dm.T)

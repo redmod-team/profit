@@ -215,7 +215,7 @@ class GPSurrogate(GaussianProcess):
                                                          fixed_sigma_n=self.fixed_sigma_n or fixed_sigma_n,
                                                          eval_gradient=eval_gradient, return_hess_inv=return_hess_inv)
         if return_hess_inv:
-            self.hess_inv = opt_hyperparameters[1].todense()
+            self.hess_inv = opt_hyperparameters[1]
             opt_hyperparameters = opt_hyperparameters[0]
         self._set_hyperparameters_from_model(opt_hyperparameters)
         self.print_hyperparameters("Optimized")

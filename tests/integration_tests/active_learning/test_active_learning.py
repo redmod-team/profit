@@ -79,9 +79,9 @@ def test_2D():
         assert sur.trained
         assert sur.kernel.__name__ == 'RBF'
         assert sur.ndim == 2
-        assert allclose(sur.hyperparameters['length_scale'], 0.77230696, rtol=PARAM_RTOL)
-        assert allclose(sur.hyperparameters['sigma_f'], 6.1093862, rtol=PARAM_RTOL)
-        assert allclose(sur.hyperparameters['sigma_n'], 0.00706141, rtol=PARAM_RTOL)
+        assert allclose(sur.hyperparameters['length_scale'], 0.94519878, rtol=PARAM_RTOL)
+        assert allclose(sur.hyperparameters['sigma_f'], 14.49290437, rtol=PARAM_RTOL)
+        assert allclose(sur.hyperparameters['sigma_n'], 1.15668428e-06, rtol=PARAM_RTOL)
     finally:
         clean(config)
         if path.exists(model_file):
