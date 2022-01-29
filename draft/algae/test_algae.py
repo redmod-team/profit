@@ -10,7 +10,7 @@ import os
 from collections import OrderedDict
 from chaospy import J, generate_quadrature, orth_ttr, fit_quadrature, E, Std, descriptives, Normal
 
-from profit.sur.gaussian_process import GPySurrogate
+from profit.sur.gp.gaussian_process import GPySurrogate
 
 import pickle
 

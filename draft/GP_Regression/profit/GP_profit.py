@@ -4,8 +4,8 @@ import seaborn as sns
 
 sns.set()
 import time
-from profit.sur.backend.gp_functions import predict_f
-from profit.sur.backend.python_kernels import RBF
+from profit.sur.gp.backend import predict_f
+from profit.sur.gp.backend.python_kernels import RBF
 
 # Fixing the dimensions of the figure
 plt.rcParams['figure.figsize'] = [12, 7]

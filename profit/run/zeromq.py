@@ -98,10 +98,22 @@ class ZeroMQInterface(Interface):
     @time.setter
     def time(self, value: int):
         self._time = value
-        self.request('TIME')
+        try:
+            self.request('TIME')
+        except ConnectionError:
+            self.logger.info('saving time to "profit_time.txt"')
+            with open('profit_time.txt', 'w') as file:
+                file.write(str(value))
 
     def done(self):
-        self.request('DATA')
+        try:
+            self.request('DATA')
+        except ConnectionError:
+            self.logger.info('saving data to "profit_results.npy"')
+            np.save('profit_results.npy', self.output)
+            self.socket.close(0)
+            # we want the Worker to exit with an error and don't perform cleanup
+            raise
         self.socket.close(0)
 
     def connect(self):

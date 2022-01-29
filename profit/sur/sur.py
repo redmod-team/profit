@@ -14,11 +14,13 @@ Class structure:
         - Linear regression surrogates (Work in progress)
 """
 
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 import numpy as np
+from profit.util.base_class import CustomABC
+from profit.defaults import fit as defaults
 
 
-class Surrogate(ABC):
+class Surrogate(CustomABC):
     """Base class for all surrogate models.
 
     Attributes:
@@ -29,8 +31,6 @@ class Surrogate(ABC):
             Vector output is supported for independent variables only.
         ndim (int): Dimension of input data.
         output_ndim (int): Dimension of output data.
-        multi_output (bool): True, if more than one output variable is defined in the
-            config file. If False, excess output dimensions are used as independent supporting points.
         encoder (list of profit.sur.encoders.Encoder): For now, inputs of kind 'LogUniform' are encoded with 'log10'
             and all input and output data is normalized. Can be modified in the config file using the format
             e.g. [['log10', [0], False], ['normalization', [0, 1], False]].
@@ -44,17 +44,11 @@ class Surrogate(ABC):
             ['normalization', [output_cols], True]]
     """
 
-    _surrogates = {}  # All surrogates are registered here
-    _defaults = {'surrogate': 'GPy',  # Default surrogate configuration parameters
-                 'save': './model.hdf5',
-                 'load': False,
-                 'fixed_sigma_n': False,
-                 'encoder': []}
+    labels = {}  # All surrogates are registered here
 
     def __init__(self):
         self.trained = False
         self.fixed_sigma_n = False
-        self.multi_output = False  # Inferred from output variables in config.
 
         self.Xtrain = None
         self.ytrain = None
@@ -67,7 +61,7 @@ class Surrogate(ABC):
         """Encodes the input and output training data.
         """
         for enc in self.encoder:
-            if enc.output:
+            if enc.work_on_output:
                 self.ytrain = enc.encode(self.ytrain)
             else:
                 self.Xtrain = enc.encode(self.Xtrain)
@@ -76,7 +70,7 @@ class Surrogate(ABC):
         """Applies the decoding function of the encoder in reverse order on the input and output training data.
         """
         for enc in self.encoder[::-1]:
-            if enc.output:
+            if enc.work_on_output:
                 self.ytrain = enc.decode(self.ytrain)
             else:
                 self.Xtrain = enc.decode(self.Xtrain)
@@ -91,7 +85,7 @@ class Surrogate(ABC):
             ndarray: Encoded and normalized prediction points.
         """
         for enc in self.encoder:
-            if not enc.output:
+            if not enc.work_on_output:
                 x = enc.encode(x)
         return x
 
@@ -109,7 +103,7 @@ class Surrogate(ABC):
         """
 
         for enc in self.encoder[::-1]:
-            if enc.output:
+            if enc.work_on_output:
                 if enc.label == 'Normalization':
                     # TODO: Move this somewhere inside the Encoder with a flag like 'work_on_variance'?
                     yv = yv * enc.variables['xmax'] ** 2
@@ -117,7 +111,7 @@ class Surrogate(ABC):
         return ym, yv
 
     @abstractmethod
-    def train(self, X, y, fixed_sigma_n=False, multi_output=False):
+    def train(self, X, y, fixed_sigma_n=defaults['fixed_sigma_n']):
         r"""Trains the surrogate on input points X and model outputs y.
 
         Depending on the surrogate, the signature can vary.
@@ -126,7 +120,6 @@ class Surrogate(ABC):
             X (ndarray): Input training points.
             y (ndarray): Observed output data.
             fixed_sigma_n (bool): Whether the noise $\sigma_n$ is fixed during optimization.
-            multi_output (bool): Whether a multi output model should be used for fitting.
         """
         pass
 
@@ -170,7 +163,10 @@ class Surrogate(ABC):
         Returns:
             profit.sur.Surrogate: Instantiated surrogate model.
         """
-        label = next(filter(lambda l: l in path, cls._surrogates), cls._defaults['surrogate'])
+        label = defaults['surrogate']
+        for f in filter(lambda l: l in path, cls.labels):
+            if len(f) > len(label):
+                label = f
         return cls[label].load_model(path)
 
     @classmethod
@@ -193,32 +189,9 @@ class Surrogate(ABC):
             # Set global attributes
             child_instance.ndim = len(base_config['input'])
             child_instance.output_ndim = len(base_config['output'])
-            child_instance.multi_output = len(base_config['output']) > 1
             child_instance.fixed_sigma_n = config['fixed_sigma_n']
             child_instance.encoder = [Encoder[func](cols, out) for func, cols, out in config['encoder']]
         return child_instance
-
-    @classmethod
-    def register(cls, label):
-        """Decorator to register new surrogate classes."""
-        def decorator(surrogate):
-            if label in cls._surrogates:
-                raise KeyError(f'registering duplicate label {label} for surrogate.')
-            cls._surrogates[label] = surrogate
-            return surrogate
-        return decorator
-
-    def __class_getitem__(cls, item):
-        """Returns the child surrogate."""
-        return cls._surrogates[item]
-
-    @classmethod
-    def get_label(cls):
-        """Returns the string label of a surrogate class object."""
-        for label, item in cls._surrogates.items():
-            if item == cls:
-                return label
-        raise NotImplementedError("Class {} is not implemented.".format(cls))
 
     def plot(self, Xpred=None, independent=None, show=False, ref=None, add_data_variance=True, axes=None):
         r"""Simple plotting for dimensions <= 2.

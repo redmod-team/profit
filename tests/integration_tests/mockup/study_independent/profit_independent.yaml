@@ -1,0 +1,21 @@
+ntrain: 10
+variables:
+    T: Halton()
+    E: Independent(0, 10, 100)
+    n_f: Output(E)
+
+run:
+    pre:
+        class: template
+        path: ../template_independent
+    post:
+        class: hdf5
+        path: mockup.hdf5
+    command: python3 mockup_independent.py
+
+files:
+    param_files: [mockup_independent.json]
+    input: input_independent.txt
+    output: output_independent.txt
+fit:
+    save: model_independent.hdf5

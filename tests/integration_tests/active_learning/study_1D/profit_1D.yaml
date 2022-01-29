@@ -1,0 +1,28 @@
+ntrain: 7
+variables:
+    u: ActiveLearning(0, 1)
+    f: Output
+
+run:
+    pre:
+        class: template
+        path: ../template
+        param_files: mockup_1D.in
+    post:
+        class: numpytxt
+        path: mockup.out
+    command: python3 mockup_1D.py
+
+files:
+    input: input_1D.hdf5
+    output: output_1D.hdf5
+
+fit:
+    surrogate: Custom
+    save: model_1D.hdf5
+
+active_learning:
+    algorithm:
+        class: simple
+        acquisition_function: simple_exploration
+    nwarmup: 3

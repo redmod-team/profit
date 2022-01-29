@@ -1,0 +1,15 @@
+ntrain: 2
+variables:
+    u: Halton()
+    v: Uniform(0.55, 0.6)
+    w: ActiveLearning()
+    r: Independent(0, 1, 10)
+    f: Output(r)
+    g: Output(r)
+
+run:
+    post:
+        class: hdf5
+        path: mockup.out
+    command: python3 mockup.py
+    clean: false

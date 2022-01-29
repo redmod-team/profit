@@ -1,6 +1,6 @@
 from numpy import *
-from profit.sur.backend.gp_functions_old import build_K
-from profit.sur.backend.gpfunc import gpfunc
+from profit.sur.gp.backend import build_K
+from profit.sur.gp.backend import gpfunc
 from time import time
 #import tracemalloc
 #tracemalloc.start()

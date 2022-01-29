@@ -148,6 +148,14 @@ The following gives an overview of all possible parameters
 
     | Not implemented yet.
 
+.. confval:: include
+    :type: path or list of paths
+    :default: empty list
+
+    | Paths to files containing custom components (relative to the base directory or absolute).
+    | If the custom components register themselves properly, they can be selected from within the
+      configuration file by their identifiers.
+
 .. confval:: files
 
     .. confval:: input
@@ -353,14 +361,6 @@ The following gives an overview of all possible parameters
         :default: ``log``
 
         | the directory where the Worker logs should be saved to (relative to the run directory)
-
-    .. confval:: include
-        :type: path or list of paths
-        :default: empty list
-
-        | paths to files containing custom components (relative to the base directory or absolute)
-        | if the custom worker & runner components register themselves properly, they can be selected from within the
-          configuration file by their identifiers
 
     .. confval:: custom
         :type: boolean

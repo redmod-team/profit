@@ -1,0 +1,22 @@
+ntrain: 7
+variables:
+    u: Halton()
+    f: Output
+    g: Output
+
+run:
+    pre:
+        class: template
+        path: ../template_multi_output
+    post:
+        class: numpytxt
+        path: mockup.out
+    command: python3 mockup_multi_output.py
+
+files:
+    input: input_1D.txt
+    output: output_1D.txt
+
+fit:
+    surrogate: CustomMultiOutputGP
+    save: model_1D.hdf5

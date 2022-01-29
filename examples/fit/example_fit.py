@@ -1,7 +1,7 @@
 from numpy import cos, linspace
 from matplotlib.pyplot import plot, show
 from profit.util import quasirand
-from profit.sur.gaussian_process import GPySurrogate
+from profit.sur.gp.gpy_surrogate import GPySurrogate
 
 
 # Original model

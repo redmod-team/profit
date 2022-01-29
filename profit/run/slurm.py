@@ -106,6 +106,8 @@ class SlurmRunner(Runner):
                 job_id, state = line.split('|')[:2]
                 if job_id in lookup:
                     if not (state.startswith('RUNNING') or state.startswith('PENDING')):
+                        # job has crashed or completed -> check backup
+                        self.check_backup(lookup[job_id])
                         self.del_run(lookup[job_id])
 
     def cancel_all(self):
@@ -155,7 +157,8 @@ class SlurmRunner(Runner):
         if self.config['cpus'] == 'all':
             text += """
 #SBATCH --nodes=1
-#SBATCH --exclusive"""
+#SBATCH --exclusive
+#SBATCH --cpus-per-task=$SLURM_CPUS_ON_NODE"""
         elif self.config['cpus'] > 1:
             text += f"""
 #SBATCH --cpus-per-task={self.config['cpus']}"""

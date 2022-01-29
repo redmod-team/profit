@@ -1,17 +1,16 @@
 ntrain: 30
+include: ../mockup.py
 variables:
     u: Uniform(4.7, 5.3)
     v: Uniform(0.55, 0.6)
-    r: Independent
     f: Output
 run:
     runner:
         class: local
         parallel: 4
         sleep: 0
-    include: ../mockup.py
     worker: mockup
 
-fit:
+ui:
     plot:
-        Xpred: [[4.6, 5.4, 0.01], [0.54, 0.61, 0.001]]
+        Xpred: [[4.6, 5.4, 0.1], [0.54, 0.61, 0.01]]

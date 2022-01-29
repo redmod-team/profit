@@ -1,0 +1,31 @@
+ntrain: 10
+variables:
+    u: ActiveLearning(4.7, 5.3)
+    v: ActiveLearning(0.55, 0.6)
+    f: Output
+
+run:
+    pre:
+        class: template
+        path: ../template
+        param_files: mockup_2D.in
+    post:
+        class: numpytxt
+        path: mockup.out
+    command: python3 mockup_2D.py
+
+files:
+    input: input_2D.txt
+    output: output_2D.txt
+
+fit:
+    surrogate: Custom
+    save: model_2D.hdf5
+
+active_learning:
+    nwarmup: 5
+    algorithm:
+        class: simple
+        acquisition_function:
+            class: simple_exploration
+            use_marginal_variance: True

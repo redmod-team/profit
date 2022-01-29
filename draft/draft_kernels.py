@@ -1,7 +1,6 @@
 import numpy as np
 
 from profit.util import halton
-from profit.sur.backend.gpfunc import *
 
 ndim = 1
 ntrain = 10

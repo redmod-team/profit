@@ -7,17 +7,17 @@ Goal: a class to manage and deploy runs
 import os
 import shutil
 import logging
-from abc import ABC, abstractmethod  # Abstract Base Class
-from collections.abc import MutableMapping
+from abc import abstractmethod
+from profit.util.base_class import CustomABC  # Abstract Base Class
 
 from .worker import Preprocessor, Postprocessor, Worker
-from profit.util import load_includes, params2map, spread_struct_horizontal, flatten_struct
+from profit.util import load_includes, params2map
 
 import numpy as np
 
 
-class RunnerInterface:
-    interfaces = {}  # ToDo: rename to registry?
+class RunnerInterface(CustomABC):
+    labels = {}
     internal_vars = [('DONE', np.bool8), ('TIME', np.uint32)]
 
     def __init__(self, config, size, input_config, output_config, *, logger_parent: logging.Logger = None):
@@ -53,24 +53,12 @@ class RunnerInterface:
     def clean(self):
         self.logger.debug('cleaning')
 
-    @classmethod
-    def register(cls, label):
-        def decorator(interface):
-            if label in cls.interfaces:
-                raise KeyError(f'registering duplicate label {label} for Interface')
-            cls.interfaces[label] = interface
-            return interface
-        return decorator
-
-    def __class_getitem__(cls, item):
-        return cls.interfaces[item]
-
 
 # === Runner === #
 
 
-class Runner(ABC):
-    systems = {}
+class Runner(CustomABC):
+    labels = {}
 
     # for now, implement the runner straightforward with less overhead
     # restructuring is always possible
@@ -111,6 +99,13 @@ class Runner(ABC):
             for key, value in mapping.items():
                 self.interface.input[key][r + offset] = value
 
+    def fill_output(self, named_output, offset=0):
+        if offset + len(named_output) - 1 >= self.interface.size:
+            self.interface.resize(max(offset + len(named_output), 2 * self.interface.size))
+        for r, row in enumerate(named_output):
+            for key in row.dtype.names:
+                self.interface.output[key][r + offset] = row[key]
+
     @abstractmethod
     def spawn_run(self, params=None, wait=False):
         """spawn a single run
@@ -134,6 +129,25 @@ class Runner(ABC):
     def check_runs(self):
         pass
 
+    def check_backup(self, run_id):
+        """ preliminary checking for backup output
+
+        ToDo: rework
+        Works only with ZeroMQ Interface for now
+        """
+        import numpy as np
+        path = os.path.join(self.base_config['run_dir'], f'run_{run_id:03d}')
+        try:
+            with open(os.path.join(path, 'profit_time.txt'), 'r') as file:
+                self.interface.internal['TIME'] = int(file.read())
+        except Exception as e:
+            self.logger.debug(f'check time for run {run_id}: {e}')
+        try:
+            self.interface.output[run_id] = np.load(os.path.join(path, 'profit_results.npy'))
+            self.interface.internal['DONE'][run_id] = True
+        except Exception as e:
+            self.logger.debug(f'check data for run {run_id}: {e}')
+
     @abstractmethod
     def cancel_all(self):
         pass
@@ -146,31 +160,10 @@ class Runner(ABC):
         return self.interface.input[self.interface.internal['DONE']]
 
     @property
-    def flat_input_data(self):
-        return flatten_struct(self.input_data)
-
-    @property
     def output_data(self):
         return self.interface.output[self.interface.internal['DONE']]
 
     @property
-    def structured_output_data(self):
-        return spread_struct_horizontal(self.output_data, self.base_config['output'])
-
-    @property
     def flat_output_data(self):
+        from profit.util import flatten_struct
         return flatten_struct(self.output_data)
-
-
-    @classmethod
-    def register(cls, label):
-        def decorator(interface):
-            if label in cls.systems:
-                raise KeyError(f'registering duplicate label {label} for Runner')
-            cls.systems[label] = interface
-            return interface
-
-        return decorator
-
-    def __class_getitem__(cls, item):
-        return cls.systems[item]

@@ -1,0 +1,16 @@
+# similar to 1D
+ntrain: 7
+include: ../simulation_files/custom_components.py
+variables:
+    u: Halton()
+    f: Output
+
+run:
+    pre:
+        class: template
+        path: ../template_1D
+    worker: mockup_worker2
+
+files:
+    input: input_custom_worker2.hdf5
+    output: output_custom_worker2.hdf5

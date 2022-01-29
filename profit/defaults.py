@@ -5,6 +5,7 @@ from os import path, getcwd
 base_dir = path.abspath(getcwd())
 run_dir = base_dir
 config_file = 'profit.yaml'
+include = []
 files = {'input': 'input.txt',
          'output': 'output.txt'}
 ntrain = 10
@@ -22,7 +23,6 @@ run = {'runner': 'local',
        'time': True,
        'debug': False,
        'log_path': 'log',
-       'include': [],
        'custom': False,
        'worker': None}
 
@@ -88,18 +88,37 @@ fit_gaussian_process = {'surrogate': 'GPy',
                                             'sigma_f': None}}
 
 # Active Learning Config
-active_learning = {'nwarm': 3,
+active_learning = {'algorithm': 'simple',
+                   'nwarmup': 3,
                    'batch_size': 1,
-                   'acquisition_function': 'simple_exploration',
                    'convergence_criterion': 1e-5,
-                   'nsearch_points': 50,
-                   'make_plot': False
+                   'nsearch': 50,
+                   'make_plot': False,
+                   'save_intermediate': {'model_path': './model.hdf5',
+                                         'input_path': './input.txt',
+                                         './output_path': 'output.txt'},
+                   'resume_from': None
                    }
 
-al_acquisition_function_simple_exploration = {'class': 'simple_exploration'}
+al_algorithm_simple = {'class': 'simple',
+                       'acquisition_function': 'simple_exploration',
+                       'save': True}
+al_algorithm_mcmc = {'class': 'mcmc',
+                     'reference_data': './yref.txt',
+                     'warmup_cycles': 1,
+                     'target_acceptance_rate': 0.35,
+                     'sigma_n': 0.05,
+                     'initial_points': None,
+                     'last_percent': 0.25,
+                     'save': './mcmc_model.hdf5',
+                     'delayed_acceptance': False}
+
+al_acquisition_function_simple_exploration = {'class': 'simple_exploration',
+                                              'use_marginal_variance': False}
 al_acquisition_function_exploration_with_distance_penalty = {'class': 'exploration_with_distance_penalty',
                                                              'weight': 10}
 al_acquisition_function_weighted_exploration = {'class': 'weighted_exploration',
+                                                'use_marginal_variance': False,
                                                 'weight': 0.5}
 al_acquisition_function_probability_of_improvement = {'class': 'probability_of_improvement'}
 al_acquisition_function_expected_improvement = {'class': 'expected_improvement',
@@ -108,6 +127,11 @@ al_acquisition_function_expected_improvement = {'class': 'expected_improvement',
 al_acquisition_function_expected_improvement_2 = {'class': 'expected_improvement_2',
                                                   'exploration_factor': 0.01,
                                                   'find_min': False}
+al_acquisition_function_alternating_exploration = {'class': 'alternating_exploration',
+                                                   'use_marginal_variance': False,
+                                                   'exploration_factor': 0.01,
+                                                   'find_min': False,
+                                                   'alternating_freq': 1}
 
 
 # UI Config

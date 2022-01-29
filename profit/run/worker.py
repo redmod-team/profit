@@ -7,7 +7,8 @@
 import os
 import shutil
 import logging
-from abc import ABC, abstractmethod  # Abstract Base Class
+from abc import abstractmethod
+from profit.util.base_class import CustomABC  # Abstract Base Class
 import time
 import subprocess
 from typing import Mapping, MutableMapping
@@ -26,9 +27,8 @@ def checkenv(name):  # ToDo: move to utils? Modify logger name
 # === Interface === #
 
 
-class Interface(ABC):
-    interfaces = {}  # ToDo: rename to registry?
-    # ToDo: inherit from a Subworker class? __init__, registry, register is basically the same for all 3
+class Interface(CustomABC):
+    labels = {}
 
     def __init__(self, config, run_id: int, *, logger_parent: logging.Logger = None):
         self.config = config  # only the run/interface config dict (after processing defaults)
@@ -51,21 +51,21 @@ class Interface(ABC):
     @classmethod
     def register(cls, label):
         def decorator(interface):
-            if label in cls.interfaces:
+            if label in cls.labels:
                 warn(f'registering duplicate label {label} for Interface')
-            cls.interfaces[label] = interface
+            cls.labels[label] = interface
             return interface
         return decorator
 
     def __class_getitem__(cls, item):
-        return cls.interfaces[item]
+        return cls.labels[item]
 
 
 # === Pre === #
 
 
-class Preprocessor(ABC):
-    preprocessors = {}
+class Preprocessor(CustomABC):
+    labels = {}
 
     def __init__(self, config, *, logger_parent: logging.Logger = None):
         self.config = config  # ~base_config['run']['post']
@@ -89,18 +89,6 @@ class Preprocessor(ABC):
         return self.pre(data, run_dir)
 
     @classmethod
-    def register(cls, label):
-        def decorator(pre):
-            if label in cls.preprocessors:
-                warn(f'registering duplicate label {label} for Preprocessor')
-            cls.preprocessors[label] = pre
-            return pre
-        return decorator
-
-    def __class_getitem__(cls, item):
-        return cls.preprocessors[item]
-
-    @classmethod
     def wrap(cls, label):
         def decorator(func):
             @cls.register(label)
@@ -113,8 +101,8 @@ class Preprocessor(ABC):
 # === Post === #
 
 
-class Postprocessor(ABC):
-    postprocessors = {}
+class Postprocessor(CustomABC):
+    labels = {}
 
     def __init__(self, config, *, logger_parent: logging.Logger = None):
         self.config = config  # ~base_config['run']['post']
@@ -130,18 +118,6 @@ class Postprocessor(ABC):
         return self.post(data)
 
     @classmethod
-    def register(cls, label):
-        def decorator(post):
-            if label in cls.postprocessors:
-                warn(f'registering duplicate label {label} for Postprocessor')
-            cls.postprocessors[label] = post
-            return post
-        return decorator
-
-    def __class_getitem__(cls, item):
-        return cls.postprocessors[item]
-
-    @classmethod
     def wrap(cls, label):
         def decorator(func):
             @cls.register(label)
@@ -154,8 +130,8 @@ class Postprocessor(ABC):
 # === Worker === #
 
 
-class Worker:
-    _registry = {}
+class Worker(CustomABC):
+    labels = {}
 
     def __init__(self, config: Mapping, interface_class, pre_class, post_class, run_id: int):
         self.logger = logging.getLogger('Worker')
@@ -192,20 +168,6 @@ class Worker:
         config = base_config[label]
         run_id = int(checkenv('PROFIT_RUN_ID')) + int(os.environ.get('PROFIT_ARRAY_ID', 0))
         return cls.from_config(config, run_id)
-
-    @classmethod
-    def register(cls, label):
-        def decorator(worker):
-            if label in cls._registry:
-                warn(f'registering duplicate label {label} for Worker')
-            cls._registry[label] = worker
-            return worker
-        return decorator
-
-    def __class_getitem__(cls, item):
-        if item is None:
-            return cls
-        return cls._registry[item]
 
     @classmethod
     def wrap(cls, label, inputs, outputs):

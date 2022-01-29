@@ -1,8 +1,8 @@
-from abc import ABC, abstractmethod
+from profit.util.base_class import CustomABC
 import numpy as np
 
 
-class Encoder(ABC):
+class Encoder(CustomABC):
     r"""Base class to handle encoding and decoding of the input and output data before creating the surrogate model.
 
     The base class itself does nothing. It delegates the encoding process to the childs
@@ -10,20 +10,20 @@ class Encoder(ABC):
 
     Parameters:
         columns (list[int]): Columns of the data the encoder acts on.
-        output (bool): True if the encoder is for output data, False if the encoder works on input data.
+        work_on_output (bool): True if the encoder is for output data, False if the encoder works on input data.
         variables (dict): Miscellaneous variables stored during encoding, which are needed for decoding. E.g. the
             scaling factor during normalization.
 
     Attributes:
         label (str): Label of the encoder class.
     """
-    _encoders = {}
+    labels = {}
 
-    def __init__(self, columns, output=False, variables=None):
+    def __init__(self, columns, work_on_output=False, variables=None):
         self.label = self.__class__.get_label()
         self.variables = {key: np.array(values) for key, values in variables.items()} if variables else {}
         self.columns = columns
-        self.output = output
+        self.work_on_output = work_on_output
 
     @property
     def repr(self):
@@ -32,7 +32,13 @@ class Encoder(ABC):
             list: List of all relevant information to reconstruct the encoder.
                 (label, columns, output flag, variable dict)
         """
-        return [self.label, self.columns, self.output, {key: values.tolist() for key, values in self.variables.items()}]
+        variables_dict = {}
+        for key, values in self.variables.items():
+            try:
+                variables_dict[key] = values.tolist()
+            except AttributeError:
+                variables_dict[key] = [values]
+        return [self.label, self.columns, self.work_on_output, variables_dict]
 
     def encode(self, x):
         """Applies the encoding function on given columns.
@@ -77,7 +83,7 @@ class Encoder(ABC):
         Returns:
             ndarray: Function used for decoding the data. E.g. $\log_{10}(x)$.
         """
-        pass
+        return x
 
     def decode_func(self, x):
         r"""
@@ -85,31 +91,7 @@ class Encoder(ABC):
             ndarray: Inverse transform of the encoding function. For an encoding of $\log_{10}(x)$ this
                 would be $10^x$.
         """
-        pass
-
-    @classmethod
-    def register(cls, label):
-        """Decorator to register new encoder classes."""
-
-        def decorator(encoder):
-            if label in cls._encoders:
-                raise KeyError(f'registering duplicate label {label} for encoder.')
-            cls._encoders[label] = encoder
-            return encoder
-
-        return decorator
-
-    @classmethod
-    def get_label(cls):
-        """Returns the string label of a encoder class object."""
-        for label, item in cls._encoders.items():
-            if item == cls:
-                return label
-        raise NotImplementedError("Class {} is not implemented.".format(cls))
-
-    def __class_getitem__(cls, item):
-        """Returns the child encoder."""
-        return cls._encoders[item]
+        return x
 
 
 @Encoder.register("Exclude")
@@ -125,13 +107,10 @@ class ExcludeEncoder(Encoder):
         return x[:, [i for i in range(x.shape[-1]) if i not in self.columns]]
 
     def decode(self, x):
-        return np.insert(x, self.columns, self.variables['excluded_values'], axis=1)
-
-    def encode_func(self, x):
-        pass
-
-    def decode_func(self, x):
-        pass
+        for idx, col in enumerate(self.columns):
+            insert_x = np.full((x.shape[0],), np.nan) if self.work_on_output else self.variables['excluded_values'][:, idx]
+            x = np.insert(x, col, insert_x, axis=1)
+        return x
 
 
 @Encoder.register('Log10')
@@ -186,8 +165,113 @@ class Normalization(Encoder):
             np.array: Decoded value.
         """
         if key == 'length_scale':
-            return (value * (self.variables['xmax'] - self.variables['xmin']) + self.variables['xmin']) if not self.output else value
+            return value * (self.variables['xmax'] - self.variables['xmin']) if not self.work_on_output else value
         elif key == 'sigma_n' or key == 'sigma_f':
-            return (value * (self.variables['xmax'] - self.variables['xmin']) + self.variables['xmin']) if self.output else value
+            return value * (self.variables['xmax'] - self.variables['xmin']) if self.work_on_output else value
         else:
             return value
+
+
+@Encoder.register("PCA")
+class PCA(Encoder):
+
+    def __init__(self, columns=(), work_on_output=True, variables=None):
+        if variables is None:
+            variables = {}
+        if 'tol' not in variables:
+            variables['tol'] = 1e-2
+
+        super().__init__(columns, work_on_output, variables)
+        if self.variables.get('ytrain') is not None:
+            self.init_eigvalues(self.variables['ytrain'])
+        else:
+            self.ymean = None
+            self.dy = None
+            self.w = None
+            self.Q = None
+
+    def init_eigvalues(self, y):
+        from scipy.linalg import eigh
+        self.variables['ytrain'] = y
+        self.ymean = np.mean(y, 0)
+        self.dy = y - self.ymean
+        w, Q = eigh(self.dy.T @ self.dy)
+        condi = w > self.variables['tol']
+        self.w = w[condi]
+        self.Q = Q[:, condi]
+
+    def encode(self, y):
+        """
+        Parameters:
+            y: ntest sample vectors of length N.
+
+        Returns:
+            Expansion coefficients of y in eigenbasis.
+        """
+        if 'ytrain' not in self.variables:
+            self.init_eigvalues(y)
+        return (y - self.ymean) @ self.Q
+
+    def decode(self, z):
+        """
+        Parameters:
+            z: Expansion coefficients of y in eigenbasis.
+
+        Returns:
+            Reconstructed ntest sample vectors of length N.
+        """
+        return self.ymean + (self.Q @ z.T).T
+
+    @property
+    def features(self):
+        """
+        Returns:
+            neig feature vectors of length N.
+        """
+        return self.Q
+
+
+@Encoder.register("KarhunenLoeve")
+class KarhunenLoeve(PCA):
+
+    def encode(self, y):
+        """
+        Parameters:
+            y: ntest sample vectors of length N.
+
+        Returns:
+            Expansion coefficients of y in eigenbasis.
+        """
+        if 'ytrain' not in self.variables:
+            self.init_eigvalues(y)
+        ntrain = self.dy.shape[0]
+        ntest = y.shape[0]
+        b = np.empty((ntrain, ntest))
+        for i in range(ntrain):
+            b[i,:] = (y - self.ymean) @ self.dy[i]
+        yres = np.diag(1.0/self.w) @ self.Q.T @ b
+        return yres.T
+
+    def init_eigvalues(self, y):
+        from scipy.linalg import eigh
+        self.variables['ytrain'] = y
+        self.ymean = np.mean(y, 0)
+        self.dy = y - self.ymean
+        w, Q = eigh(self.dy @ self.dy.T)
+        condi = w > self.variables['tol']
+        self.w = w[condi]
+        self.Q = Q[:, condi]
+
+    def decode(self, z):
+        """
+        Parameters:
+            z: Expansion coefficients of y in eigenbasis.
+
+        Returns:
+            Reconstructed ntest sample vectors of length N.
+        """
+        return self.ymean + (self.dy.T @ (self.Q @ z.T)).T
+
+    @property
+    def features(self):
+        return self.dy.T @ self.Q

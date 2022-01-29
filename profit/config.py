@@ -2,7 +2,7 @@ from os import path
 import yaml
 from collections import OrderedDict
 from profit import defaults
-from abc import ABC
+from profit.util.base_class import CustomABC
 import warnings
 
 VALID_FORMATS = ('.yaml', '.py')
@@ -46,9 +46,9 @@ def load_config_from_py(filename):
     return {name: value for name, value in f.__dict__.items() if not name.startswith('_')}
 
 
-class AbstractConfig(ABC):
+class AbstractConfig(CustomABC):
     """General class with methods which are useful for all Config classes."""
-    _sub_configs = {}
+    labels = {}
 
     def update(self, **entries):
         """Updates the attributes with user inputs. A warning is issued if the attribute set by the user is unknown.
@@ -57,7 +57,7 @@ class AbstractConfig(ABC):
             entries (dict): User input of the config parameters.
         """
         for name, value in entries.items():
-            if hasattr(self, name) or name in map(str.lower, self._sub_configs):
+            if hasattr(self, name) or name in map(str.lower, self.labels):
                 attr = getattr(self, name, None)
                 if isinstance(attr, dict):
                     attr.update(value)
@@ -91,7 +91,7 @@ class AbstractConfig(ABC):
             entries (dict): User input parameters.
         """
         entries_lower = {key.lower(): entry for key, entry in entries.items()}
-        for name, sub_config in self._sub_configs.items():
+        for name, sub_config in self.labels.items():
             sub_config_label = name.lower()
             if name.lower() in entries_lower:
                 entry = entries_lower[name.lower()]
@@ -112,9 +112,9 @@ class AbstractConfig(ABC):
             Attribute or if the attribute is a sub config, a dictionary of the sub config items.
         """
         attr = getattr(self, item)
-        if item in self._sub_configs.keys():
+        if item in self.labels.keys() or hasattr(self, 'sublabels') and item in self.sublabels:
             return {key: attr[key] for key, _ in attr.items()}
-        return getattr(self, item)
+        return attr
 
     def items(self):
         """Implements the dictionary like self.items() method.
@@ -139,16 +139,6 @@ class AbstractConfig(ABC):
         except AttributeError:
             return default
 
-    @classmethod
-    def register(cls, label):
-        """Registeres sub configs with a specific label."""
-        def decorator(config):
-            if label in cls._sub_configs:
-                raise KeyError(f'registering duplicate label {label} for Interface')
-            cls._sub_configs[label] = config
-            return config
-        return decorator
-
 
 class BaseConfig(AbstractConfig):
     """
@@ -158,6 +148,7 @@ class BaseConfig(AbstractConfig):
         - base_dir
         - run_dir
         - config_file
+        - include
         - ntrain
         - variables
         - files
@@ -181,6 +172,7 @@ class BaseConfig(AbstractConfig):
         base_dir (str): Base directory.
         run_dir (str): Run directory.
         config_path (str): Path to configuration file.
+        include (list): Paths to custom files which are loaded in the beginning.
         files (dict): Paths for input and output files.
         ntrain (int): Number of training samples.
         variables (dict): All variables.
@@ -188,11 +180,13 @@ class BaseConfig(AbstractConfig):
         output (dict): Output variables.
         independent (dict): Independent variables, if the result of the simulation is a vector.
     """
+    labels = {}
 
     def __init__(self, base_dir=defaults.base_dir, **entries):
         self.base_dir = path.abspath(base_dir)
         self.run_dir = self.base_dir
         self.config_path = path.join(self.base_dir, defaults.config_file)
+        self.include = defaults.include
         self.ntrain = defaults.ntrain
         self.variables = defaults.variables.copy()
         self.input = {}
@@ -201,12 +195,13 @@ class BaseConfig(AbstractConfig):
         self.files = defaults.files.copy()
 
         self.update(**entries)  # Update the attributes with given entries.
+        self.load_includes()
         self.create_subconfigs(**entries)
         self.process_entries()  # Postprocess the attributes to standardize different user entries.
 
     def process_entries(self):
         """Sets absolute paths, creates variables and delegates to the sub configs."""
-        from profit.util.variable_kinds import Variable, VariableGroup
+        from profit.util.variable import Variable, VariableGroup
 
         # Set absolute paths
         self.files['input'] = path.join(self.base_dir, self.files.get('input', defaults.files['input']))
@@ -233,7 +228,7 @@ class BaseConfig(AbstractConfig):
                             if 'independent' in v['kind'].lower() and v['size'] != (1, 1)}
 
         # Process sub configurations
-        for name in self._sub_configs:
+        for name in self.labels:
             sub = getattr(self, name.lower())
             if sub:
                 sub.process_entries(self)
@@ -253,6 +248,17 @@ class BaseConfig(AbstractConfig):
         self = cls(base_dir=path.split(filename)[0], **entries)
         self.config_path = path.join(self.base_dir, filename)
         return self
+
+    def load_includes(self):
+        from profit.util import load_includes
+
+        if isinstance(self.include, str):
+            self.include = [self.include]
+
+        for p, include_path in enumerate(self.include):
+            if not path.isabs(include_path):
+                self.include[p] = path.abspath(path.join(self.base_dir, include_path))
+        load_includes(self.include)
 
 
 @BaseConfig.register("run")
@@ -286,47 +292,38 @@ class RunConfig(AbstractConfig):
 
     Default values from the global profit.defaults.py file are loaded.
     """
-    _sub_configs = {}
+    labels = {}
 
     def __init__(self, **entries):
         self.set_defaults(defaults.run)
         self.update(**entries)
 
-        for key, sub_config in self._sub_configs.items():
+        for key, sub_config in self.labels.items():
             attr = getattr(self, key.lower())
             if isinstance(attr, str):
                 attr = {'class': attr}
             try:
-                setattr(self, key.lower(), sub_config._sub_configs[attr['class']](**attr))
+                setattr(self, key.lower(), sub_config.labels[attr['class']](**attr))
             except KeyError:
-                setattr(self, key.lower(), sub_config._sub_configs['default'](**attr))
+                setattr(self, key.lower(), sub_config.labels['default'](**attr))
 
     def process_entries(self, base_config):
-        """Set 'include' and paths and process entries of sub configs."""
-        from profit.util import load_includes
-
-        if isinstance(self.include, str):
-            self.include = [self.include]
-
-        for p, include_path in enumerate(self.include):
-            if not path.isabs(include_path):
-                self.include[p] = path.abspath(path.join(base_config.base_dir, include_path))
-        load_includes(self.include)
+        """Set paths and process entries of sub configs."""
 
         if not path.isabs(self.log_path):
             self.log_path = path.abspath(path.join(base_config.base_dir, self.log_path))
 
-        for key in self._sub_configs:
+        for key in self.labels:
             getattr(self, key.lower()).process_entries(base_config)
 
 
 @RunConfig.register("runner")
 class RunnerConfig(AbstractConfig):
     """Base Runner config."""
-    _sub_configs = {}
+    labels = {}
 
     def __init__(self, **entries):
-        for key, value in self._sub_configs.items():
+        for key, value in self.labels.items():
             if value.__name__ == self.__class__.__name__:
                 self.set_defaults(getattr(defaults, f"run_runner_{key}"))
                 self.update(**entries)
@@ -383,10 +380,10 @@ class SlurmRunnerConfig(RunnerConfig):
 @RunConfig.register("interface")
 class InterfaceConfig(AbstractConfig):
     """Base runner interface config."""
-    _sub_configs = {}
+    labels = {}
 
     def __init__(self, **entries):
-        for key, value in self._sub_configs.items():
+        for key, value in self.labels.items():
             if value.__name__ == self.__class__.__name__:
                 self.set_defaults(getattr(defaults, f"run_interface_{key}"))
                 self.update(**entries)
@@ -430,10 +427,10 @@ class ZeroMQInterfaceConfig(InterfaceConfig):
 @RunConfig.register("pre")
 class PreConfig(AbstractConfig):
     """Base config for preprocessors."""
-    _sub_configs = {}
+    labels = {}
 
     def __init__(self, **entries):
-        for key, value in self._sub_configs.items():
+        for key, value in self.labels.items():
             if value.__name__ == self.__class__.__name__:
                 self.set_defaults(getattr(defaults, f"run_pre_{key}"))
                 self.update(**entries)
@@ -464,10 +461,10 @@ class TemplatePreConfig(PreConfig):
 @RunConfig.register("post")
 class PostConfig(AbstractConfig):
     """Base class for postprocessor configs."""
-    _sub_configs = {}
+    labels = {}
 
     def __init__(self, **entries):
-        for key, value in self._sub_configs.items():
+        for key, value in self.labels.items():
             if value.__name__ == self.__class__.__name__:
                 self.set_defaults(getattr(defaults, f"run_post_{key}"))
                 self.update(**entries)
@@ -517,27 +514,16 @@ class HDF5PostConfig(PostConfig):
     pass
 
 
-@RunnerConfig.register("default")
-@InterfaceConfig.register("default")
-@PreConfig.register("default")
-@PostConfig.register("default")
-class DefaultConfig(AbstractConfig):
-    """Default config for all run sub configs which just updates the attributes with user entries."""
-
-    def __init__(self, **entries):
-        self.update(**entries)
-
-
 @BaseConfig.register("fit")
 class FitConfig(AbstractConfig):
     """Configuration for the surrogate and encoder. Currently, the only sub config is for the GaussianProcess classes."""
 
     def __init__(self, **entries):
         from profit.sur import Surrogate
-        from profit.sur.gaussian_process import GaussianProcess
+        from profit.sur.gp.gaussian_process import GaussianProcess
         self.set_defaults(defaults.fit)
 
-        if issubclass(Surrogate._surrogates[self.surrogate], GaussianProcess):
+        if issubclass(Surrogate.labels[self.surrogate], GaussianProcess):
             self.set_defaults(defaults.fit_gaussian_process)
 
         self.update(**entries)
@@ -562,25 +548,140 @@ class FitConfig(AbstractConfig):
                 variables = getattr(base_config, 'output' if out else 'input')
                 if cols.lower() == 'all':
                     enc[1] = list(range(len(variables)))
-                elif cols.lower() in [v['kind'].lower() for v in variables.values()]:
-                    enc[1] = [idx for idx, v in enumerate(variables.values()) if v['kind'].lower() == cols.lower()]
+                elif cols.lower() in [v.get('distr', v['kind']).lower() for v in variables.values()]:
+                    enc[1] = [idx for idx, v in enumerate(variables.values()) if
+                              v.get('distr', v['kind']).lower() == cols.lower()]
                 else:
                     enc[1] = []
 
         # Delete excluded columns from other encoders
-        [enc2[1].pop(col)
-         for i, enc in enumerate(self.encoder) if enc[0].lower() == 'exclude'
-         for enc2 in self.encoder[i+1:] if enc[2] == enc2[2]
-         for col in enc[1] if col in enc2[1]]
+        for i, enc in enumerate(self.encoder):
+            if enc[0].lower() == 'exclude':
+                for enc2 in self.encoder[i + 1:]:
+                    if enc[2] == enc2[2]:
+                        for col in enc[1]:
+                            if col in enc2[1]:
+                                idx = enc2[1].index(col)
+                                enc2[1].pop(idx)
 
 
 @BaseConfig.register("active_learning")
 class ALConfig(AbstractConfig):
     """Active learning configuration."""
+    labels = {}
 
     def __init__(self, **entries):
         self.set_defaults(defaults.active_learning)
         self.update(**entries)
+
+        for key, sub_config in self.labels.items():
+            attr = getattr(self, key.lower())
+            if isinstance(attr, str):
+                attr = {'class': attr}
+            setattr(self, key.lower(), sub_config.labels[attr['class']](**attr))
+
+    def process_entries(self, base_config):
+        for key in self.labels:
+            getattr(self, key.lower()).process_entries(base_config)
+
+
+@ALConfig.register("algorithm")
+class AlgorithmALConfig(AbstractConfig):
+    labels = {}
+
+    def __init__(self, **entries):
+        for key, value in self.labels.items():
+            if value.__name__ == self.__class__.__name__:
+                self.set_defaults(getattr(defaults, f"al_algorithm_{key}"))
+                self.update(**entries)
+                break
+
+
+@AlgorithmALConfig.register("simple")
+class SimpleALConfig(AlgorithmALConfig):
+    sublabels = {}
+
+    def __init__(self, **entries):
+        super().__init__(**entries)
+        for key, sub_config in self.sublabels.items():
+            attr = getattr(self, key.lower())
+            if isinstance(attr, str):
+                attr = {'class': attr}
+            try:
+                setattr(self, key.lower(), sub_config.labels[attr['class']](**attr))
+            except KeyError:
+                setattr(self, key.lower(), sub_config.labels['simple'](**attr))
+
+    def process_entries(self, base_config):
+        if self.save:
+            self.save = base_config['fit']['save']
+
+    @classmethod
+    def register(cls, sublabel):
+        """Decorator to register new classes."""
+
+        def decorator(obj):
+            if sublabel in cls.sublabels:
+                raise KeyError(f"registering duplicate label '{sublabel}' for {cls.__name__}.")
+            cls.sublabels[sublabel] = obj
+            return obj
+
+        return decorator
+
+
+@AlgorithmALConfig.register("mcmc")
+class McmcConfig(AlgorithmALConfig):
+
+    def process_entries(self, base_config):
+        self.save = path.abspath(path.join(base_config.base_dir, self.save))
+        self.reference_data = path.abspath(path.join(base_config.base_dir, self.reference_data))
+
+
+@SimpleALConfig.register("acquisition_function")
+class AcquisitionFunctionConfig(AbstractConfig):
+    """Acquisition function configuration."""
+    labels = {}
+
+    def __init__(self, **entries):
+        for key, value in self.labels.items():
+            if value.__name__ == self.__class__.__name__:
+                self.set_defaults(getattr(defaults, f"al_acquisition_function_{key}"))
+                self.update(**entries)
+                break
+
+
+@AcquisitionFunctionConfig.register("simple_exploration")
+class SimpleExplorationConfig(AcquisitionFunctionConfig):
+    pass
+
+
+@AcquisitionFunctionConfig.register("exploration_with_distance_penalty")
+class ExplorationWithDistancePenaltyConfig(AcquisitionFunctionConfig):
+    pass
+
+
+@AcquisitionFunctionConfig.register("weighted_exploration")
+class WeightedExplorationConfig(AcquisitionFunctionConfig):
+    pass
+
+
+@AcquisitionFunctionConfig.register("probability_of_improvement")
+class ProbabilityOfImprovementConfig(AcquisitionFunctionConfig):
+    pass
+
+
+@AcquisitionFunctionConfig.register("expected_improvement")
+class ExpectedImprovementConfig(AcquisitionFunctionConfig):
+    pass
+
+
+@AcquisitionFunctionConfig.register("expected_improvement_2")
+class ExpectedImprovement2Config(AcquisitionFunctionConfig):
+    pass
+
+@AcquisitionFunctionConfig.register("alternating_exploration")
+class AlternatingExplorationConfig(AcquisitionFunctionConfig):
+    pass
 
 
 @BaseConfig.register("ui")
@@ -590,3 +691,29 @@ class UIConfig(AbstractConfig):
     def __init__(self, **entries):
         self.plot = defaults.ui['plot']
         self.update(**entries)
+
+
+@RunnerConfig.register("default")
+@InterfaceConfig.register("default")
+@PreConfig.register("default")
+@PostConfig.register("default")
+@AcquisitionFunctionConfig.register("default")
+class DefaultConfig(AbstractConfig):
+    """Default config for all run sub configs which just updates the attributes with user entries."""
+
+    def __init__(self, **entries):
+        name = entries.get('class', self.__class__.__name__)
+        warnings.warn(f"Using default config for '{name}'.")
+        self.update(**entries)
+
+    def update(self, **entries):
+        for name, value in entries.items():
+            if hasattr(self, name) or name in map(str.lower, self.labels):
+                attr = getattr(self, name, None)
+                if isinstance(attr, dict):
+                    attr.update(value)
+                    setattr(self, name, attr)
+                else:
+                    setattr(self, name, value)
+            else:
+                setattr(self, name, value)
