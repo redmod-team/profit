@@ -38,9 +38,9 @@ class RunnerInterface(CustomABC):
         if size <= self.size:
             self.logger.warning('shrinking RunnerInterface is not supported')
             return
-        self.input.resize(size)  # filled with 0 by default
-        self.output.resize(size)
-        self.internal.resize(size)
+        self.input.resize(size, refcheck=True)  # filled with 0 by default
+        self.output.resize(size, refcheck=True)
+        self.internal.resize(size, refcheck=True)
         
     @property
     def size(self):

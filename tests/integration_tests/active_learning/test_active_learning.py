@@ -27,7 +27,7 @@ def chdir_pytest():
 
 # Allow a large range of parameters, just ensure that it is approximately at the same scale
 PARAM_RTOL = 2
-TIMEOUT = 30  # seconds
+TIMEOUT = 60  # seconds
 
 
 def clean(config):

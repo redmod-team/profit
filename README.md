@@ -1,6 +1,7 @@
 [![DOI](https://zenodo.org/badge/168945305.svg)](https://zenodo.org/badge/latestdoi/168945305)
 [![PyPI](https://img.shields.io/pypi/v/profit)](https://pypi.org/project/profit/)
 [![Python Versions](https://img.shields.io/pypi/pyversions/profit)](https://pypi.org/project/profit/)
+[![Coverage Status](https://coveralls.io/repos/github/redmod-team/profit/badge.svg)](https://coveralls.io/github/redmod-team/profit)
 
 [![Documentation Status](https://readthedocs.org/projects/profit/badge/?version=latest)](https://profit.readthedocs.io/en/latest/?badge=latest)
 [![Install & Test Status](https://github.com/redmod-team/profit/actions/workflows/install-and-test.yml/badge.svg?)](https://github.com/redmod-team/profit/actions/workflows/install-and-test.yml)
