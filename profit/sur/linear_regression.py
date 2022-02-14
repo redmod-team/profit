@@ -47,6 +47,35 @@ class LinearRegression(Surrogate, ABC):
 
     # TODO: train(), predict(), from_config(), select_config()
 
+@Surrogate.register('SklearnLinReg')
+class ChaospyLinReg(LinearRegression):
+
+    def __init__(self):
+        super().__init__()
+        self.model = None
+
+    def train(self, X, y):
+        # TODO
+        pass
+
+    def predict(self, phi_sample, phi, sigma_n, sigma_p, y_sample):
+        # TODO
+        pass
+
+    def save_model(self, path):
+        pass
+
+    @classmethod
+    def load_model(cls, path):
+        pass
+
+    @classmethod
+    def from_config(cls, config, base_config):
+        pass
+
+    @classmethod
+    def handle_subconfig(cls, config, base_config):
+        pass
 
 @Surrogate.register('SklearnLinReg')
 class SklearnLinReg(LinearRegression):
