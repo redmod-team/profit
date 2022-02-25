@@ -80,7 +80,8 @@ class LocalRunner(Runner):
                     del self.runs[run_id]
                 elif poll and process.poll() is not None:
                     # job has crashed or completed -> check backup
-                    self.check_backup(run_id)
+                    if not self.check_backup(run_id):
+                        self.failed[run_id] = self.runs[run_id]
                     del self.runs[run_id]
         else:
             for run_id, process in list(self.runs.items()):  # preserve state before deletions
@@ -90,7 +91,8 @@ class LocalRunner(Runner):
                 elif poll and process.exitcode is not None:
                     process.terminate()
                     # job has crashed or completed -> check backup
-                    self.check_backup(run_id)
+                    if not self.check_backup(run_id):
+                        self.failed[run_id] = self.runs[run_id]
                     del self.runs[run_id]
 
     def cancel_all(self):
@@ -100,6 +102,7 @@ class LocalRunner(Runner):
         else:
             for process in self.runs.values():
                 process.terminate()
+        self.failed = self.runs
         self.runs = {}
 
 
