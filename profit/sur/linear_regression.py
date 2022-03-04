@@ -1,13 +1,14 @@
-r"""This module contains the backend for Linear Regression models
+"""This module contains the backend for Linear Regression models
 
 Work in progress
 """
 
-from abc import ABC, abstractmethod
-from .sur import Surrogate
+from abc import abstractmethod
+from profit.sur.sur import Surrogate
 import numpy as np
+import chaospy
 
-class LinearRegression(Surrogate, ABC):
+class LinearRegression(Surrogate):
     """Base class for all Linear Regression models.
 
     Attributes:
@@ -20,16 +21,28 @@ class LinearRegression(Surrogate, ABC):
 
     def __init__(self):
         super().__init__()
-        self.transformer = None
-        self.ndim = 0
+        self.Mdim = None    # order of basis
+        self.Ndim = None    # number of data points
+        # self.ndim = 0
+        self.Phi = None
+        self.transform = None
+        self.w_mean = None
+        self.w_cov = None
 
-    def prepare_train(self, X, y):
+    def prepare_train(self, X, y, basis=None, order=None):
         """
 
         """
-        self.Xtrain = np.atleast_2d(X)
-        self.ytrain = np.atleast_2d(y)
+        self.Xtrain, self.ytrain = np.atleast_2d(X), np.atleast_2d(y)
         self.ndim = self.Xtrain.shape[-1]
+        self.Mdim = order
+        if self.Mdim is None:
+            self.Mdim = self.ndim + 1
+
+        self.select_basis(basis)
+
+    def select_basis(self, basis):
+        pass
 
     def set_transformation(self, params):
         """
@@ -45,22 +58,61 @@ class LinearRegression(Surrogate, ABC):
                 # TODO: Additional tranforms: Gaussian, Fourier, sigmoidal, different polynomial, ... basis functions
                 pass
 
+    @abstractmethod
+    def train(self, X, y, test=1.0):
+        pass
+
     # TODO: train(), predict(), from_config(), select_config()
 
-@Surrogate.register('SklearnLinReg')
+@Surrogate.register('ChaospyLinReg')
 class ChaospyLinReg(LinearRegression):
 
     def __init__(self):
         super().__init__()
         self.model = None
 
-    def train(self, X, y):
-        # TODO
-        pass
+    def select_basis(self, basis):
+        dict = {
+            'legendre': chaospy.expansion.legendre
+        }
+        self.transform = dict[basis]
+        vars = ['q' + str(i) for i in range(self.ndim)]
+        self.Phi = self.transform(self.Mdim)
+        if self.ndim > 0:
+            for var in vars[1:]:
+                poly = self.transform[self.Mdim]
+                poly.names = (var, )
+                self.Phi = chaospy.outer(self.Phi, poly).flatten()
 
-    def predict(self, phi_sample, phi, sigma_n, sigma_p, y_sample):
+        self.Phi = self.Phi(self.Xtrain[:, 0], self.Xtrain[:, 1])
+
+    # def transform(self):
+    #     vars = ['q' + str(i) for i in range(self.ndim)]
+    #     self.Phi = chaospy.expansion.legendre(self.m, lower=0.0, upper=1.0)
+    #
+    #     for var in vars[1:]:
+    #         poly = chaospy.expansion.legendre(self.m, lower=0.0, upper=1.0)
+    #         poly.names = (var,)
+    #         self.Phi = chaospy.outer(self.Phi, poly).flatten()
+    #
+    #     self.Phi = self.Phi(self.Xtrain[:, 0], self.Xtrain[:, 1])
+
+    def train(self, X, y, sigma_n=0.5, sigma_p=0.5):
+        self.prepare_train(X, y)
+        self.transform()
+        A_inv = np.linalg.inv(
+            1 / sigma_n ** 2 * self.Phi @ self.Phi.T + np.diag(
+                np.ones(self.Phi.shape[0]) / sigma_p ** 2))
+        self.w_mean = 1 / sigma_n**2 * A_inv @ self.Phi @ self.ytrain
+
+    def predict(self, Xpredict):
+        y_fit = 1 / sigma_n ** 2 * phi.T @ A_inv @ phi_sample @ y_sample
+        # y_fit = coeff.T @ phi
+        cov = sigma_n ** 2 + phi.T @ A_inv @ phi
+        y_std = np.sqrt(np.diag(cov))
+
         # TODO
-        pass
+
 
     def save_model(self, path):
         pass
