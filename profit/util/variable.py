@@ -373,6 +373,17 @@ class InputVariable(Variable):
     def parse_entries(cls, entries):
         return {'constraints': entries}
 
+    def create_Xpred(self, size):
+        if not isinstance(size, tuple):
+            size = (size, 1)
+        if 'log' in self.kind.lower():
+            return self.constraints[0] * np.exp((np.log(self.constraints[1]) - np.log(self.constraints[0]))
+                                                           * np.linspace(0, 1, size[0])).reshape(size)
+        elif 'constant' in self.kind.lower():
+            return self.value[0]
+        else:
+            return np.linspace(*self.constraints, size[0]).reshape(size)
+
 
 @Variable.register("independent")
 class IndependentVariable(InputVariable):

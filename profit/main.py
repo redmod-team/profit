@@ -80,9 +80,9 @@ def main():
             y = FileHandler.load(config['files']['output'])
             for v in variables.list:
                 if v.name in X.dtype.names:
-                    v.value = X[v.name]
+                    v.value[:X.shape[0]] = X[v.name]
                 else:
-                    v.value = y[v.name]
+                    v.value[:y.shape[0]] = y[v.name]
         FileHandler.save(config['files']['input'], variables.named_input)  # Save variables to input file
 
         # Check if active learning needs to be done instead of executing a normal run

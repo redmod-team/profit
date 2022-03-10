@@ -1,6 +1,7 @@
 import numpy as np
 from profit.sur import Surrogate
 from profit.sur.gp import GaussianProcess
+from profit.defaults import fit_gaussian_process as defaults, fit as base_defaults
 
 
 @Surrogate.register('Custom')
@@ -43,8 +44,8 @@ class GPSurrogate(GaussianProcess):
         except np.linalg.LinAlgError:
             return np.linalg.lstsq(self.Ky, self.ytrain, rcond=1e-15)[0]
 
-    def train(self, X, y, kernel=None, hyperparameters=None, fixed_sigma_n=False,
-              eval_gradient=True, return_hess_inv=False):
+    def train(self, X, y, kernel=defaults['kernel'], hyperparameters=defaults['hyperparameters'],
+              fixed_sigma_n=base_defaults['fixed_sigma_n'], eval_gradient=True, return_hess_inv=False):
         """After initializing the model with a kernel function and initial hyperparameters,
         it can be trained on input data X and observed output data y by optimizing the model's hyperparameters.
         This is done by minimizing the negative log likelihood.
@@ -197,7 +198,7 @@ class GPSurrogate(GaussianProcess):
             except AttributeError:
                 raise RuntimeError(f"Kernel {kernel} not implemented.")
 
-    def optimize(self, fixed_sigma_n=False, eval_gradient=False, return_hess_inv=False):
+    def optimize(self, fixed_sigma_n=base_defaults['fixed_sigma_n'], eval_gradient=False, return_hess_inv=False):
         r"""Optimize the hyperparameters length_scale $l$, scale $\sigma_f$ and noise $\sigma_n$.
 
         As a backend, the scipy minimize optimizer is used.
@@ -237,36 +238,42 @@ class MultiOutputGPSurrogate(GaussianProcess):
         self.child = child
         self.models = []
 
-    def pre_train(self, X, y, kernel=None, hyperparameters=None, fixed_sigma_n=False):
-        self.Xtrain, self.ytrain = np.atleast_2d(X), np.atleast_2d(y)
-        self.set_attributes(fixed_sigma_n=fixed_sigma_n, kernel=kernel, hyperparameters=hyperparameters)
-        self.encode_training_data()
-        self.ndim = self.Xtrain.shape[-1]
-        self.output_ndim = self.ytrain.shape[-1]
-        self.decode_training_data()
-        self.models = [self.child() for _ in range(self.output_ndim)]
-
-    def train(self, X, y, kernel=None, hyperparameters=None, fixed_sigma_n=False, return_hess_inv=False):
+    def train(self, X, y, kernel=defaults['kernel'], hyperparameters=defaults['hyperparameters'],
+              fixed_sigma_n=base_defaults['fixed_sigma_n'], return_hess_inv=False):
         self.pre_train(X, y)
+        self.models = [self.child() for _ in range(self.output_ndim)]
         for dim, m in enumerate(self.models):
-            m.train(X, y[:, [dim]], self.kernel, self.hyperparameters, self.fixed_sigma_n,
+            m.train(self.Xtrain, self.ytrain[:, [dim]], self.kernel, self.hyperparameters, self.fixed_sigma_n,
                     False, return_hess_inv)
-        self.trained = True
+        self._set_hyperparameters_from_model()
+        self.post_train()
+
+    def _set_hyperparameters_from_model(self):
+        for m in self.models:
+            for k, v in m.hyperparameters.items():
+                self.hyperparameters[k] = np.concatenate([self.hyperparameters[k], v])
+        self.hyperparameters['length_scale'] = np.linalg.norm(self.hyperparameters['length_scale'])
+        self.hyperparameters['sigma_f'] = np.max(self.hyperparameters['sigma_f'])
+        self.hyperparameters['sigma_n'] = np.max(self.hyperparameters['sigma_n'])
+        self.decode_hyperparameters()
 
     def predict(self, Xpred, add_data_variance=True):
+        Xpred = self.pre_predict(Xpred)
         ypred = np.empty((Xpred.shape[0], self.output_ndim))
         yvar = np.empty_like(ypred)
 
         for dim, m in enumerate(self.models):
             ypred[:, [dim]], yvar[:, [dim]] = m.predict(Xpred, add_data_variance)
+        ypred, yvar = self.decode_predict_data(ypred, yvar)
         return ypred, yvar
 
     def add_training_data(self, X, y):
+        start = self.Xtrain.shape[0]
+        self.Xtrain, self.ytrain = np.concatenate([self.Xtrain, X], axis=0), np.concatenate([self.ytrain, y], axis=0)
+        self.encode_training_data()
         for dim, m in enumerate(self.models):
-            m.add_training_data(X, y[:, [dim]])
-
-        self.Xtrain = np.concatenate([self.Xtrain, X], axis=0)
-        self.ytrain = np.concatenate([self.ytrain, y], axis=0)
+            m.add_training_data(self.Xtrain[start:], self.ytrain[start:, [dim]])
+        self.decode_training_data()
 
     def set_ytrain(self, y):
         for dim, m in enumerate(self.models):
@@ -315,3 +322,15 @@ class MultiOutputGPSurrogate(GaussianProcess):
     def optimize(self, **opt_kwargs):
         for m in self.models:
             m.optimize(**opt_kwargs)
+
+    def special_hyperparameter_decoding(self, key, value):
+        if len(value) > 1:
+            return np.atleast_1d(np.linalg.norm(value)) if key == 'length_scale' else np.atleast_1d(np.max(value))
+        return value
+
+    def get_marginal_variance(self, Xpred):
+        Xpred = self.encode_predict_data(Xpred)
+        v = np.zeros((Xpred.shape[0], 1))
+        for m in self.models:
+            v += m.get_marginal_variance(Xpred)
+        return v

@@ -31,9 +31,7 @@ class SimpleAL(ActiveLearning):
         self.search_space = {var.name: np.linspace(*var.constraints, nsearch)
                              for var in variables.list if var.kind.lower() in 'activelearning'}
 
-        al_keys = [var.name for var in variables.list if var.kind.lower() == 'activelearning']
-        Xpred = [var.create_Xpred((nsearch, 1)) if var.name in al_keys else np.unique(var.value)
-                 for var in variables.input_list]
+        Xpred = [var.create_Xpred((nsearch, 1)) for var in variables.input_list]
         self.Xpred = np.hstack([xi.flatten().reshape(-1, 1) for xi in np.meshgrid(*Xpred)])
 
         if issubclass(acquisition_function.__class__, AcquisitionFunction):

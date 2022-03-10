@@ -99,7 +99,7 @@ def test_log():
         sur = Surrogate.load_model(model_file)
         assert allclose(sur.hyperparameters['length_scale'], 1.12971188, rtol=PARAM_RTOL)
         assert allclose(sur.hyperparameters['sigma_f'], 0.26703034, rtol=PARAM_RTOL)
-        assert allclose(sur.hyperparameters['sigma_n'], 5.78397728e-07, rtol=PARAM_RTOL)
+        assert allclose(sur.hyperparameters['sigma_n'], 1.98627737e-05, rtol=PARAM_RTOL)
     finally:
         clean(config)
         if path.exists(model_file):
