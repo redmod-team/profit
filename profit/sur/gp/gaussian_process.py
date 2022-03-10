@@ -28,7 +28,7 @@ Literature:
 from abc import abstractmethod
 import numpy as np
 from profit.sur.sur import Surrogate
-from profit.defaults import fit_gaussian_process as defaults
+from profit.defaults import fit_gaussian_process as defaults, fit as base_defaults
 
 
 class GaussianProcess(Surrogate):
@@ -71,7 +71,8 @@ class GaussianProcess(Surrogate):
         self.kernel = None
         self.hyperparameters = {}
 
-    def pre_train(self, X, y, kernel=None, hyperparameters=None, fixed_sigma_n=False):
+    def pre_train(self, X, y, kernel=defaults['kernel'], hyperparameters=defaults['hyperparameters'],
+                  fixed_sigma_n=base_defaults['fixed_sigma_n']):
         """Check the training data, initialize the hyperparameters and set the kernel either from the given parameter,
         from config or from the default values.
 
@@ -129,7 +130,8 @@ class GaussianProcess(Surrogate):
         return {'length_scale': length_scale, 'sigma_f': sigma_f, 'sigma_n': sigma_n}
 
     @abstractmethod
-    def train(self, X, y, kernel=None, hyperparameters=None, fixed_sigma_n=False, return_hess_inv=False):
+    def train(self, X, y, kernel=defaults['kernel'], hyperparameters=defaults['hyperparameters'],
+              fixed_sigma_n=base_defaults['fixed_sigma_n'], return_hess_inv=False):
         """Trains the model on the dataset.
 
         After initializing the model with a kernel function and initial hyperparameters,

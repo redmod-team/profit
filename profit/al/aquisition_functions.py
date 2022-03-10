@@ -8,10 +8,18 @@
     - expected improvement
 * mixed exploration and bayesian optimization
 """
-from abc import abstractmethod
+
 from profit.util.base_class import CustomABC
 import numpy as np
 
+from profit.defaults import \
+    al_acquisition_function_simple_exploration as se_defaults, \
+    al_acquisition_function_exploration_with_distance_penalty as edp_defaults, \
+    al_acquisition_function_weighted_exploration as we_defaults, \
+    al_acquisition_function_probability_of_improvement as poi_defaults, \
+    al_acquisition_function_expected_improvement as ei_defaults, \
+    al_acquisition_function_expected_improvement_2 as ei2_defaults, \
+    al_acquisition_function_alternating_exploration as ae_defaults
 
 class AcquisitionFunction(CustomABC):
     """Base class for acquisition functions.
@@ -64,7 +72,7 @@ class AcquisitionFunction(CustomABC):
 class SimpleExploration(AcquisitionFunction):
     """Minimizes the local variance, which means the next points are generated at points of high variance."""
 
-    def __init__(self, Xpred, surrogate, variables, use_marginal_variance=False, **parameters):
+    def __init__(self, Xpred, surrogate, variables, use_marginal_variance=se_defaults['use_marginal_variance'], **parameters):
         super().__init__(Xpred, surrogate, variables, use_marginal_variance=use_marginal_variance, **parameters)
 
     def calculate_loss(self):
@@ -88,7 +96,8 @@ class ExplorationWithDistancePenalty(SimpleExploration):
         weight (float): Exponential penalty factor: $penalty = 1 - exp(c1 * |X_{pred} - X_{last}|)$.
     """
 
-    def __init__(self, Xpred, surrogate, variables, use_marginal_variance=False, weight=10):
+    def __init__(self, Xpred, surrogate, variables, use_marginal_variance=edp_defaults['use_marginal_variance'],
+                 weight=edp_defaults['weight']):
         super().__init__(Xpred, surrogate, variables, use_marginal_variance=use_marginal_variance, weight=weight)
 
     def calculate_loss(self):
@@ -145,7 +154,8 @@ class ExpectedImprovement(AcquisitionFunction):
     as this does not need an evaluation of the function.
     """
 
-    def __init__(self, Xpred, surrogate, variables, exploration_factor=0.01, find_min=False):
+    def __init__(self, Xpred, surrogate, variables, exploration_factor=ei_defaults['exploration_factor'],
+                 find_min=ei_defaults['find_min']):
         super().__init__(Xpred, surrogate, variables, exploration_factor=exploration_factor, find_min=find_min)
         self.improvement = None
         self.sigma = None
@@ -187,7 +197,8 @@ class ExpectedImprovement2(AcquisitionFunction):
     while the others are found using the minimization of local variance acquisition function.
     """
 
-    def __init__(self, Xpred, surrogate, variables, exploration_factor=0.01, find_min=False):
+    def __init__(self, Xpred, surrogate, variables, exploration_factor=ei2_defaults['exploration_factor'],
+                 find_min=ei2_defaults['find_min']):
         super().__init__(Xpred, surrogate, variables, exploration_factor=exploration_factor, find_min=find_min)
 
     def calculate_loss(self):
@@ -225,7 +236,9 @@ class AlternatingAF(AcquisitionFunction):
 
     al_parameters = {'krun': 0}
 
-    def __init__(self, Xpred, surrogate, variables, use_marginal_variance=False, exploration_factor=0.01, find_min=False, alternating_freq=1):
+    def __init__(self, Xpred, surrogate, variables, use_marginal_variance=ae_defaults['use_marginal_variance'],
+                 exploration_factor=ae_defaults['exploration_factor'],
+                 find_min=ae_defaults['find_min'], alternating_freq=ae_defaults['alternating_freq']):
         super().__init__(Xpred, surrogate, variables, alternating_freq=alternating_freq)
         self.exploration = SimpleExploration(Xpred, surrogate, variables, use_marginal_variance=use_marginal_variance)
         self.expected_improvement = ExpectedImprovement(Xpred, surrogate, variables,

@@ -56,6 +56,7 @@ def test_set_hyperparameters():
     expected_hyperparameters = {'length_scale': np.array([1]), 'sigma_n': np.array([1]), 'sigma_f': np.array([1])}
 
     sur = GPySurrogate()
+    sur.ndim = Xtrain.shape[0]
 
     # Default RBF kernel
     sur.model = GPRegression(Xtrain, ytrain)

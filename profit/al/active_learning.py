@@ -6,9 +6,11 @@ acquisition function like the minimization of local variance or expected improve
 """
 import numpy as np
 from abc import abstractmethod
+from warnings import warn
 
 from profit.util.base_class import CustomABC
 from profit.defaults import active_learning as defaults
+
 
 class ActiveLearning(CustomABC):
     """Active learning base class.
@@ -39,7 +41,8 @@ class ActiveLearning(CustomABC):
         self.nwarmup = min(nwarmup, ntrain)
 
         if nwarmup > ntrain:
-            print("WARNING: nwarmup > ntrain. Setting nwarmup=ntrain.")
+            message = "nwarmup > ntrain. Setting nwarmup=ntrain."
+            warn(message)
 
         self.batch_size = batch_size
         if (ntrain - nwarmup) % batch_size:

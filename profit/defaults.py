@@ -116,6 +116,7 @@ al_algorithm_mcmc = {'class': 'mcmc',
 al_acquisition_function_simple_exploration = {'class': 'simple_exploration',
                                               'use_marginal_variance': False}
 al_acquisition_function_exploration_with_distance_penalty = {'class': 'exploration_with_distance_penalty',
+                                                             'use_marginal_variance': False,
                                                              'weight': 10}
 al_acquisition_function_weighted_exploration = {'class': 'weighted_exploration',
                                                 'use_marginal_variance': False,

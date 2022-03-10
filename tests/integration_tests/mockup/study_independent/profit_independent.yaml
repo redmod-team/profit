@@ -8,13 +8,13 @@ run:
     pre:
         class: template
         path: ../template_independent
+        param_files: [ mockup_independent.json ]
     post:
         class: hdf5
         path: mockup.hdf5
     command: python3 mockup_independent.py
 
 files:
-    param_files: [mockup_independent.json]
     input: input_independent.txt
     output: output_independent.txt
 fit:

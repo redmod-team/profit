@@ -1,6 +1,7 @@
 import numpy as np
 from profit.sur import Surrogate
 from profit.sur.gp import GaussianProcess
+from profit.defaults import fit_gaussian_process as defaults, fit as base_defaults
 
 
 @Surrogate.register('GPy')
@@ -17,7 +18,8 @@ class GPySurrogate(GaussianProcess):
         super().__init__()
         self.model = None
 
-    def train(self, X, y, kernel=None, hyperparameters=None, fixed_sigma_n=False):
+    def train(self, X, y, kernel=defaults['kernel'], hyperparameters=defaults['hyperparameters'],
+              fixed_sigma_n=base_defaults['fixed_sigma_n']):
         self.pre_train(X, y, kernel, hyperparameters, fixed_sigma_n)
         self.model = self.GPy.models.GPRegression(self.Xtrain, self.ytrain, self.kernel,
                                                   noise_var=self.hyperparameters['sigma_n'] ** 2)
@@ -187,11 +189,13 @@ class GPySurrogate(GaussianProcess):
 @Surrogate.register("CoregionalizedGPy")
 class CoregionalizedGPySurrogate(GPySurrogate):
 
-    def pre_train(self, X, y, kernel=None, hyperparameters=None, fixed_sigma_n=False):
+    def pre_train(self, X, y, kernel=defaults['kernel'], hyperparameters=defaults['hyperparameters'],
+                  fixed_sigma_n=base_defaults['fixed_sigma_n']):
         super().pre_train(X, y, kernel, hyperparameters, fixed_sigma_n)
         self.output_ndim = self.ytrain.shape[-1]
 
-    def train(self, X, y, kernel=None, hyperparameters=None, fixed_sigma_n=False):
+    def train(self, X, y, kernel=defaults['kernel'], hyperparameters=defaults['hyperparameters'],
+              fixed_sigma_n=base_defaults['fixed_sigma_n']):
         self.pre_train(X, y, kernel, hyperparameters, fixed_sigma_n)
         icm = self.GPy.util.multioutput.ICM(input_dim=self.ndim, num_outputs=self.output_ndim, kernel=self.kernel)
         _X = self.output_ndim * [self.Xtrain]
