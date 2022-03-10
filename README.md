@@ -16,8 +16,9 @@ black-box simulation codes or experiments and construction of reduced
 order response models over input parameter space. 
 
 proFit can be fed with a number of data points consisting of different 
-input parameter combinations and the resulting output of the model under 
-investigation. It then fits a response "surface" through the point cloud.
+input parameter combinations and the resulting output of the simulation under 
+investigation. It then fits a response-surface through the point cloud 
+using Gaussian process regression (GPR) models.
 This probabilistic response model allows to predict ("interpolate") the output 
 at yet unexplored parameter combinations including uncertainty estimates. 
 It can also tell you where to put more training points to gain maximum new 
@@ -27,18 +28,23 @@ visually in a web frontend.
 
 Telling proFit how to interact with your existing simulations is easy
 and requires no changes in your existing code. Current functionality covers 
-uncertainty quantification via polynomial chaos expansion 
-with [chaospy](https://github.com/jonathf/chaospy) as a backend. Support for 
-response surface / surrogate models via 
-[GPflow](https://github.com/GPflow/GPflow) is under development. 
-The web frontend is based on [plotly/dash](https://github.com/plotly/dash).
+starting simulations locally or on a cluster via [Slurm](https://slurm.schedmd.com), subsequent 
+surrogate modelling using [GPy](https://github.com/SheffieldML/GPy), 
+[scikit-learn](https://github.com/scikit-learn/scikit-learn), 
+as well as an active learning algorithm to iteratively sample at interesting
+points and a Markov-Chain-Monte-Carlo (MCMC) algorithm. The web frontend 
+is based on [plotly/dash](https://github.com/plotly/dash).
 
 ## Features
 
-* Compute evaluation points to run simulation for UQ (full or sparse grid)
+* Compute evaluation points (e.g. from a random distribution) to run simulation
 * Template replacement and automatic generation of run directories
 * Starting parallel runs locally or on the cluster (SLURM)
-* Collection of result output and postprocessing with UQ
+* Collection of result output and postprocessing
+* Response-model fitting using GPR
+* Active learning to reduce number of samples needed
+* MCMC
+* Graphical user interface
 
 ## Installation
 
@@ -134,6 +140,22 @@ Examples for different model codes are available under `examples/`:
 * `fit`: Simple fit via python interface.
 * `mockup`: Simple model called by console command based on template directory.
 
+Also, the integration tests under `tests/integration_tests/` may be informative examples:
+* `active_learning`:
+  * 1D: One dimensional mockup with active learning
+  * 2D: Two dimensional mockup with active learning
+  * Log: Active learning with logarithmic search space
+  * MCMC: Markov-Chain-Monte-Carlo application to mockup experimental data
+* `mockup`:
+  * 1D
+  * 2D
+  * Custom postprocessor: Instead of the prebuilt postprocessr, a user-built class is used.
+  * Custom worker: A user-built worker function is used.
+  * Independent: Output with an independent (linear) variable additional to input parameters: f(t; u, v).
+  * KarhunenLoeve: Multi output surrogate model with Karhunen-Loeve encoder.
+  * Multi output: Multi output surrogate with two different output variables.
+
+### Steps
 
 1. Create and enter a directory (e.g. `study`) containing `profit.yaml` for your run.
     If your code is based on text configuration files for each run, copy the according directory to `template` and 
@@ -162,6 +184,11 @@ Examples for different model codes are available under `examples/`:
    ```
    starts a Dash-based browser UI
 
+The figure below gives a graphical representation of the typical profit workflow described above.
+The boxes in red describe user actions while the boxes in blue are conducted by profit.
+
+<img src="https://raw.githubusercontent.com/redmod-team/profit/master/doc/pics/profit_workflow.png" width="300px">
+
 ### Cluster
 proFit supports scheduling the runs on a cluster using *slurm*. This is done entirely via the configuration files and
 the usage doesn't change.
@@ -181,4 +208,8 @@ the usage doesn't change.
   * input files use a template format where `{variable_name}` is substituted with the generated values
 
 * a custom *Postprocessor* (optional)
-  * if the default postprocessors don't work with the simulation a custom one can be specified
+  * if the default postprocessors don't work with the simulation a custom one can be specified using the `include` parameter in the configuration.
+
+Example directory structure:
+
+<img src="https://raw.githubusercontent.com/redmod-team/profit/master/doc/pics/example_directory.png" width="200px">
