@@ -23,68 +23,83 @@ class LinearRegression(Surrogate):
         super().__init__()
         self.Mdim = None    # order of basis
         self.Ndim = None    # number of data points
-        # self.ndim = 0
-        self.Phi = None
-        self.transform = None
-        self.w_mean = None
-        self.w_cov = None
+        # self.ndim = None    # dim of input array
+        self.wmean = None
+        self.wcov = None
 
-    def prepare_train(self, X, y, basis=None, order=None):
+    def pre_train(self, X, y, basis=None, order=None):
         """
 
         """
-        self.Xtrain, self.ytrain = np.atleast_2d(X), np.atleast_2d(y)
+        self.Xtrain, self.ytrain = np.atleast_2d(X), np.atleast_2d(y).T
+        self.Ndim = self.Xtrain.shape[0]
         self.ndim = self.Xtrain.shape[-1]
         self.Mdim = order
         if self.Mdim is None:
-            self.Mdim = self.ndim + 1
+            self.Mdim = self.ndim
 
-        self.select_basis(basis)
+    def post_train(self):
+        self.trained = True
 
-    def select_basis(self, basis):
-        pass
+    def pre_predict(self, Xpred):
+        from profit.util import check_ndim
 
-    def set_transformation(self, params):
-        """
+        if not self.trained:
+            raise RuntimeError("Need to train() before predict()!")
 
-        """
-        for key, value in params.items():
-            if key == 'polynomial':
-                from sklearn.preprocessing import PolynomialFeatures
+        if Xpred is None:
+            Xpred = self.default_Xpred()
+        Xpred = check_ndim(Xpred)
+        # Xpred = self.encode_predict_data(Xpred)
+        return Xpred
 
-                self.transformer = PolynomialFeatures(value)
-
-            else:
-                # TODO: Additional tranforms: Gaussian, Fourier, sigmoidal, different polynomial, ... basis functions
-                pass
-
-    @abstractmethod
-    def train(self, X, y, test=1.0):
-        pass
+    # def set_transformation(self, params):
+    #     """
+    #
+    #     """
+    #     for key, value in params.items():
+    #         if key == 'polynomial':
+    #             from sklearn.preprocessing import PolynomialFeatures
+    #
+    #             self.transformer = PolynomialFeatures(value)
+    #
+    #         else:
+    #             # TODO: Additional tranforms: Gaussian, Fourier, sigmoidal, different polynomial, ... basis functions
+    #             pass
 
     # TODO: train(), predict(), from_config(), select_config()
 
 @Surrogate.register('ChaospyLinReg')
 class ChaospyLinReg(LinearRegression):
 
-    def __init__(self):
+    def __init__(self, model='legendre'):
         super().__init__()
-        self.model = None
+        if model == 'legendre':
+            self.model = chaospy.expansion.legendre
+        else:
+            self.model = chaospy.expansion.legendre
 
-    def select_basis(self, basis):
-        dict = {
-            'legendre': chaospy.expansion.legendre
-        }
-        self.transform = dict[basis]
-        vars = ['q' + str(i) for i in range(self.ndim)]
-        self.Phi = self.transform(self.Mdim)
+    def transform(self, X):
+        vars = ['q' + str(i) for i in range(self.ndim)] # TODO: right dim...
+        Phi = self.model(self.Mdim)
         if self.ndim > 0:
             for var in vars[1:]:
-                poly = self.transform[self.Mdim]
-                poly.names = (var, )
-                self.Phi = chaospy.outer(self.Phi, poly).flatten()
+                poly = self.model(self.Mdim)
+                poly.names = (var,)
+                Phi = chaospy.outer(Phi, poly).flatten()
+        Phi = Phi(X[:, 0], X[:, 1])   # TODO: general
+        return Phi
 
-        self.Phi = self.Phi(self.Xtrain[:, 0], self.Xtrain[:, 1])
+    def train(self, X, y, sigma_n=0.02, sigma_p=0.5):
+        self.pre_train(X, y)
+        Phi = self.transform(self.Xtrain)
+        A_inv = np.linalg.inv(
+            1 / sigma_n ** 2 * Phi @ Phi.T + np.diag(
+                np.ones(Phi.shape[0])) / sigma_p ** 2)
+        self.wmean = 1 / sigma_n**2 * A_inv @ Phi @ self.ytrain
+        self.wcov = A_inv
+        self.post_train()
+        return Phi
 
     # def transform(self):
     #     vars = ['q' + str(i) for i in range(self.ndim)]
@@ -97,22 +112,21 @@ class ChaospyLinReg(LinearRegression):
     #
     #     self.Phi = self.Phi(self.Xtrain[:, 0], self.Xtrain[:, 1])
 
-    def train(self, X, y, sigma_n=0.5, sigma_p=0.5):
-        self.prepare_train(X, y)
-        self.transform()
-        A_inv = np.linalg.inv(
-            1 / sigma_n ** 2 * self.Phi @ self.Phi.T + np.diag(
-                np.ones(self.Phi.shape[0]) / sigma_p ** 2))
-        self.w_mean = 1 / sigma_n**2 * A_inv @ self.Phi @ self.ytrain
+    # def train(self, X, y, sigma_n=0.5, sigma_p=0.5):
+    #     self.prepare_train(X, y)
+    #     self.transform()
+    #     A_inv = np.linalg.inv(
+    #         1 / sigma_n ** 2 * self.Phi @ self.Phi.T + np.diag(
+    #             np.ones(self.Phi.shape[0]) / sigma_p ** 2))
+    #     self.w_mean = 1 / sigma_n**2 * A_inv @ self.Phi @ self.ytrain
 
-    def predict(self, Xpredict):
-        y_fit = 1 / sigma_n ** 2 * phi.T @ A_inv @ phi_sample @ y_sample
-        # y_fit = coeff.T @ phi
-        cov = sigma_n ** 2 + phi.T @ A_inv @ phi
-        y_std = np.sqrt(np.diag(cov))
-
-        # TODO
-
+    def predict(self, Xpred, add_data_variance=False):
+        Xpred = self.pre_predict(Xpred)
+        Phi = self.transform(Xpred)
+        ymean = Phi.T @ self.wmean
+        ycov = Phi.T @ self.wcov @ Phi
+        # y_std = np.sqrt(np.diag(y_cov)) # TODO: include data variance
+        return ymean, ycov
 
     def save_model(self, path):
         pass
