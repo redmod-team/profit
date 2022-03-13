@@ -240,7 +240,7 @@ class GaussianProcess(Surrogate):
             self.hyperparameters[key] = new_value
 
     def special_hyperparameter_decoding(self, key, value):
-        return value
+        return np.atleast_1d(value)
 
     def print_hyperparameters(self, prefix):
         """Helper function to print the hyperparameter dict.
@@ -249,6 +249,7 @@ class GaussianProcess(Surrogate):
             prefix (str): Usually 'Initialized', 'Loaded' or 'Optimized' to identify the state of the hyperparameters.
         """
 
-        hyperparameter_str = ["{} hyperparameters:".format(prefix)]
-        hyperparameter_str += ["{k}: {v}".format(k=key, v=value) for key, value in self.hyperparameters.items()]
-        print('\n'.join(hyperparameter_str))
+        #hyperparameter_str = ["{} hyperparameters:".format(prefix)]
+        #hyperparameter_str += ["{k}: {v}".format(k=key, v=value) for key, value in self.hyperparameters.items()]
+        #print('\n'.join(hyperparameter_str))
+        pass  # TODO: Include in DEBUG logging.

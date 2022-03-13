@@ -252,9 +252,9 @@ class MultiOutputGPSurrogate(GaussianProcess):
         for m in self.models:
             for k, v in m.hyperparameters.items():
                 self.hyperparameters[k] = np.concatenate([self.hyperparameters[k], v])
-        self.hyperparameters['length_scale'] = np.linalg.norm(self.hyperparameters['length_scale'])
-        self.hyperparameters['sigma_f'] = np.max(self.hyperparameters['sigma_f'])
-        self.hyperparameters['sigma_n'] = np.max(self.hyperparameters['sigma_n'])
+        self.hyperparameters['length_scale'] = np.atleast_1d(np.linalg.norm(self.hyperparameters['length_scale']))
+        self.hyperparameters['sigma_f'] = np.atleast_1d(np.max(self.hyperparameters['sigma_f']))
+        self.hyperparameters['sigma_n'] = np.atleast_1d(np.max(self.hyperparameters['sigma_n']))
         self.decode_hyperparameters()
 
     def predict(self, Xpred, add_data_variance=True):
