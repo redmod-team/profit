@@ -76,10 +76,10 @@ fit = {'surrogate': 'GPy',
        'save': './model.hdf5',
        'load': False,
        'fixed_sigma_n': False,
-       'encoder': [['Exclude', 'Constant', False],
-                   ['Log10', 'LogUniform', False],
-                   ['Normalization', 'all', False],
-                   ['Normalization', 'all', True]]}
+       'input_encoders': [{'class': 'Exclude', 'columns': 'Constant', 'parameters': {}},
+                          {'class': 'Log10', 'columns': 'LogUniform', 'parameters': {}},
+                          {'class': 'Normalization', 'columns': 'all', 'parameters': {}}],
+       'output_encoders': [{'class': 'Normalization', 'columns': 'all', 'parameters': {}}]}
 
 fit_gaussian_process = {'surrogate': 'GPy',
                         'kernel': 'RBF',

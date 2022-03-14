@@ -1,0 +1,28 @@
+ntrain: 10
+variables:
+    T: Halton()
+    E: Independent(0, 10, 100)
+    n_f: Output(E)
+
+run:
+    pre:
+        class: template
+        path: ../template_independent
+        param_files: [ mockup_independent.json ]
+
+    post:
+        class: hdf5
+        path: mockup.hdf5
+    command: python3 mockup_independent.py
+
+files:
+    input: input_independent.txt
+    output: output_independent.txt
+fit:
+    surrogate: CoregionalizedGPy
+    save: model_independent.hdf5
+    output_encoders:
+        - class: Normalization
+          columns: all
+        - class: KarhunenLoeve
+          columns: all

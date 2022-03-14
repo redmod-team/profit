@@ -72,7 +72,8 @@ class GPySurrogate(GaussianProcess):
 
         sur_dict = {attr: getattr(self, attr) for attr in ('Xtrain', 'ytrain')}
         sur_dict['model'] = self.model.to_dict()
-        sur_dict['encoder'] = str([enc.repr for enc in self.encoder])
+        sur_dict['input_encoders'] = str([enc.repr for enc in self.input_encoders])
+        sur_dict['output_encoders'] = str([enc.repr for enc in self.output_encoders])
         FileHandler.save(path, sur_dict)
 
     @classmethod
@@ -95,7 +96,11 @@ class GPySurrogate(GaussianProcess):
         sur_dict = FileHandler.load(path, as_type='dict')
         self.model = models.GPRegression.from_dict(sur_dict['model'])
         self.Xtrain, self.ytrain = sur_dict['Xtrain'], sur_dict['ytrain']
-        self.encoder = [Encoder[func](cols, out, variables) for func, cols, out, variables in eval(sur_dict['encoder'])]
+
+        for enc in eval(sur_dict['input_encoders']):
+            self.add_input_encoder(Encoder[enc['class']](enc['columns'], enc['parameters']))
+        for enc in eval(sur_dict['output_encoders']):
+            self.add_output_encoder(Encoder[enc['class']](enc['columns'], enc['parameters']))
 
         # Initialize the encoder by encoding and decoding the training data once.
         self.encode_training_data()
@@ -175,15 +180,17 @@ class GPySurrogate(GaussianProcess):
                     else:
                         self.hyperparameters[key] = value
             noise_var = self.model.likelihood.gaussian_variance(
-                self.model.Y_metadata).reshape(-1, self.output_ndim, order='F')
+                self.model.Y_metadata).reshape(-1, 1, order='F')
             self.hyperparameters['sigma_n'] = np.sqrt(np.max(noise_var, axis=0))
         self.decode_hyperparameters()
 
     def special_hyperparameter_decoding(self, key, value):
-        if key == 'length_scale' and self.ndim > 1 and not self.model.kern.ARD:
+        has_ard = any(p.ARD for p in self.model.kern.parts) if hasattr(self.model.kern, 'parts') else self.model.kern.ARD
+        if key == 'length_scale' and self.ndim > 1 and not has_ard:
             return np.atleast_1d(np.linalg.norm(value))
-        else:
-            return value
+        elif key in ('sigma_f', 'sigma_n') and len(value) > 1:
+            return np.atleast_1d(np.max(value))
+        return value
 
 
 @Surrogate.register("CoregionalizedGPy")
@@ -243,7 +250,9 @@ class CoregionalizedGPySurrogate(GPySurrogate):
         if ending != '.pkl':
             print(f"Saving to '{ending}' not implemented yet for {self.__class__.__name__} surrogate."
                   " Saving to '.pkl' file instead.")
-        save_list = [self.model, self.Xtrain, self.ytrain, str([enc.repr for enc in self.encoder])]
+        save_list = [self.model, self.Xtrain, self.ytrain,
+                     str([enc.repr for enc in self.input_encoders]),
+                     str([enc.repr for enc in self.output_encoders])]
         FileHandler.save(filepath + '.pkl', save_list)
 
     @classmethod
@@ -253,14 +262,18 @@ class CoregionalizedGPySurrogate(GPySurrogate):
 
         self = cls()
         try:
-            self.model, self.Xtrain, self.ytrain, encoder_str = FileHandler.load(path, as_type='raw')
+            self.model, self.Xtrain, self.ytrain, input_encoder_str, output_encoder_str = FileHandler.load(path, as_type='raw')
         except (OSError, FileNotFoundError):
             from os.path import splitext
             print("File not found. Try changing file ending to '.pkl'!")
             path = splitext(path)[0] + '.pkl'
             # Load multi-output model from pickle file
-            self.model, self.Xtrain, self.ytrain, encoder_str = FileHandler.load(path)
-        self.encoder = [Encoder[func](cols, out, variables) for func, cols, out, variables in eval(encoder_str)]
+            self.model, self.Xtrain, self.ytrain, input_encoder_str, output_encoder_str = FileHandler.load(path, as_type='raw')
+
+        for enc in eval(input_encoder_str):
+            self.add_input_encoder(Encoder[enc['class']](enc['columns'], enc['parameters']))
+        for enc in eval(output_encoder_str):
+            self.add_output_encoder(Encoder[enc['class']](enc['columns'], enc['parameters']))
         self.output_ndim = int(max(self.model.X[:, -1])) + 1
 
         # Initialize the encoder by encoding and decoding the training data once.
@@ -274,19 +287,15 @@ class CoregionalizedGPySurrogate(GPySurrogate):
         self.print_hyperparameters("Loaded")
         return self
 
-    def decode_hyperparameters(self):
-        for key, value in self.hyperparameters.items():
-            new_value = value
-            for enc in self.encoder:
-                new_value = enc.decode_hyperparameters(key, new_value)
-                if key == 'W' or key == 'kappa':
-                    # TODO: Review W and kappa encoding
-                    new_value = value * (enc.variables['xmax'] - enc.variables['xmin']) if enc.work_on_output else value
-                new_value = self.special_hyperparameter_decoding(key, new_value)
-            self.hyperparameters[key] = new_value
-
     def special_hyperparameter_decoding(self, key, value):
         if key == 'length_scale' and self.ndim > 1 and not self.model.kern.parts[0].ARD:
             return np.atleast_1d(np.linalg.norm(value))
-        else:
-            return value
+        elif key in ('sigma_f', 'sigma_n') and len(value) > 1:
+            return np.atleast_1d(np.max(value))
+        elif key in ('W', 'kappa'):
+                new_value = value
+                for enc in self.output_encoders:
+                    if enc.label == 'Normalization':
+                        new_value = enc.decode_hyperparameters(value)
+                return np.atleast_1d(np.min(new_value))
+        return value

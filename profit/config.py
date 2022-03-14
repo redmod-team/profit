@@ -548,28 +548,55 @@ class FitConfig(AbstractConfig):
         if self.load:
             self.save = False
 
-        for enc in getattr(self, 'encoder'):
-            cols = enc[1]
-            out = enc[2]
-            if isinstance(cols, str):
-                variables = getattr(base_config, 'output' if out else 'input')
-                if cols.lower() == 'all':
-                    enc[1] = list(range(len(variables)))
-                elif cols.lower() in [v.get('distr', v['kind']).lower() for v in variables.values()]:
-                    enc[1] = [idx for idx, v in enumerate(variables.values()) if
-                              v.get('distr', v['kind']).lower() == cols.lower()]
-                else:
-                    enc[1] = []
+        for in_out in ('input_encoders', 'output_encoders'):
+            variables = base_config[in_out.split('_')[0]]
+            ncols = sum([v['size'][-1] for v in variables.values()])
+            all_cols = list(range(ncols))
+            for enc in getattr(self, in_out):
+
+                # Set columns
+                cols = enc['columns']
+
+                if isinstance(cols, str):
+                    col_str = cols.lower()
+                    variables_distr = [v.get('distr', v['kind']).lower() for v in variables.values()]
+
+                    if col_str == 'all':
+                        enc['columns'] = all_cols
+                    elif col_str in variables_distr:
+                        enc['columns'] = [idx for idx, d in enumerate(variables_distr) if d == col_str]
+                    else:
+                        enc['columns'] = []
+
+                # Set parameters
+                if 'parameters' not in enc:
+                    enc['parameters'] = {}
+                for k, v in enc['parameters'].items():
+                    try:
+                        enc['parameters'][k] = float(v)
+                    except ValueError:
+                        pass
 
         # Delete excluded columns from other encoders
-        for i, enc in enumerate(self.encoder):
-            if enc[0].lower() == 'exclude':
-                for enc2 in self.encoder[i + 1:]:
-                    if enc[2] == enc2[2]:
-                        for col in enc[1]:
-                            if col in enc2[1]:
-                                idx = enc2[1].index(col)
-                                enc2[1].pop(idx)
+        for in_out_encoders in (self.input_encoders, self.output_encoders):
+            for n_enc, enc in enumerate(in_out_encoders):
+                if enc['class'].lower() == 'exclude':
+                    cols1 = enc['columns']
+                    for enc2 in in_out_encoders[n_enc+1:]:
+                        cols2 = enc2['columns']
+                        removed_cols = 0
+                        for idx1, col1 in enumerate(cols1):
+                            col_rm = col1 - removed_cols
+                            if col_rm in cols2:
+                                # Remove excluded column from other encoder and reindex subsequent columns
+                                idx2 = cols2.index(col_rm)
+                                cols2.pop(idx2)
+                                cols2[idx2:] = [c - 1 for c in cols2[idx2:]]
+                                removed_cols += 1
+                            else:
+                                # Reindex subsequent columns
+                                idx2 = [c > col1 for c in cols2]
+                                cols2[:] = [c-1 if cond else c for c, cond in zip(cols2, idx2)]
 
 
 @BaseConfig.register("active_learning")

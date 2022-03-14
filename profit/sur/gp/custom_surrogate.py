@@ -67,7 +67,7 @@ class GPSurrogate(GaussianProcess):
                 for active learning.
         """
         self.pre_train(X, y, kernel, hyperparameters, fixed_sigma_n)
-        if self.encoder:
+        if self.input_encoders or self.output_encoders:
             print("For now, encoding is not supported for this surrogate. The model is created without encoding.")
             self.decode_training_data()
 
@@ -81,9 +81,8 @@ class GPSurrogate(GaussianProcess):
     def predict(self, Xpred, add_data_variance=True):
         Xpred = super().pre_predict(Xpred)
         # Encoding is not supported yet for this surrogate.
-        for enc in self.encoder[::-1]:
-            if not enc.work_on_output:
-                Xpred = enc.decode(Xpred)
+        for enc in self.input_encoders[::-1]:
+            Xpred = enc.decode(Xpred)
 
         # Skip data noise sigma_n in hyperparameters
         prediction_hyperparameters = {key: value for key, value in self.hyperparameters.items() if key != 'sigma_n'}
@@ -289,7 +288,9 @@ class MultiOutputGPSurrogate(GaussianProcess):
         """
 
         from profit.util.file_handler import FileHandler
-        save_dict = {attr: getattr(self, attr) for attr in ('Xtrain', 'ytrain', 'trained', 'output_ndim',)}
+        save_dict = {attr: getattr(self, attr) for attr in ('Xtrain', 'ytrain', 'trained', 'output_ndim', 'hyperparameters')}
+        save_dict['input_encoders'] = str([enc.repr for enc in self.input_encoders])
+        save_dict['output_encoders'] = str([enc.repr for enc in self.output_encoders])
         for i, m in enumerate(self.models):
             save_dict[i] = {attr: getattr(m, attr)
                             for attr in
@@ -303,12 +304,24 @@ class MultiOutputGPSurrogate(GaussianProcess):
     @classmethod
     def load_model(cls, path):
         from profit.util.file_handler import FileHandler
+        from profit.sur.encoders import Encoder
 
         load_dict = FileHandler.load(path, as_type='dict')
         self = cls()
         self.trained = load_dict['trained']
         self.output_ndim = load_dict['output_ndim']
         self.Xtrain, self.ytrain = load_dict['Xtrain'], load_dict['ytrain']
+        self.hyperparameters = load_dict['hyperparameters']
+
+        for enc in eval(load_dict['input_encoders']):
+            self.add_input_encoder(Encoder[enc['class']](enc['columns'], enc['parameters']))
+        for enc in eval(load_dict['output_encoders']):
+            self.add_output_encoder(Encoder[enc['class']](enc['columns'], enc['parameters']))
+
+        # Initialize the encoder by encoding and decoding the training data once.
+        self.encode_training_data()
+        self.decode_training_data()
+
         self.models = [self.child() for _ in range(self.output_ndim)]
 
         for i, m in enumerate(self.models):

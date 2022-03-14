@@ -193,3 +193,26 @@ def test_2D_independent():
         clean(config)
         if path.exists(model_file):
             remove(model_file)
+
+
+def test_karhunenloeve():
+    """Same test function as 'test_2D_independent' but with multi-output surrogate and Karhunen-Loeve encoder."""
+
+    config_file = 'study_karhunenloeve/profit_karhunenloeve.yaml'
+    config = BaseConfig.from_file(config_file)
+    model_file = config['fit'].get('save')
+    try:
+        run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
+        run(f"profit fit {config_file}", shell=True, timeout=TIMEOUT)
+        sur = Surrogate.load_model(model_file)
+        assert sur.get_label() == 'CoregionalizedGPy'
+        assert sur.trained
+        assert allclose(sur.hyperparameters['length_scale'], 0.51021744, rtol=PARAM_RTOL)
+        assert allclose(sur.hyperparameters['sigma_f'], 0.36038181, rtol=PARAM_RTOL)
+        assert allclose(sur.hyperparameters['sigma_n'], 0.1267644, rtol=PARAM_RTOL)
+    finally:
+        clean(config)
+        if path.exists(model_file):
+            from os.path import splitext
+            model_file = splitext(model_file)[0] + '.pkl'
+            remove(model_file)

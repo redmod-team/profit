@@ -234,9 +234,13 @@ class GaussianProcess(Surrogate):
         """Decodes the hyperparameters, as encoded ones are used in the surrogate model."""
         for key, value in self.hyperparameters.items():
             new_value = value
-            for enc in self.encoder:
-                new_value = enc.decode_hyperparameters(key, new_value)
-                new_value = self.special_hyperparameter_decoding(key, new_value)
+            if key == 'length_scale':
+                for enc in self.input_encoders:
+                    new_value = enc.decode_hyperparameters(new_value)
+            if key in ('sigma_f', 'sigma_n'):
+                for enc in self.output_encoders:
+                    new_value = enc.decode_hyperparameters(new_value)
+            new_value = self.special_hyperparameter_decoding(key, new_value)
             self.hyperparameters[key] = new_value
 
     def special_hyperparameter_decoding(self, key, value):
