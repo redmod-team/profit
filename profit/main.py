@@ -24,13 +24,13 @@ def main():
     subparsers.add_parser("run", help="start simulation runs")
     subparsers.add_parser("fit", help="fit data (e.g. with a Gaussian Process)")
     subparsers.add_parser("ui", help="interactively visualize results using dash")
-    subparsers.add_parser("clean", help="remove generated files")
+    subparsers.add_parser("clean", help="remove temporary files, run directories and logs")
     subparsers.add_parser("version", help="show version information")
-    subparsers.choices["clean"].add_argument("--all", action="store_true")
+    subparsers.choices["clean"].add_argument("--all", action="store_true", help="remove input, output and model files")
 
     parser.add_argument('base_dir',
                         metavar='base-dir',
-                        help='path to config file (default: current working directory)',
+                        help='path to config file or directory containing profit.yaml (default: current working directory)',
                         default=default_base_dir, nargs='?')
 
     args, reminder = parser.parse_known_args()
@@ -39,6 +39,18 @@ def main():
     parser.usage = parser.format_usage()
     del parser._actions[1]  # without subparsers
     args = parser.parse_args(reminder, namespace=args)
+    
+    # `profit version` does not require a config
+    if args.mode == "version":
+        print(f"proFit {__version__}")
+        import profit.sur.gp.backend
+        try:
+            from profit.sur.gp.backend import gpfunc
+            print('with fortran backend')
+        except ImportError:
+            print('without fortran backend')
+        print(f"python {python_version()}")
+        return
 
     # Instantiate Config from the given file
     config_file = safe_path(args.base_dir, default=default_config_file)
@@ -185,16 +197,6 @@ def main():
             pass
         if path.exists('runner.log'):
             remove('runner.log')
-
-    elif args.mode == "version":
-        print(f"proFit {__version__}")
-        import profit.sur.gp.backend
-        try:
-            from profit.sur.gp.backend import gpfunc
-            print('with fortran backend')
-        except ImportError:
-            print('without fortran backend')
-        print(f"python {python_version()}")
 
 
 if __name__ == '__main__':
