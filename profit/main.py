@@ -4,7 +4,7 @@ This script is called when running the `profit` command inside a shell.
 """
 
 import sys
-from argparse import ArgumentParser, RawTextHelpFormatter
+from argparse import ArgumentParser
 from platform import python_version
 
 from profit.config import BaseConfig
@@ -13,33 +13,44 @@ from profit.util.variable import VariableGroup, Variable
 from profit.defaults import base_dir as default_base_dir, config_file as default_config_file
 from profit.run import Runner
 
-YES = False  # always answer 'y'
-
 
 def main():
     """Main command line interface"""
+    from profit import __version__  # delayed to prevent cyclic import
 
     # Get parameters from shell input
-    parser = ArgumentParser(usage='profit <mode> (base-dir)',
-                            description="Probabilistic Response Model Fitting with Interactive Tools",
-                            formatter_class=RawTextHelpFormatter)
-    parser.add_argument('mode',  # ToDo: subparsers?
-                        metavar='mode',
-                        choices=['run', 'fit', 'ui', 'clean'],
-                        help='run   ... start simulation runs\n'
-                             'fit   ... fit data with Gaussian Process\n'
-                             'ui    ... visualise results\n'
-                             'clean ... remove run directories and input/output files')
+    parser = ArgumentParser(description=f"Probabilistic Response Model Fitting with Interactive Tools v{__version__}")
+    subparsers = parser.add_subparsers(metavar="mode", dest="mode", required=True)
+    subparsers.add_parser("run", help="start simulation runs")
+    subparsers.add_parser("fit", help="fit data (e.g. with a Gaussian Process)")
+    subparsers.add_parser("ui", help="interactively visualize results using dash")
+    subparsers.add_parser("clean", help="remove temporary files, run directories and logs")
+    subparsers.add_parser("version", help="show version information")
+    subparsers.choices["clean"].add_argument("--all", action="store_true", help="remove input, output and model files")
+
     parser.add_argument('base_dir',
                         metavar='base-dir',
-                        help='path to config file (default: current working directory)',
+                        help='path to config file or directory containing profit.yaml (default: current working directory)',
                         default=default_base_dir, nargs='?')
 
-    from profit import __version__  # delayed to prevent cyclic import
-    print(f"proFit {__version__} for python {python_version()}")
-    args = parser.parse_args()
+    args, reminder = parser.parse_known_args()
 
-    print(args)
+    # parse additional arguments which weren't used by the subparser by a modified main parser again
+    parser.usage = parser.format_usage()
+    del parser._actions[1]  # without subparsers
+    args = parser.parse_args(reminder, namespace=args)
+    
+    # `profit version` does not require a config
+    if args.mode == "version":
+        print(f"proFit {__version__}")
+        import profit.sur.gp.backend
+        try:
+            from profit.sur.gp.backend import gpfunc
+            print('with fortran backend')
+        except ImportError:
+            print('without fortran backend')
+        print(f"python {python_version()}")
+        return
 
     # Instantiate Config from the given file
     config_file = safe_path(args.base_dir, default=default_config_file)
@@ -103,6 +114,8 @@ def main():
             params_array = [row[0] for row in variables.named_input]  # Structured array of input values
             try:
                 runner.spawn_array(tqdm(params_array), blocking=True)  # Start runs
+            except KeyboardInterrupt:
+                runner.logger.info("Keyboard Interrupt")
             finally:
                 runner.cancel_all()  # Close all run processes
 
@@ -112,6 +125,8 @@ def main():
 
         if config['run']['clean']:
             runner.clean()
+        if len(runner.failed):
+            runner.logger.warning(f"{len(runner.failed)} runs failed")
 
         # Format output data for txt file and save
         formatted_output_data = variables.formatted_output \
@@ -157,26 +172,20 @@ def main():
         from os import path, remove
         run_dir = config['run_dir']
 
-        question = "Are you sure you want to remove the run directories in {} " \
-                   "and input/output files? (y/N) ".format(config['run_dir'])
-        if YES:
-            print(question + 'y')
-        else:
-            answer = input(question)
-            if not answer.lower().startswith('y'):
-                print('exit...')
-                sys.exit()
         # Remove single run directories
         for krun in range(config['ntrain']):
             single_run_dir = path.join(run_dir, f'run_{krun:03d}')
             if path.exists(single_run_dir):
                 rmtree(single_run_dir)
 
-        # Remove input and output files
-        if path.exists(config['files']['input']):
-            remove(config['files']['input'])
-        if path.exists(config['files']['output']):
-            remove(config['files']['output'])
+        if args.all:
+            # Remove input and output files
+            if path.exists(config['files']['input']):
+                remove(config['files']['input'])
+            if path.exists(config['files']['output']):
+                remove(config['files']['output'])
+            if path.exists(config['fit']['save']):
+                remove(config['fit']['save'])
 
         # Cleanup runner
         runner = Runner.from_config(config['run'], config)

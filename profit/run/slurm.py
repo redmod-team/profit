@@ -94,7 +94,7 @@ class SlurmRunner(Runner):
         self.interface.poll()
         for run_id in list(self.runs):
             if self.interface.internal['DONE'][run_id]:
-                self.del_run(run_id)
+                self.delete_run(run_id)
         # poll the slurm scheduler to check for crashed runs
         if poll:
             acct = subprocess.run(['sacct', f'--name={self.config["options"]["job-name"]}', '--brief', '--parsable2'],
@@ -105,10 +105,13 @@ class SlurmRunner(Runner):
                     continue
                 job_id, state = line.split('|')[:2]
                 if job_id in lookup:
+                    run_id = lookup[job_id]
                     if not (state.startswith('RUNNING') or state.startswith('PENDING')):
                         # job has crashed or completed -> check backup
-                        self.check_backup(lookup[job_id])
-                        self.del_run(lookup[job_id])
+                        if self.check_backup(run_id):
+                            self.delete_run(run_id)
+                        else:  # failed / crashed
+                            self.failed[run_id] = self.runs.pop(run_id)
 
     def cancel_all(self):
         from re import split
@@ -117,9 +120,10 @@ class SlurmRunner(Runner):
             ids.add(split(r'[_.]', self.runs[run_id])[0])
         for job_id in ids:
             subprocess.run(['scancel', job_id])
+        self.failed = self.runs
         self.runs = {}
 
-    def del_run(self, run_id: int):
+    def delete_run(self, run_id: int):
         """helper: delete run from runs and remove slurm-stdout
 
         :param run_id: which run to delete, is a key in ``self.runs``
@@ -134,12 +138,15 @@ class SlurmRunner(Runner):
 
     def clean(self):
         """remove generated scripts and any slurm-stdout-files which match ``slurm-*.out``"""
+        from re import match
         super().clean()
         if not self.config['custom'] and os.path.exists(self.config['path']):
             os.remove(self.config['path'])
         for direntry in os.scandir(self.base_config['run_dir']):
-            if direntry.is_file() and direntry.name.startswith('slurm-') and direntry.name.endswith('.out'):
-                os.remove(os.path.join(self.base_config['run_dir'], direntry.path))
+            if direntry.is_file() and match(r"slurm-(\d+)\.out", direntry.name) is not None:
+                job_id = match(r"slurm-(\d+)\.out", direntry.name).groups()[0]
+                if job_id not in self.failed.values():  # do not remove failed runs
+                    os.remove(os.path.join(self.base_config['run_dir'], direntry.path))
 
     def generate_script(self):
         text = f"""\

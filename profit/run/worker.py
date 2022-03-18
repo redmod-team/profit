@@ -1,8 +1,4 @@
-"""proFit worker class & components
-
-:author: Robert Babin
-:date: Mar 2021
-"""
+"""proFit worker class & components"""
 
 import os
 import shutil
@@ -93,8 +89,10 @@ class Preprocessor(CustomABC):
         def decorator(func):
             @cls.register(label)
             class WrappedPreprocessor(cls):
+                __doc__ = func.__doc__
                 def pre(self, data, run_dir):
-                    func(data)
+                    func(self, data, run_dir)
+            return WrappedPreprocessor
         return decorator
 
 
@@ -122,8 +120,10 @@ class Postprocessor(CustomABC):
         def decorator(func):
             @cls.register(label)
             class WrappedPostprocessor(cls):
+                __doc__ = func.__doc__
                 def post(self, data):
-                    func(data)
+                    func(self, data)
+            return WrappedPostprocessor
         return decorator
 
 
@@ -170,18 +170,62 @@ class Worker(CustomABC):
         return cls.from_config(config, run_id)
 
     @classmethod
-    def wrap(cls, label, inputs, outputs):
+    def wrap(cls, label, inputs=None, outputs=None):
+        """
+        ```
+        @Worker.wrap('label', ['f', 'g'], ['x', 'y'])
+        def func(x, y):
+            ...
+        
+        @Worker.wrap('label', ['f', 'g'])
+        def func(x, y):
+            ...
+        
+        @Worker.wrap('label')
+        def func(x, y) -> ['f', 'g']:
+            ...
+        
+        @Worker.wrap('name', 'f', 'x')
+        def func(x):
+            ...
+        
+        @Worker.wrap('name')
+        def func(x) -> 'f':
+            ...
+        
+        @Worker.wrap('name')
+        def f(x):
+            ...
+        ```
+        """
         def decorator(func):
+            nonlocal inputs, outputs
+            if isinstance(inputs, str):
+                inputs = [inputs]
+            elif inputs is None:
+                inputs = func.__code__.co_varnames[:func.__code__.co_argcount]
+            if outputs is None:
+                if 'return' in func.__annotations__:
+                    outputs = func.__annotations__['return']
+                else:
+                    outputs = func.__code__.co_name
+            if isinstance(outputs, str):
+                outputs = [outputs]
+        
             @cls.register(label)
             class WrappedWorker(cls):
+                __doc__ = func.__doc__
                 def main(self):
+                    timestamp = time.time()
                     values = func(*[self.interface.input[key] for key in inputs])
-                    if isinstance(outputs, str):
-                        self.interface.output[outputs] = values
-                    else:
-                        for value, key in zip(values, outputs):
-                            self.interface.output[key] = value
+                    if self.config['time']:
+                        self.interface.time = int(time.time() - timestamp)
+                    if len(outputs) == 1:
+                        values = [values]
+                    for value, key in zip(values, outputs):
+                        self.interface.output[key] = value
                     self.interface.done()
+            return WrappedWorker
         return decorator
 
     def run(self):

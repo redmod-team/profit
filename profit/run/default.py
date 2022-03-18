@@ -80,7 +80,8 @@ class LocalRunner(Runner):
                     del self.runs[run_id]
                 elif poll and process.poll() is not None:
                     # job has crashed or completed -> check backup
-                    self.check_backup(run_id)
+                    if not self.check_backup(run_id):
+                        self.failed[run_id] = self.runs[run_id]
                     del self.runs[run_id]
         else:
             for run_id, process in list(self.runs.items()):  # preserve state before deletions
@@ -90,7 +91,8 @@ class LocalRunner(Runner):
                 elif poll and process.exitcode is not None:
                     process.terminate()
                     # job has crashed or completed -> check backup
-                    self.check_backup(run_id)
+                    if not self.check_backup(run_id):
+                        self.failed[run_id] = self.runs[run_id]
                     del self.runs[run_id]
 
     def cancel_all(self):
@@ -100,10 +102,11 @@ class LocalRunner(Runner):
         else:
             for process in self.runs.values():
                 process.terminate()
+        self.failed = self.runs
         self.runs = {}
 
 
-# === Numpy Memmap Inerface === #
+# === Numpy Memmap Interface === #
 
 
 @RunnerInterface.register('memmap')
@@ -308,26 +311,25 @@ class TemplatePreprocessor(Preprocessor):
 # === JSON Postprocessor === #
 
 
-@Postprocessor.register('json')
-class JSONPostprocessor(Postprocessor):
+@Postprocessor.wrap('json')
+def JSONPostprocessor(self, data):
     """ Postprocessor to read output from a JSON file
 
     - variables are assumed to be stored with the correct key and able to be converted immediately
     - not extensively tested
     """
-    def post(self, data):
-        import json
-        with open(self.config['path']) as f:
-            output = json.load(f)
-        for key, value in output.items():
-            data[key] = value
+    import json
+    with open(self.config['path']) as f:
+        output = json.load(f)
+    for key, value in output.items():
+        data[key] = value
 
 
 # === Numpy Text Postprocessor === #
 
 
-@Postprocessor.register('numpytxt')
-class NumpytxtPostprocessor(Postprocessor):
+@Postprocessor.wrap('numpytxt')
+def NumpytxtPostprocessor(self, data):
     """ Postprocessor to read output from a tabular text file (e.g. csv, tsv) with numpy ``genfromtxt``
 
     - the data is assumed to be row oriented
@@ -336,34 +338,32 @@ class NumpytxtPostprocessor(Postprocessor):
     - ``names`` which are not specified as output variables are ignored
     - additional options are passed directly to ``numpy.genfromtxt()`
     """
-    def post(self, data):
-        dtype = [(name, float, data.dtype[name].shape if name in data.dtype.names else ())
-                 for name in self.config['names']]
-        try:
-            raw = np.genfromtxt(self.config['path'], dtype=dtype, **self.config['options'])
-        except OSError:
-            self.logger.error(f'output file {self.config["path"]} not found')
-            self.logger.info(f'cwd = {os.getcwd()}')
-            dirname = os.path.dirname(self.config['path']) or '.'
-            self.logger.info(f'ls {dirname} = {os.listdir(dirname)}')
-            raise
-        for key in self.config['names']:
-            if key in data.dtype.names:
-                data[key] = raw[key]
+    dtype = [(name, float, data.dtype[name].shape if name in data.dtype.names else ())
+             for name in self.config['names']]
+    try:
+        raw = np.genfromtxt(self.config['path'], dtype=dtype, **self.config['options'])
+    except OSError:
+        self.logger.error(f'output file {self.config["path"]} not found')
+        self.logger.info(f'cwd = {os.getcwd()}')
+        dirname = os.path.dirname(self.config['path']) or '.'
+        self.logger.info(f'ls {dirname} = {os.listdir(dirname)}')
+        raise
+    for key in self.config['names']:
+        if key in data.dtype.names:
+            data[key] = raw[key]
 
 
 # === HDF5 Postprocessor === #
 
 
-@Postprocessor.register('hdf5')
-class HDF5Postprocessor(Postprocessor):
+@Postprocessor.wrap('hdf5')
+def HDF5Postprocessor(self, data):
     """ Postprocessor to read output from a HDF5 file
 
         - variables are assumed to be stored with the correct key and able to be converted immediately
         - not extensively tested
     """
-    def post(self, data):
-        import h5py
-        with h5py.File(self.config['path'], 'r') as f:
-            for key in f.keys():
-                data[key] = f[key]
+    import h5py
+    with h5py.File(self.config['path'], 'r') as f:
+        for key in f.keys():
+            data[key] = f[key]

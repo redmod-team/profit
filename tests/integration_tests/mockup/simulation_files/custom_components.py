@@ -12,7 +12,7 @@ class MockupPostprocessor(Postprocessor):
 
 
 @Postprocessor.wrap('mockup_post2')
-def post(data):
+def post(self, data):
     """ shorthand for mockup_post1 """
     raw = np.loadtxt('mockup.out')
     data['f'] = raw

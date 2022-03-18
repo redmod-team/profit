@@ -5,12 +5,11 @@ Goal: a class to manage and deploy runs
 """
 
 import os
-import shutil
+import sys
 import logging
 from abc import abstractmethod
 from profit.util.base_class import CustomABC  # Abstract Base Class
 
-from .worker import Preprocessor, Postprocessor, Worker
 from profit.util import load_includes, params2map
 
 import numpy as np
@@ -38,9 +37,9 @@ class RunnerInterface(CustomABC):
         if size <= self.size:
             self.logger.warning('shrinking RunnerInterface is not supported')
             return
-        self.input.resize(size)  # filled with 0 by default
-        self.output.resize(size)
-        self.internal.resize(size)
+        self.input.resize(size, refcheck=True)  # filled with 0 by default
+        self.output.resize(size, refcheck=True)
+        self.internal.resize(size, refcheck=True)
         
     @property
     def size(self):
@@ -72,6 +71,11 @@ class Runner(CustomABC):
             log_formatter = logging.Formatter('{asctime} {levelname:8s} {name}: {message}', style='{')
             log_handler.setFormatter(log_formatter)
             self.logger.addHandler(log_handler)
+
+            log_handler2 = logging.StreamHandler(sys.stderr)
+            log_handler2.setFormatter(log_formatter)
+            log_handler2.setLevel(logging.WARNING)
+            self.logger.addHandler(log_handler2)
             self.logger.propagate = False
         if self.run_config['debug']:
             self.logger.setLevel(logging.DEBUG)
@@ -80,6 +84,7 @@ class Runner(CustomABC):
                                                           logger_parent=self.logger)
 
         self.runs = {}  # run_id: (whatever data the system tracks)
+        self.failed = {}  # ~runs, saving those that failed
         self.next_run_id = 0
         self.env = os.environ.copy()
         self.env['PROFIT_BASE_DIR'] = self.base_config['base_dir']
@@ -147,6 +152,7 @@ class Runner(CustomABC):
             self.interface.internal['DONE'][run_id] = True
         except Exception as e:
             self.logger.debug(f'check data for run {run_id}: {e}')
+        return self.interface.internal['DONE'][run_id]
 
     @abstractmethod
     def cancel_all(self):
