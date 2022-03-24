@@ -91,6 +91,7 @@ class GPySurrogate(GaussianProcess):
         from profit.util.file_handler import FileHandler
         from profit.sur.encoders import Encoder
         from GPy import models
+        from numpy import array  # needed for eval of arrays
 
         self = cls()
         sur_dict = FileHandler.load(path, as_type='dict')
@@ -259,6 +260,7 @@ class CoregionalizedGPySurrogate(GPySurrogate):
     def load_model(cls, path):
         from profit.util.file_handler import FileHandler
         from profit.sur.encoders import Encoder
+        from numpy import array  # needed for eval of arrays
 
         self = cls()
         try:

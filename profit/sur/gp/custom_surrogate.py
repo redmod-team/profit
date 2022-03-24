@@ -305,6 +305,7 @@ class MultiOutputGPSurrogate(GaussianProcess):
     def load_model(cls, path):
         from profit.util.file_handler import FileHandler
         from profit.sur.encoders import Encoder
+        from numpy import array  # needed for eval of arrays
 
         load_dict = FileHandler.load(path, as_type='dict')
         self = cls()

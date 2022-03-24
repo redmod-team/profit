@@ -21,8 +21,6 @@ files:
 fit:
     surrogate: CoregionalizedGPy
     save: model_independent.hdf5
-    output_encoders:
-        - class: Normalization
-          columns: all
-        - class: KarhunenLoeve
-          columns: all
+    encoder:
+        - Normalization(all)
+        - KarhunenLoeve(output)

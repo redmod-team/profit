@@ -111,6 +111,16 @@ class VariableGroup:
         return [v for v in self.list if v.__class__ in (InputVariable, ActiveLearningVariable)]
 
     @property
+    def kind_dict(self):
+        kinds = {}
+        for v in self.input_list:
+            if v["kind"] in kinds:
+                kinds[v["kind"]].append(v)
+            else:
+                kinds[v["kind"]] = [v]
+        return kinds
+
+    @property
     def output(self):
         """
         Returns:
@@ -165,6 +175,14 @@ class VariableGroup:
             Dictionary of the output variables.
         """
         return {v.name: v for v in self.list if v.__class__ == OutputVariable}
+
+    @property
+    def output_list(self):
+        """
+        Returns:
+            List of output variables.
+        """
+        return [v for v in self.list if v.__class__ == OutputVariable]
 
     def __getitem__(self, item):
         """Implements dict like behavior to get a variable by its identifier or index.

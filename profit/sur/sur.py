@@ -36,12 +36,13 @@ class Surrogate(CustomABC):
 
     Default parameters:
         surrogate: GPy
-        save: ./model_{surrogate_label}.hdf5
+        save: ./model_{surrogate label}.hdf5
         load: False
         fixed_sigma_n: False
-        input_encoders: [{'class': 'log10', 'columns': [log_input_cols], 'parameters': {}},
-                         {'class': 'normalization', 'columns': [input_cols], 'parameters': {}}]
-        output_encoders: [{'class': 'normalization', 'columns': [output_cols], 'parameters': {}}]
+        input_encoders: [{'class': 'exclude', 'columns': {constant columns}
+                         {'class': 'log10', 'columns': {log input columns}, 'parameters': {}},
+                         {'class': 'normalization', 'columns': {input columns}, 'parameters': {}}]
+        output_encoders: [{'class': 'normalization', 'columns': {output columns}, 'parameters': {}}]
     """
 
     labels = {}  # All surrogates are registered here
@@ -201,9 +202,9 @@ class Surrogate(CustomABC):
             child_instance.ndim = len(base_config['input'])
             child_instance.output_ndim = len(base_config['output'])
             child_instance.fixed_sigma_n = config['fixed_sigma_n']
-            for enc in config['input_encoders']:
+            for enc in config['_input_encoders']:
                 child_instance.add_input_encoder(Encoder[enc['class']](enc['columns'], enc['parameters']))
-            for enc in config['output_encoders']:
+            for enc in config['_output_encoders']:
                 child_instance.add_output_encoder(Encoder[enc['class']](enc['columns'], enc['parameters']))
         return child_instance
 

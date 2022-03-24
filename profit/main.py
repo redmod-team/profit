@@ -55,18 +55,9 @@ def main():
     # Instantiate Config from the given file
     config_file = safe_path(args.base_dir, default=default_config_file)
     config = BaseConfig.from_file(config_file)
+    variables = config.variable_group
 
     sys.path.append(config['base_dir'])
-
-    # Create variables
-    variables = VariableGroup(config['ntrain'])
-    vars = []
-    for k, v in config['variables'].items():
-        if isinstance(v, str):
-            vars.append(Variable.create_from_str(k, (config['ntrain'], 1), v))
-        else:
-            vars.append(Variable.create(**v))
-    variables.add(vars)
 
     # Select mode
     if args.mode == 'run':

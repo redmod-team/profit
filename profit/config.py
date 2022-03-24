@@ -135,6 +135,8 @@ class AbstractConfig(CustomABC):
         """
         attr = getattr(self, item)
         if item in self.labels:
+            if type(attr) is list:
+                return {"list": attr}
             return {key: attr[key] for key, _ in attr.items()}
         return attr
 
@@ -240,7 +242,7 @@ class BaseConfig(AbstractConfig):
         self.files['output'] = path.join(self.base_dir, self.files.get('output', defaults.files['output']))
 
         # Variable configuration as dict
-        variables = VariableGroup(self.ntrain)
+        self.variable_group = VariableGroup(self.ntrain)
         vars = []
         for k, v in self.variables.items():
             if isinstance(v, (int, float)):
@@ -249,9 +251,9 @@ class BaseConfig(AbstractConfig):
                 vars.append(Variable.create_from_str(k, (self.ntrain, 1), v))
             else:
                 vars.append(Variable.create(name=k, size=(self.ntrain,1), **v))
-        variables.add(vars)
+        self.variable_group.add(vars)
 
-        self.variables = variables.as_dict
+        self.variables = self.variable_group.as_dict
         self.input = {k: v for k, v in self.variables.items()
                       if not any(k in v['kind'].lower() for k in ('output', 'independent'))}
         self.output = {k: v for k, v in self.variables.items()
@@ -548,55 +550,77 @@ class FitConfig(AbstractConfig):
         if self.load:
             self.save = False
 
-        for in_out in ('input_encoders', 'output_encoders'):
-            variables = base_config[in_out.split('_')[0]]
-            ncols = sum([v['size'][-1] for v in variables.values()])
-            all_cols = list(range(ncols))
-            for enc in getattr(self, in_out):
+        # Encoders
+        from re import match
+        import numpy as np
 
-                # Set columns
-                cols = enc['columns']
+        # array: which columns belong to which variables
+        input_columns = np.array(sum(([var.name] * var.size[1]
+                                      for var in base_config.variable_group.input_list), start=[]))
+        output_columns = np.array(sum(([var.name] * var.size[1]
+                                       for var in base_config.variable_group.output_list), start=[]))
 
-                if isinstance(cols, str):
-                    col_str = cols.lower()
-                    variables_distr = [v.get('distr', v['kind']).lower() for v in variables.values()]
+        for config in self.encoder:
+            # handle shorthand notation, e.g. Name(a,b) -> {class: Name, variables: [a, b]}
+            if isinstance(config, str):
+                try:
+                    name, var_spec = match(r"(\w+)\((.*)\)", config).groups()
+                except AttributeError as ex:
+                    raise ValueError(f"unable to parse encoder shortcut <{config}>") from ex
+                var_spec = [v.strip().lower() for v in var_spec.split(",")]  # variable specification
+            elif isinstance(config, dict):
+                name = config["class"]
+                var_spec = [v.strip().lower() for v in config["variables"]]
+            else:
+                raise ValueError(f"unable to parse encoder <{config}>")
 
-                    if col_str == 'all':
-                        enc['columns'] = all_cols
-                    elif col_str in variables_distr:
-                        enc['columns'] = [idx for idx, d in enumerate(variables_distr) if d == col_str]
-                    else:
-                        enc['columns'] = []
+            # ToDo: check if var_spec is valid -> warn otherwise
 
-                # Set parameters
-                if 'parameters' not in enc:
-                    enc['parameters'] = {}
-                for k, v in enc['parameters'].items():
-                    try:
-                        enc['parameters'][k] = float(v)
-                    except ValueError:
-                        pass
+            # select input columns based on variables or kinds
+            if any(s in var_spec for s in ["all", "in", "input", "inputs"]):
+                input_vars = base_config.variable_group.input_list
+                input_select = np.arange(input_columns.size)
+            else:
+                input_vars = [var for var in base_config.variable_group.input_list
+                              if var.name in var_spec or var.kind in var_spec]
+                if input_vars:
+                    input_select = np.hstack([np.arange(input_columns.size)[input_columns == var.name]
+                                              for var in input_vars])
+                else:
+                    input_select = None
 
-        # Delete excluded columns from other encoders
-        for in_out_encoders in (self.input_encoders, self.output_encoders):
-            for n_enc, enc in enumerate(in_out_encoders):
-                if enc['class'].lower() == 'exclude':
-                    cols1 = enc['columns']
-                    for enc2 in in_out_encoders[n_enc+1:]:
-                        cols2 = enc2['columns']
-                        removed_cols = 0
-                        for idx1, col1 in enumerate(cols1):
-                            col_rm = col1 - removed_cols
-                            if col_rm in cols2:
-                                # Remove excluded column from other encoder and reindex subsequent columns
-                                idx2 = cols2.index(col_rm)
-                                cols2.pop(idx2)
-                                cols2[idx2:] = [c - 1 for c in cols2[idx2:]]
-                                removed_cols += 1
-                            else:
-                                # Reindex subsequent columns
-                                idx2 = [c > col1 for c in cols2]
-                                cols2[:] = [c-1 if cond else c for c, cond in zip(cols2, idx2)]
+            # select output columns based on variable names or kinds
+            if any(s in var_spec for s in ["all", "out", "output", "outputs"]):
+                output_vars = base_config.variable_group.output_list
+                output_select = np.arange(output_columns.size)
+            else:
+                output_vars = [var for var in base_config.variable_group.input_list
+                               if var.name in var_spec or var.kind in var_spec]
+                if output_vars:
+                    output_select = np.hstack([np.arange(output_columns.size)[output_columns == var.name]
+                                               for var in output_vars])
+                else:
+                    output_select = None
+
+            # handle special cases
+            if name == "Exclude":
+                # remove excluded columns from column lists
+                input_columns = np.array([c for c in input_columns if c not in input_vars])
+                output_columns = np.array([c for c in output_columns if c not in output_vars])
+            elif name in ["PCA", "KarhunenLoeve"]:
+                # ToDo: can't handle dimensionality reduction yet
+                if config is not self.encoder[-1]:
+                    raise NotImplementedError("reduced dimensions cannot be encoded further")
+
+            # add processed config to _input_encoders & _output_encoders
+            for encoders, select in [(self._input_encoders, input_select), (self._output_encoders, output_select)]:
+                if select is not None:
+                    encoders.append({
+                        "class": name,
+                        "columns": select,
+                        "parameters": {k: float(v) for k, v in config.get("parameters", {})}
+                        if not isinstance(config, str) else {},
+                    })
 
 
 @BaseConfig.register("active_learning")
