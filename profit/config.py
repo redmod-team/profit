@@ -556,9 +556,9 @@ class FitConfig(AbstractConfig):
 
         # array: which columns belong to which variables
         input_columns = np.array(sum(([var.name] * var.size[1]
-                                      for var in base_config.variable_group.input_list), start=[]))
+                                      for var in base_config.variable_group.input_list), []))
         output_columns = np.array(sum(([var.name] * var.size[1]
-                                       for var in base_config.variable_group.output_list), start=[]))
+                                       for var in base_config.variable_group.output_list), []))
 
         for config in self.encoder:
             # handle shorthand notation, e.g. Name(a,b) -> {class: Name, variables: [a, b]}
