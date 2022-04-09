@@ -49,3 +49,4 @@ kernels_base.f90
 a.out
 *.S
 *.npy
+.idea
