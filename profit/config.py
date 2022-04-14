@@ -582,7 +582,7 @@ class FitConfig(AbstractConfig):
                 input_select = np.arange(input_columns.size)
             else:
                 input_vars = [var for var in base_config.variable_group.input_list
-                              if var.name in var_spec or var.kind in var_spec]
+                              if var.name.lower() in var_spec or var.kind.lower() in var_spec]
                 if input_vars:
                     input_select = np.hstack([np.arange(input_columns.size)[input_columns == var.name]
                                               for var in input_vars])
@@ -594,8 +594,8 @@ class FitConfig(AbstractConfig):
                 output_vars = base_config.variable_group.output_list
                 output_select = np.arange(output_columns.size)
             else:
-                output_vars = [var for var in base_config.variable_group.input_list
-                               if var.name in var_spec or var.kind in var_spec]
+                output_vars = [var for var in base_config.variable_group.output_list
+                               if var.name.lower() in var_spec or var.kind.lower() in var_spec]
                 if output_vars:
                     output_select = np.hstack([np.arange(output_columns.size)[output_columns == var.name]
                                                for var in output_vars])
@@ -605,8 +605,8 @@ class FitConfig(AbstractConfig):
             # handle special cases
             if name == "Exclude":
                 # remove excluded columns from column lists
-                input_columns = np.array([c for c in input_columns if c not in input_vars])
-                output_columns = np.array([c for c in output_columns if c not in output_vars])
+                input_columns = np.array([c for c in input_columns if c not in (v.name for v in input_vars)])
+                output_columns = np.array([c for c in output_columns if c not in (v.name for v in output_vars)])
             elif name in ["PCA", "KarhunenLoeve"]:
                 # ToDo: can't handle dimensionality reduction yet
                 if config is not self.encoder[-1]:

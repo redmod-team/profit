@@ -235,10 +235,10 @@ class GaussianProcess(Surrogate):
         for key, value in self.hyperparameters.items():
             new_value = value
             if key == 'length_scale':
-                for enc in self.input_encoders:
+                for enc in self.input_encoders[::-1]:
                     new_value = enc.decode_hyperparameters(new_value)
             if key in ('sigma_f', 'sigma_n'):
-                for enc in self.output_encoders:
+                for enc in self.output_encoders[::-1]:
                     new_value = enc.decode_hyperparameters(new_value)
             new_value = self.special_hyperparameter_decoding(key, new_value)
             self.hyperparameters[key] = new_value

@@ -26,10 +26,6 @@ class GPySurrogate(GaussianProcess):
         self.optimize()
         self.post_train()
 
-    def post_train(self):
-        self._set_hyperparameters_from_model()
-        super().post_train()
-
     def add_training_data(self, X, y):
         """Adds training points to the existing dataset.
 
