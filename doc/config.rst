@@ -5,7 +5,7 @@ The entry point for the user is the configuration file, by default ``profit.yaml
 Here, parameters, paths, variable names, etc. are stored.
 For more information on the single modules, see the corresponding section in :ref:`components`.
 
-The configuration file, `profit.yaml` (or a `.py` file containing python dictionaries of the parameters) contains
+The configuration file, ``profit.yaml`` (or a ``.py`` file containing python dictionaries of the parameters) contains
 all parameters for running the simulation, fitting and active learning.
 Examples and a full list of available options, as well as the default values, which are located in the file
 `profit/defaults.py`, are shown below.
@@ -36,8 +36,8 @@ relative paths to absolute, convert strings to floats if possible, etc.).
 Some parameters are themselves sub configurations, e.g. the runner (local or slurm) or active learning algorithms
 (standard AL or MCMC). These have themselves again different parameters.
 
-The code structure is similar to the other modules of proFit, in a hierarchical class structure, where custom
-configurations can be registered, e.g. if a custom component is implemented (see also :ref:`extensions`).
+The code structure is similar to the other modules of proFit: a hierarchical class structure, where custom
+configurations can be registered (see also :ref:`extensions`).
 In the case custom components are implemented, but have no corresponding configuration, a ``DefaultConfig`` is
 used, which just returns the user parameters without modifications.
 
@@ -59,22 +59,23 @@ E.g. after registering a custom postprocessor, a corresponding configuration can
 
 
 Examples
--------
+--------
 
 **Minimal configuration**
 
 Parameters that are mentioned in the following description but do not occur in the configuration file are set by default values:
-The configuration executes $10$ runs of a python script locally on all available CPUs when providing
-the command ``profit run``, with one input variable drawn from a uniform random distribution on the interval [0, 1]
-(for further information on variables, see :ref:`variables`. For the run system, see :ref:`run_system`).
-The input file containing the variable $x$ is found in the `./template directory`.
-The script writes the output in `json` format to `stdout`. After all runs are finished,
-the total input and output data is saved to `input.txt` and `output.txt`, respectively.
-Using the command ``profit fit``, the default ``GPySurrogate`` is used to fit the data with initial fit
-hyperparameters incurred from the data directly and the model is saved to the file
-model_GPy.hdf5 (for further information on surrogate models, see :ref:`surrogates`).
-Thereafter, the data and fit can be viewed in a graphical user interface using ``profit ui``
-(For more information on the UI, see :ref:`ui`).
+
+- The configuration executes $10$ (``ntrain``) runs of a script (``simulate.x``) locally on all available CPUs when providing
+  the command ``profit run``, with one input variable (``x``) drawn from a uniform random distribution on the interval [0, 1]
+  (for further information on variables, see :ref:`variables`. For the run system, see :ref:`run_system`).
+- The input file containing the variable $x$ is found in the ``template`` directory.
+- The script writes the output in `json` format to `stdout`. After all runs are finished,
+  the total input and output data is saved to ``input.txt`` and ``output.txt``, respectively.
+- Using the command ``profit fit``, the default ``GPySurrogate`` is used to fit the data with initial fit
+  hyperparameters incurred from the data directly and the model is saved to the file
+  ``model_GPy.hdf5`` (for further information on surrogate models, see :ref:`surrogates`).
+- Thereafter, the data and fit can be viewed in a graphical user interface using ``profit ui``
+  (For more information on the UI, see :ref:`ui`).
 
 .. code-block:: yaml
 
@@ -83,11 +84,12 @@ Thereafter, the data and fit can be viewed in a graphical user interface using `
         x: Uniform()
         f: Output
     run:
-        command: python ./simulate.py
+        command: ./simulate.x
 
 **Run on cluster**
 
 Example for executing a simulation with `GORILLA <https://github.com/itpplasma/GORILLA>`_.
+See :ref:`cluster` for more details.
 
 .. code-block:: yaml
 

@@ -34,6 +34,8 @@ class AcquisitionFunction(CustomABC):
     labels = {}
     al_parameters = {}
 
+    EPSILON = 1e-12
+
     def __init__(self, Xpred, surrogate, variables, **parameters):
         self.parameters = parameters
 
@@ -69,11 +71,10 @@ class AcquisitionFunction(CustomABC):
             self.surrogate.optimize()
         return candidates
 
-    @staticmethod
-    def normalize(value, min=None):
+    def normalize(self, value, min=None):
         minval = value.min(axis=0)
         maxval = value.max(axis=0)
-        normalized_value = (value - minval) / np.maximum((maxval - minval), 1e-12)
+        normalized_value = (value - minval) / np.maximum((maxval - minval), self.EPSILON)
         if min is not None:
             return np.maximum(normalized_value, min)
         return normalized_value
@@ -181,6 +182,8 @@ class ExpectedImprovement(AcquisitionFunction):
     as this does not need an evaluation of the function.
     """
 
+    SIGMA_EPSILON = 1e-10
+
     def __init__(self, Xpred, surrogate, variables, exploration_factor=ei_defaults['exploration_factor'],
                  find_min=ei_defaults['find_min']):
         super().__init__(Xpred, surrogate, variables, exploration_factor=exploration_factor, find_min=find_min)
@@ -205,7 +208,7 @@ class ExpectedImprovement(AcquisitionFunction):
     def sigma_part(self):
         _, variance = self.surrogate.predict(self.Xpred)
         sigma = np.sqrt(variance)
-        sigma = self.normalize(sigma, min=1e-10)
+        sigma = self.normalize(sigma, min=self.SIGMA_EPSILON)
         return sigma
 
     def find_next_candidates(self, batch_size):

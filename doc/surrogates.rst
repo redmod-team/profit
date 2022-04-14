@@ -9,7 +9,7 @@ Overview
 Fitting the data with the command ``profit fit`` is accomplished by
 Gaussian process regression (GPR) surrogate models.
 
-Currently, there are three such models implemented in proFit:
+Currently, there are three such models implemented in proFit, which differences are explained further below:
 
 * Custom (built from scratch in proFit)
 * GPySurrogate (based on `GPy <https://github.com/SheffieldML/GPy>`_)
@@ -135,7 +135,7 @@ surrogate models more reliable. The most important encodings in proFit include
     while KL uses the covariance matrix $C=X \cdot X^T$ which is efficient if the number of variables is larger
     than the number of samples.
 
-By default, the following encoder pipe is used:
+By default, the following encoder pipeline is used:
 
 1. Exclude ``Constant`` input variables
 2. Logarithmically transform ``LogUniform`` input variables

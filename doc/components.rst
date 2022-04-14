@@ -1,3 +1,5 @@
+.. _components:
+
 Components
 ==========
 This section lists detailed information about the

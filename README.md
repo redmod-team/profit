@@ -32,8 +32,8 @@ starting simulations locally or on a cluster via [Slurm](https://slurm.schedmd.c
 surrogate modelling using [GPy](https://github.com/SheffieldML/GPy), 
 [scikit-learn](https://github.com/scikit-learn/scikit-learn), 
 as well as an active learning algorithm to iteratively sample at interesting
-points and a Markov-Chain-Monte-Carlo (MCMC) algorithm. The web frontend 
-is based on [plotly/dash](https://github.com/plotly/dash).
+points and a Markov-Chain-Monte-Carlo (MCMC) algorithm. The web frontend to interactively explore the point cloud 
+and surrogate is based on [plotly/dash](https://github.com/plotly/dash).
 
 ## Features
 
@@ -43,8 +43,8 @@ is based on [plotly/dash](https://github.com/plotly/dash).
 * Collection of result output and postprocessing
 * Response-model fitting using GPR
 * Active learning to reduce number of samples needed
-* MCMC
-* Graphical user interface
+* MCMC to find a posterior parameter distribution (similar to active learning)
+* Graphical user interface to explore the results
 
 ## Installation
 
@@ -149,7 +149,7 @@ Also, the integration tests under `tests/integration_tests/` may be informative 
 * `mockup`:
   * 1D
   * 2D
-  * Custom postprocessor: Instead of the prebuilt postprocessr, a user-built class is used.
+  * Custom postprocessor: Instead of the prebuilt postprocessor, a user-built class is used.
   * Custom worker: A user-built worker function is used.
   * Independent: Output with an independent (linear) variable additional to input parameters: f(t; u, v).
   * KarhunenLoeve: Multi output surrogate model with Karhunen-Loeve encoder.

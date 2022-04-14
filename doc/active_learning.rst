@@ -32,8 +32,8 @@ This workflow is shown graphically in the figure below:
 
     Active learning workflow
 
-proFit automatically activates AL if the user inserts an ``ActiveLearning`` vari-
-able inside the `profit.yaml` configuration file. The corresponding search interval
+proFit automatically activates AL if the user inserts an ``ActiveLearning`` variable
+inside the ``profit.yaml`` configuration file. The corresponding search interval
 is given as parameter of the variable, defaulting to $[0, 1]$. As optional parameter,
 the AL variable can be set to log-space, which means the search space is logarithmically
 transformed. This especially makes sense if the user wants to explore a

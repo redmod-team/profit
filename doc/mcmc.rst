@@ -6,7 +6,7 @@ Markov-Chain Monte-Carlo
 The Markov-Chain-Monte-Carlo algorithm (MCMC) is closely related to active learning but
 candidate points are sampled from a distribution and either accepted or rejected according to
 their posterior probability rather than actively learned.
-Furthermore, MCMC focusses on finding the highest posterior distribution of the parameters in place
+Furthermore, MCMC focuses on finding the highest posterior distribution of the parameters in place
 of optimizing a loss function as in active learning.
 
 Given observed data and a simulation model with certain (physical) parameters, an MCMC simulation estimates the best posterior distribution
@@ -16,8 +16,8 @@ The ingredients to an MCMC algorithm are the following:
 
 * Data
     Observed (experimental) data. Which path is given in the configuration as parameter ``reference_data``.
-* Model
-    Usual simulation function to model the observed data with parameter vector $\theta$.
+* Model simulation
+    Usual simulation to model the observed data with parameter vector $\theta$.
 * Sampling algorithm
     Method, how next input points to the simulation are chosen.
     In proFit the Metropolis-Hastings algorithm is used.
@@ -39,7 +39,7 @@ distribution with uncertainties for the parameters, is executed. The config para
 specifies which fraction of the main MCMC run is used for calculating the mean and variance of the posterior distribution.
 This lasts normally until a convergence criterion is satisfied or the
 maximum number of MCMC runs is reached. The log-likelihoods of each step are saved to
-`./log_likelihohod.txt` and the parameter's final mean and standard deviation are saved to `./mcmc_stats.txt`.
+``./log_likelihohod.txt`` and the parameter's final mean and standard deviation are saved to ``./mcmc_stats.txt``.
 
 A special feature of the proFit MCMC algorithm is delayed acceptance (DA),
 which uses a surrogate model of the loss function to estimate its expected minimum

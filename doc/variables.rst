@@ -21,11 +21,11 @@ Variables
     output models. This lowers necessary computing resources and can even
     enhance the quality of the fit, since complexity of the model is reduced.
 * Output variables
-    Default output is a scalar value, but with the attatchment of independent
+    Default output is a scalar value, but with the attachment of independent
     variables, it becomes a vector. In the config file, also several output variables
     can be defined independently, which leads to multi-output surrogates during
-    fitting. This is useful e.g. if the simulation outputs additionaly to the ´ result
-    also the standard deviation or the derivative of the result.
+    fitting. This is useful if the simulation outputs additional variables,
+    e.g. the standard deviation or the derivative of the result.
 
 All single variables are then stored in a VariableGroup , which is the main
 object for the runner, active learning and surrogates to interact with variables.
@@ -79,7 +79,7 @@ Variables can be declared as strings as shown above, or with the full dict-like 
             constraints: [1e-4, 1e-1]
         ...
 
-Escaping variables `a1` and `d` inside a simulation input file (`.txt` and `.json`).
+Describing variable placeholders `a1` and `d` inside a simulation input file (`.txt` and `.json`).
 
 ::
 

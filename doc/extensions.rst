@@ -5,7 +5,7 @@ Custom extensions
 
 Experienced users have the possibility to add custom components which are used
 throughout the proFit workflow. The code should be placed in a Python file which
-is referenced inside the include section of the profit.yaml configuration file.
+is referenced inside the ``include`` section of the ``profit.yaml`` configuration file.
 
 Following components are customizable:
 
