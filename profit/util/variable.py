@@ -111,6 +111,16 @@ class VariableGroup:
         return [v for v in self.list if v.__class__ in (InputVariable, ActiveLearningVariable)]
 
     @property
+    def kind_dict(self):
+        kinds = {}
+        for v in self.input_list:
+            if v["kind"] in kinds:
+                kinds[v["kind"]].append(v)
+            else:
+                kinds[v["kind"]] = [v]
+        return kinds
+
+    @property
     def output(self):
         """
         Returns:
@@ -165,6 +175,14 @@ class VariableGroup:
             Dictionary of the output variables.
         """
         return {v.name: v for v in self.list if v.__class__ == OutputVariable}
+
+    @property
+    def output_list(self):
+        """
+        Returns:
+            List of output variables.
+        """
+        return [v for v in self.list if v.__class__ == OutputVariable]
 
     def __getitem__(self, item):
         """Implements dict like behavior to get a variable by its identifier or index.
@@ -372,6 +390,17 @@ class InputVariable(Variable):
     @classmethod
     def parse_entries(cls, entries):
         return {'constraints': entries}
+
+    def create_Xpred(self, size):
+        if not isinstance(size, tuple):
+            size = (size, 1)
+        if 'log' in self.kind.lower():
+            return self.constraints[0] * np.exp((np.log(self.constraints[1]) - np.log(self.constraints[0]))
+                                                           * np.linspace(0, 1, size[0])).reshape(size)
+        elif 'constant' in self.kind.lower():
+            return self.value[0]
+        else:
+            return np.linspace(*self.constraints, size[0]).reshape(size)
 
 
 @Variable.register("independent")

@@ -67,9 +67,9 @@ def test_1D():
         assert sur.get_label() == 'GPy'
         assert sur.trained
         assert sur.model.kern.name == 'rbf'
-        assert allclose(sur.model.likelihood.variance[0], 4.809421284738159e-11, atol=NLL_ATOL)
-        assert allclose(sur.model.kern.variance[0], 1.6945780226638725, rtol=PARAM_RTOL)
-        assert allclose(sur.model.kern.lengthscale, 0.22392982500520792, rtol=PARAM_RTOL)
+        assert allclose(sur.hyperparameters['length_scale'], 0.23521412, rtol=PARAM_RTOL)
+        assert allclose(sur.hyperparameters['sigma_f'], 1.56475873, rtol=PARAM_RTOL)
+        assert allclose(sur.hyperparameters['sigma_n'], 5.26616713e-05, rtol=PARAM_RTOL)
     finally:
         clean(config)
         if path.exists(model_file):
@@ -163,9 +163,9 @@ def test_2D():
         assert sur.trained
         assert sur.model.kern.name == 'rbf'
         assert sur.model.kern.input_dim == 2
-        assert allclose(sur.model.likelihood.variance[0], 2.657441549034709e-08, atol=NLL_ATOL)
-        assert allclose(sur.model.kern.variance[0], 270.2197671669302, rtol=PARAM_RTOL)
-        assert allclose(sur.model.kern.lengthscale[0], 1.079943283873971, rtol=PARAM_RTOL)
+        assert allclose(sur.hyperparameters['length_scale'], 0.47321765, rtol=PARAM_RTOL)
+        assert allclose(sur.hyperparameters['sigma_f'], 0.49950325, rtol=PARAM_RTOL)
+        assert allclose(sur.hyperparameters['sigma_n'], 3.36370612e-07, rtol=PARAM_RTOL)
     finally:
         clean(config)
         if path.exists(model_file):
@@ -186,10 +186,33 @@ def test_2D_independent():
         assert sur.trained
         assert sur.model.kern.name == 'rbf'
         assert sur.model.kern.input_dim == 1
-        assert allclose(sur.model.likelihood.variance[0], 2.8769632382230903e-05, atol=NLL_ATOL)
-        assert allclose(sur.model.kern.variance[0], 0.4382486018781694, rtol=PARAM_RTOL)
-        assert allclose(sur.model.kern.lengthscale[0], 0.24077767526116695, rtol=PARAM_RTOL)
+        assert allclose(sur.hyperparameters['length_scale'], 0.25102422, rtol=PARAM_RTOL)
+        assert allclose(sur.hyperparameters['sigma_f'], 0.36038181, rtol=PARAM_RTOL)
+        assert allclose(sur.hyperparameters['sigma_n'], 0.0042839, rtol=PARAM_RTOL)
     finally:
         clean(config)
         if path.exists(model_file):
+            remove(model_file)
+
+
+def test_karhunenloeve():
+    """Same test function as 'test_2D_independent' but with multi-output surrogate and Karhunen-Loeve encoder."""
+
+    config_file = 'study_karhunenloeve/profit_karhunenloeve.yaml'
+    config = BaseConfig.from_file(config_file)
+    model_file = config['fit'].get('save')
+    try:
+        run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
+        run(f"profit fit {config_file}", shell=True, timeout=TIMEOUT)
+        sur = Surrogate.load_model(model_file)
+        assert sur.get_label() == 'CoregionalizedGPy'
+        assert sur.trained
+        assert allclose(sur.hyperparameters['length_scale'], 0.51021744, rtol=PARAM_RTOL)
+        assert allclose(sur.hyperparameters['sigma_f'], 0.36038181, rtol=PARAM_RTOL)
+        assert allclose(sur.hyperparameters['sigma_n'], 0.1267644, rtol=PARAM_RTOL)
+    finally:
+        clean(config)
+        if path.exists(model_file):
+            from os.path import splitext
+            model_file = splitext(model_file)[0] + '.pkl'
             remove(model_file)

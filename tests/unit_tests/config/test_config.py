@@ -66,7 +66,7 @@ def test_yaml_py_config():
                 for v1, v2 in zip(value1, value2):
                     if type(value1) is dict:
                         assert_dict(v1.items(), v2.items())
-            elif key1 != 'config_path':
+            elif key1 not in ['config_path', 'variable_group']:
                 assert value1 == value2
 
     assert_dict(config_yaml.items(), config_py.items())

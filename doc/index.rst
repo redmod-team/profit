@@ -13,8 +13,8 @@ Welcome to proFit's documentation!
    proFit <README>
    config
    cluster
-   ui
-   run_system
+   code_structure
+   components
    CONTRIBUTING
 
 

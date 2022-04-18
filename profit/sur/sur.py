@@ -31,17 +31,18 @@ class Surrogate(CustomABC):
             Vector output is supported for independent variables only.
         ndim (int): Dimension of input data.
         output_ndim (int): Dimension of output data.
-        encoder (list of profit.sur.encoders.Encoder): For now, inputs of kind 'LogUniform' are encoded with 'log10'
-            and all input and output data is normalized. Can be modified in the config file using the format
-            e.g. [['log10', [0], False], ['normalization', [0, 1], False]].
+        input_encoders (list of profit.sur.encoders.Encoder): Encoding used on input data.
+        output_encoders (list of profit.sur.encoders.Encoder): Encoding used on output data.
 
     Default parameters:
         surrogate: GPy
-        save: ./model_{surrogate_label}.hdf5
+        save: ./model_{surrogate label}.hdf5
         load: False
         fixed_sigma_n: False
-        encoder: [['log10', [log_input_cols], False], ['normalization', [input_cols], False],
-            ['normalization', [output_cols], True]]
+        input_encoders: [{'class': 'exclude', 'columns': {constant columns}
+                         {'class': 'log10', 'columns': {log input columns}, 'parameters': {}},
+                         {'class': 'normalization', 'columns': {input columns}, 'parameters': {}}]
+        output_encoders: [{'class': 'normalization', 'columns': {output columns}, 'parameters': {}}]
     """
 
     labels = {}  # All surrogates are registered here
@@ -55,25 +56,24 @@ class Surrogate(CustomABC):
         self.ndim = None  # TODO: Consistency between len(base_config['input']) and self.Xtrain.shape[-1]
         self.output_ndim = 1
 
-        self.encoder = []
+        self.input_encoders = []
+        self.output_encoders = []
 
     def encode_training_data(self):
         """Encodes the input and output training data.
         """
-        for enc in self.encoder:
-            if enc.work_on_output:
-                self.ytrain = enc.encode(self.ytrain)
-            else:
-                self.Xtrain = enc.encode(self.Xtrain)
+        for enc in self.input_encoders:
+            self.Xtrain = enc.encode(self.Xtrain)
+        for enc in self.output_encoders:
+            self.ytrain = enc.encode(self.ytrain)
 
     def decode_training_data(self):
         """Applies the decoding function of the encoder in reverse order on the input and output training data.
         """
-        for enc in self.encoder[::-1]:
-            if enc.work_on_output:
-                self.ytrain = enc.decode(self.ytrain)
-            else:
-                self.Xtrain = enc.decode(self.Xtrain)
+        for enc in self.input_encoders[::-1]:
+            self.Xtrain = enc.decode(self.Xtrain)
+        for enc in self.output_encoders[::-1]:
+            self.ytrain = enc.decode(self.ytrain)
 
     def encode_predict_data(self, x):
         """Transforms the input prediction points according to the encoder used for training.
@@ -84,9 +84,8 @@ class Surrogate(CustomABC):
         Returns:
             ndarray: Encoded and normalized prediction points.
         """
-        for enc in self.encoder:
-            if not enc.work_on_output:
-                x = enc.encode(x)
+        for enc in self.input_encoders:
+            x = enc.encode(x)
         return x
 
     def decode_predict_data(self, ym, yv):
@@ -102,13 +101,26 @@ class Surrogate(CustomABC):
                 - yv (ndarray): Rescaled predictive variance.
         """
 
-        for enc in self.encoder[::-1]:
-            if enc.work_on_output:
-                if enc.label == 'Normalization':
-                    # TODO: Move this somewhere inside the Encoder with a flag like 'work_on_variance'?
-                    yv = yv * enc.variables['xmax'] ** 2
-                ym = enc.decode(ym)
+        for enc in self.output_encoders[::-1]:
+            ym = enc.decode(ym)
+            yv = enc.decode_variance(yv)
         return ym, yv
+
+    def add_input_encoder(self, encoder):
+        """Add encoder on input data.
+
+        Parameters:
+            encoder (profit.sur.encoder.Encoder)
+        """
+        self.input_encoders.append(encoder)
+
+    def add_output_encoder(self, encoder):
+        """Add encoder on output data.
+
+        Parameters:
+            encoder (profit.sur.encoder.Encoder)
+        """
+        self.output_encoders.append(encoder)
 
     @abstractmethod
     def train(self, X, y, fixed_sigma_n=defaults['fixed_sigma_n']):
@@ -190,7 +202,10 @@ class Surrogate(CustomABC):
             child_instance.ndim = len(base_config['input'])
             child_instance.output_ndim = len(base_config['output'])
             child_instance.fixed_sigma_n = config['fixed_sigma_n']
-            child_instance.encoder = [Encoder[func](cols, out) for func, cols, out in config['encoder']]
+            for enc in config['_input_encoders']:
+                child_instance.add_input_encoder(Encoder[enc['class']](enc['columns'], enc['parameters']))
+            for enc in config['_output_encoders']:
+                child_instance.add_output_encoder(Encoder[enc['class']](enc['columns'], enc['parameters']))
         return child_instance
 
     def plot(self, Xpred=None, independent=None, show=False, ref=None, add_data_variance=True, axes=None):

@@ -28,7 +28,7 @@ Literature:
 from abc import abstractmethod
 import numpy as np
 from profit.sur.sur import Surrogate
-from profit.defaults import fit_gaussian_process as defaults
+from profit.defaults import fit_gaussian_process as defaults, fit as base_defaults
 
 
 class GaussianProcess(Surrogate):
@@ -71,7 +71,8 @@ class GaussianProcess(Surrogate):
         self.kernel = None
         self.hyperparameters = {}
 
-    def pre_train(self, X, y, kernel=None, hyperparameters=None, fixed_sigma_n=False):
+    def pre_train(self, X, y, kernel=defaults['kernel'], hyperparameters=defaults['hyperparameters'],
+                  fixed_sigma_n=base_defaults['fixed_sigma_n']):
         """Check the training data, initialize the hyperparameters and set the kernel either from the given parameter,
         from config or from the default values.
 
@@ -129,7 +130,8 @@ class GaussianProcess(Surrogate):
         return {'length_scale': length_scale, 'sigma_f': sigma_f, 'sigma_n': sigma_n}
 
     @abstractmethod
-    def train(self, X, y, kernel=None, hyperparameters=None, fixed_sigma_n=False, return_hess_inv=False):
+    def train(self, X, y, kernel=defaults['kernel'], hyperparameters=defaults['hyperparameters'],
+              fixed_sigma_n=base_defaults['fixed_sigma_n'], return_hess_inv=False):
         """Trains the model on the dataset.
 
         After initializing the model with a kernel function and initial hyperparameters,
@@ -232,13 +234,17 @@ class GaussianProcess(Surrogate):
         """Decodes the hyperparameters, as encoded ones are used in the surrogate model."""
         for key, value in self.hyperparameters.items():
             new_value = value
-            for enc in self.encoder:
-                new_value = enc.decode_hyperparameters(key, new_value)
-                new_value = self.special_hyperparameter_decoding(key, new_value)
+            if key == 'length_scale':
+                for enc in self.input_encoders[::-1]:
+                    new_value = enc.decode_hyperparameters(new_value)
+            if key in ('sigma_f', 'sigma_n'):
+                for enc in self.output_encoders[::-1]:
+                    new_value = enc.decode_hyperparameters(new_value)
+            new_value = self.special_hyperparameter_decoding(key, new_value)
             self.hyperparameters[key] = new_value
 
     def special_hyperparameter_decoding(self, key, value):
-        return value
+        return np.atleast_1d(value)
 
     def print_hyperparameters(self, prefix):
         """Helper function to print the hyperparameter dict.
@@ -247,6 +253,7 @@ class GaussianProcess(Surrogate):
             prefix (str): Usually 'Initialized', 'Loaded' or 'Optimized' to identify the state of the hyperparameters.
         """
 
-        hyperparameter_str = ["{} hyperparameters:".format(prefix)]
-        hyperparameter_str += ["{k}: {v}".format(k=key, v=value) for key, value in self.hyperparameters.items()]
-        print('\n'.join(hyperparameter_str))
+        #hyperparameter_str = ["{} hyperparameters:".format(prefix)]
+        #hyperparameter_str += ["{k}: {v}".format(k=key, v=value) for key, value in self.hyperparameters.items()]
+        #print('\n'.join(hyperparameter_str))
+        pass  # TODO: Include in DEBUG logging.

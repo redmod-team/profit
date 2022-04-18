@@ -18,6 +18,8 @@ class McmcAL(ActiveLearning):
         warmup_cycles (int): Number of warmup cycles with `nwarmup` iterations each.
         target_acceptance_rate (float): Target rate with which probability new points are accepted.
         sigma_n (float): Estimated standard deviation of the experimental data.
+        initial_points (list of float): Starting points for the MCMC.
+        delayed_acceptancd (bool): Whether to use delayed acceptance with a surrogate model for the likelihood.
 
     Attributes:
         Xpred (np.ndarray): Matrix of the candidate points built with np.meshgrid.

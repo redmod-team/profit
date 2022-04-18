@@ -1,6 +1,7 @@
 import numpy as np
 from profit.sur import Surrogate
 from profit.sur.gp import GaussianProcess
+from profit.defaults import fit_gaussian_process as defaults, fit as base_defaults
 
 
 @Surrogate.register('Sklearn')
@@ -15,7 +16,8 @@ class SklearnGPSurrogate(GaussianProcess):
         super().__init__()
         self.model = None
 
-    def train(self, X, y, kernel=None, hyperparameters=None, fixed_sigma_n=False, **kwargs):
+    def train(self, X, y, kernel=defaults['kernel'], hyperparameters=defaults['hyperparameters'],
+              fixed_sigma_n=base_defaults['fixed_sigma_n'], **kwargs):
         from sklearn.gaussian_process import GaussianProcessRegressor
 
         self.pre_train(X, y, kernel, hyperparameters, fixed_sigma_n)

@@ -14,8 +14,8 @@ from profit.sur.encoders import Encoder
 
 def test_exclude():
 
-    CONFIG = ['Exclude', [2], False, {}]
     COLUMNS= [2]
+    CONFIG = {'class': 'Exclude', 'columns': COLUMNS, 'parameters': {}}
     SIZE = (10, 4)
     n = SIZE[0] * SIZE[1]
     X = np.linspace(0, n-1, n).reshape(SIZE)
@@ -31,8 +31,8 @@ def test_exclude():
 def test_log10():
     from profit.sur.encoders import Log10Encoder
 
-    CONFIG = ['Log10', [2, 3], False, {}]
     COLUMNS= [2, 3]
+    CONFIG = {'class': 'Log10', 'columns': COLUMNS, 'parameters': {}}
     SIZE = (10, 4)
     n = SIZE[0] * SIZE[1]
     X = np.linspace(0, n-1, n).reshape(SIZE)
@@ -49,8 +49,8 @@ def test_log10():
 
 def test_normalization():
 
-    CONFIG = ['Normalization', [0, 1, 2, 3], False, {}]
     COLUMNS= [0, 1, 2, 3]
+    CONFIG = {'class': 'Normalization', 'columns': COLUMNS, 'parameters': {}}
     SIZE = (10, 4)
     n = SIZE[0] * SIZE[1]
     X = np.linspace(0, n-1, n).reshape(SIZE)
@@ -64,10 +64,10 @@ def test_normalization():
     assert np.allclose(X_dec, X)
 
     y = np.sin(X[:, [1]])
-    enc = Encoder['Normalization']([0], work_on_output=True)
+    enc = Encoder['Normalization']([0])
     y_enc = enc.encode(y)
-    assert max(y_enc) == 1
-    assert min(y_enc) == 0
+    assert np.allclose(np.max(y_enc), 1)
+    assert np.allclose(np.min(y_enc), 0)
     y_dec = enc.decode(y_enc)
     assert np.allclose(y_dec, y)
 
@@ -75,13 +75,19 @@ def test_normalization():
                        'sigma_f': np.array([0.7]),
                        'sigma_n': np.array([0.05])}
 
+    xmean = 1.7
+    xstd = 2.8
     xmin = 0.5
     xmax = 3
-    scaling = xmax - xmin
+    xmax_centered = (xmax - xmean) / xstd
+    xmin_centered = (xmin - xmean) / xstd
+    scaling = (xmax_centered - xmin_centered) * xstd
 
-    for key, value in hyperparameters.items():
-        work_on_output = key != 'length_scale'
-        enc = Encoder['Normalization'](COLUMNS, work_on_output=work_on_output,
-                                       variables={'xmin': 0.5, 'xmax': 3})
-        val_dec = enc.decode_hyperparameters(key, value)
-        assert np.allclose(val_dec, value * scaling)
+    enc = Encoder['Normalization'](COLUMNS, parameters={'xmean': xmean, 'xstd': xstd, 'xmin': xmin, 'xmax': xmax,
+                                                        'xmin_centered': xmin_centered, 'xmax_centered': xmax_centered})
+    length_scale_dec = enc.decode_hyperparameters(hyperparameters['length_scale'])
+    sigma_f_dec = np.sqrt(enc.decode_variance(hyperparameters['sigma_f']**2))
+    sigma_n_dec = np.sqrt(enc.decode_variance(hyperparameters['sigma_n']**2))
+    assert np.allclose(length_scale_dec, hyperparameters['length_scale'] * scaling)
+    assert np.allclose(sigma_f_dec, hyperparameters['sigma_f'] * scaling)
+    assert np.allclose(sigma_n_dec, hyperparameters['sigma_n'] * scaling)
