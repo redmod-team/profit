@@ -1,3 +1,5 @@
+.. _active_learning:
+
 Active Learning
 ===============
 

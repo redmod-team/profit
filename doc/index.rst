@@ -11,6 +11,7 @@ Welcome to proFit's documentation!
    :caption: Contents:
 
    proFit <README>
+   start
    config
    cluster
    code_structure
