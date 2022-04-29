@@ -122,7 +122,7 @@ For a simulation which can be called from python directly, the recommended confi
 
 The type annotation is used to tell proFit which return value belongs to which return value if there are several. The configuration is then:
 
-.. code-block::
+.. code-block:: yaml
 
    run:
      worker: my_name
@@ -145,7 +145,7 @@ Everything should be ready to run now:
 
 * with :ref:`active_learning` enabled, the fit will already happen during the run step. Active Learning optimizes the paramters at which the simulation is run to gain as much value per simulation run as possible
 
-* finally the results can be explored interactively in a browser after starting a ``plotly/dash`` server using ``profit ui``
+* finally the results can be explored interactively in a browser after starting a ``plotly/dash`` server using ``profit ui`` (see :ref:`ui`)
 
 
 There is a wide variety of configuration options to customize the run system, the surrogate fitting and the active learning algorithm. Please have a look at the documentation on the :ref:`config` and don't hestitate to contact the developers if you encounter any bugs.

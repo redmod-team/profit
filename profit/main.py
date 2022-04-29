@@ -24,9 +24,10 @@ def main():
     subparsers.add_parser("run", help="start simulation runs")
     subparsers.add_parser("fit", help="fit data (e.g. with a Gaussian Process)")
     subparsers.add_parser("ui", help="interactively visualize results using dash")
+    subparsers.choices["ui"].add_argument("--debug", action="store_true", help="activate debug mode for the Dash app")
     subparsers.add_parser("clean", help="remove temporary files, run directories and logs")
-    subparsers.add_parser("version", help="show version information")
     subparsers.choices["clean"].add_argument("--all", action="store_true", help="remove input, output and model files")
+    subparsers.add_parser("version", help="show version information")
 
     parser.add_argument('base_dir',
                         metavar='base-dir',
@@ -156,7 +157,7 @@ def main():
     elif args.mode == 'ui':
         from profit.ui import init_app
         app = init_app(config)
-        app.run_server(debug=True)  # Start Dash server on localhost
+        app.run_server(debug=args.debug)  # Start Dash server on localhost
 
     elif args.mode == 'clean':
         from shutil import rmtree
