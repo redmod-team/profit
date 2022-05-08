@@ -1,0 +1,53 @@
+{
+    "description": "<p>Collection of tools for studying parametric dependencies of black-box simulation codes or experiments and construction of reduced order response models over input parameter space.</p>", 
+    "license": "MIT", 
+    "title": "proFit v0.4: Probabilistic Response Model Fitting with Interactive Tools", 
+    "version": "v0.4", 
+    "upload_type": "software", 
+    "publication_date": "2021-05-28", 
+    "creators": [
+        {
+            "orcid": "0000-0003-4773-416X", 
+            "affiliation": "Max-Planck-Institut f\u00fcr Plasmaphysik", 
+            "name": "Christopher Albert"
+        }, 
+        {
+            "affiliation": "Technische Universit\u00e4t Graz", 
+            "name": "Robert Babin"
+        }, 
+        {
+            "affiliation": "Technische Universit\u00e4t Graz", 
+            "name": "Michael Hadwiger"
+        }, 
+        {
+            "affiliation": "Technische Universit\u00e4t Graz", 
+            "name": "Maximilian Kendler"
+        }, 
+        {
+            "affiliation": "Max-Planck-Institut f\u00fcr Plasmaphysik", 
+            "name": "Manal Khallaayoune"
+        }, 
+        {
+            "orcid": "0000-0002-4962-5656", 
+            "affiliation": "Max-Planck-Institut f\u00fcr Plasmaphysik", 
+            "name": "Katharina Rath"
+        }, 
+        {
+            "affiliation": "Max-Planck-Institut f\u00fcr Plasmaphysik", 
+            "name": "Baptiste Rubino-Moyner"
+        }
+    ], 
+    "access_right": "open", 
+    "related_identifiers": [
+        {
+            "scheme": "url", 
+            "identifier": "https://github.com/redmod-team/profit/tree/v0.4", 
+            "relation": "isSupplementTo"
+        }, 
+        {
+            "scheme": "doi", 
+            "identifier": "10.5281/zenodo.3580488", 
+            "relation": "isVersionOf"
+        }
+    ]
+}
