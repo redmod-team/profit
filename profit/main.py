@@ -19,7 +19,14 @@ def main():
     from profit import __version__  # delayed to prevent cyclic import
 
     # Get parameters from shell input
-    parser = ArgumentParser(description=f"Probabilistic Response Model Fitting with Interactive Tools v{__version__}")
+    # display help by default: https://stackoverflow.com/questions/4042452/display-help-message-with-python-argparse-when-script-is-called-without-any-argu
+    class MyParser(ArgumentParser):
+        def error(self, message):
+            sys.stderr.write(f"error: {message}\n")
+            self.print_help(sys.stderr)
+            self.exit(2)
+
+    parser = MyParser(description=f"Probabilistic Response Model Fitting with Interactive Tools v{__version__}")
     subparsers = parser.add_subparsers(metavar="mode", dest="mode", required=True)
     subparsers.add_parser("run", help="start simulation runs")
     subparsers.add_parser("fit", help="fit data (e.g. with a Gaussian Process)")
