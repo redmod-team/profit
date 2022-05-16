@@ -1,6 +1,6 @@
 import dash
-import dash_core_components as dcc
-import dash_html_components as html
+from dash import dcc
+from dash import html
 import plotly.graph_objs as go
 from dash.dependencies import Input, Output, State, MATCH, ALL
 from math import log10
@@ -11,11 +11,13 @@ from matplotlib import cm as colormaps
 from matplotlib.colors import to_hex as color2hex
 
 def init_app(config):
+    from profit import __version__  # delayed to prevent cyclic import
     external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
     app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
     server = app.server
     app.config.suppress_callback_exceptions = False
+    app.title = f"proFit UI v{__version__}"
 
     indata = FileHandler.load(config['files']['input']).flatten()
     outdata = FileHandler.load(config['files']['output']).flatten()

@@ -72,7 +72,8 @@ Package metadata and requirements are specified in `setup.cfg`. Building the *fo
 `setup.py` file and `numpy` installed during the build process.
 
 Upon publishing a new release in *GitHub*, a workflow should automatically upload the package to *PyPI*.
-To create a release manually follow this [guide](https://packaging.python.org/tutorials/packaging-projects/)
+To create a release manually follow this [guide](https://packaging.python.org/tutorials/packaging-projects/).
+The new version is automatically added to [zenodo](https://zenodo.org/record/4849489), make sure to update the metadata in `.zenodo.json`.
 
 ## Testing
 proFit uses `pytest` for automatic testing. A pull request on *GitHub* triggers automatic testing with the supported

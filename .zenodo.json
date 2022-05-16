@@ -1,0 +1,53 @@
+{
+   "description":"<p>proFit is a collection of tools for studying parametric dependencies of black-box simulation codes or experiments and construction of reduced order response models over input parameter space.</p><p>proFit can be fed with a number of data points consisting of different input parameter combinations and the resulting output of the simulation under investigation. It then fits a response-surface through the point cloud using Gaussian process regression (GPR) models. This probabilistic response model allows to predict (interpolate) the output at yet unexplored parameter combinations including uncertainty estimates. It can also tell you where to put more training points to gain maximum new information (experimental design) and automatically generate and start new simulation runs locally or on a cluster. Results can be explored and checked visually in a web frontend.</p><p>Telling proFit how to interact with your existing simulations is easy and requires no changes in your existing code. Current functionality covers starting simulations locally or on a cluster via <a href=\"https://slurm.schedmd.com\">Slurm</a>, subsequent surrogate modelling using <a href=\"https://github.com/SheffieldML/GPy\">GPy</a>, <a href=\"https://github.com/scikit-learn/scikit-learn\">scikit-learn</a>, as well as an active learning algorithm to iteratively sample at interesting points and a Markov-Chain-Monte-Carlo (MCMC) algorithm. The web frontend to interactively explore the point cloud and surrogate is based on <a href=\"https://github.com/plotly/dash\">plotly/dash</a>.</p><p>Features include: <ul><li>Compute evaluation points (e.g. from a random distribution) to run simulation</li><li>Template replacement and automatic generation of run directories</li><li>Starting parallel runs locally or on the cluster (SLURM)</li><li>Collection of result output and postprocessing</li><li>Response-model fitting using GPR</li><li>Active learning to reduce number of samples needed</li><li>MCMC to find a posterior parameter distribution (similar to active learning)</li><li>Graphical user interface to explore the results</li></ul></p>",
+  "license":"MIT",
+   "title":"proFit: Probabilistic Response Model Fitting with Interactive Tools",
+   "creators":[
+      {
+         "orcid":"0000-0003-4773-416X",
+         "affiliation":"Technische Universit\u00e4t Graz",
+         "name":"Christopher Albert"
+      },
+      {
+         "affiliation":"Technische Universit\u00e4t Graz",
+         "name":"Maximilian Kendler"
+      },
+      {
+         "affiliation":"Technische Universit\u00e4t Graz",
+         "name":"Robert Babin"
+      },
+      {
+         "affiliation":"Technische Universit\u00e4t Graz",
+         "name":"Michael Hadwiger"
+      },
+      {
+         "affiliation":"Helmholtz-Zentrum Geesthacht",
+         "name":"Richard Hofmeister"
+      },
+      {
+         "affiliation":"Max-Planck-Institut f\u00fcr Plasmaphysik",
+         "name":"Manal Khallaayoune"
+      },
+      {
+         "affiliation":"Technische Universit\u00e4t Graz",
+         "name":"Francesco Kramp"
+      },
+      {
+         "orcid":"0000-0002-4962-5656",
+         "affiliation":"Max-Planck-Institut f\u00fcr Plasmaphysik",
+         "name":"Katharina Rath"
+      },
+      {
+         "affiliation":"Max-Planck-Institut f\u00fcr Plasmaphysik",
+         "name":"Baptiste Rubino-Moyner"
+      }
+   ],
+   "keywords":[
+      "Parameter Study",
+      "Gaussian Process",
+      "Regression",
+      "HPC",
+      "Active Learning"
+   ]
+}
+

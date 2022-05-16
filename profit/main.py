@@ -19,14 +19,22 @@ def main():
     from profit import __version__  # delayed to prevent cyclic import
 
     # Get parameters from shell input
-    parser = ArgumentParser(description=f"Probabilistic Response Model Fitting with Interactive Tools v{__version__}")
+    # display help by default: https://stackoverflow.com/questions/4042452/display-help-message-with-python-argparse-when-script-is-called-without-any-argu
+    class MyParser(ArgumentParser):
+        def error(self, message):
+            sys.stderr.write(f"error: {message}\n")
+            self.print_help(sys.stderr)
+            self.exit(2)
+
+    parser = MyParser(description=f"Probabilistic Response Model Fitting with Interactive Tools v{__version__}")
     subparsers = parser.add_subparsers(metavar="mode", dest="mode", required=True)
     subparsers.add_parser("run", help="start simulation runs")
     subparsers.add_parser("fit", help="fit data (e.g. with a Gaussian Process)")
     subparsers.add_parser("ui", help="interactively visualize results using dash")
+    subparsers.choices["ui"].add_argument("--debug", action="store_true", help="activate debug mode for the Dash app")
     subparsers.add_parser("clean", help="remove temporary files, run directories and logs")
-    subparsers.add_parser("version", help="show version information")
     subparsers.choices["clean"].add_argument("--all", action="store_true", help="remove input, output and model files")
+    subparsers.add_parser("version", help="show version information")
 
     parser.add_argument('base_dir',
                         metavar='base-dir',
@@ -156,7 +164,7 @@ def main():
     elif args.mode == 'ui':
         from profit.ui import init_app
         app = init_app(config)
-        app.run_server(debug=True)  # Start Dash server on localhost
+        app.run_server(debug=args.debug)  # Start Dash server on localhost
 
     elif args.mode == 'clean':
         from shutil import rmtree
