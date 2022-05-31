@@ -4,23 +4,27 @@ Variables
 =========
 
 * Input variables
-    Values according to a (random) distribution or successively inserted through
-    active learning.
+    Drawn from random distributions:
 
-    Possible distributions:
-
-    * Halton sequence (quasi-random, space filling)
-    * Uniform (random)
-    * Log-uniform (random)
-    * Normal (random)
-    * Linear vector
-    * Constant value
-* Independent variables
+    * `Halton` sequence (quasi-random, space filling)
+    * `Uniform` distribution
+    * `LogUniform`: uniformly distributed in log-space
+    * `Normal` distribution
+    
+    Fixed values:
+    
+    * `Linear`: linearly spaced values
+    * `Constant` (excluded from the fit)
+    
+    Special:
+    
+    * `ActiveLearning`: succesively inserted according to a specified optimization strategy
+* `Independent` variables
     The user can bind an independent variable to an output variable, if the simulation outputs a (known) vector over linear supporting points. This
     dimension is then not considered during fitting, in contrast to full multi-
     output models. This lowers necessary computing resources and can even
     enhance the quality of the fit, since complexity of the model is reduced.
-* Output variables
+* `Output` variables
     Default output is a scalar value, but with the attachment of independent
     variables, it becomes a vector. In the config file, also several output variables
     can be defined independently, which leads to multi-output surrogates during
@@ -48,7 +52,7 @@ Definition of variables inside the `profit.yaml` configuration file.
         a2: Uniform(0, 1)  # Same as 'a1'
         b: Normal(0, 1e-2)  # Normal distribution with 0 mean and 1e-2 standard deviation.
         c1: 0.2  # Constant value.
-        c2: Constant(0.2)  # Same as 'c'.
+        c2: Constant(0.2)  # Same as 'c1'.
         d: LogUniform(1e-4, 0.1)  # LogUniform distribution.
         e: Halton(0, 3)  # Quasi-random Halton sequence.
         h: Linear(-1, 1)  # Linear vector with size of 'ntrain'.
