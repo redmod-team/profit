@@ -29,26 +29,9 @@ class LinearRegression(Surrogate):
         """# ToDo
 
         """
-        self.Xtrain = X if len(X.shape) > 1 else X.reshape([-1, 1])
-        self.ytrain = X if len(y.shape) > 1 else y.reshape([-1, 1])
+        super().pre_train(X, y)
 
         # ToDo: set attributes
         self.sigma_n, self.sigma_p = sigma_n, sigma_p
-        self.ndim = self.Xtrain.shape[-1]
 
-    def post_train(self):
-        self.trained = True
-
-    def pre_predict(self, Xpred):
-        from profit.util import check_ndim
-
-        if not self.trained:
-            raise RuntimeError("Need to train() before predict()!")
-
-        if Xpred is None:
-            Xpred = self.default_Xpred()
-        Xpred = check_ndim(Xpred)
-        # Xpred = self.encode_predict_data(Xpred)
-        return Xpred
-
-    # TODO: train(), predict(), from_config(), select_config()
+    # TODO: from_config(), select_config()

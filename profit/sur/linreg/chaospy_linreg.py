@@ -88,8 +88,9 @@ class ChaospyLinReg(LinearRegression):
 
         ymean = Phi.T @ self.coeff_mean
         ycov = Phi.T @ self.coeff_cov @ Phi
-        # y_std = np.sqrt(np.diag(y_cov)) # TODO: include data variance
-        return ymean, ycov
+        yvar = np.diag(ycov)
+        # ToDO: add data variance
+        return ymean, yvar
 
     def save_model(self, path):
         pass

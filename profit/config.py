@@ -530,10 +530,13 @@ class FitConfig(AbstractConfig):
     def __init__(self, **entries):
         from profit.sur import Surrogate
         from profit.sur.gp.gaussian_process import GaussianProcess
+        from profit.sur.linreg import LinearRegression
         self.set_defaults(defaults.fit)
 
         if issubclass(Surrogate.labels[self.surrogate], GaussianProcess):
             self.set_defaults(defaults.fit_gaussian_process)
+        elif issubclass(Surrogate.labels[self.surrogate], LinearRegression):
+            self.set_defaults(defaults.fit_linear_regression)
 
         self.update(**entries)
 
