@@ -24,14 +24,3 @@ class LinearRegression(Surrogate):
         super().__init__()
         self.coeff_mean = None
         self.coeff_cov = None
-
-    def pre_train(self, X, y, sigma_n, sigma_p):
-        """# ToDo
-
-        """
-        super().pre_train(X, y)
-
-        # ToDo: set attributes
-        self.sigma_n, self.sigma_p = sigma_n, sigma_p
-
-    # TODO: from_config(), select_config()

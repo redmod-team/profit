@@ -532,13 +532,14 @@ class FitConfig(AbstractConfig):
         from profit.sur.gp.gaussian_process import GaussianProcess
         from profit.sur.linreg import LinearRegression
         self.set_defaults(defaults.fit)
+        self.update(**entries)  # update general fit config
 
         if issubclass(Surrogate.labels[self.surrogate], GaussianProcess):
             self.set_defaults(defaults.fit_gaussian_process)
         elif issubclass(Surrogate.labels[self.surrogate], LinearRegression):
             self.set_defaults(defaults.fit_linear_regression)
 
-        self.update(**entries)
+        self.update(**entries)  # update surrogate fit config
 
     def process_entries(self, base_config):
         """Set 'load' and 'save' as well as the encoder."""
