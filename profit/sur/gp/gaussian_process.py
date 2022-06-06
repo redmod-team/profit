@@ -88,25 +88,10 @@ class GaussianProcess(Surrogate):
             fixed_sigma_n (bool/float/ndarray): Indicates if the data noise should be optimized or not.
                 If an ndarray is given, its length must match the training data.
         """
-        X, y = np.asarray(X), np.asarray(y)
-        # more verbose than check_ndim
-        if X.ndim == 1:
-            X = X.reshape(-1, 1)
-        elif X.ndim != 2:
-            raise ValueError(f"X should have shape (n,) or (n, d) but has shape {X.shape}")
-        if y.ndim == 1:
-            y = y.reshape(-1, 1)
-        elif y.ndim != 2:
-            raise ValueError(f"y should have shape (n,) or (n, D) but has shape {y.shape}")
-        if X.shape[0] != y.shape[0]:
-            raise ValueError(f"mismatched number of data points for X and y: {X.shape[0]} != {y.shape[0]}")
-        self.Xtrain, self.ytrain = X, y
+        super().pre_train(X, y)
 
         # Set attributes either from config, the given parameters or from defaults
         self.set_attributes(fixed_sigma_n=fixed_sigma_n, kernel=kernel, hyperparameters=hyperparameters)
-
-        self.encode_training_data()
-        self.ndim = self.Xtrain.shape[-1]
 
         # Set hyperparameter inferred values
         inferred_hyperparameters = self.infer_hyperparameters()
@@ -162,40 +147,6 @@ class GaussianProcess(Surrogate):
                 for active learning.
         """
         pass
-
-    def post_train(self):
-        self.trained = True
-        self.decode_training_data()
-
-    def pre_predict(self, Xpred):
-        """Prepares the surrogate for prediction by checking if it is trained and validating the data.
-
-        Parameters:
-            Xpred (ndarray): (n, d) or (n,) array of input points for prediction
-
-        Returns:
-            ndarray: Checked input data or default values inferred from training data.
-        """
-
-        if not self.trained:
-            raise RuntimeError("Need to train() before predict()!")
-
-        if Xpred is None:
-            Xpred = self.default_Xpred()
-
-        # more verbose thant check_ndim
-        Xpred = np.asarray(Xpred)
-        if Xpred.ndim == 1:
-            Xpred = Xpred.reshape(-1, 1)
-        elif Xpred.ndim != 2:
-            if self.ndim == 1:
-                raise ValueError(f"Xpred should have shape (n,) or (n, 1) but has shape {Xpred.shape}")
-            raise ValueError(f"Xpred should have shape (n, {self.ndim}) but has shape {Xpred.shape}")
-        if Xpred.shape[1] != self.ndim:
-            raise ValueError(f"Xpred should have shape (n, {self.ndim}) but has shape {Xpred.shape}")
-
-        Xpred = self.encode_predict_data(Xpred)
-        return Xpred
 
     @abstractmethod
     def predict(self, Xpred, add_data_variance=True):
