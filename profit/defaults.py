@@ -88,6 +88,13 @@ fit_gaussian_process = {'surrogate': 'GPy',
                                             'sigma_n': None,
                                             'sigma_f': None}}
 
+# ToDo: set defaults for linear regression
+fit_linear_regression = {'surrogate': 'ChaospyLinreg',
+                         'model': 'monomial',
+                         'model_kwargs': {'order': 2},
+                         'sigma_n': None,
+                         'sigma_p': None}
+
 # Active Learning Config
 active_learning = {'algorithm': 'simple',
                    'nwarmup': 3,
