@@ -15,30 +15,50 @@ class ChaospyLinReg(LinearRegression):
         # ToDo
     """
 
-    def __init__(self):
+    def __init__(self, model=defaults['model'],
+                 order=defaults['order'],
+                 model_kwargs=defaults['model_kwargs'],
+                 sigma_n=defaults['sigma_n'], sigma_p=defaults['sigma_p']):
         super().__init__()
-        self.model = None
-        self.model_kwargs = {}
+        self._model = None
+        self.set_model(model, order, model_kwargs)
+        self.sigma_n = sigma_n
+        self.sigma_p = sigma_p
         self.n_features = None
 
-    def set_model(self, model, model_kwargs):
+    @property
+    def model(self):
+        if self._model is None:
+            return None
+        return self._model.__name__
+
+    @model.setter
+    def model(self, model_name):
+        self.set_model(model_name, 2) # ToDo: set order
+
+    def set_model(self, model, order, model_kwargs=None):
         """Sets model parameters for surrogate
 
         Parameters:
             model (str): Name of chaospy model to use
+            order (int): Highest order for polynomial basis functions
             model_kwargs (dict): Keyword arguments for the model
         """
-        if model == "monomial":
-            self.model = chaospy.monomial
-            if "order" in model_kwargs:
-                model_kwargs["start"] = 0
-                model_kwargs["stop"] = model_kwargs["order"]
-                model_kwargs.pop("order")
-            model_kwargs["dimensions"] = self.ndim
+        self.order = order
+        if model_kwargs is None:
+            self.model_kwargs = {}
         else:
-            self.model = getattr(chaospy.expansion, model)
+            self.model_kwargs = model_kwargs
 
-        self.model_kwargs = model_kwargs
+        if model == "monomial":
+            self._model = chaospy.monomial
+            if 'start' not in self.model_kwargs:
+                self.model_kwargs['start'] = 0
+            if 'stop' not in self.model_kwargs:
+                self.model_kwargs['stop'] = self.order
+        else:
+            self._model = getattr(chaospy.expansion, model)
+            self.model_kwargs['order'] = self.order
 
     def transform(self, X):
         """Transforms input data on selected basis functions
@@ -51,17 +71,17 @@ class ChaospyLinReg(LinearRegression):
         """
         if self.model == "monomial":
             self.model_kwargs["dimensions"] = self.ndim
-            Phi = self.model(**self.model_kwargs)
+            Phi = self._model(**self.model_kwargs)
         # if model == 'lagrange':
         #     # ToDo
         #     pass
         else:
             # ToDo: if isattr?
             vars = ["q" + str(i) for i in range(self.ndim)]
-            Phi = self.model(**self.model_kwargs)
+            Phi = self._model(**self.model_kwargs)
             if self.ndim > 0:
                 for var in vars[1:]:
-                    poly = self.model(**self.model_kwargs)
+                    poly = self._model(**self.model_kwargs)
                     poly.names = (var,)
                     Phi = chaospy.outer(Phi, poly)
             Phi = Phi.flatten()
@@ -93,17 +113,69 @@ class ChaospyLinReg(LinearRegression):
         # ToDO: add data variance
         return ymean, yvar
 
+    def as_dict(self):
+        """Converts class to dictionary
+
+        # ToDo
+
+        """
+        attrs = ('model',  'order', 'model_kwargs', 'sigma_n', 'sigma_p',
+                 'n_features', 'trained', 'coeff_mean', 'coeff_cov')
+        sur_dict = {attr: getattr(self, attr) for attr in attrs}
+        sur_dict['input_encoders'] = str([enc.repr for enc in self.input_encoders])
+        sur_dict['output_encoders'] = str([enc.repr for enc in self.output_encoders])
+        return sur_dict
+
     def save_model(self, path):
-        raise NotImplementedError
+        """Save the model as dict to a .hdf5 file.
+
+        Parameters:
+            path (str): Path including the file name, where the model should be saved.
+        """
+        from profit.util.file_handler import FileHandler
+
+        sur_dict = self.as_dict()
+        sur_dict['input_encoders'] = str([enc.repr for enc in self.input_encoders])
+        sur_dict['output_encoders'] = str([enc.repr for enc in self.output_encoders])
+        FileHandler.save(path, sur_dict, as_type='dict')
 
     @classmethod
     def load_model(cls, path):
-        raise NotImplementedError
+        """Loads a saved model from a .hdf5 file and updates its attributes
+
+        Parameters:
+            path (str): Path including the file name, from where the model should be loaded.
+
+        Returns:
+            # ToDo
+            Instantiated surrogate model.
+        """
+        from profit.util.file_handler import FileHandler
+        from profit.sur.encoders import Encoder
+
+        self = cls()
+        sur_dict = FileHandler.load(path, as_type='dict')
+        self.set_model(sur_dict['model'], sur_dict['model_kwargs'])
+        self.sigma_n = sur_dict['sigma_n']
+        self.sigma_p = sur_dict['sigma_p']
+        self.trained = sur_dict['trained']
+        self.n_features = sur_dict['n_features']
+        self.coeff_mean = sur_dict['coeff_mean']
+        self.coeff_cov = sur_dict['coeff_cov']
+
+        for enc in eval(sur_dict['input_encoders']):
+            self.add_input_encoder(
+                Encoder[enc['class']](enc['columns'], enc['parameters']))
+        for enc in eval(sur_dict['output_encoders']):
+            self.add_output_encoder(
+                Encoder[enc['class']](enc['columns'], enc['parameters']))
+        # ToDo: print something useful
+        return self
 
     @classmethod
     def from_config(cls, config, base_config):
         self = cls()
         self.sigma_n = config["sigma_n"]
         self.sigma_p = config["sigma_p"]
-        self.set_model(config["model"], config["model_kwargs"])
+        self.set_model(config["model"], config["order"], config["model_kwargs"])
         return self

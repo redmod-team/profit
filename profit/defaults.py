@@ -90,7 +90,8 @@ fit_gaussian_process = {'surrogate': 'GPy',
 
 fit_linear_regression = {'surrogate': 'ChaospyLinreg',
                          'model': 'monomial',
-                         'model_kwargs': {'order': 2},
+                         'order': 2,
+                         'model_kwargs': None,
                          'sigma_n': None,
                          'sigma_p': None}
 
