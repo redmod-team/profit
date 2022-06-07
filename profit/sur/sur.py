@@ -204,10 +204,10 @@ class Surrogate(CustomABC):
             if self.ndim == 1:
                 raise ValueError(f"Xpred should have shape (n,) or (n, 1) but has shape {Xpred.shape}")
             raise ValueError(f"Xpred should have shape (n, {self.ndim}) but has shape {Xpred.shape}")
+        
+        Xpred = self.encode_predict_data(Xpred)
         if Xpred.shape[1] != self.ndim:
             raise ValueError(f"Xpred should have shape (n, {self.ndim}) but has shape {Xpred.shape}")
-
-        Xpred = self.encode_predict_data(Xpred)
         return Xpred
 
     @abstractmethod

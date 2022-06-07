@@ -1,0 +1,19 @@
+ntrain: 10
+include: ../simulation_files/mockup_worker.py
+variables:
+    r: 0.25
+    u: Halton(4.7, 5.3)
+    v: Halton(0.55, 0.6)
+    a: 1
+    b: 3
+    f: Output
+run:
+    worker: mockup
+files:
+    input: input_linreg.txt
+    output: output_linreg.txt
+fit:
+    surrogate: ChaospyLinReg
+    model: monomial
+    order: 3
+    save: model_linreg.hdf5
