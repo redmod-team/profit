@@ -152,10 +152,12 @@ class ChaospyLinReg(LinearRegression):
         """
         from profit.util.file_handler import FileHandler
         from profit.sur.encoders import Encoder
+        from numpy import array  # needed for eval of arrays
 
         self = cls()
         sur_dict = FileHandler.load(path, as_type='dict')
-        self.set_model(sur_dict['model'], sur_dict['model_kwargs'])
+        # TODO: test for empty model_kwargs
+        self.set_model(sur_dict['model'], sur_dict['order'], sur_dict['model_kwargs'])
         self.sigma_n = sur_dict['sigma_n']
         self.sigma_p = sur_dict['sigma_p']
         self.trained = sur_dict['trained']
@@ -177,5 +179,8 @@ class ChaospyLinReg(LinearRegression):
         self = cls()
         self.sigma_n = config["sigma_n"]
         self.sigma_p = config["sigma_p"]
-        self.set_model(config["model"], config["order"], config["model_kwargs"])
+        if 'model_kwargs' in config:
+            self.set_model(config["model"], config["order"], config["model_kwargs"])
+        else:
+            self.set_model(config["model"], config["order"])
         return self
