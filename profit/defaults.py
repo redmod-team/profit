@@ -92,8 +92,8 @@ fit_linear_regression = {'surrogate': 'ChaospyLinreg',
                          'model': 'monomial',
                          'order': 2,
                          'model_kwargs': None,
-                         'sigma_n': None,
-                         'sigma_p': None}
+                         'sigma_n': 0.1,
+                         'sigma_p': 10}
 
 # Active Learning Config
 active_learning = {'algorithm': 'simple',

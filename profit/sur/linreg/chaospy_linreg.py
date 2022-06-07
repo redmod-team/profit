@@ -34,7 +34,7 @@ class ChaospyLinReg(LinearRegression):
 
     @model.setter
     def model(self, model_name):
-        self.set_model(model_name, 2) # ToDo: set order
+        self.set_model(model_name, defaults['order'])   # ToDo: set order
 
     def set_model(self, model, order, model_kwargs=None):
         """Sets model parameters for surrogate
@@ -161,6 +161,7 @@ class ChaospyLinReg(LinearRegression):
         self.sigma_n = sur_dict['sigma_n']
         self.sigma_p = sur_dict['sigma_p']
         self.trained = sur_dict['trained']
+        self.ndim = int(sur_dict['ndim'])
         self.n_features = sur_dict['n_features']
         self.coeff_mean = sur_dict['coeff_mean']
         self.coeff_cov = sur_dict['coeff_cov']
@@ -177,10 +178,11 @@ class ChaospyLinReg(LinearRegression):
     @classmethod
     def from_config(cls, config, base_config):
         self = cls()
-        self.sigma_n = config["sigma_n"]
-        self.sigma_p = config["sigma_p"]
-        if 'model_kwargs' in config:
-            self.set_model(config["model"], config["order"], config["model_kwargs"])
-        else:
-            self.set_model(config["model"], config["order"])
+        self.sigma_n = config["sigma_n"] if "sigma_n" in config else defaults[
+            "sigma_n"]
+        self.sigma_p = config["sigma_p"] if "sigma_p" in config else defaults[
+            "sigma_p"]
+        self.model_kwargs = config["model_kwargs"] if "model_kwargs" in config else defaults[
+            "model_kwargs"]
+        self.set_model(config["model"], config["order"])
         return self
