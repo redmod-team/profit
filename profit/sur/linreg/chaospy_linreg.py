@@ -119,7 +119,7 @@ class ChaospyLinReg(LinearRegression):
         # ToDo
 
         """
-        attrs = ('model',  'order', 'model_kwargs', 'sigma_n', 'sigma_p',
+        attrs = ('model',  'order', 'model_kwargs', 'sigma_n', 'sigma_p', 'ndim',
                  'n_features', 'trained', 'coeff_mean', 'coeff_cov')
         sur_dict = {attr: getattr(self, attr) for attr in attrs}
         sur_dict['input_encoders'] = str([enc.repr for enc in self.input_encoders])
