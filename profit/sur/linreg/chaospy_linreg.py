@@ -109,7 +109,7 @@ class ChaospyLinReg(LinearRegression):
 
         ymean = Phi.T @ self.coeff_mean
         ycov = Phi.T @ self.coeff_cov @ Phi
-        yvar = np.diag(ycov)
+        yvar = np.atleast_2d(np.diag(ycov))
         # ToDO: add data variance
         return ymean, yvar
 
