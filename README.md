@@ -41,7 +41,7 @@ and surrogate is based on [plotly/dash](https://github.com/plotly/dash).
 * Template replacement and automatic generation of run directories
 * Starting parallel runs locally or on the cluster (SLURM)
 * Collection of result output and postprocessing
-* Response-model fitting using GPR
+* Response-model fitting using Gaussian Process Regression and Linear Regression
 * Active learning to reduce number of samples needed
 * MCMC to find a posterior parameter distribution (similar to active learning)
 * Graphical user interface to explore the results
