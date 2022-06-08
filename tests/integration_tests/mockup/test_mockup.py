@@ -238,7 +238,7 @@ def test_chaospy_linreg():
         assert sur.sigma_p == 10
         assert allclose(sur.coeff_mean.flatten(), [-0.16878038, 1.13322473, -1.24807956, 0.72796502, 0.34113983, 0.1707707])
         mean, cov = sur.predict([[0.25, 5.0, 0.57, 1, 3]])
-        assert allclose(mean[0, 0], 0.49899636) and allclose(cov[0, 0], 0.00566557)
+        assert allclose(mean[0, 0], 3.70979048) and allclose(cov[0, 0], 0.00202274)
     finally:
         clean(config)
         if path.exists(model_file):
