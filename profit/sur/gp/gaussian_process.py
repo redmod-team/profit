@@ -77,8 +77,8 @@ class GaussianProcess(Surrogate):
         from config or from the default values.
 
         Parameters:
-            X: (n, d) array of input training data.
-            y: (n, D) array of training output.
+            X: (n, d) or (n,) array of input training data.
+            y: (n, D) or (n,)  array of training output.
             kernel (str/object): Identifier of kernel like 'RBF' or directly the kernel object of the
                 specific surrogate.
             hyperparameters (dict): Hyperparameters such as length scale, variance and noise.
@@ -88,14 +88,10 @@ class GaussianProcess(Surrogate):
             fixed_sigma_n (bool/float/ndarray): Indicates if the data noise should be optimized or not.
                 If an ndarray is given, its length must match the training data.
         """
-
-        self.Xtrain, self.ytrain = np.atleast_2d(X), np.atleast_2d(y)
+        super().pre_train(X, y)
 
         # Set attributes either from config, the given parameters or from defaults
         self.set_attributes(fixed_sigma_n=fixed_sigma_n, kernel=kernel, hyperparameters=hyperparameters)
-
-        self.encode_training_data()
-        self.ndim = self.Xtrain.shape[-1]
 
         # Set hyperparameter inferred values
         inferred_hyperparameters = self.infer_hyperparameters()
@@ -151,30 +147,6 @@ class GaussianProcess(Surrogate):
                 for active learning.
         """
         pass
-
-    def post_train(self):
-        self.trained = True
-        self.decode_training_data()
-
-    def pre_predict(self, Xpred):
-        """Prepares the surrogate for prediction by checking if it is trained and validating the data.
-
-        Parameters:
-            Xpred (ndarray): Input points for prediction
-
-        Returns:
-            ndarray: Checked input data or default values inferred from training data.
-        """
-        from profit.util import check_ndim
-
-        if not self.trained:
-            raise RuntimeError("Need to train() before predict()!")
-
-        if Xpred is None:
-            Xpred = self.default_Xpred()
-        Xpred = check_ndim(Xpred)
-        Xpred = self.encode_predict_data(Xpred)
-        return Xpred
 
     @abstractmethod
     def predict(self, Xpred, add_data_variance=True):

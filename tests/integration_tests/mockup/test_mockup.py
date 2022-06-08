@@ -6,6 +6,7 @@ Testcases for mockup simulations:
     - multi output
 - 2D function (Rosenbrock)
     - .txt input/output
+    - Linear Regression
 - 2D function (Fermi)
     - one Halton (Temperature) and one independent (Energy) variable (simulation returns a vector)
     - .json template
@@ -216,3 +217,30 @@ def test_karhunenloeve():
             from os.path import splitext
             model_file = splitext(model_file)[0] + '.pkl'
             remove(model_file)
+
+def test_chaospy_linreg():
+    """Test the Chaospy Linear Regression on a Rosenbrock 2D function."""
+
+    config_file = "study_linreg/profit_linreg.yaml"
+    config = BaseConfig.from_file(config_file)
+    model_file = config["fit"].get("save")
+    try:
+        run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
+        run(f"profit fit {config_file}", shell=True, timeout=TIMEOUT)
+        sur = Surrogate.load_model(model_file)
+        assert sur.get_label() == "ChaospyLinReg"
+        assert sur.trained
+        assert sur.model == "monomial"
+        assert sur.order == 3
+        assert sur.ndim == 2
+        assert sur.n_features == 6
+        assert sur.sigma_n == 0.1
+        assert sur.sigma_p == 10
+        assert allclose(sur.coeff_mean.flatten(), [-0.16878038, 1.13322473, -1.24807956, 0.72796502, 0.34113983, 0.1707707])
+        mean, cov = sur.predict([[0.25, 5.0, 0.57, 1, 3]])
+        assert allclose(mean[0, 0], 3.70979048) and allclose(cov[0, 0], 0.00202274)
+    finally:
+        clean(config)
+        if path.exists(model_file):
+            remove(model_file)
+

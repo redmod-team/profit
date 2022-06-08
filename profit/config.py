@@ -528,14 +528,26 @@ class FitConfig(AbstractConfig):
     defaults = "fit"
 
     def __init__(self, **entries):
+        self.set_defaults(defaults.fit)
+        if len(entries) != 0:
+            warnings.warn(f"FitConfig should be initialized with empty entries and not with {entries}")
+
+    def update(self, **entries):
         from profit.sur import Surrogate
         from profit.sur.gp.gaussian_process import GaussianProcess
-        self.set_defaults(defaults.fit)
+        from profit.sur.linreg import LinearRegression
+        if "surrogate" in entries:
+            self.surrogate = entries["surrogate"]
 
         if issubclass(Surrogate.labels[self.surrogate], GaussianProcess):
             self.set_defaults(defaults.fit_gaussian_process)
+        elif issubclass(Surrogate.labels[self.surrogate], LinearRegression):
+            self.set_defaults(defaults.fit_linear_regression)
+        else:
+            raise RuntimeError(f"unknown surrogate {self.surrogate}")
 
-        self.update(**entries)
+        super().update(**entries)
+
 
     def process_entries(self, base_config):
         """Set 'load' and 'save' as well as the encoder."""
