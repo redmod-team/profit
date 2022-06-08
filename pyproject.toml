@@ -2,7 +2,7 @@
 
 [build-system]
 requires = [
-    "setuptools>=42",
+    "setuptools>=42,<60",
     "wheel",
     "numpy==1.16.6; python_version<='3.7' and platform_machine!='aarch64'",
     "numpy==1.17.5; python_version=='3.8' and platform_machine!='aarch64'",
