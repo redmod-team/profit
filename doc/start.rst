@@ -124,6 +124,7 @@ The type annotation is used to tell proFit which return value belongs to which r
 
 .. code-block:: yaml
 
+   include: path_to_simulation.py
    run:
      worker: my_name
 
