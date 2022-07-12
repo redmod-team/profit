@@ -218,7 +218,32 @@ def test_karhunenloeve():
             model_file = splitext(model_file)[0] + '.pkl'
             remove(model_file)
 
-def test_chaospy_linreg():
+
+def test_gpy():
+    """Test the Chaospy Linear Regression on a Rosenbrock 2D function."""
+
+    config_file = "study_gpy/profit_gpy.yaml"
+    config = BaseConfig.from_file(config_file)
+    model_file = config["fit"].get("save")
+    try:
+        run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
+        run(f"profit fit {config_file}", shell=True, timeout=TIMEOUT)
+        sur = Surrogate.load_model(model_file)
+        assert sur.get_label() == "GPy"
+        assert sur.trained
+        assert sur.ndim == 2
+        assert allclose(sur.hyperparameters['length_scale'], 0.47321765, rtol=PARAM_RTOL)
+        assert allclose(sur.hyperparameters['sigma_f'], 0.49950325, rtol=PARAM_RTOL)
+        assert allclose(sur.hyperparameters['sigma_n'], 3.3637e-7, rtol=PARAM_RTOL)
+        mean, cov = sur.predict([[0.25, 5.0, 0.57, 1, 3]])
+        assert allclose(mean[0, 0], 3.71906) and allclose(cov[0, 0], 2.8619e-6)
+    finally:
+        clean(config)
+        if path.exists(model_file):
+            remove(model_file)
+
+
+def test_linreg_chaospy():
     """Test the Chaospy Linear Regression on a Rosenbrock 2D function."""
 
     config_file = "study_linreg/profit_linreg.yaml"

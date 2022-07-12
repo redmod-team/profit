@@ -101,10 +101,10 @@ class GPySurrogate(GaussianProcess):
 
         # Initialize the encoder by encoding and decoding the training data once.
         self.encode_training_data()
+        self.ndim = self.Xtrain.shape[-1]
         self.decode_training_data()
 
         self.kernel = self.model.kern
-        self.ndim = self.Xtrain.shape[-1]
         self._set_hyperparameters_from_model()
         self.trained = True
         self.print_hyperparameters("Loaded")
