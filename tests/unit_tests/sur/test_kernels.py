@@ -19,7 +19,7 @@ def test_kern_sqexp():
     k2 = np.exp(-0.5*xdiff2)
     print(tic - time.time())
 
-    assert np.array_equal(k1, k2)
+    assert np.allclose(k1, k2)
 
 
 def test_build_K():
@@ -41,8 +41,8 @@ def test_build_K():
     K2 = np.exp(-0.5*xdiff2)
     K3 = RBF(xa, xb, l)
 
-    assert np.array_equal(K1, K2)
-    assert np.array_equal(K1, K3)
+    assert np.allclose(K1, K2)
+    assert np.allclose(K1, K3)
 
 
 def test_build_dKdth():
