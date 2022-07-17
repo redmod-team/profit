@@ -1,22 +1,17 @@
-"""proFit default runner
-
-in development (Mar 2021)
-Goal: a class to manage and deploy runs
-"""
+""" Runner & Runner Interface """
 
 import os
 import sys
 import logging
 from abc import abstractmethod
-from profit.util.base_class import CustomABC  # Abstract Base Class
+from profit.util.component import Component
 
 from profit.util import load_includes, params2map
 
 import numpy as np
 
 
-class RunnerInterface(CustomABC):
-    labels = {}
+class RunnerInterface(Component):
     internal_vars = [('DONE', np.bool8), ('TIME', np.uint32)]
 
     def __init__(self, config, size, input_config, output_config, *, logger_parent: logging.Logger = None):
@@ -56,17 +51,10 @@ class RunnerInterface(CustomABC):
 # === Runner === #
 
 
-class Runner(CustomABC):
-    labels = {}
-
-    # for now, implement the runner straightforward with less overhead
-    # restructuring is always possible
-    def __init__(self, interface_class, run_config, base_config, handle_logging=True):
-        self.base_config = base_config
-        self.run_config = run_config
-        self.config = self.run_config['runner']
-        self.logger = logging.getLogger('Runner')
-        if handle_logging:
+class Runner(Component):
+    def __init__(self, interface, env=None, debug=False, logger=None, loghandler=None):
+        self.logger = logger if logger is not None else logging.getLogger('Runner')
+        if loghandler is None:
             log_handler = logging.FileHandler('runner.log', mode='w')
             log_formatter = logging.Formatter('{asctime} {levelname:8s} {name}: {message}', style='{')
             log_handler.setFormatter(log_formatter)
@@ -77,11 +65,10 @@ class Runner(CustomABC):
             log_handler2.setLevel(logging.WARNING)
             self.logger.addHandler(log_handler2)
             self.logger.propagate = False
-        if self.run_config['debug']:
+        self.debug = debug 
+        if debug:
             self.logger.setLevel(logging.DEBUG)
-        self.interface: RunnerInterface = interface_class(self.run_config['interface'], self.base_config['ntrain'],
-                                                          self.base_config['input'], self.base_config['output'],
-                                                          logger_parent=self.logger)
+        self.interface: RunnerInterface = interface
 
         self.runs = {}  # run_id: (whatever data the system tracks)
         self.failed = {}  # ~runs, saving those that failed
@@ -89,12 +76,24 @@ class Runner(CustomABC):
         self.env = os.environ.copy()
         self.env['PROFIT_BASE_DIR'] = self.base_config['base_dir']
         self.env['PROFIT_CONFIG_PATH'] = base_config['config_path']  # ToDo better way to pass this?
+        
+        self.env = env if env is not None else os.environ.copy()
 
     @classmethod
     def from_config(cls, config, base_config):
         child = cls[config['runner']['class']]
-        interface_class = RunnerInterface[config['interface']['class']]
-        return child(interface_class, config, base_config)
+        
+        interface = RunnerInterface[config['interface']['class']](
+            run_config['interface'], 
+            base_config['ntrain'],
+            base_config['input'], 
+            base_config['output'],
+            logger_parent=self.logger)
+        env = os.environ.copy()
+        env['PROFIT_BASE_DIR'] = base_config['base_dir']
+        env['PROFIT_CONFIG_PATH'] = base_config['config_path']
+        
+        return child(interface, env, config['debug'])
 
     def fill(self, params_array, offset=0):
         if offset + len(params_array) - 1 >= self.interface.size:
