@@ -6,7 +6,7 @@ The Run System
 This documentation was taken directly from: R. Babin, "Generic system to 
 manage simulation runs and result collection for distributed parameter 
 studies", Bachelor's Thesis (Graz University of Technology, Graz, Austria, 
-2021)
+2021). Parts of it were modified to reflect the changes to *proFit* since then.
 
 --------------
 
@@ -145,6 +145,8 @@ listing 2.
 
 ::
 
+    from profit.run import Postprocessor
+    
     @Postprocessor.register('json')
     class JSONPostprocessor(Postprocessor):
         """ Postprocessor to read output from a JSON file
@@ -159,17 +161,7 @@ listing 2.
             for key, value in output.items():
                 data[key] = value
 
-        @classmethod
-        def handle_config(cls, config, base_config):
-            """
-            Example:
-                .. code-block:: yaml
-
-                    class: json
-                    path: stdout    # file to read from, relative to the run directory
-            """
-            if 'path' not in config:
-                config['path'] = 'stdout'
+     
 
 *Listing 1: Registering a Postprocessor with the identifier json, to read simulation output in the JSON file format. Part of the default components of proFit* [proFit]_.
 
@@ -179,7 +171,7 @@ listing 2.
         post:
             class: json
             path: simulation_output.json
-        include: path/to/my_custom_json_postprocessor.py
+    include: path/to/my_custom_json_postprocessor.py
 
 *Listing 2: The post-section of the YAML-configuration file to select the JSON Postprocessor defined in listing 1.*
 
@@ -194,8 +186,8 @@ listing 4 for the corresponding configuration).
 
 ::
 
-    @Worker.wrap('new_worker', 'u', 'f')
-    def simulation(u):
+    @Worker.wrap('new_worker')
+    def simulation(u) -> 'f':
         return np.cos(10 * u) + u
 
 *Listing 3: Registering a new Worker with the identifier python_worker, the input parameter u and output value f = cos(10 u) + u using the wrapper. Adapted from the tests of proFit* [proFit]_.
@@ -204,7 +196,7 @@ listing 4 for the corresponding configuration).
 
     run:
         worker: new_worker
-        include: path/to/my_custom_worker.py
+    include: path/to/my_custom_worker.py
 
 *Listing 4: The YAML configuration to select the custom Worker defined in listing 3. Adapted from the tests of proFit* [proFit]_.
 
@@ -290,4 +282,4 @@ communication across the network.
    The homepage of *ZeroMQ* is found at https://zeromq.org
 
 .. [proFit]
-   C. Albert, R. Babin, M. Hadwiger, M. Kendler, M. Khallaayoune, K. Rath, and B. Rubino-Moyner, "proFit v0.4: Probabilistic Response Model Fitting with Interactive Tools", 10.5281/zenodo.4849489 (2021)
+   C. Albert, M. Kendler, R. Babin, M. Hadwiger, R. Hofmeister, M. Khallaayoune, F. Kramp, K. Rath, & B. Rubino-Moyner, "proFit: Probabilistic Response Model Fitting with Interactive Tools", v0.5, 10.5281/zenodo.6624446 (2022)
