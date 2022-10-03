@@ -131,27 +131,28 @@ class MemmapRunnerInterface(RunnerInterface, label="memmap"):
 
     def __init__(
         self,
-        config,
         size,
         input_config,
         output_config,
+        path: str = "interface.npy",
         *,
         logger_parent: logging.Logger = None,
     ):
         super().__init__(
-            config, size, input_config, output_config, logger_parent=logger_parent
+            size, input_config, output_config, logger_parent=logger_parent
         )
+        self.path = path
 
         init_data = np.zeros(
             size, dtype=self.input_vars + self.internal_vars + self.output_vars
         )
-        np.save(self.config["path"], init_data)
+        np.save(self.path, init_data)
 
         try:
-            self._memmap = np.load(self.config["path"], mmap_mode="r+")
+            self._memmap = np.load(self.path, mmap_mode="r+")
         except FileNotFoundError:
             self.runner.logger.error(
-                f'{self.__class__.__name__} could not load {self.config["path"]} (cwd: {os.getcwd()})'
+                f'{self.__class__.__name__} could not load {self.path} (cwd: {os.getcwd()})'
             )
             raise
 
@@ -177,13 +178,13 @@ class MemmapRunnerInterface(RunnerInterface, label="memmap"):
         init_data = np.zeros(
             size, dtype=self.input_vars + self.internal_vars + self.output_vars
         )
-        np.save(self.config["path"], init_data)
+        np.save(self.path, init_data)
 
         try:
-            self._memmap = np.load(self.config["path"], mmap_mode="r+")
+            self._memmap = np.load(self.path, mmap_mode="r+")
         except FileNotFoundError:
             self.runner.logger.error(
-                f'{self.__class__.__name__} could not load {self.config["path"]} (cwd: {os.getcwd()})'
+                f'{self.__class__.__name__} could not load {self.path} (cwd: {os.getcwd()})'
             )
             raise
 
@@ -192,8 +193,8 @@ class MemmapRunnerInterface(RunnerInterface, label="memmap"):
         self.internal = self._memmap[[v[0] for v in self.internal_vars]]
 
     def clean(self):
-        if os.path.exists(self.config["path"]):
-            os.remove(self.config["path"])  #
+        if os.path.exists(self.path):
+            os.remove(self.path)
 
 
 class MemmapWorkerInterface(WorkerInterface, label="memmap"):
