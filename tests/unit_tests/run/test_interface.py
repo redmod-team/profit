@@ -20,66 +20,112 @@ def chdir_pytest():
     chdir(pytest_root_dir)
 
 
-# === base functionality === #
+# === initialization === #
 
 
-@pytest.mark.parametrize("label", ["memmap", "zeromq"])
-def test_interface(label):
-    """send & receive with default values"""
-    from profit.run.interface import RunnerInterface, WorkerInterface
+LABELS = ["memmap", "zeromq"]
 
-    SIZE = 4
-    RUNID = 2
-    inputs = {
-        "x": np.random.random(SIZE),
-        "y": np.random.random(SIZE),
+
+@pytest.fixture(params=LABELS)
+def label(request):
+    return request.param
+
+
+@pytest.fixture
+def size():
+    return 4
+
+
+@pytest.fixture
+def runid():
+    return 2
+
+
+@pytest.fixture
+def inputs(size):
+    return {
+        "x": np.random.random(size),
+        "y": np.random.random(size),
     }
-    outputs = {
+
+
+@pytest.fixture
+def outputs(size):
+    return {
         "f": np.random.random((SIZE, 1)),
         "G": np.random.random((SIZE, 2)),  # vector
     }
 
-    # init
-    runner = RunnerInterface[label](
-        size=SIZE,
+
+@pytest.fixture
+def runner_interface(label, size, inputs, outputs):
+    from profit.run.interface import WorkerInterface
+    rif = RunnerInterface[label](
+        size=size,
         input_config={key: {"dtype": value.dtype} for key, value in inputs.items()},
         output_config={
             key: {"dtype": value.dtype, "size": (1, value.size)}
             for key, value in outputs.items()
         },
     )
-    worker = WorkerInterface[label](run_id=RUNID)
-
     for key, value in inputs.items():
         runner.input[key] = value
+    yield rif
+    rif.clean()
 
-    try:
-        # send & receive
-        def run():
-            for i in range(10):
-                runner.poll()
-                if runner.internal["DONE"][RUNID]:
-                    break
-                sleep(0.1)
 
-        def work():
-            worker.retrieve()
-            for key, value in outputs.items():
-                runner.output[key] = value[RUNID]
-            worker.time = np.random.random()
-            worker.transmit()
+@pytest.fixture
+def worker_interface(label, runid):
+    from profit.run.interface import WorkerInterface
+    wif = WorkerInterface[label](run_id=runid)
+    return
 
-        run_thread = Thread(target=run)
-        work_thread = Thread(target=work)
 
-        run_thread.start()
-        work_thread.start()
-        work_thread.join()
-        run_thread.join()
+# === base functionality === #
 
-        assert runner.internal["DONE"][RUNID]
-        assert all(runner.input[RUNID] == worker.input)
-        assert all(runner.output[RUNID] == worker.output)
-        assert runner.internal["TIME"][RUNID] == worker.time
-    finally:
-        runner.clean()
+
+def test_register():
+    from profit.run.interface import RunnerInterface, WorkerInterface
+    # Runner- and Worker-Interfaces come in pairs
+    assert RunnerInterface.labels == WorkerInterface.labels
+    # all Interfaces should be tested
+    assert RunnerInterface.labels == set(LABELS)
+
+
+def test_interface(runner_interface, worker_interface, runid):
+    """send & receive with default values"""
+    # send & receive
+    def run():
+        for i in range(10):
+            runner_interface.poll()
+            if runner_interface.internal["DONE"][runid]:
+                break
+            sleep(0.1)
+
+    def work():
+        worker_interface.retrieve()
+        for key, value in outputs.items():
+            worker_interface.output[key] = value[runid]
+        worker_interface.time = np.random.random()
+        worker_interface.transmit()
+
+    run_thread = Thread(target=run)
+    work_thread = Thread(target=work)
+
+    run_thread.start()
+    work_thread.start()
+    work_thread.join()
+    run_thread.join()
+
+    assert runner.internal["DONE"][runid]
+    assert all(runner.input[runid] == worker.input)
+    assert all(runner.output[runid] == worker.output)
+    assert runner.internal["TIME"][runid] == worker.time
+
+
+def test_interface_resize(size, runner_interface):
+    assert runner_interface.size == size
+    runner_interface.resize(size - 5)  # shrinking (not supported)
+    assert runner_interface.size == size
+    runner_interface.resize(size + 5)  # expanding
+    assert runner_interface.size == size + 5
