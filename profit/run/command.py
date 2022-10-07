@@ -365,7 +365,8 @@ def JSONPostprocessor(self, data):
     with open(self.path) as f:
         output = json.load(f)
     for key, value in output.items():
-        data[key] = value
+        if key in data.dtype.names:
+            data[key] = value
 
 
 # --- Numpy Text Postprocessor --- #
@@ -388,11 +389,11 @@ def NumpytxtPostprocessor(self, data):
         for name in self.names
     ]
     try:
-        raw = np.genfromtxt(self.path, dtype=dtype, **self.config["options"])
+        raw = np.genfromtxt(self.path, dtype=dtype, **self.options)
     except OSError:
-        self.logger.error(f'output file {self.config["path"]} not found')
+        self.logger.error(f'output file {self.path} not found')
         self.logger.info(f"cwd = {os.getcwd()}")
-        dirname = os.path.dirname(self.config["path"]) or "."
+        dirname = os.path.dirname(self.path) or "."
         self.logger.info(f"ls {dirname} = {os.listdir(dirname)}")
         raise
 
@@ -415,4 +416,5 @@ def HDF5Postprocessor(self, data):
 
     with h5py.File(self.path, "r") as f:
         for key in f.keys():
-            data[key] = f[key]
+            if key in data.dtype.names:
+                data[key] = f[key]

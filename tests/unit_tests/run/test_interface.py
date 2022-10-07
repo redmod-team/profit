@@ -60,6 +60,7 @@ def outputs(size):
 @pytest.fixture
 def runner_interface(label, size, inputs, outputs):
     from profit.run.interface import WorkerInterface
+
     rif = RunnerInterface[label](
         size=size,
         input_config={key: {"dtype": value.dtype} for key, value in inputs.items()},
@@ -77,6 +78,7 @@ def runner_interface(label, size, inputs, outputs):
 @pytest.fixture
 def worker_interface(label, runid):
     from profit.run.interface import WorkerInterface
+
     wif = WorkerInterface[label](run_id=runid)
     return
 
@@ -86,6 +88,7 @@ def worker_interface(label, runid):
 
 def test_register():
     from profit.run.interface import RunnerInterface, WorkerInterface
+
     # Runner- and Worker-Interfaces come in pairs
     assert RunnerInterface.labels == WorkerInterface.labels
     # all Interfaces should be tested
