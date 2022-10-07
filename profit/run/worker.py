@@ -74,6 +74,9 @@ class Worker(Component):
         # self.interface.transmit()
         pass
 
+    def clean(self):
+        self.interface.clean()
+
     @classmethod
     def from_env(cls, env):
         from profit.config import BaseConfig

@@ -134,25 +134,24 @@ class MemmapRunnerInterface(RunnerInterface, label="memmap"):
         size,
         input_config,
         output_config,
-        path: str = "interface.npy",
         *,
+        path: str = "interface.npy",
         logger_parent: logging.Logger = None,
     ):
-        super().__init__(
-            size, input_config, output_config, logger_parent=logger_parent
-        )
+        super().__init__(size, input_config, output_config, logger_parent=logger_parent)
         self.path = path
 
         init_data = np.zeros(
             size, dtype=self.input_vars + self.internal_vars + self.output_vars
         )
         np.save(self.path, init_data)
+        self.logger.debug(f"init memmap <{self.path}, size {size}, {init_data.dtype}>")
 
         try:
             self._memmap = np.load(self.path, mmap_mode="r+")
         except FileNotFoundError:
             self.runner.logger.error(
-                f'{self.__class__.__name__} could not load {self.path} (cwd: {os.getcwd()})'
+                f"{self.__class__.__name__} could not load {self.path} (cwd: {os.getcwd()})"
             )
             raise
 
@@ -184,7 +183,7 @@ class MemmapRunnerInterface(RunnerInterface, label="memmap"):
             self._memmap = np.load(self.path, mmap_mode="r+")
         except FileNotFoundError:
             self.runner.logger.error(
-                f'{self.__class__.__name__} could not load {self.path} (cwd: {os.getcwd()})'
+                f"{self.__class__.__name__} could not load {self.path} (cwd: {os.getcwd()})"
             )
             raise
 
@@ -204,7 +203,7 @@ class MemmapWorkerInterface(WorkerInterface, label="memmap"):
     """
 
     def __init__(
-        self, run_id: int, path="interface.npy", *, logger_parent: logging.Logger = None
+        self, run_id: int, *, path="interface.npy", logger_parent: logging.Logger = None
     ):
         self.path = path
         self._memmap = None
@@ -241,17 +240,22 @@ class MemmapWorkerInterface(WorkerInterface, label="memmap"):
         for key in self._memmap.dtype.names[k:]:
             if key not in ["DONE", "TIME"]:
                 outputs.append(key)
-        self.input = self._memmap[inputs][run_id]
-        self.output = self._memmap[outputs][run_id]
-        self._data = self._memmap[run_id]
+        self.input = self._memmap[inputs][self.run_id]
+        self.output = self._memmap[outputs][self.run_id]
+        self._data = self._memmap[self.run_id]
 
     def transmit(self):
         # signal the Worker has completed
         self._data["DONE"] = True
         # ensure the data is written to disk
         self._memmap.flush()
-        # close the connection
-        self._memmap = None
-        del self._data
-        del self._input
-        del self._output
+
+    def clean(self):
+        if self._memmap is not None:
+            # ensure the data is written to disk
+            self._memmap.flush()
+            # close the connection
+            self._memmap = None
+            del self._data
+            del self.input
+            del self.output

@@ -31,8 +31,7 @@ class ZeroMQRunnerInterface(RunnerInterface, label="zeromq"):
         port: port of the Runner Interface
         connection: override for the ZeroMQ connection spec (Worker side)
         bind: override for the ZeroMQ bind spec (Runner side)
-        poll: polling duration (Runner)
-        timeout: connection timeout when waiting for an answer (Worker)
+        timeout: connection timeout when waiting for an answer in seconds (Runner & Worker)
         retries: number of tries to establish a connection (Worker)
         retry_sleep: sleep time in seconds between each retry (Worker)
 
@@ -46,39 +45,43 @@ class ZeroMQRunnerInterface(RunnerInterface, label="zeromq"):
         size,
         input_config,
         output_config,
-        /,
+        *,
         transport="tcp",
         address="localhost",
         port=9000,
         connection=None,
         bind=None,
-        timeout=2500,
+        timeout=2.5,
         retries=3,
-        poll=1,
         retry_sleep=10,
-        *,
         logger_parent: Logger = None,
     ):
         if "FLAGS" not in [var[0] for var in self.internal_vars]:
             self.internal_vars += [("FLAGS", np.byte.__name__)]
-        super().__init__(
-            config, size, input_config, output_config, logger_parent=logger_parent
-        )
+        super().__init__(size, input_config, output_config, logger_parent=logger_parent)
+        self.transport = transport
         self.address = address
         self.port = port
         self.connection = connection
-        self.bind = bind
+        self._bind = bind
         self.timeout = timeout
         self.retries = retries
         self.retry_sleep = retry_sleep
 
         self.socket = zmq.Context.instance().socket(zmq.ROUTER)
-        if self.bind is None:
-            bind = f"{self.transport}://*:{self.port}"
+        self.socket.bind(self.bind)
+        self.logger.info(f"connected to {self.bind}")
+
+    @property
+    def bind(self):
+        if self._bind is None:
+            return f"{self.transport}://*:{self.port}"
         else:
-            bind = self.bind
-        self.socket.bind(bind)
-        self.logger.info(f"connected to {bind}")
+            return self._bind
+
+    @bind.setter
+    def bind(self, value):
+        self._bind = value
 
     @property
     def config(self):
@@ -87,8 +90,7 @@ class ZeroMQRunnerInterface(RunnerInterface, label="zeromq"):
             "address": self.address,
             "port": self.port,
             "connection": self.connection,
-            "bind": self.bind,
-            "poll": self.poll,
+            "bind": self._bind,
             "timeout": self.timeout,
             "retries": self.retries,
             "retry_sleep": self.retry_sleep,
@@ -97,7 +99,7 @@ class ZeroMQRunnerInterface(RunnerInterface, label="zeromq"):
 
     def poll(self):
         self.logger.debug("polling: checking for messages")
-        while self.socket.poll(timeout=self.poll, flags=zmq.POLLIN):
+        while self.socket.poll(timeout=int(1e3 * self.timeout), flags=zmq.POLLIN):
             msg = self.socket.recv_multipart()
             # ToDo: Heartbeats
             self.handle_msg(msg[0], msg[2:])
@@ -154,22 +156,22 @@ class ZeroMQWorkerInterface(WorkerInterface, label="zeromq"):
     def __init__(
         self,
         run_id: int,
+        *,
         transport="tcp",
         address="localhost",
         port=9000,
         connection=None,
         bind=None,
-        timeout=2500,
+        timeout=2.5,
         retries=3,
-        poll=1,
         retry_sleep=10,
-        *,
         logger_parent: Logger = None,
     ):
         super().__init__(run_id, logger_parent=logger_parent)
+        self.transport = transport
         self.address = address
         self.port = port
-        self.connection = connection
+        self._connection = connection
         self.bind = bind
         self.timeout = timeout
         self.retries = retries
@@ -178,14 +180,25 @@ class ZeroMQWorkerInterface(WorkerInterface, label="zeromq"):
         self._connected = False
 
     @property
+    def connection(self):
+        if self._connection is None:
+            address = os.environ.get("PROFIT_RUNNER_ADDRESS") or "localhost"
+            return f"{self.transport}://{self.address}:{self.port}"
+        else:
+            return self._connection
+
+    @connection.setter
+    def connection(self, value):
+        self._connection = value
+
+    @property
     def config(self):
         config = {
             "transport": self.transport,
             "address": self.address,
             "port": self.port,
-            "connection": self.connection,
-            "bind": self.bind,
-            "poll": self.poll,
+            "connection": self._connection,
+            "bind": self._bind,
             "timeout": self.timeout,
             "retries": self.retries,
             "retry_sleep": self.retry_sleep,
@@ -203,16 +216,15 @@ class ZeroMQWorkerInterface(WorkerInterface, label="zeromq"):
         self.request("DATA")
         self.disconnect()
 
+    def clean(self):
+        if self._connected:
+            self.disconnect()
+
     def connect(self):
         self.socket = zmq.Context.instance().socket(zmq.REQ)
         self.socket.setsockopt(zmq.IDENTITY, f"req_{self.run_id}".encode())
-        if self.connection is None:
-            address = os.environ.get("PROFIT_RUNNER_ADDRESS") or "localhost"
-            connection = f"{self.transport}://{self.address}:{self.port}"
-        else:
-            connection = self.connection
-        self.socket.connect(connection)
-        self.logger.info(f"connected to {connection}")
+        self.socket.connect(self.connection)
+        self.logger.info(f"connected to {self.connection}")
         self._connected = True
 
     def disconnect(self):
@@ -234,7 +246,8 @@ class ZeroMQWorkerInterface(WorkerInterface, label="zeromq"):
             elif request == "TIME":
                 msg.append(np.uint(self.time))
             self.socket.send_multipart(msg)
-            if self.socket.poll(timeout=self.timeout, flags=zmq.POLLIN):
+            self.logger.debug(f"send message {msg}")
+            if self.socket.poll(timeout=int(1e3 * self.timeout), flags=zmq.POLLIN):
                 response = None
                 try:
                     response = self.socket.recv_multipart()

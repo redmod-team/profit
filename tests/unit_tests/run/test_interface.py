@@ -6,8 +6,10 @@ Testcases for run/interface.py
 
 import pytest
 import numpy as np
-from threading import Thread
+from multiprocessing import Process
 from time import sleep
+import logging
+import sys
 
 
 @pytest.fixture(autouse=True)
@@ -24,6 +26,7 @@ def chdir_pytest():
 
 
 LABELS = ["memmap", "zeromq"]
+TIMEOUT = 2  # s
 
 
 @pytest.fixture(params=LABELS)
@@ -52,35 +55,60 @@ def inputs(size):
 @pytest.fixture
 def outputs(size):
     return {
-        "f": np.random.random((SIZE, 1)),
-        "G": np.random.random((SIZE, 2)),  # vector
+        "f": np.random.random((size, 1)),
+        "G": np.random.random((size, 2)),  # vector
     }
 
 
 @pytest.fixture
-def runner_interface(label, size, inputs, outputs):
-    from profit.run.interface import WorkerInterface
+def time():
+    return int(1e3 * np.random.random())
+
+
+@pytest.fixture
+def logger(caplog):
+    caplog.set_level(logging.DEBUG)
+    return logging.getLogger()
+
+
+def log_to_stderr(log):
+    log_formatter = logging.Formatter(
+        "{asctime} {levelname:8s} {name}: {message}", style="{"
+    )
+    log_handler = logging.StreamHandler(sys.stderr)
+    log_handler.setFormatter(log_formatter)
+    log_handler.setLevel(logging.DEBUG)
+    log.addHandler(log_handler)
+
+
+@pytest.fixture
+def runner_interface(label, size, inputs, outputs, logger):
+    from profit.run.interface import RunnerInterface
 
     rif = RunnerInterface[label](
         size=size,
-        input_config={key: {"dtype": value.dtype} for key, value in inputs.items()},
+        input_config={
+            key: {"dtype": value.dtype.type} for key, value in inputs.items()
+        },
         output_config={
-            key: {"dtype": value.dtype, "size": (1, value.size)}
+            key: {"dtype": value.dtype.type, "size": (1, value.shape[1])}
             for key, value in outputs.items()
         },
+        logger_parent=logger,
     )
     for key, value in inputs.items():
-        runner.input[key] = value
+        rif.input[key] = value
     yield rif
     rif.clean()
 
 
 @pytest.fixture
-def worker_interface(label, runid):
+def worker_interface(label, runid, logger):
     from profit.run.interface import WorkerInterface
 
-    wif = WorkerInterface[label](run_id=runid)
-    return
+    wif = WorkerInterface[label](run_id=runid, logger_parent=logger)
+    yield wif
+    wif.clean()
 
 
 # === base functionality === #
@@ -95,35 +123,48 @@ def test_register():
     assert RunnerInterface.labels == set(LABELS)
 
 
-def test_interface(runner_interface, worker_interface, runid):
+def test_interface(
+    runner_interface, worker_interface, runid, inputs, outputs, time, reraise
+):
     """send & receive with default values"""
     # send & receive
     def run():
-        for i in range(10):
+        for i in range(5):
             runner_interface.poll()
             if runner_interface.internal["DONE"][runid]:
                 break
             sleep(0.1)
+        else:
+            raise RuntimeError("timeout")
 
     def work():
+        log_to_stderr(worker_interface.logger)
         worker_interface.retrieve()
         for key, value in outputs.items():
             worker_interface.output[key] = value[runid]
-        worker_interface.time = np.random.random()
+        with reraise:
+            for key in inputs:
+                assert np.all(worker_interface.input[key] == inputs[key][runid])
+        worker_interface.time = time
         worker_interface.transmit()
 
-    run_thread = Thread(target=run)
-    work_thread = Thread(target=work)
+    work_thread = Process(target=work)
 
-    run_thread.start()
-    work_thread.start()
-    work_thread.join()
-    run_thread.join()
+    # keep runner in the main thread
+    try:
+        work_thread.start()
+        run()
+        work_thread.join(TIMEOUT)
+        assert not work_thread.is_alive()
+    finally:
+        work_thread.terminate()
 
-    assert runner.internal["DONE"][runid]
-    assert all(runner.input[runid] == worker.input)
-    assert all(runner.output[runid] == worker.output)
-    assert runner.internal["TIME"][runid] == worker.time
+    assert runner_interface.internal["DONE"][runid]
+    for key in inputs:
+        assert np.all(runner_interface.input[key][runid] == inputs[key][runid])
+    for key in outputs:
+        assert np.all(runner_interface.output[key][runid] == outputs[key][runid])
+    assert runner_interface.internal["TIME"][runid] == time
 
 
 def test_interface_resize(size, runner_interface):

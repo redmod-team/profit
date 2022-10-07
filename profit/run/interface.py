@@ -95,9 +95,9 @@ class WorkerInterface(Component):
         if "time" not in self.__dir__():
             self.time: int = 0
         if "input" not in self.__dir__():
-            self.input: void = zeros(1, dtype=[])[0]
+            self.input: void = np.zeros(1, dtype=[])[0]
         if "output" not in self.__dir__():
-            self.output: void = zeros(1, dtype=[])[0]
+            self.output: void = np.zeros(1, dtype=[])[0]
 
     @abstractmethod
     def retrieve(self):
@@ -114,4 +114,7 @@ class WorkerInterface(Component):
         1) transmit the output and time data (`.output` and `.time`)
         2) signal the Worker has finished
         3) close the connection to the Runner-Interface"""
+        pass
+
+    def clean(self):
         pass
