@@ -121,6 +121,8 @@ class Preprocessor(Component):
         os.chdir(self.run_dir)
 
     def post(self):
+        if self.return_dir is None:
+            break  # nothing to do
         os.chdir(self.return_dir)
         if self.clean:
             shutil.rmtree(self.run_dir)
