@@ -9,6 +9,8 @@ import numpy as np
 from threading import Thread
 from time import sleep
 import os
+import logging
+import json
 
 
 @pytest.fixture(autouse=True)
@@ -31,17 +33,25 @@ OUTPUT_DTYPE = [("f", float, (3,)), ("g", float)]
 OPTIONS = {"numpytxt": {"names": ["f", "g"]}}
 
 
-@pytest.fixture(params=PREPROCESSORS)
-def postprocessor(request):
-    label = request.param
-    from profit.run.command import Postprocessor
-
-    return Postprocessor[label](path=f"{label}.post")
+@pytest.fixture
+def inputs():
+    return {key: np.random.random() for key, dtype in INPUT_DTYPE}
 
 
 @pytest.fixture
-def inputs():
-    return {key: np.random.random() for key in INPUT_DTYPE}
+def logger(caplog):
+    caplog.set_level(logging.DEBUG)
+    return logging.getLogger()
+
+
+@pytest.fixture(params=POSTPROCESSORS)
+def postprocessor(request, logger):
+    label = request.param
+    from profit.run.command import Postprocessor
+
+    return Postprocessor[label](
+        path=f"{label}.post", **OPTIONS.get(label, {}), logger_parent=logger
+    )
 
 
 # === base functionality === #
@@ -66,24 +76,26 @@ def test_postprocessor(postprocessor):
     postprocessor.retrieve(data)
 
     for key in OUTPUTS:
-        assert all(data[key] == OUTPUTS[key])
+        assert np.allclose(data[key], OUTPUTS[key])
 
 
 # === specific components === #
 
 
-def test_template(inputs):
+def test_template(inputs, logger):
     from profit.run.command import Preprocessor
-    
-    preprocessor = Preprocessor["template"]("run_test", clean=True)
+
+    preprocessor = Preprocessor["template"](
+        "run_test", clean=True, logger_parent=logger
+    )
     try:
         preprocessor.prepare(inputs)
         assert os.path.basename(os.getcwd()) == "run_test"
-        data_csv = np.loadtxt("template.csv")
+        data_csv = np.loadtxt("template.csv", delimiter=",", dtype=INPUT_DTYPE)
         with open("template.json") as f:
             data_json = json.load(f)
-        for key in inputs:
-            assert np.all(inputs[key] == data_csv[key])
-            assert np.all(inputs[key] == data_json[key])
+        for key, value in inputs.items():
+            assert np.all(value == data_csv[key])
+            assert np.all(value == data_json[key])
     finally:
         preprocessor.post()

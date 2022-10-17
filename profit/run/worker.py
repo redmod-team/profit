@@ -9,6 +9,7 @@ import subprocess
 from typing import Mapping, MutableMapping
 from numpy import zeros, void
 from warnings import warn
+import functools
 
 from ..util.component import Component
 from .interface import WorkerInterface as Interface
@@ -141,10 +142,8 @@ class Worker(Component):
             if isinstance(outputs, str):
                 outputs = [outputs]
 
-            @cls.register(label)
-            class WrappedWorker(cls):
-                __doc__ = func.__doc__
-
+            @functools.wraps(func, updated={})
+            class WrappedWorker(cls, label=label):
                 def work(self):
                     self.interface.retrieve()
                     self.logger.info(f"start {func.__name__}")

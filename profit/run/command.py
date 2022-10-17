@@ -1,4 +1,4 @@
-""" Command Worker 
+""" Command Worker
 
 The default Worker to run an executable simulation.
 The Preprocessor allows for a customized preparation of the environment for the simulation.
@@ -6,7 +6,7 @@ The output of the simulation is retrieved by a Postprocessor.
 
  * CommandWorker: run an executable simulation
  * Preprocessor: new Component to prepare the environment for the simulation
-   * TemplatePreprocessor: fill a directory according to a template directory 
+   * TemplatePreprocessor: fill a directory according to a template directory
  * Postprocessor: new Component to retrieve the simulation output
    * JSONPostprocessor: read a simple JSON
    * NumpytxtPostprocessor: read a CSV/TSV (using numpy)
@@ -18,6 +18,8 @@ import shutil
 from typing import Mapping, MutableMapping
 from abc import abstractmethod
 import logging
+import functools
+import numpy as np
 
 from .worker import Component, Worker, Interface
 
@@ -41,7 +43,7 @@ class CommandWorker(Worker, label="command"):
         *,
         logger=None,
     ):
-        super().__init__(self, run_id, interface, debug, log_path, logger=logger)
+        super().__init__(run_id, interface, debug, log_path, logger=logger)
         self.run_dir = f"run_{run_id:03d}"
 
         if isinstance(pre, str):
@@ -98,7 +100,7 @@ class CommandWorker(Worker, label="command"):
 
 
 class Preprocessor(Component):
-    def __init__(self, run_dir: str, /, clean=True, *, logger_parent=None):
+    def __init__(self, run_dir: str, *, clean=True, logger_parent=None):
         self.run_dir = run_dir
         self.clean = clean
 
@@ -122,7 +124,7 @@ class Preprocessor(Component):
 
     def post(self):
         if self.return_dir is None:
-            break  # nothing to do
+            return  # nothing to do
         os.chdir(self.return_dir)
         if self.clean:
             shutil.rmtree(self.run_dir)
@@ -130,26 +132,22 @@ class Preprocessor(Component):
     @classmethod
     def wrap(cls, label, config={}):
         def decorator(func):
+            @functools.wraps(func, updated={})
             class WrappedPreprocessor(cls, label=label):
-                __doc__ = func.__doc__
-
                 def __init__(
                     self,
                     run_dir,
-                    clean=True,
                     *,
-                    logger=None,
+                    clean=True,
                     logger_parent: logging.Logger = None,
                     **kwargs,
                 ):
                     super().__init__(
-                        self,
                         run_dir,
                         clean=clean,
-                        logger=logger,
                         logger_parent=logger_parent,
                     )
-                    for key, value in kwargs:
+                    for key, value in kwargs.items():
                         if key not in config:
                             raise TypeError(
                                 f"{func.name}.__init__() got an unexpected keyword argument '{key}'"
@@ -175,33 +173,33 @@ class TemplatePreprocessor(Preprocessor, label="template"):
     - copies the given template directory to the target run directory
     - searches all files for variables templates of the form {name} and replaces them with their values
     - for file formats which use curly braces (e.g. json) the template identifier is {{name}}
-    - substitution can be restricted to certain files by specifying `param_files`
+    - substitution can be restricted to certain files by specifying `param_files`, `None` means no restriction
     - relative symbolic links are converted to absolute symbolic links on copying
-    - linked files are ignored with `param_files: all`, but if specified explicitly the link target is copied to the run
+    - linked files are ignored with `param_files = None`, but if specified explicitly the link target is copied to the run
       directory and then substituted
     """
 
     def __init__(
         self,
         run_dir: str,
-        /,
+        *,
         clean=True,
         path="template",
-        param_files="all",
-        *,
+        param_files=None,
         logger_parent=None,
     ):
-        super().__init__(self, clean=clean, logger_parent=logger_parent)
+        super().__init__(run_dir=run_dir, clean=clean, logger_parent=logger_parent)
         self.path = path
-        self.param_files = param_files
+        if isinstance(param_files, str):
+            self.param_files = [param_files]
+        else:
+            self.param_files = param_files
 
     def prepare(self, data: Mapping):
         # No call to super()! overrides the default directory creation
         if os.path.exists(self.run_dir):
-            self.logger.warning(
-                f"run directory '{self.run_dir}' already exists, deactivating clean"
-            )
-            self.clean = False
+            self.logger.error(f"run directory '{self.run_dir}' already exists")
+            raise OSError(f"run directory '{self.run_dir}' already exists")
         self.fill_run_dir_single(
             data,
             self.path,
@@ -232,7 +230,8 @@ class TemplatePreprocessor(Preprocessor, label="template"):
 
         self.fill_template(run_dir_single, params, param_files=param_files)
 
-    def copy_template(self, template_dir, out_dir, dont_copy=None):
+    @classmethod
+    def copy_template(cls, template_dir, out_dir, dont_copy=None):
         from shutil import copytree, ignore_patterns
 
         if dont_copy:
@@ -241,7 +240,7 @@ class TemplatePreprocessor(Preprocessor, label="template"):
             )
         else:
             copytree(template_dir, out_dir, symlinks=True)
-        self.convert_relative_symlinks(template_dir, out_dir)
+        cls.convert_relative_symlinks(template_dir, out_dir)
 
     @staticmethod
     def convert_relative_symlinks(template_dir, out_dir):
@@ -274,17 +273,21 @@ class TemplatePreprocessor(Preprocessor, label="template"):
                 if (
                     not param_files and not os.path.islink(filepath)
                 ) or filename in param_files:
+                    self.logger.debug(f"fill {filepath} with {params}")
                     self.fill_template_file(filepath, filepath, params)
+                else:
+                    self.logger.debug(f"ignore {filepath}")
 
+    @classmethod
     def fill_template_file(
-        self, template_filepath, output_filepath, params, copy_link=True
+        cls, template_filepath, output_filepath, params, copy_link=True
     ):
         """Fill template in `template_filepath` by `params` and output into
         `output_filepath`. If `copy_link` is set (default), do not write into
         symbolic links but copy them instead.
         """
         with open(template_filepath, "r") as f:
-            content = self.replace_template(f.read(), params)
+            content = cls.replace_template(f.read(), params)
         if copy_link and os.path.islink(output_filepath):
             os.remove(output_filepath)  # otherwise the link target would be substituted
         with open(output_filepath, "w") as f:
@@ -329,12 +332,11 @@ class Postprocessor(Component):
     @classmethod
     def wrap(cls, label, config={}):
         def decorator(func):
+            @functools.wraps(func, updated={})
             class WrappedPostprocessor(cls, label=label):
-                __doc__ = func.__doc__
-
                 def __init__(self, *, logger_parent: logging.Logger = None, **kwargs):
-                    super().__init__(self, logger=logger, logger_parent=logger_parent)
-                    for key, value in kwargs:
+                    super().__init__(logger_parent=logger_parent)
+                    for key, value in kwargs.items():
                         if key not in config:
                             raise TypeError(
                                 f"{func.name}.__init__() got an unexpected keyword argument '{key}'"
@@ -393,7 +395,7 @@ def NumpytxtPostprocessor(self, data):
     try:
         raw = np.genfromtxt(self.path, dtype=dtype, **self.options)
     except OSError:
-        self.logger.error(f'output file {self.path} not found')
+        self.logger.error(f"output file {self.path} not found")
         self.logger.info(f"cwd = {os.getcwd()}")
         dirname = os.path.dirname(self.path) or "."
         self.logger.info(f"ls {dirname} = {os.listdir(dirname)}")
@@ -419,4 +421,4 @@ def HDF5Postprocessor(self, data):
     with h5py.File(self.path, "r") as f:
         for key in f.keys():
             if key in data.dtype.names:
-                data[key] = f[key]
+                data[key] = f[key][:]
