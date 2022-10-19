@@ -54,11 +54,80 @@ def postprocessor(request, logger):
     )
 
 
+@pytest.fixture
+def MockWorkerInterface(inputs):
+    from profit.run.interface import WorkerInterface
+    
+    class Mock(WorkerInterface):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.retrieved = False
+            self.transmitted = False
+
+        def retrieve(self):
+            self.input = inputs
+            self.retrieved = True
+
+        def transmit(self):
+            assert np.all(self.output == OUTPUTS)
+            self.transmitted = True
+
+        def test(self):
+            assert self.retrieved
+            assert self.transmitted
+
+    return Mock
+
+
+@pytest.fixture
+def MockPreprocessor(inputs):
+    from profit.run.command import Preprocessor
+
+    class Mock(Preprocessor):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*argw, **kwargs)
+            self.prepared = False
+            self.posted = False
+
+        def prepare(self, data):
+            assert np.all(data == inputs)
+            self.prepared = True
+
+        def post(self):
+            self.posted = True
+
+        def test(self):
+            assert self.prepared
+            assert self.posted
+
+    return Mock
+
+
+@pytest.fixture
+def MockPostprocessor():
+    from profit.run.command import Postprocessor
+
+    class Mock(Postprocessor):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.retrieved = False
+
+        def retrieve(self, data):
+            self.data[:] = OUTPUTS
+            self.retrieved = True
+
+        def test(self):
+            assert self.retrieved
+
+    return Mock
+
+
 # === base functionality === #
 
 
 def test_register():
-    from profit.run.command import Worker, CommandWorker, Preprocessor, Postprocessor
+    from profit.run import Worker, Preprocessor, Postprocessor
+    from profit.run.command import CommandWorker
 
     # CommandWorker should be registered
     assert CommandWorker.label in Worker.labels
@@ -99,3 +168,22 @@ def test_template(inputs, logger):
             assert np.all(value == data_json[key])
     finally:
         preprocessor.post()
+
+
+def test_command(logger, MockWorkerInterface, MockPreprocessor, MockPostprocessor):
+    from profit.run.command import Worker, CommandWorker
+    
+    assert Worker["command"] == CommandWorker
+    worker = CommandWorker(
+        runid=2,
+        interface=MockWorkerInterface(),
+        pre=MockPreprocessor(),
+        post=MockPostprocessor(),
+        command="sleep 1",
+    )
+    
+    worker.work()
+    pre.test()
+    post.test()
+    interface.test()
+    assert interface.time == 1  # duration of sleep

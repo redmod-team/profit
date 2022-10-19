@@ -31,8 +31,8 @@ class CommandWorker(Worker, label="command"):
     def __init__(
         self,
         run_id: int,
-        /,
-        interface: Interface,
+        *,
+        interface: Interface = "zeromq",
         pre="template",
         post="numpytxt",
         command="./simulation",
@@ -40,7 +40,6 @@ class CommandWorker(Worker, label="command"):
         stderr=None,
         debug=False,
         log_path="log",
-        *,
         logger=None,
     ):
         super().__init__(run_id, interface, debug, log_path, logger=logger)

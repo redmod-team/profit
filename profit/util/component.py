@@ -18,16 +18,16 @@ class Component(ABC):
         """This method is called when a class is subclassed.
 
         Register a new (sub-)component"""
-        if label is None:
-            label = cls.__name__
-
-        # register itself with parent
-        cls.register(label)(cls)
-
         if cls.component == "Component":
+            if label is None:
+                label = cls.__name__
             # set up new registry for subcomponents
             cls._components = {}
             cls.component = label
+
+        # register itself with parent
+        if label is not None:
+            cls.register(label)(cls)
 
     @classmethod
     def register(cls, label):

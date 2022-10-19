@@ -18,7 +18,7 @@ from .interface import RunnerInterface
 class Runner(Component):
     def __init__(
         self,
-        interface: RunnerInterface,
+        interface: RunnerInterface = "zeromq",
         tmp_dir=".",
         debug=False,
         parallel=0,

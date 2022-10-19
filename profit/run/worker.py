@@ -22,11 +22,10 @@ class Worker(Component):
     def __init__(
         self,
         run_id: int,
-        /,
-        interface: Interface,
+        *,
+        interface: Interface = "zeromq",
         debug=False,
         log_path="log",
-        *,
         logger=None,
     ):
         self.run_id = run_id

@@ -23,7 +23,7 @@ from .worker import Worker
 class LocalRunner(Runner, label="local"):
     """start Workers locally via the shell"""
 
-    def __init__(self, interface, command="profit-worker", parallel="all", **kwargs):
+    def __init__(self, interface="zeromq", command="profit-worker", parallel="all", **kwargs):
         if parallel == "all":  # parallel: 'all' infers the number of available CPUs
             parallel = len(os.sched_getaffinity(0))
         super().__init__(self, interface, parallel=parallel, **kwargs)
@@ -78,7 +78,7 @@ class LocalRunner(Runner, label="local"):
 class ForkRunner(Runner, label="fork"):
     """start Workers locally using forking (multiprocessing.Process)"""
 
-    def __init__(self, interface, parallel="all", **kwargs):
+    def __init__(self, interface="zeromq", parallel="all", **kwargs):
         if parallel == "all":  # parallel: 'all' infers the number of available CPUs
             parallel = len(os.sched_getaffinity(0))
         super().__init__(self, interface, parallel=parallel, **kwargs)
