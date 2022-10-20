@@ -115,7 +115,7 @@ def worker_interface(label, runid, logger):
 
 
 def test_register():
-    from profit.run.interface import RunnerInterface, WorkerInterface
+    from profit.run import RunnerInterface, WorkerInterface
 
     # Runner- and Worker-Interfaces come in pairs
     assert RunnerInterface.labels == WorkerInterface.labels

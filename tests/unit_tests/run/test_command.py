@@ -6,9 +6,6 @@ Testcases for run/command.py
 
 import pytest
 import numpy as np
-from threading import Thread
-from time import sleep
-import os
 import logging
 import json
 
@@ -181,6 +178,7 @@ def test_command(logger, MockWorkerInterface, MockPreprocessor, MockPostprocesso
         post=MockPostprocessor(),
         command="sleep 1",
     )
+    worker.logger.parent = logger
     
     worker.work()
     pre.test()
