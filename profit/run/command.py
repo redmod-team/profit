@@ -20,6 +20,8 @@ from abc import abstractmethod
 import logging
 import functools
 import numpy as np
+import time
+import subprocess
 
 from .worker import Component, Worker, Interface
 
@@ -42,14 +44,16 @@ class CommandWorker(Worker, label="command"):
         log_path="log",
         logger=None,
     ):
-        super().__init__(run_id, interface, debug, log_path, logger=logger)
+        super().__init__(
+            run_id, interface=interface, debug=debug, log_path=log_path, logger=logger
+        )
         self.run_dir = f"run_{run_id:03d}"
 
         if isinstance(pre, str):
-            self.pre = Preprocessor[pre](self.run_id, logger_parent=self.logger)
+            self.pre = Preprocessor[pre](self.run_dir, logger_parent=self.logger)
         elif isinstance(pre, Mapping):
             self.pre = Preprocessor[pre["class"]](
-                self.run_id,
+                self.run_dir,
                 **{key: value for key, value in pre.items() if key != "class"},
                 logger_parent=self.logger,
             )
@@ -72,7 +76,7 @@ class CommandWorker(Worker, label="command"):
 
     def work(self):
         self.interface.retrieve()
-        self.pre.prepare(self.interface.input, self.run_dir)
+        self.pre.prepare(self.interface.input)
 
         kwargs = {}
         if self.stdout is not None:

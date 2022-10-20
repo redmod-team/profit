@@ -6,6 +6,7 @@ abstract base class to register subclasses
 from abc import ABC, abstractmethod
 import logging
 
+
 class Component(ABC):
     _components = {}
     component = "Component"
@@ -21,12 +22,12 @@ class Component(ABC):
         if cls.component == "Component":
             if label is None:
                 label = cls.__name__
+            # register with parent
+            cls.register(label)(cls)
             # set up new registry for subcomponents
             cls._components = {}
             cls.component = label
-
-        # register itself with parent
-        if label is not None:
+        elif label is not None:
             cls.register(label)(cls)
 
     @classmethod
@@ -50,7 +51,7 @@ class Component(ABC):
         return decorator
 
     def __class_getitem__(cls, label):
-        """Returns the subcomponent. """
+        """Returns the subcomponent."""
         return cls._components[label]
 
     @classmethod
@@ -67,4 +68,3 @@ class Component(ABC):
     def labels(cls):
         """Returns the labels of all available subcomponents."""
         return cls._components.keys()
-  

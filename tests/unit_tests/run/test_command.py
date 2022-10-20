@@ -8,6 +8,7 @@ import pytest
 import numpy as np
 import logging
 import json
+import os
 
 
 @pytest.fixture(autouse=True)
@@ -54,7 +55,7 @@ def postprocessor(request, logger):
 @pytest.fixture
 def MockWorkerInterface(inputs):
     from profit.run.interface import WorkerInterface
-    
+
     class Mock(WorkerInterface):
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
@@ -62,11 +63,15 @@ def MockWorkerInterface(inputs):
             self.transmitted = False
 
         def retrieve(self):
-            self.input = inputs
+            self.input = np.zeros(1, dtype=INPUT_DTYPE)[0]
+            for key in inputs:
+                self.input[key] = inputs[key]
+            self.output = np.zeros(1, dtype=OUTPUT_DTYPE)[0]
             self.retrieved = True
 
         def transmit(self):
-            assert np.all(self.output == OUTPUTS)
+            for key in OUTPUTS:
+                assert np.all(self.output[key] == OUTPUTS[key])
             self.transmitted = True
 
         def test(self):
@@ -82,12 +87,13 @@ def MockPreprocessor(inputs):
 
     class Mock(Preprocessor):
         def __init__(self, *args, **kwargs):
-            super().__init__(*argw, **kwargs)
+            super().__init__(run_dir=".", *args, **kwargs)
             self.prepared = False
             self.posted = False
 
         def prepare(self, data):
-            assert np.all(data == inputs)
+            for key in inputs:
+                assert np.all(data[key] == inputs[key])
             self.prepared = True
 
         def post(self):
@@ -110,7 +116,8 @@ def MockPostprocessor():
             self.retrieved = False
 
         def retrieve(self, data):
-            self.data[:] = OUTPUTS
+            for key in OUTPUTS:
+                data[key] = OUTPUTS[key]
             self.retrieved = True
 
         def test(self):
@@ -169,19 +176,20 @@ def test_template(inputs, logger):
 
 def test_command(logger, MockWorkerInterface, MockPreprocessor, MockPostprocessor):
     from profit.run.command import Worker, CommandWorker
-    
+
     assert Worker["command"] == CommandWorker
     worker = CommandWorker(
-        runid=2,
-        interface=MockWorkerInterface(),
+        run_id=2,
+        interface=MockWorkerInterface(run_id=2),
         pre=MockPreprocessor(),
         post=MockPostprocessor(),
         command="sleep 1",
+        stdout=None,
     )
     worker.logger.parent = logger
-    
+
     worker.work()
-    pre.test()
-    post.test()
-    interface.test()
-    assert interface.time == 1  # duration of sleep
+    worker.pre.test()
+    worker.post.test()
+    worker.interface.test()
+    assert worker.interface.time == 1  # duration of sleep
