@@ -49,6 +49,11 @@ class RunnerInterface(Component):
         self.output = np.zeros(size, dtype=self.output_vars)
         self.internal = np.zeros(size, dtype=self.internal_vars)
 
+    @property
+    def config(self):
+        # return all config parameters
+        return {"class": self.label}
+
     def resize(self, size):
         if size <= self.size:
             self.logger.warning("shrinking RunnerInterface is not supported")
@@ -98,6 +103,10 @@ class WorkerInterface(Component):
             self.input: void = np.zeros(1, dtype=[])[0]
         if "output" not in self.__dir__():
             self.output: void = np.zeros(1, dtype=[])[0]
+
+    @property
+    def config(self):
+        return {"class": self.label}
 
     @abstractmethod
     def retrieve(self):

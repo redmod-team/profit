@@ -11,6 +11,7 @@ import logging
 import numpy as np
 import os
 from shutil import rmtree
+import json
 
 from .interface import RunnerInterface, WorkerInterface
 from .runner import Runner
@@ -23,15 +24,15 @@ from .worker import Worker
 class LocalRunner(Runner, label="local"):
     """start Workers locally via the shell"""
 
-    def __init__(self, interface="zeromq", command="profit-worker", parallel="all", **kwargs):
+    def __init__(self, command="profit-worker", parallel="all", **kwargs):
         if parallel == "all":  # parallel: 'all' infers the number of available CPUs
             parallel = len(os.sched_getaffinity(0))
-        super().__init__(self, interface, parallel=parallel, **kwargs)
+        super().__init__(parallel=parallel, **kwargs)
         self.command = command
 
     def __repr__(self):
         return (
-            f"<{self.__class__.__name__} (" + f"{repr(self.interface)}" + ", debug"
+            f"<{self.__class__.__name__} (" + ", debug"
             if self.debug
             else "" + f", {self.command}"
             if self.command != "profit-worker"
@@ -47,10 +48,12 @@ class LocalRunner(Runner, label="local"):
 
     def spawn(self, params=None, wait=False):
         super().spawn(params, wait)
-        env = self.env.copy()
+        env = os.environ.copy()
         env["PROFIT_RUN_ID"] = str(self.next_run_id)
+        env["PROFIT_WORKER"] = json.dumps(self.worker)
+        env["PROFIT_INTERFACE"] = json.dumps(self.interface.config)
         self.runs[self.next_run_id] = subprocess.Popen(
-            self.command, shell=True, env=env, cwd=self.run_dir
+            self.command, shell=True, env=env, cwd=self.tmp_dir
         )
         if wait:
             self.wait(self.next_run_id)
@@ -58,10 +61,8 @@ class LocalRunner(Runner, label="local"):
 
     def poll(self, run_id):
         if self.runs[run_id].poll() is not None:
-            if self.interface.check_backup(run_id):
-                del self.runs[run_id]
-            else:
-                self.failed[run_id] = self.runs.pop(run_id)
+            self.logger.info(f"run {run_id} failed")
+            self.failed[run_id] = self.runs.pop(run_id)
 
     def wait(self, run_id):
         self.runs[run_id].wait()
@@ -78,20 +79,23 @@ class LocalRunner(Runner, label="local"):
 class ForkRunner(Runner, label="fork"):
     """start Workers locally using forking (multiprocessing.Process)"""
 
-    def __init__(self, interface="zeromq", parallel="all", **kwargs):
+    def __init__(self, parallel="all", **kwargs):
         if parallel == "all":  # parallel: 'all' infers the number of available CPUs
             parallel = len(os.sched_getaffinity(0))
-        super().__init__(self, interface, parallel=parallel, **kwargs)
+        super().__init__(parallel=parallel, **kwargs)
 
     def spawn(self, params=None, wait=False):
-        super().spawn_run(params, wait)
+        super().spawn(params, wait)
 
         def work():
-            worker = Worker.from_config(self.run_config, self.next_run_id)
-            worker.main()
+            worker = Worker.from_config(
+                self.worker, self.interface.config, self.next_run_id
+            )
+            worker.work()
+            worker.clean()
 
         base_dir = os.getcwd()
-        os.chdir(self.run_dir)
+        os.chdir(self.tmp_dir)
         process = Process(target=work)
         self.runs[self.next_run_id] = process
         process.start()
@@ -100,12 +104,10 @@ class ForkRunner(Runner, label="fork"):
             self.wait(self.next_run_id)
         self.next_run_id += 1
 
-    def poll(self, run_dir):
-        if process.exitcode is not None:
-            if self.interface.check_backup(run_id):
-                del self.runs[run_id]
-            else:
-                self.failed[run_id] = self.runs.pop(run_id)
+    def poll(self, run_id):
+        if self.runs[run_id].exitcode is not None:
+            self.logger.info(f"run {run_id} failed")
+            self.failed[run_id] = self.runs.pop(run_id)
 
     def wait(self, run_id):
         self.runs[run_id].join()
@@ -160,6 +162,10 @@ class MemmapRunnerInterface(RunnerInterface, label="memmap"):
         self.output = self._memmap[[v[0] for v in self.output_vars]]
         self.internal = self._memmap[[v[0] for v in self.internal_vars]]
 
+    @property
+    def config(self):
+        return super().config() | {"path": self.path}
+
     def resize(self, size):
         """Resizing the Interface
 
@@ -209,6 +215,10 @@ class MemmapWorkerInterface(WorkerInterface, label="memmap"):
         self._memmap = None
 
         super().__init__(run_id, logger_parent=logger_parent)
+
+    @property
+    def config(self):
+        return super().config() | {"path": self.path}
 
     @property
     def time(self):

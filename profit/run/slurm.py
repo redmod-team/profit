@@ -9,7 +9,6 @@
 import subprocess
 from time import sleep, time
 import os
-from tqdm import trange
 
 from .runner import Runner
 
@@ -29,7 +28,8 @@ class SlurmRunner(Runner, label="slurm"):
 
     def __init__(
         self,
-        interface,
+        *,
+        interface="zeromq",
         cpus=1,
         openmp=False,
         custom=False,
@@ -38,7 +38,7 @@ class SlurmRunner(Runner, label="slurm"):
         command="srun profit-worker",
         **kwargs,
     ):
-        super().__init__(self, interface, **kwargs)
+        super().__init__(self, interface=interface, **kwargs)
         self.env["SBATCH_EXPORT"] = "ALL"
 
         self.cpus = cpus
@@ -62,10 +62,7 @@ class SlurmRunner(Runner, label="slurm"):
 
     def __repr__(self):
         return (
-            f"<{self.__class__.__name__} ("
-            + f"{repr(self.interface)}"
-            + f", {self.cpus} cpus"
-            + ", OpenMP"
+            f"<{self.__class__.__name__} (" + f", {self.cpus} cpus" + ", OpenMP"
             if self.openmp
             else "" + ", debug"
             if self.debug
@@ -95,11 +92,13 @@ class SlurmRunner(Runner, label="slurm"):
         super().spawn_run(params, wait)  # fill data with params
         self.logger.info(f"schedule run {self.next_run_id:03d} via Slurm")
         self.logger.debug(f"wait = {wait}, params = {params}")
-        env = self.env.copy()
+        env = os.environ.copy()
         env["PROFIT_RUN_ID"] = str(self.next_run_id)
+        env["PROFIT_WORKER"] = json.dumps(self.worker)
+        env["PROFIT_INTERFACE"] = json.dumps(self.interface.config)
         submit = subprocess.run(
             ["sbatch", "--parsable", self.path],
-            cwd=self.run_dir,
+            cwd=self.tmp_dir,
             env=env,
             capture_output=True,
             text=True,
@@ -108,7 +107,7 @@ class SlurmRunner(Runner, label="slurm"):
         job_id = submit.stdout.split(";")[0].strip()
         self.runs[self.next_run_id] = job_id
         if wait:
-            self.wait_for(self.next_run_id)
+            self.wait(self.next_run_id)
         self.next_run_id += 1
 
     def spawn_array(self, params_array, wait=False):
@@ -116,14 +115,16 @@ class SlurmRunner(Runner, label="slurm"):
             f"schedule array {self.next_run_id} - {self.next_run_id + len(params_array) - 1} via Slurm"
         )
         self.fill(params_array, offset=self.next_run_id)
-        env = self.env.copy()
+        env = os.environ.copy()
         env["PROFIT_RUN_ID"] = str(self.next_run_id)
+        env["PROFIT_WORKER"] = json.dumps(self.worker)
+        env["PROFIT_INTERFACE"] = json.dumps(self.interface.config)
         array_str = f"--array=0-{len(params_array) - 1}"
         if self.parallel > 0:
             array_str += f"%{self.parallel}"
         submit = subprocess.run(
             ["sbatch", "--parsable", array_str, self.path],
-            cwd=self.run_dir,
+            cwd=self.tmp_dir,
             env=env,
             capture_output=True,
             text=True,
@@ -135,37 +136,6 @@ class SlurmRunner(Runner, label="slurm"):
         if wait:
             self.wait_all()
         self.next_run_id += len(params_array)
-
-    def wait_all(self):
-        """wait until all specified runs have completed"""
-        poll_time = time()
-        if show_tqdm:
-            progress = trange(len(run_ids))
-        while len([i for i in run_ids if i in self.runs]):
-            self.check_runs()
-            sleep(self.config["sleep"])
-            # poll the scheduler after a longer period
-            if time() - poll_time > self.config["poll"]:
-                self.check_runs(poll=True)
-                poll_time = time()
-                sleep(self.config["sleep"])
-            if show_tqdm:
-                progress.update(
-                    len([i for i in run_ids if i not in self.runs]) - progress.n
-                )
-
-    def wait_for(self, run_id: int):
-        """wait until the specified run has completed"""
-        self.wait_for_all([run_id])
-
-    def check_runs(self, poll: bool = False):
-        """check the status of runs via the interface, poll only when specified"""
-        # ask interface and remove all completed runs
-        self.interface.poll()
-        for run_id in list(self.runs):
-            if self.interface.internal["DONE"][run_id]:
-                self.delete_run(run_id)
-        # poll the slurm scheduler to check for crashed runs
 
     def poll_all(self):
         acct = subprocess.run(
@@ -182,11 +152,7 @@ class SlurmRunner(Runner, label="slurm"):
             if job_id in lookup:
                 run_id = lookup[job_id]
                 if not (state.startswith("RUNNING") or state.startswith("PENDING")):
-                    # job has crashed or completed -> check backup
-                    if self.check_backup(run_id):
-                        self.delete_run(run_id)
-                    else:  # failed / crashed
-                        self.failed[run_id] = self.runs.pop(run_id)
+                    self.failed[run_id] = self.runs.pop(run_id)
 
     def cancel(self, run_id):
         subprocess.run(["scancel", self.runs[run_id]])

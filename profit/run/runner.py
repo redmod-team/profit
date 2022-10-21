@@ -5,6 +5,7 @@ import sys
 import logging
 from abc import abstractmethod
 import numpy as np
+from typing import Mapping
 
 from ..util.component import Component
 from ..util import load_includes, params2map
@@ -18,7 +19,9 @@ from .interface import RunnerInterface
 class Runner(Component):
     def __init__(
         self,
+        *,
         interface: RunnerInterface = "zeromq",
+        worker: Mapping = "command",
         tmp_dir=".",
         debug=False,
         parallel=0,
@@ -26,9 +29,22 @@ class Runner(Component):
         logfile="runner.log",
         logger=None,
     ):
+        self.tmp_dir = tmp_dir
+        self.debug = debug
+        self.parallel = parallel
+        assert parallel >= 0  # parallel: 0 means infinite
+        self.sleep = sleep
+        assert sleep >= 0
+        self.logfile = logfile
+
+        if not os.path.exists(tmp_dir):
+            os.path.mkdir(tmp_dir)
+
         if logger is None:
             self.logger = logging.getLogger("Runner")
-            log_handler = logging.FileHandler(logfile, mode="w")
+            log_handler = logging.FileHandler(
+                os.path.join(self.tmp_dir, self.logfile), mode="w"
+            )
             log_formatter = logging.Formatter(
                 "{asctime} {levelname:8s} {name}: {message}", style="{"
             )
@@ -55,13 +71,10 @@ class Runner(Component):
         else:
             self.interface = interface
 
-        self.tmp_dir = tmp_dir
-        self.debug = debug
-        self.logfile = logfile
-        self.parallel = parallel
-        assert parallel >= 0  # parallel: 0 means infinite
-        self.sleep = sleep
-        assert sleep >= 0
+        if isinstance(worker, str):
+            self.worker = {"class": worker}
+        else:
+            self.worker = worker
 
         self.runs = {}  # run_id: (whatever data the system tracks)
         self.failed = {}  # ~runs, saving those that failed
@@ -96,9 +109,7 @@ class Runner(Component):
 
     def __repr__(self):
         return (
-            f"<{self.__class__.__name__} (" + f"{repr(self.interface)}" + f", debug"
-            if self.debug
-            else "" + ")>"
+            f"<{self.__class__.__name__} (" + (f", debug" if self.debug else "") + ")>"
         )
 
     @property
@@ -108,6 +119,7 @@ class Runner(Component):
             "debug": self.debug,
             "parallel": self.parallel,
             "sleep": self.sleep,
+            "logfile": self.logfile,
         }
 
     def fill(self, params_array, offset=0):
@@ -148,7 +160,7 @@ class Runner(Component):
         """spawn an array of runs
 
         maximum 'parallel' at the same time
-        blocking until all are done"""
+        blocking until all are submitted"""
         for params in params_array:
             self.spawn(params)
             while len(self.runs) >= self.parallel and self.parallel > 0:
@@ -171,6 +183,7 @@ class Runner(Component):
         self.interface.poll()
         for run_id in list(self.runs):  # preserve state before deletions
             if self.interface.internal["DONE"][run_id]:
+                self.logger.debug(f"run {run_id} done")
                 del self.runs[run_id]
         self.poll_all()
 
@@ -188,13 +201,31 @@ class Runner(Component):
             sleep(self.sleep)
             self.check_runs()
 
-    def wait_all():
-        while len(self.runs):
-            self.wait(self.runs.keys[0])
+    def wait_all(self, progress=False):
+        import tqdm
+
+        if progress:
+            bar = tqdm.tqdm(total=len(self.runs), desc="finished")
+            while len(self.runs):
+                sleep(self.sleep)
+                self.check_runs()
+                bar.update(bar.total - len(self.runs) - bar.n)
+            bar.close()
+        else:
+            while len(self.runs):
+                self.wait(list(self.runs.keys())[0])
 
     def clean(self):
+        import re
+        from shutil import rmtree
+
         self.logger.debug("cleaning")
         self.interface.clean()
+        for path in os.listdir():
+            if re.fullmatch(r"run_\d+", path) or path == "log":
+                rmtree(path)
+            if path == "runner.log":
+                os.remove(path)
 
     @property
     def input_data(self):

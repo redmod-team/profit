@@ -6,10 +6,11 @@ import logging
 from abc import abstractmethod
 import time
 import subprocess
-from typing import Mapping, MutableMapping
+from typing import Mapping, MutableMapping, Sequence
 from numpy import zeros, void
 from warnings import warn
 import functools
+import json
 
 from ..util.component import Component
 from .interface import WorkerInterface as Interface
@@ -78,24 +79,24 @@ class Worker(Component):
         self.interface.clean()
 
     @classmethod
+    def from_config(cls, config, interface, run_id):
+        return cls[config["class"]](
+            run_id=run_id,
+            interface=interface,
+            **{key: value for key, value in config.items() if key != "class"},
+        )
+
+    @classmethod
     def from_env(cls, env):
-        from profit.config import BaseConfig
+        from ..util import load_includes
 
-        base_config = BaseConfig.from_file(env["PROFIT_CONFIG_PATH"])
-        run_config = base_config["run"]
-        run_id = int(env["PROFIT_RUN_ID"]) + int(env.get("PROFIT_ARRAY_ID", 0))
-
-        if isinstance(worker, str):
-            worker = cls[worker](run_id)
-        elif isinstance(worker, Mapping):
-            worker = cls[worker["class"]](
-                self.run_id,
-                **{key: value for key, value in worker.items() if key != "class"},
-            )
-        else:
-            raise TypeError(f"could not create {cls} from config '{worker}'")
-
-        return cls.from_config(run_id, run_config)
+        if env["PROFIT_INCLUDES"]:
+            load_includes(json.loads(env["PROFIT_INCLUDES"]))
+        return cls.from_config(
+            config=json.loads(env["PROFIT_WORKER"]),
+            interface=json.loads(env["PROFIT_INTERFACE"]),
+            run_id=int(env["PROFIT_RUN_ID"]) + int(env.get("PROFIT_ARRAY_ID", 0)),
+        )
 
     @classmethod
     def wrap(cls, label, outputs=None, inputs=None):
@@ -175,6 +176,6 @@ def main():
 
     the run id and the path to the proFit configuration is provided via environment variables
     """
-    worker = Worker.from_env()
+    worker = Worker.from_env(os.environ)
     worker.work()
     worker.clean()
