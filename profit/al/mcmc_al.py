@@ -62,11 +62,7 @@ class McmcAL(ActiveLearning):
         self.accepted = np.zeros((self.ntrain, self.ndim), dtype=bool)
         self.log_random = np.log(np.random.random((self.ntrain, self.ndim)))
 
-        interface_class = self.runner.interface.__class__
-        RunnerInterface = interface_class(self.runner.run_config['interface'], ntrain * self.ndim + 1,
-                                          self.runner.base_config['input'], self.runner.base_config['output'],
-                                          logger_parent=self.runner.logger)
-        self.runner.interface = RunnerInterface
+        self.runner.interface.resize(ntrain * self.ndim + 1)
 
         if delayed_acceptance:
             from profit.sur import Surrogate
@@ -92,7 +88,7 @@ class McmcAL(ActiveLearning):
             if self.initial_points is None else self.initial_points
 
         # TODO: Implement warmup with default AL model
-        """ 
+        """
         if self.delayed_acceptance_surrogate:
             from profit.al.default_al import DefaultAL
             from profit.util.variable import OutputVariable

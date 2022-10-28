@@ -6,6 +6,8 @@ import logging
 from abc import abstractmethod
 import numpy as np
 from typing import Mapping
+import time
+from contextlib import contextmanager
 
 from ..util.component import Component
 from ..util import load_includes, params2map
@@ -20,12 +22,12 @@ class Runner(Component):
     def __init__(
         self,
         *,
-        interface: RunnerInterface = "zeromq",
+        interface: RunnerInterface = "memmap",
         worker: Mapping = "command",
         tmp_dir=".",
         debug=False,
         parallel=0,
-        sleep=1,
+        sleep=0.1,
         logfile="runner.log",
         logger=None,
     ):
@@ -40,72 +42,105 @@ class Runner(Component):
         if not os.path.exists(tmp_dir):
             os.path.mkdir(tmp_dir)
 
-        if logger is None:
-            self.logger = logging.getLogger("Runner")
-            log_handler = logging.FileHandler(
-                os.path.join(self.tmp_dir, self.logfile), mode="w"
-            )
-            log_formatter = logging.Formatter(
-                "{asctime} {levelname:8s} {name}: {message}", style="{"
-            )
-            log_handler.setFormatter(log_formatter)
-            if debug:
-                log_handler.setLevel(logging.DEBUG)
-            self.logger.addHandler(log_handler)
+        os.environ["PROFIT_BASE_DIR"] = os.path.abspath(os.getcwd())
+        with self.change_tmp_dir():
+            if logger is None:
+                self.logger = logging.getLogger("Runner")
+                log_handler = logging.FileHandler(self.logfile, mode="w")
+                log_formatter = logging.Formatter(
+                    "{asctime} {levelname:8s} {name}: {message}", style="{"
+                )
+                log_handler.setFormatter(log_formatter)
+                if debug:
+                    log_handler.setLevel(logging.DEBUG)
+                else:
+                    log_handler.setLevel(logging.INFO)
+                self.logger.addHandler(log_handler)
 
-            log_handler2 = logging.StreamHandler(sys.stderr)
-            log_handler2.setFormatter(log_formatter)
-            log_handler2.setLevel(logging.WARNING)
-            self.logger.addHandler(log_handler2)
-            self.logger.propagate = False
-        else:
-            self.logger = logger
+                log_handler2 = logging.StreamHandler(sys.stderr)
+                log_handler2.setFormatter(log_formatter)
+                log_handler2.setLevel(logging.WARNING)
+                self.logger.addHandler(log_handler2)
+            else:
+                self.logger = logger
 
-        if isinstance(interface, str):
-            self.interface = RunnerInterface[interface](logger_parent=self.logger)
-        elif isinstance(interface, Mapping):
-            self.interface = RunnerInterface[interface["class"]](
-                **{key: value for key, value in interface.items() if key != "class"},
-                logger_parent=self.logger,
-            )
-        else:
-            self.interface = interface
+            if isinstance(interface, Mapping):
+                self.interface = RunnerInterface[interface["class"]](
+                    **{
+                        key: value for key, value in interface.items() if key != "class"
+                    },
+                    logger_parent=self.logger,
+                )
+            else:
+                self.interface = interface
+            if isinstance(self.interface, str):
+                self.logger.error("shorthand interface config not yet supported")
+                raise TypeError("shorthand interface config not yet supported")
+            elif not isinstance(self.interface, RunnerInterface):
+                self.logger.warning(
+                    f"interface '{self.interface}' has type '{type(self.interface)}' and not 'RunnerInterface'"
+                )
 
-        if isinstance(worker, str):
-            self.worker = {"class": worker}
-        else:
-            self.worker = worker
+            if isinstance(worker, str):
+                self.worker = {"class": worker}
+            else:
+                self.worker = worker
+            if not isinstance(self.worker, Mapping):
+                self.logger.warning(
+                    f"worker config '{self.worker}' has type '{type(self.worker)}' which is not a Mapping"
+                )
 
-        self.runs = {}  # run_id: (whatever data the system tracks)
-        self.failed = {}  # ~runs, saving those that failed
-        self.next_run_id = 0
+            self.logger.debug(f"init Runner with config: {self.config}")
+
+            self.runs = {}  # run_id: (whatever data the system tracks)
+            self.failed = {}  # ~runs, saving those that failed
+            self.next_run_id = 0
 
     @classmethod
     def from_config(cls, run_config, base_config):
         """Constructor from run config & base config dict"""
-        child = cls[run_config["runner"]["class"]]
+        if isinstance(run_config["runner"], str):
+            label = run_config["runner"]
+            run_config["runner"] = {"class": label}
+        else:
+            label = run_config["runner"]["class"]
 
-        interface = RunnerInterface[run_config["interface"]["class"]](
-            run_config["interface"],
-            base_config["ntrain"],
-            base_config["input"],
-            base_config["output"],
-            logger_parent=self.logger,
-        )
-        env = os.environ.copy()
-        env["PROFIT_BASE_DIR"] = base_config["base_dir"]
-        env["PROFIT_CONFIG_PATH"] = base_config["config_path"]
-        env["PROFIT_WORKER_CONFIG"] = run_config["worker"]
-        env["PROFIT_INTERFACE_CONFIG"]
+        kwargs = {
+            key: value for key, value in run_config["runner"].items() if key != "class"
+        }
+        if "interface" in run_config:
+            kwargs["interface"] = run_config["interface"]
+        elif "interface" not in kwargs:
+            kwargs["interface"] = {"class": "memmap"}
+        if isinstance(kwargs["interface"], str):
+            kwargs["interface"] = {"class": kwargs["interface"]}
+        else:
+            kwargs["interface"] = {
+                key: value for key, value in kwargs["interface"].items()
+            }
+        # interface cannot be auto-constructed yet
+        kwargs["interface"]["size"] = base_config["ntrain"]
+        kwargs["interface"]["input_config"] = base_config["input"]
+        kwargs["interface"]["output_config"] = base_config["output"]
 
-        return child(
-            interface,
-            base_config["run_dir"],
-            env,
-            run_config["debug"],
-            run_config["parallel"],
-            run_config["sleep"],
-        )
+        if "worker" in run_config:
+            kwargs["worker"] = run_config["worker"]
+        if isinstance(kwargs["worker"], str):
+            kwargs["worker"] = {"class": kwargs["worker"]}
+        else:
+            kwargs["worker"] = {key: value for key, value in kwargs["worker"].items()}
+        if "pre" in run_config:
+            kwargs["worker"]["pre"] = run_config["pre"]
+        if "post" in run_config:
+            kwargs["worker"]["post"] = run_config["post"]
+        if "debug" in run_config and run_config["debug"]:
+            kwargs["runner"]["debug"] = True
+            kwargs["worker"]["debug"] = True
+        if "command" in run_config and isinstance(run_config["command"], str):
+            kwargs["worker"]["class"] = "command"
+            kwargs["worker"]["command"] = run_config["command"]
+        kwargs["tmp_dir"] = base_config["run_dir"]
+        return cls[label](**kwargs)
 
     def __repr__(self):
         return (
@@ -121,6 +156,15 @@ class Runner(Component):
             "sleep": self.sleep,
             "logfile": self.logfile,
         }
+
+    @contextmanager
+    def change_tmp_dir(self):
+        origin = os.getcwd()
+        try:
+            os.chdir(self.tmp_dir)
+            yield
+        finally:
+            os.chdir(origin)
 
     def fill(self, params_array, offset=0):
         """fill Interface input with parameters"""
@@ -150,24 +194,29 @@ class Runner(Component):
         :param params: a mapping which defines input parameters to be set
         :param wait: whether to wait for the run to complete
         """
+        self.logger.info(f"spawn run {self.next_run_id}")
         if self.next_run_id >= self.interface.size:
             self.interface.resize(2 * self.interface.size)
         mapping = params2map(params)
         for key, value in mapping.items():
             self.interface.input[key][self.next_run_id] = value
 
-    def spawn_array(self, params_array, wait=False):
+    def spawn_array(self, params_array, wait=False, progress=False):
         """spawn an array of runs
 
         maximum 'parallel' at the same time
         blocking until all are submitted"""
+        import tqdm
+
+        if progress:
+            params_array = tqdm.tqdm(params_array, desc="submitted")
         for params in params_array:
-            self.spawn(params)
             while len(self.runs) >= self.parallel and self.parallel > 0:
-                sleep(self.sleep)
+                time.sleep(self.sleep)
                 self.check_runs()
+            self.spawn(params)
         if wait:
-            self.wait_all()
+            self.wait_all(progress=progress)
 
     @abstractmethod
     def poll(self, run_id):
@@ -180,10 +229,10 @@ class Runner(Component):
 
     def check_runs(self):
         """check the status of runs via the interface"""
-        self.interface.poll()
+        self.interface.poll()  # allows active communication!
         for run_id in list(self.runs):  # preserve state before deletions
             if self.interface.internal["DONE"][run_id]:
-                self.logger.debug(f"run {run_id} done")
+                self.logger.info(f"run {run_id} done")
                 del self.runs[run_id]
         self.poll_all()
 
@@ -194,20 +243,21 @@ class Runner(Component):
     def cancel_all(self):
         self.logger.debug("cancel all runs")
         while len(self.runs):
-            self.cancel(self.runs.keys[0])
+            self.cancel(list(self.runs.keys())[0])
 
     def wait(self, run_id):
         while run_id in self.runs:
-            sleep(self.sleep)
+            time.sleep(self.sleep)
             self.check_runs()
 
     def wait_all(self, progress=False):
         import tqdm
 
         if progress:
-            bar = tqdm.tqdm(total=len(self.runs), desc="finished")
+            bar = tqdm.tqdm(total=self.next_run_id, desc="finished ")
+            bar.update(len(self.runs))
             while len(self.runs):
-                sleep(self.sleep)
+                time.sleep(self.sleep)
                 self.check_runs()
                 bar.update(bar.total - len(self.runs) - bar.n)
             bar.close()
@@ -220,12 +270,15 @@ class Runner(Component):
         from shutil import rmtree
 
         self.logger.debug("cleaning")
-        self.interface.clean()
-        for path in os.listdir():
-            if re.fullmatch(r"run_\d+", path) or path == "log":
-                rmtree(path)
-            if path == "runner.log":
-                os.remove(path)
+        with self.change_tmp_dir():
+            self.interface.clean()
+            for path in os.listdir():
+                if re.fullmatch(r"run_\d+", path) or path == self.worker.get(
+                    "logpath", "log"
+                ):
+                    rmtree(path)
+                if path == self.logfile:
+                    os.remove(path)
 
     @property
     def input_data(self):

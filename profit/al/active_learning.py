@@ -76,7 +76,7 @@ class ActiveLearning(CustomABC):
             for idx, value in enumerate(values):
                 params_array[idx][key] = value
         # Start batch
-        self.runner.spawn_array(params_array, blocking=True)
+        self.runner.spawn_array(params_array, wait=True)
 
     def update_data(self):
         """Update the variables with the runner data."""

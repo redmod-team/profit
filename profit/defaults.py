@@ -12,64 +12,9 @@ ntrain = 10
 variables = {}
 
 # Run Config
-run = {'runner': 'local',
+run = {'runner': 'fork',
        'interface': 'memmap',
-       'pre': 'template',
-       'post': 'json',
-       'command': './simulation',
-       'stdout': 'stdout',
-       'stderr': None,
-       'clean': True,
-       'time': True,
-       'debug': False,
-       'log_path': 'log',
-       'custom': False,
-       'worker': None}
-
-
-run_runner_local = {'class': 'local',
-                    'parallel': 'all',
-                    'sleep': 0,
-                    'fork': True}
-
-run_runner_slurm = {'class': 'slurm',
-                    'parallel': None,
-                    'sleep': 0,
-                    'poll': 60,
-                    'path': 'slurm.bash',
-                    'custom': False,
-                    'prefix': 'srun',
-                    'OpenMP': False,
-                    'cpus': 1,
-                    'options': {'job-name': 'profit'}}
-
-run_interface_memmap = {'class': 'memmap',
-                        'path': 'interface.npy'}
-
-run_interface_zeromq = {'class': 'zeromq',
-                        'transport': 'tcp',
-                        'port': 9000,
-                        'address': None,
-                        'connect': None,
-                        'timeout': 2500,
-                        'retries': 3,
-                        'retry-sleep': 1}
-
-run_pre_template = {'class': 'template',
-                    'path': 'template',
-                    'param_files': None}
-
-run_post_json = {'class': 'json',
-                 'path': 'stdout'}
-
-run_post_numpytxt = {'class': 'numpytxt',
-                     'path': 'stdout',
-                     'names': 'all',
-                     'options': {'deletechars': ""}}
-
-run_post_hdf5 = {'class': 'hdf5',
-                 'path': 'output.hdf5'}
-
+       'worker': "command"}
 
 # Fit Config
 fit = {'surrogate': 'GPy',

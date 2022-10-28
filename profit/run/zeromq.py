@@ -31,7 +31,7 @@ class ZeroMQRunnerInterface(RunnerInterface, label="zeromq"):
         port: port of the Runner Interface
         connection: override for the ZeroMQ connection spec (Worker side)
         bind: override for the ZeroMQ bind spec (Runner side)
-        timeout: connection timeout when waiting for an answer in seconds (Runner & Worker)
+        timeout: connection timeout when waiting for an answer in seconds (Worker)
         retries: number of tries to establish a connection (Worker)
         retry_sleep: sleep time in seconds between each retry (Worker)
 
@@ -51,9 +51,9 @@ class ZeroMQRunnerInterface(RunnerInterface, label="zeromq"):
         port=9000,
         connection=None,
         bind=None,
-        timeout=2.5,
+        timeout=4,
         retries=3,
-        retry_sleep=10,
+        retry_sleep=1,
         logger_parent: Logger = None,
     ):
         if "FLAGS" not in [var[0] for var in self.internal_vars]:
@@ -99,7 +99,10 @@ class ZeroMQRunnerInterface(RunnerInterface, label="zeromq"):
 
     def poll(self):
         self.logger.debug("polling: checking for messages")
-        while self.socket.poll(timeout=int(1e3 * self.timeout), flags=zmq.POLLIN):
+        # poll does not wait for messages (timeout=10ms as 0 means wait forever)
+        # waiting should be done with the runner (sleep)
+        # this allows the runner to react to messages immediately
+        while self.socket.poll(timeout=10, flags=zmq.POLLIN):
             msg = self.socket.recv_multipart()
             # ToDo: Heartbeats
             self.handle_msg(msg[0], msg[2:])
@@ -162,11 +165,12 @@ class ZeroMQWorkerInterface(WorkerInterface, label="zeromq"):
         port=9000,
         connection=None,
         bind=None,
-        timeout=2.5,
+        timeout=4,
         retries=3,
-        retry_sleep=10,
+        retry_sleep=1,
         logger_parent: Logger = None,
     ):
+        # TODO: duplicate default values
         super().__init__(run_id, logger_parent=logger_parent)
         self.transport = transport
         self.address = address
@@ -262,14 +266,14 @@ class ZeroMQWorkerInterface(WorkerInterface, label="zeromq"):
                         ]
                         self.input = np.frombuffer(input_data, dtype=input_descr)[0]
                         self.output = np.zeros(1, dtype=output_descr)[0]
-                        self.logger.info("READY: received input data")
+                        self.logger.info("READY - received input data")
                         self.logger.debug(
                             f"received: {np.frombuffer(input_data, dtype=input_descr)}"
                         )
                         return
                     else:
                         assert response[0] == b"ACK"
-                        self.logger.debug(f"{request}: message acknowledged")
+                        self.logger.info(f"{request}: message acknowledged")
                         return
                 except (ValueError, AssertionError):
                     self.logger.debug(f"{request}: received {response}")

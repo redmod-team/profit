@@ -63,7 +63,7 @@ class SimpleAL(ActiveLearning):
                     rand = values[key][0]
                 params_array[idx][key] = rand
 
-        self.runner.spawn_array(params_array, blocking=True)
+        self.runner.spawn_array(params_array, wait=True)
         self.update_data()
 
         self.surrogate.train(self.variables.input[:self.nwarmup], self.variables.output[:self.nwarmup])

@@ -36,12 +36,6 @@ def inputs():
     return {key: np.random.random() for key, dtype in INPUT_DTYPE}
 
 
-@pytest.fixture
-def logger(caplog):
-    caplog.set_level(logging.DEBUG)
-    return logging.getLogger()
-
-
 @pytest.fixture(params=POSTPROCESSORS)
 def postprocessor(request, logger):
     label = request.param
@@ -178,6 +172,7 @@ def test_command(logger, MockWorkerInterface, MockPreprocessor, MockPostprocesso
     from profit.run.command import Worker, CommandWorker
 
     assert Worker["command"] == CommandWorker
+    logging.getLogger("Worker").parent = logger
     worker = CommandWorker(
         run_id=2,
         interface=MockWorkerInterface(run_id=2),
@@ -186,7 +181,6 @@ def test_command(logger, MockWorkerInterface, MockPreprocessor, MockPostprocesso
         command="sleep 1",
         stdout=None,
     )
-    worker.logger.parent = logger
 
     worker.work()
     worker.pre.test()

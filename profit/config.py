@@ -8,7 +8,7 @@ import warnings
 VALID_FORMATS = ('.yaml', '.py')
 
 """
-yaml has to be configured to represent OrderedDict 
+yaml has to be configured to represent OrderedDict
 see https://stackoverflow.com/questions/16782112/can-pyyaml-dump-dict-items-in-non-alphabetical-order
 and https://stackoverflow.com/questions/5121931/in-python-how-can-you-load-yaml-mappings-as-ordereddicts
 """
@@ -282,12 +282,15 @@ class BaseConfig(AbstractConfig):
 
     def load_includes(self):
         from profit.util import load_includes
+        import os
+        import json
 
         if isinstance(self.include, str):
             self.include = [self.include]
 
         self.include = [path.abspath(path.join(self.base_dir, p)) for p in self.include]
         load_includes(self.include)
+        os.environ["PROFIT_INCLUDES"] = json.dumps(self.include)
 
 
 @BaseConfig.register("run")
@@ -321,204 +324,26 @@ class RunConfig(AbstractConfig):
 
     Default values from the global profit.defaults.py file are loaded.
     """
+
     labels = {}
     defaults = "run"
 
-    def process_entries(self, base_config):
-        """Set paths and process entries of sub configs."""
+    def update(self, **entries):
+        """Updates the attributes with user inputs. No warning is issued if the attribute set by the user is unknown.
 
-        if not path.isabs(self.log_path):
-            self.log_path = path.abspath(path.join(base_config.base_dir, self.log_path))
-
-        for key in self.labels:
-            getattr(self, key.lower()).process_entries(base_config)
-
-
-@RunConfig.register("runner")
-class RunnerConfig(AbstractConfig):
-    """Base Runner config."""
-    labels = {}
-    defaults = None
-
-
-@RunnerConfig.register("local")
-class LocalRunnerConfig(RunnerConfig):
-    """
-    Example:
-        .. code-block:: yaml
-
-            class: local
-            parallel: all   # maximum number of simultaneous runs (for spawn array)
-            sleep: 0        # number of seconds to sleep while polling
-            fork: true      # whether to spawn the worker via forking instead of a subprocess (via a shell)
-    """
-    labels = {}
-    defaults = "run_runner_local"
-
-    def process_entries(self, base_config):
-        """Converts `parallel: all` to number of available cpus"""
-        from os import sched_getaffinity
-        if self.parallel == 'all':
-            self.parallel = len(sched_getaffinity(0))
-
-
-@RunnerConfig.register("slurm")
-class SlurmRunnerConfig(RunnerConfig):
-    """
-    Example:
-        .. code-block:: yaml
-
-               class: slurm
-               parallel: null      # maximum number of simultaneous runs (for spawn array)
-               sleep: 0            # number of seconds to sleep while (internally) polling
-               poll: 60            # number of seconds between external polls (to catch failed runs), use with care!
-               path: slurm.bash    # the path to the generated batch script (relative to the base directory)
-               custom: false       # whether a custom batch script is already provided at 'path'
-               prefix: srun        # prefix for the command
-               OpenMP: false       # whether to set OMP_NUM_THREADS and OMP_PLACES
-               cpus: 1             # number of cpus (including hardware threads) to use (may specify 'all')
-               options:            # (long) options to be passed to slurm: e.g. time, mem-per-cpu, account, constraint
-                   job-name: profit
-    """
-    labels = {}
-    defaults = "run_runner_slurm"
-
-    def process_entries(self, base_config):
-        """Converts paths to absolute and check type of 'cpus'"""
-        # Convert path to absolute path
-        if not path.isabs(self.path):
-            self.path = path.abspath(path.join(base_config.base_dir, self.path))
-        # Check type of 'cpus'
-        if (type(self.cpus) is not int or self.cpus < 1) and self.cpus != 'all':
-            raise ValueError(f'config option "cpus" may only be a positive integer or "all" and not {self.cpus}')
-
-
-@RunConfig.register("interface")
-class InterfaceConfig(AbstractConfig):
-    """Base runner interface config."""
-    labels = {}
-    defaults = None
-
-
-@InterfaceConfig.register("memmap")
-class MemmapInterfaceConfig(InterfaceConfig):
-    """
-    Example:
-        .. code-block:: yaml
-
-            class: memmap
-            path: interface.npy     # path to memory mapped interface file, relative to base directory
-    """
-    labels = {}
-    defaults = "run_interface_memmap"
-
-    def process_entries(self, base_config):
-        """Converts 'path' to absolute."""
-        if not path.isabs(self.path):
-            self.path = path.abspath(path.join(base_config.base_dir, self.path))
-
-
-@InterfaceConfig.register("zeromq")
-class ZeroMQInterfaceConfig(InterfaceConfig):
-    """
-    Example:
-        .. code-block:: yaml
-
-            class: zeromq
-            transport: tcp      # transport system used by zeromq
-            port: 9000          # port for the interface
-            address: null       # override bind address used by zeromq
-            connect: null       # override connect address used by zeromq
-            timeout: 2500       # zeromq polling timeout, in ms
-            retries: 3          # number of zeromq connection retries
-            retry-sleep: 1      # sleep between retries, in s
-    """
-    labels = {}
-    defaults = "run_interface_zeromq"
-
-
-@RunConfig.register("pre")
-class PreConfig(AbstractConfig):
-    """Base config for preprocessors."""
-    labels = {}
-    defaults = None
-
-
-@PreConfig.register("template")
-class TemplatePreConfig(PreConfig):
-    """
-    Example:
-        .. code-block:: yaml
-
-            class: template
-            path: template      # directory to copy from, relative to base directory
-            param_files: null   # files in template which contain placeholders for variables, null means all files
-                                # can be a filename or a list of filenames
-    """
-    labels = {}
-    defaults = "run_pre_template"
-
-    def process_entries(self, base_config):
-        """Convert 'path' to absolute and set 'param_files'."""
-        if not path.isabs(self.path):
-            self.path = path.abspath(path.join(base_config.base_dir, self.path))
-
-        if isinstance(self.param_files, str):
-            self.param_files = [self.param_files]
-
-
-@RunConfig.register("post")
-class PostConfig(AbstractConfig):
-    """Base class for postprocessor configs."""
-    labels = {}
-    defaults = None
-
-
-@PostConfig.register("json")
-class JsonPostConfig(PostConfig):
-    """
-    Example:
-        .. code-block:: yaml
-
-            class: json
-            path: stdout    # file to read from, relative to the run directory
-    """
-    labels = {}
-    defaults = "run_post_json"
-
-
-@PostConfig.register("numpytxt")
-class NumpytxtPostConfig(PostConfig):
-    """
-    Example:
-        .. code-block:: yaml
-
-            class: numpytxt
-            path: stdout    # file to read from, relative to the run directory
-            names: "f g"    # list or string of output variables in order, default read from config/variables
-            options:        # options which are passed on to numpy.genfromtxt() (fname & dtype are used internally)
-                deletechars: ""
-    """
-    labels = {}
-    defaults = "run_post_numpytxt"
-
-    def process_entries(self, base_config):
-        """Sets the included names of variables. The Keyword 'all' includes all variables."""
-        if isinstance(self.names, str):
-            self.names = list(base_config.output.keys()) if self.names == 'all' else self.names.split()
-
-
-@PostConfig.register("hdf5")
-class HDF5PostConfig(PostConfig):
-    """
-    Example:
-        .. code-block:: yaml
-
-            class: hdf5
-            path: output.hdf5   # file to read from, relative to the run directory
-    """
-    labels = {}
-    defaults = "run_post_hdf5"
+        Parameters:
+            entries (dict): User input of the config parameters.
+        """
+        for name, value in entries.items():
+            if hasattr(self, name) or name in map(str.lower, self.labels):
+                attr = getattr(self, name, None)
+                if isinstance(attr, dict):
+                    attr.update(value)
+                    setattr(self, name, attr)
+                else:
+                    setattr(self, name, value)
+            else:
+                setattr(self, name, value)
 
 
 @BaseConfig.register("fit")
@@ -628,8 +453,8 @@ class FitConfig(AbstractConfig):
             for encoders, select in [(self._input_encoders, input_select), (self._output_encoders, output_select)]:
                 if select is not None:
                     encoders.append({
-                        "class": name,
-                        "columns": select,
+                            "class": name,
+                            "columns": select,
                         "parameters": {k: float(v) for k, v in config.get("parameters", {})}
                         if not isinstance(config, str) else {},
                     })
@@ -738,10 +563,6 @@ class UIConfig(AbstractConfig):
     defaults = "ui"
 
 
-@RunnerConfig.register("default")
-@InterfaceConfig.register("default")
-@PreConfig.register("default")
-@PostConfig.register("default")
 @AcquisitionFunctionConfig.register("default")
 class DefaultConfig(AbstractConfig):
     """Default config for all run sub configs which just updates the attributes with user entries."""

@@ -48,17 +48,18 @@ class SlurmRunner(Runner, label="slurm"):
         self.options = {"job-name": "profit"} | options if options is not None else {}
         self.command = command
 
-        if self.custom:
-            if not os.path.exists(self.path):
-                self.logger.error(
-                    f"flag for custom script is set, but could not be found at "
-                    f"specified location {self.path}"
-                )
-                self.logger.debug(f"cwd = {os.getcwd()}")
-                self.logger.debug(f"ls = {os.listdir(os.path.dirname(self.path))}")
-                raise FileNotFoundError(f"could not find {self.path}")
-        else:
-            self.generate_script()
+        with self.change_tmp_dir():
+            if self.custom:
+                if not os.path.exists(self.path):
+                    self.logger.error(
+                        f"flag for custom script is set, but could not be found at "
+                        f"specified location {self.path}"
+                    )
+                    self.logger.debug(f"cwd = {os.getcwd()}")
+                    self.logger.debug(f"ls = {os.listdir(os.path.dirname(self.path))}")
+                    raise FileNotFoundError(f"could not find {self.path}")
+            else:
+                self.generate_script()
 
     def __repr__(self):
         return (
@@ -110,10 +111,14 @@ class SlurmRunner(Runner, label="slurm"):
             self.wait(self.next_run_id)
         self.next_run_id += 1
 
-    def spawn_array(self, params_array, wait=False):
+    def spawn_array(self, params_array, wait=False, progress=False):
+        import tqdm
+
         self.logger.info(
             f"schedule array {self.next_run_id} - {self.next_run_id + len(params_array) - 1} via Slurm"
         )
+        if progress:
+            progressbar = tqdm(params_array, desc="submitted")
         self.fill(params_array, offset=self.next_run_id)
         env = os.environ.copy()
         env["PROFIT_RUN_ID"] = str(self.next_run_id)
@@ -133,9 +138,11 @@ class SlurmRunner(Runner, label="slurm"):
         job_id = submit.stdout.split(";")[0].strip()
         for i in range(len(params_array)):
             self.runs[self.next_run_id + i] = f"{job_id}_{i}"
-        if wait:
-            self.wait_all()
         self.next_run_id += len(params_array)
+        if progress:
+            progressbar.update(progressbar.total)
+        if wait:
+            self.wait_all(progress=progress)
 
     def poll_all(self):
         acct = subprocess.run(

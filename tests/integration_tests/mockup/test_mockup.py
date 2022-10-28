@@ -22,6 +22,7 @@ from subprocess import run
 from numpy import array, allclose
 from shutil import rmtree
 from pytest import fixture
+from typing import Mapping
 
 
 @fixture(autouse=True)
@@ -36,23 +37,6 @@ def chdir_pytest():
 NLL_ATOL = 1e3
 PARAM_RTOL = 2
 TIMEOUT = 30  # seconds
-
-
-def clean(config):
-    """Delete run directories and input/outpt files after the test."""
-
-    for krun in range(config.get('ntrain')):
-        single_dir = path.join(config.get('run_dir'), f'run_{krun:03d}')
-        if path.exists(single_dir):
-            rmtree(single_dir)
-    if path.exists(config['run']['interface'].get('path')):
-        remove(config['run']['interface'].get('path'))
-    if path.exists(config['files'].get('input')):
-        remove(config['files'].get('input'))
-    if path.exists(config['files'].get('output')):
-        remove(config['files'].get('output'))
-    if path.exists(config['run'].get('log_path')):
-        rmtree(config['run'].get('log_path'))
 
 
 def test_1D():
@@ -72,9 +56,7 @@ def test_1D():
         assert allclose(sur.hyperparameters['sigma_f'], 1.56475873, rtol=PARAM_RTOL)
         assert allclose(sur.hyperparameters['sigma_n'], 5.26616713e-05, rtol=PARAM_RTOL)
     finally:
-        clean(config)
-        if path.exists(model_file):
-            remove(model_file)
+        run(f"profit clean --all {config_file}", shell=True, timeout=TIMEOUT)
 
 
 def multi_test_1d(study, config_file, output_file):
@@ -89,7 +71,7 @@ def multi_test_1d(study, config_file, output_file):
         assert all(output['f'] - array([0.7836, -0.5511, 1.0966, 0.4403, 1.6244, -0.4455, 0.0941]).reshape((7, 1))
                    < 1e-4)
     finally:
-        clean(config)
+        run(f"profit clean --all {config_file}", shell=True, timeout=TIMEOUT)
 
 
 def test_custom_post1():
@@ -110,11 +92,6 @@ def test_custom_worker1():
 def test_custom_worker2():
     """ test 1D with custom worker (integrated, custom main) """
     multi_test_1d('./study_custom_worker2', 'profit_custom_worker2.yaml', 'output_custom_worker2.hdf5')
-
-
-def test_custom_worker3():
-    """ test 1D with custom worker (integrated, custom run) """
-    multi_test_1d('./study_custom_worker3', 'profit_custom_worker3.yaml', 'output_custom_worker3.hdf5')
 
 
 def test_custom_worker4():
@@ -142,12 +119,7 @@ def test_multi_output():
             assert allclose(m.hyperparameters['sigma_f'], sigma_f[i], rtol=PARAM_RTOL)
             assert allclose(m.hyperparameters['sigma_n'], sigma_n[i], rtol=PARAM_RTOL)
     finally:
-        clean(config)
-        from os.path import splitext
-        # .hdf5 is not yet supported for multi output model, so it is saved as .pkl instead.
-        model_file = splitext(model_file)[0] + '.pkl'
-        if path.exists(model_file):
-            remove(model_file)
+        run(f"profit clean --all {config_file}", shell=True, timeout=TIMEOUT)
 
 
 def test_2D():
@@ -168,9 +140,7 @@ def test_2D():
         assert allclose(sur.hyperparameters['sigma_f'], 0.49950325, rtol=PARAM_RTOL)
         assert allclose(sur.hyperparameters['sigma_n'], 3.36370612e-07, rtol=PARAM_RTOL)
     finally:
-        clean(config)
-        if path.exists(model_file):
-            remove(model_file)
+        run(f"profit clean --all {config_file}", shell=True, timeout=TIMEOUT)
 
 
 def test_2D_independent():
@@ -191,9 +161,7 @@ def test_2D_independent():
         assert allclose(sur.hyperparameters['sigma_f'], 0.36038181, rtol=PARAM_RTOL)
         assert allclose(sur.hyperparameters['sigma_n'], 0.0042839, rtol=PARAM_RTOL)
     finally:
-        clean(config)
-        if path.exists(model_file):
-            remove(model_file)
+        run(f"profit clean --all {config_file}", shell=True, timeout=TIMEOUT)
 
 
 def test_karhunenloeve():
@@ -212,11 +180,7 @@ def test_karhunenloeve():
         assert allclose(sur.hyperparameters['sigma_f'], 0.36038181, rtol=PARAM_RTOL)
         assert allclose(sur.hyperparameters['sigma_n'], 0.1267644, rtol=PARAM_RTOL)
     finally:
-        clean(config)
-        if path.exists(model_file):
-            from os.path import splitext
-            model_file = splitext(model_file)[0] + '.pkl'
-            remove(model_file)
+        run(f"profit clean --all {config_file}", shell=True, timeout=TIMEOUT)
 
 
 def test_gpy():
@@ -238,9 +202,7 @@ def test_gpy():
         mean, cov = sur.predict([[0.25, 5.0, 0.57, 1, 3]])
         assert allclose(mean[0, 0], 3.71906) and allclose(cov[0, 0], 2.8619e-6)
     finally:
-        clean(config)
-        if path.exists(model_file):
-            remove(model_file)
+        run(f"profit clean --all {config_file}", shell=True, timeout=TIMEOUT)
 
 
 def test_linreg_chaospy():
@@ -265,7 +227,5 @@ def test_linreg_chaospy():
         mean, cov = sur.predict([[0.25, 5.0, 0.57, 1, 3]])
         assert allclose(mean[0, 0], 3.70979048) and allclose(cov[0, 0], 0.00202274)
     finally:
-        clean(config)
-        if path.exists(model_file):
-            remove(model_file)
+        run(f"profit clean --all {config_file}", shell=True, timeout=TIMEOUT)
 

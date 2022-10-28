@@ -34,12 +34,6 @@ OUTPUTS = {"f": (INPUTS["u"] + INPUTS["v"]).reshape((SIZE, 1))}
 
 
 @pytest.fixture
-def logger(caplog):
-    caplog.set_level(logging.DEBUG)
-    return logging.getLogger()
-
-
-@pytest.fixture
 def runner_interface(logger):
     from profit.run import RunnerInterface
 
@@ -75,9 +69,8 @@ def runner(request, logger, runner_interface):
     if label == "slurm" and which("sbatch") is None:
         pytest.skip("SLURM not installed")
 
+    logging.getLogger("Runner").parent = logger
     runner = Runner[label](interface=runner_interface, worker="mock")
-    runner.logger.parent = logger
-    runner.logger.propagate = True
     yield runner
     if not request.config.getoption("--no-clean"):
         runner.clean()

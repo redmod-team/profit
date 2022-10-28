@@ -4,6 +4,7 @@ This script is called when running the `profit` command inside a shell.
 """
 
 import sys
+import os
 from argparse import ArgumentParser
 from platform import python_version
 
@@ -66,6 +67,7 @@ def main():
     variables = config.variable_group
 
     sys.path.append(config['base_dir'])
+    os.chdir(config["base_dir"])
 
     # Select mode
     if args.mode == 'run':
@@ -112,7 +114,7 @@ def main():
             # Normal (parallel) run
             params_array = [row[0] for row in variables.named_input]  # Structured array of input values
             try:
-                runner.spawn_array(tqdm(params_array), blocking=True)  # Start runs
+                runner.spawn_array(params_array, wait=True, progress=True)  # submit runs
             except KeyboardInterrupt:
                 runner.logger.info("Keyboard Interrupt")
             finally:
@@ -122,8 +124,6 @@ def main():
                 for key in runner.output_data.dtype.names:
                     variables[key].value = check_ndim(runner.output_data[key])
 
-        if config['run']['clean']:
-            runner.clean()
         if len(runner.failed):
             runner.logger.warning(f"{len(runner.failed)} runs failed")
 
@@ -189,14 +189,6 @@ def main():
         # Cleanup runner
         runner = Runner.from_config(config['run'], config)
         runner.clean()
-        try:
-            # Remove log
-            rmtree(config['run']['log_path'])
-        except FileNotFoundError:
-            pass
-        if path.exists('runner.log'):
-            remove('runner.log')
-
 
 if __name__ == '__main__':
     main()

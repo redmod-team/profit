@@ -1,6 +1,7 @@
 """ Local Runner & Memory-map Interface
 
- * LocalRunner: start Workers locally with forking (subprocess.Popen or multiprocessing.Process)
+ * LocalRunner: start Workers locally via the shell (subprocess.Popen)
+ * ForkRunner: start Workers locally with forking (multiprocessing.Process)
  * MemmapInterface: share date using a memory-mapped, structured array (using numpy)
 """
 
@@ -27,8 +28,8 @@ class LocalRunner(Runner, label="local"):
     def __init__(self, command="profit-worker", parallel="all", **kwargs):
         if parallel == "all":  # parallel: 'all' infers the number of available CPUs
             parallel = len(os.sched_getaffinity(0))
-        super().__init__(parallel=parallel, **kwargs)
         self.command = command
+        super().__init__(parallel=parallel, **kwargs)
 
     def __repr__(self):
         return (
@@ -64,10 +65,6 @@ class LocalRunner(Runner, label="local"):
             self.logger.info(f"run {run_id} failed")
             self.failed[run_id] = self.runs.pop(run_id)
 
-    def wait(self, run_id):
-        self.runs[run_id].wait()
-        self.check_runs()
-
     def cancel(self, run_id):
         self.runs[run_id].terminate()
         self.failed[run_id] = self.runs.pop(run_id)
@@ -88,18 +85,16 @@ class ForkRunner(Runner, label="fork"):
         super().spawn(params, wait)
 
         def work():
-            worker = Worker.from_config(
-                self.worker, self.interface.config, self.next_run_id
-            )
-            worker.work()
-            worker.clean()
+            with self.change_tmp_dir():
+                worker = Worker.from_config(
+                    self.worker, self.interface.config, self.next_run_id
+                )
+                worker.work()
+                worker.clean()
 
-        base_dir = os.getcwd()
-        os.chdir(self.tmp_dir)
         process = Process(target=work)
         self.runs[self.next_run_id] = process
         process.start()
-        os.chdir(base_dir)
         if wait:
             self.wait(self.next_run_id)
         self.next_run_id += 1
@@ -108,10 +103,6 @@ class ForkRunner(Runner, label="fork"):
         if self.runs[run_id].exitcode is not None:
             self.logger.info(f"run {run_id} failed")
             self.failed[run_id] = self.runs.pop(run_id)
-
-    def wait(self, run_id):
-        self.runs[run_id].join()
-        self.check_runs()
 
     def cancel(self, run_id):
         self.runs[run_id].terminate()
@@ -164,7 +155,7 @@ class MemmapRunnerInterface(RunnerInterface, label="memmap"):
 
     @property
     def config(self):
-        return super().config() | {"path": self.path}
+        return super().config | {"path": self.path}
 
     def resize(self, size):
         """Resizing the Interface
@@ -218,7 +209,7 @@ class MemmapWorkerInterface(WorkerInterface, label="memmap"):
 
     @property
     def config(self):
-        return super().config() | {"path": self.path}
+        return super().config | {"path": self.path}
 
     @property
     def time(self):

@@ -28,21 +28,7 @@ def chdir_pytest():
 # Allow a large range of parameters, just ensure that it is approximately at the same scale
 PARAM_RTOL = 2
 TIMEOUT = 60  # seconds
-
-
-def clean(config):
-    """Delete run directories and input/outpt files after the test."""
-
-    for krun in range(config.get('ntrain')):
-        single_dir = path.join(config.get('run_dir'), f'run_{krun:03d}')
-        if path.exists(single_dir):
-            rmtree(single_dir)
-    if path.exists(config['run']['interface'].get('path')):
-        remove(config['run']['interface'].get('path'))
-    if path.exists(config['files'].get('input')):
-        remove(config['files'].get('input'))
-    if path.exists(config['files'].get('output')):
-        remove(config['files'].get('output'))
+CLEAN_TIMEOUT = 5 # seconds
 
 
 def test_1D():
@@ -61,9 +47,9 @@ def test_1D():
         assert allclose(sur.hyperparameters['sigma_f'], 0.91133526, rtol=PARAM_RTOL)
         assert allclose(sur.hyperparameters['sigma_n'], 0.00014507, rtol=PARAM_RTOL)
     finally:
-        clean(config)
         if path.exists(model_file):
             remove(model_file)
+        run(f"profit clean --all {config_file}", shell=True, timeout=CLEAN_TIMEOUT)
 
 
 def test_2D():
@@ -83,9 +69,9 @@ def test_2D():
         assert allclose(sur.hyperparameters['sigma_f'], 14.49290437, rtol=PARAM_RTOL)
         assert allclose(sur.hyperparameters['sigma_n'], 1.15668428e-06, rtol=PARAM_RTOL)
     finally:
-        clean(config)
         if path.exists(model_file):
             remove(model_file)
+        run(f"profit clean --all {config_file}", shell=True, timeout=CLEAN_TIMEOUT)
 
 
 def test_log():
@@ -101,9 +87,9 @@ def test_log():
         assert allclose(sur.hyperparameters['sigma_f'], 0.26703034, rtol=PARAM_RTOL)
         assert allclose(sur.hyperparameters['sigma_n'], 1.98627737e-05, rtol=PARAM_RTOL)
     finally:
-        clean(config)
         if path.exists(model_file):
             remove(model_file)
+        run(f"profit clean --all {config_file}", shell=True, timeout=CLEAN_TIMEOUT)
 
 
 def test_mcmc():
@@ -120,11 +106,11 @@ def test_mcmc():
         assert allclose(stats['Xmean'][1], 1.4, atol=2 * stats['Xstd'][1])
 
     finally:
-        clean(config)
         if path.exists(stats_file):
             remove(stats_file)
         if path.exists(log_likelihood_file):
             remove(log_likelihood_file)
+        run(f"profit clean --all {config_file}", shell=True, timeout=CLEAN_TIMEOUT)
 
 
 def test_delayed_acceptance_mcmc():
@@ -146,8 +132,8 @@ def test_delayed_acceptance_mcmc():
         assert allclose(stats['Xmean'][0], 1.15, atol=2*stats['Xstd'][0])
         assert allclose(stats['Xmean'][1], 1.4, atol=2*stats['Xstd'][1])
     finally:
-        clean(config)
         if path.exists(stats_file):
             remove(stats_file)
         if path.exists(log_likelihood_file):
             remove(log_likelihood_file)
+        run(f"profit clean --all {config_file}", shell=True, timeout=CLEAN_TIMEOUT)

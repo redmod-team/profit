@@ -24,7 +24,7 @@ class Worker(Component):
         self,
         run_id: int,
         *,
-        interface: Interface = "zeromq",
+        interface: Interface = "memmap",
         debug=False,
         log_path="log",
         logger=None,
@@ -34,7 +34,6 @@ class Worker(Component):
 
         if logger is None:
             self.logger = logging.getLogger("Worker")
-            self.logger.propagate = False
             try:
                 os.mkdir(log_path)
             except FileExistsError:
@@ -45,6 +44,8 @@ class Worker(Component):
             )
             if self.debug:
                 log_handler.setLevel(logging.DEBUG)
+            else:
+                log_handler.setLevel(logging.INFO)
             log_formatter = logging.Formatter(
                 "{asctime} {levelname:8s} {name}: {message}", style="{"
             )
@@ -87,10 +88,13 @@ class Worker(Component):
         )
 
     @classmethod
-    def from_env(cls, env):
+    def from_env(cls, env=None):
         from ..util import load_includes
 
-        if env["PROFIT_INCLUDES"]:
+        if env is None:
+            env = os.environ.copy()
+
+        if env.get("PROFIT_INCLUDES"):
             load_includes(json.loads(env["PROFIT_INCLUDES"]))
         return cls.from_config(
             config=json.loads(env["PROFIT_WORKER"]),
@@ -176,6 +180,6 @@ def main():
 
     the run id and the path to the proFit configuration is provided via environment variables
     """
-    worker = Worker.from_env(os.environ)
+    worker = Worker.from_env()
     worker.work()
     worker.clean()

@@ -27,6 +27,7 @@ def chdir_pytest():
 
 
 TIMEOUT = 30  # seconds
+CLEAN_TIMEOUT = 5  # seconds
 
 
 def clean(config):
@@ -42,8 +43,6 @@ def clean(config):
         remove(config['files'].get('input'))
     if path.exists(config['files'].get('output')):
         remove(config['files'].get('output'))
-    if path.exists(config['run'].get('log_path')):
-        rmtree(config['run'].get('log_path'))
 
 
 def test_yaml_py_config():
@@ -80,6 +79,7 @@ def test_txt_input():
     run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
     assert path.isfile('./study/run_000/mockup.in')
     clean(config)
+    run(f"profit clean --all {config_file}", shell=True, timeout=CLEAN_TIMEOUT)
 
 
 def test_txt_json_input():
@@ -98,6 +98,7 @@ def test_txt_json_input():
         assert json_input.shape == txt_input.shape
     finally:
         clean(config)
+        run(f"profit clean --all {config_file}", shell=True, timeout=CLEAN_TIMEOUT)
 
 
 def test_hdf5_input_output():
@@ -112,6 +113,7 @@ def test_hdf5_input_output():
         assert data_in.dtype.names == ('u', 'v', 'w')
     finally:
         clean(config)
+        run(f"profit clean --all {config_file}", shell=True, timeout=CLEAN_TIMEOUT)
 
 
 def test_symlinks():
@@ -130,6 +132,7 @@ def test_symlinks():
                 assert link_data == base_data and not link_data.startswith('{')
     finally:
         clean(config)
+        run(f"profit clean --all {config_file}", shell=True, timeout=CLEAN_TIMEOUT)
 
 
 def test_default_values():

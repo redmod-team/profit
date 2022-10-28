@@ -13,12 +13,14 @@ def f(u):
     return np.cos(10 * u) + u
 
 
-class MockupWorker(Worker):
-    def main(self):
+class MockupWorker(Worker, label="mockup1"):
+    def work(self):
+        self.interface.retrieve()
         self.interface.output['f'] = f(self.interface.input['u'])
-        self.interface.done()
+        self.interface.transmit()
 
 
 if __name__ == '__main__':
     worker = MockupWorker.from_env()
-    worker.main()
+    worker.work()
+    worker.clean()

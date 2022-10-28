@@ -65,12 +65,6 @@ def time():
     return int(1e3 * np.random.random())
 
 
-@pytest.fixture
-def logger(caplog):
-    caplog.set_level(logging.DEBUG)
-    return logging.getLogger()
-
-
 def log_to_stderr(log):
     log_formatter = logging.Formatter(
         "{asctime} {levelname:8s} {name}: {message}", style="{"
@@ -167,9 +161,10 @@ def test_interface(
     assert runner_interface.internal["TIME"][runid] == time
 
 
-def test_interface_resize(size, runner_interface):
+def test_interface_resize(size, runner_interface, caplog):
     assert runner_interface.size == size
-    runner_interface.resize(size - 5)  # shrinking (not supported)
+    with caplog.at_level(logging.ERROR):
+        runner_interface.resize(size - 5)  # shrinking (not supported)
     assert runner_interface.size == size
     runner_interface.resize(size + 5)  # expanding
     assert runner_interface.size == size + 5

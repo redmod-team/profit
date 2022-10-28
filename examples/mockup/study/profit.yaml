@@ -6,9 +6,8 @@ variables:
     f: Output
 run:
     runner:
-        class: local
+        class: fork
         parallel: 4
-        sleep: 0
     worker: mockup
 
 ui:

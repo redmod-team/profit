@@ -34,19 +34,14 @@ class CommandWorker(Worker, label="command"):
         self,
         run_id: int,
         *,
-        interface: Interface = "zeromq",
         pre="template",
         post="numpytxt",
         command="./simulation",
         stdout="stdout",
         stderr=None,
-        debug=False,
-        log_path="log",
-        logger=None,
+        **kwargs,
     ):
-        super().__init__(
-            run_id, interface=interface, debug=debug, log_path=log_path, logger=logger
-        )
+        super().__init__(run_id, **kwargs)
         self.run_dir = f"run_{run_id:03d}"
 
         if isinstance(pre, str):
@@ -64,7 +59,7 @@ class CommandWorker(Worker, label="command"):
             self.post = Postprocessor[post](logger_parent=self.logger)
         elif isinstance(post, Mapping):
             self.post = Postprocessor[post["class"]](
-                **{key: value for key, value in pre.items() if key != "class"},
+                **{key: value for key, value in post.items() if key != "class"},
                 logger_parent=self.logger,
             )
         else:
@@ -153,7 +148,7 @@ class Preprocessor(Component):
                     for key, value in kwargs.items():
                         if key not in config:
                             raise TypeError(
-                                f"{func.name}.__init__() got an unexpected keyword argument '{key}'"
+                                f"{func.__name__}.__init__() got an unexpected keyword argument '{key}'"
                             )
                     kwargs = config | kwargs
                     for key, value in kwargs.items():  # save arbitrary arguments
@@ -198,6 +193,10 @@ class TemplatePreprocessor(Preprocessor, label="template"):
         else:
             self.param_files = param_files
 
+    @property
+    def template_path(self):
+        return os.path.join(os.environ.get("PROFIT_BASE_DIR", "."), self.path)
+
     def prepare(self, data: Mapping):
         # No call to super()! overrides the default directory creation
         if os.path.exists(self.run_dir):
@@ -205,7 +204,7 @@ class TemplatePreprocessor(Preprocessor, label="template"):
             raise OSError(f"run directory '{self.run_dir}' already exists")
         self.fill_run_dir_single(
             data,
-            self.path,
+            self.template_path,
             self.run_dir,
             ignore_path_exists=True,
             param_files=self.param_files,
@@ -342,7 +341,7 @@ class Postprocessor(Component):
                     for key, value in kwargs.items():
                         if key not in config:
                             raise TypeError(
-                                f"{func.name}.__init__() got an unexpected keyword argument '{key}'"
+                                f"{func.__name__}.__init__() got an unexpected keyword argument '{key}'"
                             )
                     kwargs = config | kwargs
                     for key, value in kwargs.items():  # save arbitrary arguments
@@ -391,9 +390,13 @@ def NumpytxtPostprocessor(self, data):
     - ``names`` which are not specified as output variables are ignored
     - additional options are passed directly to ``numpy.genfromtxt()`
     """
+    if self.names is None:
+        names = data.dtype.names
+    else:
+        names = self.names
     dtype = [
         (name, float, data.dtype[name].shape if name in data.dtype.names else ())
-        for name in self.names
+        for name in names
     ]
     try:
         raw = np.genfromtxt(self.path, dtype=dtype, **self.options)
@@ -404,7 +407,7 @@ def NumpytxtPostprocessor(self, data):
         self.logger.info(f"ls {dirname} = {os.listdir(dirname)}")
         raise
 
-    for key in self.names:
+    for key in names:
         if key in data.dtype.names:
             data[key] = raw[key]
 
