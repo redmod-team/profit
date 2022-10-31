@@ -24,30 +24,42 @@ def chdir_pytest():
 
 
 LABELS = ["fork", "local", "slurm"]
-SIZE = 4
+SIZE = 8
 INTERFACE = "zeromq"
+INTERFACE_CONFIG = {"zeromq": {"retry_sleep": 0.1, "timeout": 0.5}}
 INPUTS = {
     "u": np.random.random(SIZE),
     "v": np.random.random(SIZE),
 }
 OUTPUTS = {"f": (INPUTS["u"] + INPUTS["v"]).reshape((SIZE, 1))}
 
+POLL_ITERATIONS = 40
+POLL_SLEEP = 0.2
+
 
 @pytest.fixture
 def runner_interface(logger):
     from profit.run import RunnerInterface
+    import zmq
 
-    rif = RunnerInterface[INTERFACE](
-        size=SIZE,
-        input_config={
-            key: {"dtype": value.dtype.type} for key, value in INPUTS.items()
-        },
-        output_config={
-            key: {"dtype": value.dtype.type, "size": (1, value.shape[1])}
-            for key, value in OUTPUTS.items()
-        },
-        logger_parent=logger,
-    )
+    for _ in range(2):
+        try:
+            rif = RunnerInterface[INTERFACE](
+                size=SIZE,
+                input_config={
+                    key: {"dtype": value.dtype.type} for key, value in INPUTS.items()
+                },
+                output_config={
+                    key: {"dtype": value.dtype.type, "size": (1, value.shape[1])}
+                    for key, value in OUTPUTS.items()
+                },
+                **INTERFACE_CONFIG[INTERFACE] if INTERFACE in INTERFACE_CONFIG else {},
+                logger_parent=logger,
+            )
+            break
+        except zmq.error.ZMQError:
+            # possibly: Address already in use (form a previous test)
+            sleep(1)
     for key, value in INPUTS.items():
         rif.input[key] = value
     yield rif
@@ -70,7 +82,9 @@ def runner(request, logger, runner_interface):
         pytest.skip("SLURM not installed")
 
     logging.getLogger("Runner").parent = logger
-    runner = Runner[label](interface=runner_interface, worker="mock")
+    runner = Runner[label](
+        interface=runner_interface, worker={"class": "mock", "debug": False}, debug=True
+    )
     yield runner
     if not request.config.getoption("--no-clean"):
         runner.clean()
@@ -93,24 +107,25 @@ def test_register():
 def test_runner(runner):
     params = [{key: value[i] for key, value in INPUTS.items()} for i in range(SIZE)]
     runner.spawn(params[0], wait=False)
-    for i in range(10):
-        sleep(0.2)
+    for i in range(POLL_ITERATIONS):
+        sleep(POLL_SLEEP)
         runner.check_runs()
-        if 0 not in runner.runs:
+        if not len(runner.runs):
             break
     else:
         runner.cancel_all()
         raise RuntimeError("Timeout")
 
     runner.spawn_array(params[1:], wait=False)
-    for i in range(10):
-        sleep(0.2)
+    for i in range(POLL_ITERATIONS):
+        sleep(POLL_SLEEP)
         runner.check_runs()
-        if 0 not in runner.runs:
+        if not len(runner.runs):
             break
     else:
+        remaining = set(runner.runs.keys())
         runner.cancel_all()
-        raise RuntimeError("Timeout")
+        raise RuntimeError(f"Timeout (runs {remaining} remaining)")
 
     assert np.sum(runner.interface.internal["DONE"]) == SIZE
     for key in OUTPUTS:

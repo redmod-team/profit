@@ -46,6 +46,7 @@ class Runner(Component):
         with self.change_tmp_dir():
             if logger is None:
                 self.logger = logging.getLogger("Runner")
+                self.logger.setLevel(logging.DEBUG)
                 log_handler = logging.FileHandler(self.logfile, mode="w")
                 log_formatter = logging.Formatter(
                     "{asctime} {levelname:8s} {name}: {message}", style="{"

@@ -34,6 +34,7 @@ class Worker(Component):
 
         if logger is None:
             self.logger = logging.getLogger("Worker")
+            self.logger.setLevel(logging.DEBUG)
             try:
                 os.mkdir(log_path)
             except FileExistsError:

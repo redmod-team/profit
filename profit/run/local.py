@@ -226,7 +226,7 @@ class MemmapWorkerInterface(WorkerInterface, label="memmap"):
         try:
             self._memmap = np.load(self.path, mmap_mode="r+")
         except FileNotFoundError:
-            self.worker.logger.error(
+            self.logger.error(
                 f"{self.__class__.__name__} could not load {self.path} (cwd: {os.getcwd()})"
             )
             raise

@@ -22,6 +22,7 @@ addopts = "--verbose --cov=profit"
 log_cli = true
 log_cli_level = "WARNING"
 log_cli_format = "%(asctime)s %(levelname)8s %(name)s: %(message)s"
+log_format = "%(asctime)s %(levelname)8s %(name)s: %(message)s"
 testpaths = [
    "tests/unit_tests",
    "tests/integration_tests",

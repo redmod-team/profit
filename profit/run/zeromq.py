@@ -110,12 +110,11 @@ class ZeroMQRunnerInterface(RunnerInterface, label="zeromq"):
     def handle_msg(self, address: bytes, msg: list):
         if address[:4] == b"req_":  # req_123
             run_id = int(address[4:])
-            self.logger.debug(f"received {msg[0]} from run {run_id}")
             if msg[0] == b"READY":
                 input_descr = json.dumps(self.input_vars).encode()
                 output_descr = json.dumps(self.output_vars).encode()
                 self.logger.debug(
-                    f"send input {input_descr} + {self.input[run_id]} + output {output_descr}"
+                    f"run {run_id} READY: {input_descr} + {self.input[run_id]} + output {output_descr}"
                 )
                 self.socket.send_multipart(
                     [address, b"", input_descr, self.input[run_id], output_descr]
@@ -124,19 +123,20 @@ class ZeroMQRunnerInterface(RunnerInterface, label="zeromq"):
             elif msg[0] == b"DATA":
                 self.output[run_id] = np.frombuffer(msg[1], dtype=self.output_vars)
                 self.logger.debug(
-                    f"received output {np.frombuffer(msg[1], dtype=self.output_vars)}"
+                    f"run {run_id} DATA: {np.frombuffer(msg[1], dtype=self.output_vars)[0]}"
                 )
                 self.internal["DONE"][run_id] = True
                 self.internal["FLAGS"][run_id] |= 0x08
-                self.logger.debug("acknowledge DATA")
                 self.socket.send_multipart([address, b"", b"ACK"])  # acknowledge
             elif msg[0] == b"TIME":
                 self.internal["TIME"][run_id] = np.frombuffer(msg[1], dtype=np.uint)
-                self.logger.debug("acknowledge TIME")
+                self.logger.debug(
+                    f"run {run_id} TIME: {np.frombuffer(msg[1], dtype=np.uint)[0]}"
+                )
                 self.socket.send_multipart([address, b"", b"ACK"])  # acknowledge
             elif msg[0] == b"DIE":
                 self.internal["FLAGS"][run_id] |= 0x04
-                self.logger.debug("acknowledge DIE")
+                self.logger.debug(f"run {run_id} DIE")
                 self.socket.send_multipart([address, b"", b"ACK"])  # acknowledge
             else:
                 self.logger.warning(f"received unknown message {address}: {msg}")
@@ -146,8 +146,13 @@ class ZeroMQRunnerInterface(RunnerInterface, label="zeromq"):
             )
 
     def clean(self):
-        self.logger.debug("cleaning: closing socket")
-        self.socket.close(0)
+        self.logger.info("cleaning: closing socket")
+        self.socket.close(linger=0)
+        zmq.Context.instance().destroy(linger=1)
+
+    def __del__(self):
+        self.socket.close(linger=0)
+        zmq.Context.instance().destroy(linger=1)
 
 
 class ZeroMQWorkerInterface(WorkerInterface, label="zeromq"):
@@ -235,6 +240,10 @@ class ZeroMQWorkerInterface(WorkerInterface, label="zeromq"):
         self.socket.close(linger=0)
         self._connected = False
 
+    def __del__(self):
+        if self._connected:
+            self.socket.close(linger=0)
+
     def request(self, request):
         """0MQ - Lazy Pirate Pattern"""
         if not self._connected:
@@ -279,7 +288,7 @@ class ZeroMQWorkerInterface(WorkerInterface, label="zeromq"):
                     self.logger.debug(f"{request}: received {response}")
                     self.logger.error(f"{request}: malformed reply")
             else:
-                self.logger.warning(f"{request}: no response")
+                self.logger.info(f"{request}: no response")
                 tries += 1
                 sleep(self.retry_sleep)
 
