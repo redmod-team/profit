@@ -15,7 +15,7 @@ class Component(ABC):
     def __init__(self):
         pass
 
-    def __init_subclass__(cls, /, label=None):
+    def __init_subclass__(cls, label=None):
         """This method is called when a class is subclassed.
 
         Register a new (sub-)component"""
@@ -27,6 +27,7 @@ class Component(ABC):
             # set up new registry for subcomponents
             cls._components = {}
             cls.component = label
+            cls.labels = cls._components.keys()
         elif label is not None:
             cls.register(label)(cls)
 
@@ -46,6 +47,7 @@ class Component(ABC):
                     f"replacing {cls._components[label]} with {cls} for label '{label}' ({cls.component})."
                 )
             cls._components[label] = subcls
+            subcls.label = label
             return subcls
 
         return decorator
@@ -53,18 +55,3 @@ class Component(ABC):
     def __class_getitem__(cls, label):
         """Returns the subcomponent."""
         return cls._components[label]
-
-    @classmethod
-    @property
-    def label(cls):
-        """Returns the string label of a subcomponent."""
-        for label, item in cls._components.items():  # _components is inherited
-            if item == cls:
-                return label
-        raise KeyError(f"Class {cls} is not registered.")
-
-    @classmethod
-    @property
-    def labels(cls):
-        """Returns the labels of all available subcomponents."""
-        return cls._components.keys()

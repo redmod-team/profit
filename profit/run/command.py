@@ -150,7 +150,10 @@ class Preprocessor(Component):
                             raise TypeError(
                                 f"{func.__name__}.__init__() got an unexpected keyword argument '{key}'"
                             )
-                    kwargs = config | kwargs
+                    kwargs = {
+                        **config,
+                        **kwargs,
+                    }  # super().config | config in python3.9
                     for key, value in kwargs.items():  # save arbitrary arguments
                         self.__setattr__(key, value)
 
@@ -343,7 +346,10 @@ class Postprocessor(Component):
                             raise TypeError(
                                 f"{func.__name__}.__init__() got an unexpected keyword argument '{key}'"
                             )
-                    kwargs = config | kwargs
+                    kwargs = {
+                        **config,
+                        **kwargs,
+                    }  # super().config | config in python3.9
                     for key, value in kwargs.items():  # save arbitrary arguments
                         self.__setattr__(key, value)
 

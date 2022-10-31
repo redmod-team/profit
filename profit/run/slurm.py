@@ -45,7 +45,9 @@ class SlurmRunner(Runner, label="slurm"):
         self.openmp = openmp
         self.custom = custom
         self.path = path
-        self.options = {"job-name": "profit"} | options if options is not None else {}
+        self.options = {"job-name": "profit"}
+        if options is not None:
+            self.options.update(options)
         self.command = command
 
         with self.change_tmp_dir():
@@ -76,18 +78,22 @@ class SlurmRunner(Runner, label="slurm"):
     def config(self):
         config = {}
         if not self.custom:
-            config |= {
-                "cpus": self.cpus,
-                "openmp": self.openmp,
-                "options": self.options,
-                "command": self.command,
+            config.update(
+                {
+                    "cpus": self.cpus,
+                    "openmp": self.openmp,
+                    "options": self.options,
+                    "command": self.command,
+                }
+            )
+        config.update(
+            {
+                "custom": self.custom,
+                "path": self.path,
+                "interval": self.interval,
             }
-        config |= {
-            "custom": self.custom,
-            "path": self.path,
-            "interval": self.interval,
-        }
-        return super().config | config
+        )
+        return {**super().config, **config}  # super().config | config in python3.9
 
     def spawn(self, params=None, wait=False):
         super().spawn_run(params, wait)  # fill data with params
@@ -173,7 +179,7 @@ class SlurmRunner(Runner, label="slurm"):
             ids.add(split(r"[_.]", self.runs[run_id])[0])
         for job_id in ids:
             subprocess.run(["scancel", job_id])
-        self.failed |= self.runs
+        self.failed.update(self.runs)
         self.runs = {}
 
     def clean(self):

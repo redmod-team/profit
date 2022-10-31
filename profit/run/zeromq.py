@@ -95,7 +95,7 @@ class ZeroMQRunnerInterface(RunnerInterface, label="zeromq"):
             "retries": self.retries,
             "retry_sleep": self.retry_sleep,
         }
-        return super().config | config
+        return {**super().config, **config}  # super().config | config in python3.9
 
     def poll(self):
         self.logger.debug("polling: checking for messages")
@@ -212,7 +212,7 @@ class ZeroMQWorkerInterface(WorkerInterface, label="zeromq"):
             "retries": self.retries,
             "retry_sleep": self.retry_sleep,
         }
-        return super().config | config
+        return {**super().config, **config}  # super().config | config in python3.9
 
     def retrieve(self):
         self.connect()

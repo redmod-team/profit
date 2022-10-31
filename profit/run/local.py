@@ -45,7 +45,7 @@ class LocalRunner(Runner, label="local"):
         config = {
             "command": self.command,
         }
-        return super().config | config
+        return {**super().config, **config}  # super().config | config in python3.9
 
     def spawn(self, params=None, wait=False):
         super().spawn(params, wait)
@@ -155,7 +155,10 @@ class MemmapRunnerInterface(RunnerInterface, label="memmap"):
 
     @property
     def config(self):
-        return super().config | {"path": self.path}
+        return {
+            **super().config,
+            "path": self.path,
+        }  # super().config | config in python3.9
 
     def resize(self, size):
         """Resizing the Interface
@@ -209,7 +212,10 @@ class MemmapWorkerInterface(WorkerInterface, label="memmap"):
 
     @property
     def config(self):
-        return super().config | {"path": self.path}
+        return {
+            **super().config,
+            "path": self.path,
+        }  # super().config | config in python3.9
 
     @property
     def time(self):
