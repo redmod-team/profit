@@ -9,6 +9,8 @@
 import subprocess
 from time import sleep, time
 import os
+import json
+import re
 
 from .runner import Runner
 
@@ -38,9 +40,6 @@ class SlurmRunner(Runner, label="slurm"):
         command="srun profit-worker",
         **kwargs,
     ):
-        super().__init__(self, interface=interface, **kwargs)
-        self.env["SBATCH_EXPORT"] = "ALL"
-
         self.cpus = cpus
         self.openmp = openmp
         self.custom = custom
@@ -49,6 +48,8 @@ class SlurmRunner(Runner, label="slurm"):
         if options is not None:
             self.options.update(options)
         self.command = command
+
+        super().__init__(interface=interface, **kwargs)
 
         with self.change_tmp_dir():
             if self.custom:
@@ -90,19 +91,19 @@ class SlurmRunner(Runner, label="slurm"):
             {
                 "custom": self.custom,
                 "path": self.path,
-                "interval": self.interval,
             }
         )
         return {**super().config, **config}  # super().config | config in python3.9
 
     def spawn(self, params=None, wait=False):
-        super().spawn_run(params, wait)  # fill data with params
+        super().spawn(params, wait)  # fill data with params
         self.logger.info(f"schedule run {self.next_run_id:03d} via Slurm")
         self.logger.debug(f"wait = {wait}, params = {params}")
         env = os.environ.copy()
         env["PROFIT_RUN_ID"] = str(self.next_run_id)
         env["PROFIT_WORKER"] = json.dumps(self.worker)
         env["PROFIT_INTERFACE"] = json.dumps(self.interface.config)
+        env["SBATCH_EXPORT"] = "ALL"
         submit = subprocess.run(
             ["sbatch", "--parsable", self.path],
             cwd=self.tmp_dir,
@@ -124,12 +125,13 @@ class SlurmRunner(Runner, label="slurm"):
             f"schedule array {self.next_run_id} - {self.next_run_id + len(params_array) - 1} via Slurm"
         )
         if progress:
-            progressbar = tqdm(params_array, desc="submitted")
+            progressbar = tqdm.tqdm(params_array, desc="submitted")
         self.fill(params_array, offset=self.next_run_id)
         env = os.environ.copy()
         env["PROFIT_RUN_ID"] = str(self.next_run_id)
         env["PROFIT_WORKER"] = json.dumps(self.worker)
         env["PROFIT_INTERFACE"] = json.dumps(self.interface.config)
+        env["SBATCH_EXPORT"] = "ALL"
         array_str = f"--array=0-{len(params_array) - 1}"
         if self.parallel > 0:
             array_str += f"%{self.parallel}"
@@ -147,8 +149,15 @@ class SlurmRunner(Runner, label="slurm"):
         self.next_run_id += len(params_array)
         if progress:
             progressbar.update(progressbar.total)
+            progressbar.close()
         if wait:
             self.wait_all(progress=progress)
+
+    def poll(self, run_id):
+        self.logger.warning(
+            "`poll(run_id)` is not supported, calling `poll_all` instead"
+        )
+        self.poll_all()
 
     def poll_all(self):
         acct = subprocess.run(
@@ -167,16 +176,27 @@ class SlurmRunner(Runner, label="slurm"):
                 if not (state.startswith("RUNNING") or state.startswith("PENDING")):
                     self.failed[run_id] = self.runs.pop(run_id)
 
+        # remove slurm-logs for completed runs which did not fail
+        if not self.debug:
+            with self.change_tmp_dir():
+                for path in os.listdir():
+                    match = re.fullmatch(r"slurm-([\d_]+)\.out", path)
+                    if match is not None:
+                        job_id = match.groups()[0]
+                        if (
+                            job_id not in self.runs.values()
+                            and job_id not in self.failed.values()
+                        ):
+                            os.remove(path)
+
     def cancel(self, run_id):
         subprocess.run(["scancel", self.runs[run_id]])
         self.failed = self.runs.pop(run_id)
 
     def cancel_all(self):
-        from re import split
-
         ids = set()
         for run_id in self.runs:
-            ids.add(split(r"[_.]", self.runs[run_id])[0])
+            ids.add(re.split(r"[_.]", self.runs[run_id])[0])
         for job_id in ids:
             subprocess.run(["scancel", job_id])
         self.failed.update(self.runs)
@@ -184,19 +204,13 @@ class SlurmRunner(Runner, label="slurm"):
 
     def clean(self):
         """remove generated scripts and any slurm-stdout-files which match ``slurm-*.out``"""
-        from re import match
-
         super().clean()
         if not self.custom and os.path.exists(self.path):
             os.remove(self.path)
-        for direntry in os.scandir(self.run_dir):
-            if (
-                direntry.is_file()
-                and match(r"slurm-(\d+)\.out", direntry.name) is not None
-            ):
-                job_id = match(r"slurm-(\d+)\.out", direntry.name).groups()[0]
-                if job_id not in self.failed.values():  # do not remove failed runs
-                    os.remove(os.path.join(self.run_dir, direntry.path))
+        with self.change_tmp_dir():
+            for path in os.listdir():
+                if re.fullmatch(r"slurm-([\d_]+)\.out", path):
+                    os.remove(path)
 
     def generate_script(self):
         text = f"""\

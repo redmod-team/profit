@@ -27,7 +27,7 @@ class ZeroMQRunnerInterface(RunnerInterface, label="zeromq"):
 
     Parameters:
         transport: ZeroMQ transport protocol
-        address: ip address of the Runner Interface
+        address: override ip address or hostname of the Runner Interface (default: localhost, automatic with Slurm)
         port: port of the Runner Interface
         connection: override for the ZeroMQ connection spec (Worker side)
         bind: override for the ZeroMQ bind spec (Runner side)
@@ -47,7 +47,7 @@ class ZeroMQRunnerInterface(RunnerInterface, label="zeromq"):
         output_config,
         *,
         transport="tcp",
-        address="localhost",
+        address=None,
         port=9000,
         connection=None,
         bind=None,
@@ -166,7 +166,7 @@ class ZeroMQWorkerInterface(WorkerInterface, label="zeromq"):
         run_id: int,
         *,
         transport="tcp",
-        address="localhost",
+        address=None,
         port=9000,
         connection=None,
         bind=None,
@@ -191,8 +191,10 @@ class ZeroMQWorkerInterface(WorkerInterface, label="zeromq"):
     @property
     def connection(self):
         if self._connection is None:
-            address = os.environ.get("PROFIT_RUNNER_ADDRESS") or "localhost"
-            return f"{self.transport}://{self.address}:{self.port}"
+            address = (
+                self.address or os.environ.get("PROFIT_RUNNER_ADDRESS") or "localhost"
+            )
+            return f"{self.transport}://{address}:{self.port}"
         else:
             return self._connection
 

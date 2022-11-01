@@ -27,3 +27,7 @@ Most of these environment variables are only set if required.
 * ``PROFIT_ARRAY_ID`` - modifier to the ``run_id``, needed for batch computation on clusters
 * ``PROFIT_WORKER`` - JSON configuration of the *Worker*
 * ``PROFIT_INTERFACE`` - JSON configuration of the *Interface*
+* ``PROFIT_RUNNER_ADDRESS`` - hostname/address of the *Runner*
+* ``SBATCH_EXPORT = ALL`` - Slurm: load the full environment as passed by the *SlurmRunner*
+* ``OMP_NUM_THREADS`` - OpenMP: number of threads (*SlurmRunner*)
+* ``OMP_PLACES = threads`` - OpenMP: position of threads (*SlurmRunner*)
