@@ -83,7 +83,7 @@ def runner(request, logger, runner_interface):
 
     logging.getLogger("Runner").parent = logger
     runner = Runner[label](
-        interface=runner_interface, worker={"class": "mock", "debug": False}, debug=True
+        interface=runner_interface, worker={"class": "mock", "debug": True}, debug=True
     )
     yield runner
     if not request.config.getoption("--no-clean"):
