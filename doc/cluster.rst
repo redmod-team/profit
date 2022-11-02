@@ -50,6 +50,5 @@ For more information and to submit the bugs you encountered visit the
 Available Options
 -----------------
 
-.. autoraw:: profit.run.slurm.SlurmRunner.handle_config
-
-.. autoraw:: profit.run.zeromq.ZeroMQRunnerInterface.handle_config
+* :py:class:`profit.run.slurm.SlurmRunner`
+* :py:class:`profit.run.zeromq.ZeroMQRunnerInterface`

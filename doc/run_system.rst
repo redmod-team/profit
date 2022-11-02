@@ -3,9 +3,9 @@
 The Run System
 ##############
 
-This documentation was taken directly from: R. Babin, "Generic system to 
-manage simulation runs and result collection for distributed parameter 
-studies", Bachelor's Thesis (Graz University of Technology, Graz, Austria, 
+This documentation was taken directly from: R. Babin, "Generic system to
+manage simulation runs and result collection for distributed parameter
+studies", Bachelor's Thesis (Graz University of Technology, Graz, Austria,
 2021). Parts of it were modified to reflect the changes to *proFit* since then.
 
 --------------
@@ -61,7 +61,7 @@ all simultaneously running *Workers*. This preliminary design is drawn
 in figure 1.
 
 .. figure:: pics/run_req.png
-   
+
    Figure 1: Preliminary design of the *proFit* run system.
 
 To support arbitrary simulations, the processes of preparing the input
@@ -77,7 +77,7 @@ divided into five generic components (see figure 2) which can
 come in different variations.
 
 .. figure:: pics/run_components.png
-   
+
    Figure 2: The components of the *proFit* run system.
 
 The central component is the *Runner* which interacts with the user and
@@ -87,7 +87,10 @@ manages the individual runs. Each simulation run is represented by a
 interacting parts which handle the *Worker* and *Runner* side
 respectively. To supply the input arguments to the simulation, the
 *Worker* uses a *Preprocessor* and to collect the output data a
-*Postprocessor* is used. The *Runner* and its corresponding part of the
+*Postprocessor* is used. Alternatively simulations which provide a python
+callable can be wrapped directly with a custom *Worker*. The data is then
+passed directly and no *Pre-* and *Postprocessor* is needed.
+The *Runner* and its corresponding part of the
 *Interface* are persistent while the other components exist for each run
 of the simulation separately.
 
@@ -105,7 +108,7 @@ ensures that everything is cleaned before it exits.
 
 Each variant of a component is marked with an identifier which allows
 the user to select the variant in the configuration using this
-identifier. Each component (except for the *Worker*) has its independent
+identifier. Each component has its independent
 section in the configuration. A user can add custom variants in the
 exact same way the default components are implemented by specifying the
 file with the custom components in the configuration. As this approach
@@ -117,16 +120,16 @@ Implementation
 
 Each component was implemented using classes in *Python* with each
 variant being a subclass of the respective abstract base class  [1]_.
-The *Worker* is an exception to this, as the default *Worker* is the
-base class and a custom implementation would subclass it and overwrite
-only specific methods. The two parts of the *Interface* are represented
+The two parts of the *Interface* are represented
 by two separate class hierarchies, which work in parallel using the same
 identifiers.
 
 To facilitate adding new variants and to allow the user to provide a
 custom variant of a component, a class-decorator was provided for each
 component which registers the new variant so that it can be called using
-its identifier. To select a specific variant of a component, it’s
+its identifier. Alternatively the label of the new variant can also be
+configured directly using an argument at the class definition.
+To select a specific variant of a component, it’s
 identifier has to be selected in the configuration as the respective
 component’s *class* (see for example listing 2). For the
 most commonly customized components *Preprocessor*, *Postprocessor* and
@@ -137,50 +140,49 @@ to provide the same functionality as the subclass with minimal effort
 
 The default components of *proFit* are implemented using the same decorators and
 one of the default components, the *JSON Postprocessor* is given in
-listing 1. The *post* method is the main method which is
-called to process the simualtion’s output while *handle\_config* is used
-to process the *post*-section of the config file. An example of this
-*post*-section where the *JSON Postprocessor* was selected is given in
-listing 2.
+listing 1. The *retrieve* method is the main method which is
+called to process the simualtion’s output. An example of the configuration
+of the *JSON Postprocessor* is given in listing 2.
 
 ::
 
     from profit.run import Postprocessor
-    
-    @Postprocessor.register('json')
-    class JSONPostprocessor(Postprocessor):
-        """ Postprocessor to read output from a JSON file
 
-        - variables are assumed to be stored with the correct key and able to be converted immediately
-        - not extensively tested
-        """
-        def post(self, data):
+        @Postprocessor.wrap("json", config=dict(path="stdout"))
+        def JSONPostprocessor(self, data):
+            """Postprocessor to read output from a JSON file
+
+            - variables are assumed to be stored with the correct key and able to be converted immediately
+            - not extensively tested
+            """
             import json
-            with open(self.config['path']) as f:
+
+            with open(self.path) as f:
                 output = json.load(f)
             for key, value in output.items():
-                data[key] = value
+                if key in data.dtype.names:
+                    data[key] = value
 
-     
 
 *Listing 1: Registering a Postprocessor with the identifier json, to read simulation output in the JSON file format. Part of the default components of proFit* [proFit]_.
 
 ::
 
     run:
-        post:
-            class: json
-            path: simulation_output.json
+        runner:
+            post:
+                class: json
+                path: simulation_output.json
     include: path/to/my_custom_json_postprocessor.py
 
 *Listing 2: The post-section of the YAML-configuration file to select the JSON Postprocessor defined in listing 1.*
 
-Usually a user shouldn’t have to create a custom *Worker*, but to reduce
+To reduce
 the overhead for a simulation or for testing purposes it might be
 beneficial to let the *Worker* call a *Python* function directly instead
 of starting a simulation via a system call. An example for a *Worker*
-subclass, which uses a simple function instead of a complicated
-simulation, is given in listing 3, using the *wrap*-decorator
+subclass, which uses a python function instead of an executable,
+is given in listing 3, using the *wrap*-decorator
 discussed earlier to reduce the necessary code overhead (see
 listing 4 for the corresponding configuration).
 
@@ -233,12 +235,17 @@ Local Runner
 ~~~~~~~~~~~~
 
 The *Runner* is the core of the run system and by default it executes
-the *Workers* locally. A new simulation run is therefore launched in a
-separate process, but this causes a significant overhead for very fast
-simulations as the newly started *Python* process needs to reload all
-packages. To circumvent this, the *Local Runner* now uses forking which
-allows the child process (a *Worker*) to inherit the loaded package with
-little overhead.
+the *Workers* locally. Each new simulation run is launched in a
+separate process.
+
+Fork Runner
+~~~~~~~~~~~
+
+For fast simulations (e.g. during testing) the *Local Runner* causes
+significant overhead as each *Worker* is started via a subprocess and
+has to reload all packages. To circumvent this, the *Fork Runner* now
+uses forking which allows the child process (a *Worker*) to inherit
+the loaded package with little overhead.
 
 Slurm Runner
 ~~~~~~~~~~~~
@@ -247,8 +254,8 @@ One of the core goals of this project was the utilization of the cluster
 scheduler *Slurm* instead of the local system. With the *Slurm Runner*
 each run of the simulation is scheduled as a job with groups of runs
 being scheduled as *job arrays*. The scheduler can be queried at
-specified intervals (preferably longer intervals to reduce the load on
-the scheduler) to detect failed or cancelled jobs. Parallelised
+specified intervals
+to detect failed or cancelled jobs. Parallelised
 simulations using *OpenMP* are supported, as well as passing arbitrary
 options through to the *Slurm* scheduler, like the job’s required
 memory. By default the *Slurm Runner* generates a *Slurm script*, but it
@@ -282,4 +289,4 @@ communication across the network.
    The homepage of *ZeroMQ* is found at https://zeromq.org
 
 .. [proFit]
-   C. Albert, M. Kendler, R. Babin, M. Hadwiger, R. Hofmeister, M. Khallaayoune, F. Kramp, K. Rath, & B. Rubino-Moyner, "proFit: Probabilistic Response Model Fitting with Interactive Tools", v0.5, 10.5281/zenodo.6624446 (2022)
+   C. Albert, M. Kendler, R. Babin, M. Hadwiger, R. Hofmeister, M. Khallaayoune, F. Kramp, K. Rath, & B. Rubino-Moyner, "proFit: Probabilistic Response Model Fitting with Interactive Tools", 10.5281/zenodo.6624446 (2022)

@@ -3,20 +3,20 @@
 Getting Started
 ===============
 
-This guide aims to give a rough overview over a full proFit workflow. Further examples of the configuration can be found in ``examples/`` and in ``tests/integration_tests/``. If you want to just use a few features have a look at ``examples/api/``, ``tests`` and the :ref:`autapi`.
-
-.. toctree::
-   :maxdepth:: 1
-   :caption: Example API Notebooks:
-
-   example-run
-   example-fit
+This guide aims to give a rough overview over a full proFit workflow. Further examples of the configuration can be found in ``examples/`` and in ``tests/integration_tests/``. If you want to just use a few features have a look at ``examples/api/``, ``tests`` and the API reference.
 
 .. figure:: pics/profit_workflow.png
    :width: 600
    :align: center
 
    The typical profit workflow
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Example API Notebooks:
+
+   example-run
+   example-fit
 
 
 The Configuration File

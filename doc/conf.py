@@ -21,6 +21,7 @@ sys.path.insert(0, os.path.abspath('..'))
 
 # -- Project information -----------------------------------------------------
 
+
 project = 'profit'
 copyright = '2022, The RedMod Team'
 author = 'The RedMod Team'

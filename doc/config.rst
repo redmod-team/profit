@@ -10,7 +10,7 @@ For more information on the single modules, see the corresponding section in :re
 The configuration file, ``profit.yaml`` (or a ``.py`` file containing python dictionaries of the parameters) contains
 all parameters for running the simulation, fitting and active learning.
 Examples and a full list of available options, as well as the default values, which are located in the file
-`profit/defaults.py`, are shown below. For the run system, the default values are documented in the individual classes, see :ref:`autoapi`.
+``profit/defaults.py``, are shown below. For the run system, the default values are documented in the individual classes, see the API reference.
 
 
 Structure

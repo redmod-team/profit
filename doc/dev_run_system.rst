@@ -14,7 +14,7 @@ Components & Sections
   * to retain compatiblity ``pre`` and ``post`` may also be specified a level higher.
   * the shorthand ``command: ./simulation`` will be expanded to ``runner: {class: command, command: ./simulation}``
 * the options in each section are mostly the same as the arguments for ``__init__``,
-some components have additional arguments which are set during the program flow (e.g. the ``run_id`` for the Worker)
+  some components have additional arguments which are set during the program flow (e.g. the ``run_id`` for the Worker)
 * if a Component takes sub-Components as arguments it should also support a config-dictionary, or a single string label
 
 Paths & Directories

@@ -10,7 +10,7 @@ different modules of proFit.
 
     variables
     run_system
-    dev_run
+    dev_run_system
     surrogates
     active_learning
     mcmc
