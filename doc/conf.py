@@ -22,7 +22,7 @@ sys.path.insert(0, os.path.abspath('..'))
 # -- Project information -----------------------------------------------------
 
 project = 'profit'
-copyright = '2021, The RedMod Team'
+copyright = '2022, The RedMod Team'
 author = 'The RedMod Team'
 
 # credit: https://pypi.org/project/setuptools-scm/
@@ -64,6 +64,7 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx.ext.githubpages',
     'sphinx.ext.napoleon',
+    'nbsphinx',
     'recommonmark',
 ]
 

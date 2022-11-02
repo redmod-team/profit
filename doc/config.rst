@@ -10,7 +10,7 @@ For more information on the single modules, see the corresponding section in :re
 The configuration file, ``profit.yaml`` (or a ``.py`` file containing python dictionaries of the parameters) contains
 all parameters for running the simulation, fitting and active learning.
 Examples and a full list of available options, as well as the default values, which are located in the file
-`profit/defaults.py`, are shown below.
+`profit/defaults.py`, are shown below. For the run system, the default values are documented in the individual classes, see :ref:`autoapi`.
 
 
 Structure
@@ -43,23 +43,6 @@ configurations can be registered (see also :ref:`extensions`).
 In the case custom components are implemented, but have no corresponding configuration, a ``DefaultConfig`` is
 used, which just returns the user parameters without modifications.
 
-E.g. after registering a custom postprocessor, a corresponding configuration can be registered:
-
-.. code-block:: python
-
-    from profit.config import PostConfig
-
-    @PostConfig.register('custom_post')  # Must have same label as postprocessor itself.
-    class CustomPostConfig(PostConfig):
-
-        def process_entries(self, base_config):
-            param1 = getattr(self, 'param1')
-            if param1 is None:
-                self.param1 = [1, 2, 3]  # Set custom default value
-            if not isinstance(some_parameter, list):
-                self.param1 = list(self.param1)
-
-
 Examples
 --------
 
@@ -71,7 +54,7 @@ Parameters that are mentioned in the following description but do not occur in t
   the command ``profit run``, with one input variable (``x``) drawn from a uniform random distribution on the interval [0, 1]
   (for further information on variables, see :ref:`variables`. For the run system, see :ref:`run_system`).
 - The input file containing the variable $x$ is found in the ``template`` directory.
-- The script writes the output in `json` format to `stdout`. After all runs are finished,
+- The script writes the output in ``json`` format to ``stdout``. After all runs are finished,
   the total input and output data is saved to ``input.txt`` and ``output.txt``, respectively.
 - Using the command ``profit fit``, the default ``GPySurrogate`` is used to fit the data with initial fit
   hyperparameters incurred from the data directly and the model is saved to the file
@@ -123,16 +106,17 @@ See :ref:`cluster` for more details.
         interface:
             class: zeromq
             port: 9100
-        pre:
-            class: template
-            path: ./template
-            param_files: [mono_energetic_transp_coef.inp, gorilla.inp]
-        post:
-            class: numpytxt
-            path: nustar_diffcoef_std.dat
-            names: "IGNORE D11 D11_std"
-        command: ./mono_energetic_transp_main.x
-        clean: False
+        worker:
+            class: command
+            command: ./mono_energetic_transp_main.x
+            pre:
+                class: template
+                path: ./template
+                param_files: [mono_energetic_transp_coef.inp, gorilla.inp]
+            post:
+                class: numpytxt
+                path: nustar_diffcoef_std.dat
+                names: "IGNORE D11 D11_std"
 
 
 Full list of options
@@ -161,51 +145,55 @@ Run config
     .. code-block:: yaml
 
         run:
-            runner: local  # Local runner with its default parameters (see below).
+            runner: fork  # Local runner with its default parameters (see below).
             interface: memmap  # Numpy memmap interface with its default parameters.
-            pre: template  # Read input data from a template.
-            post: json  # Simulation output is loaded from a json file.
-            command: ./simulation  # Path to the script that should be executed.
-            stdout: stdout  # File where stdout is written.
-            stderr: None  # File where stderr is written.
-            clean: True  # Delete all run directories and log after all runs have finished successfully.
-            time: True  # Whether to record the computation time. Currently this is not added in the output data.
-            debug: False  # Write detailed logging information.
-            log_path: log  # Path to logging file.
-            custom: False,  # Use custom worker.
-            worker: None  # Specify custom worker.
+            worker: command  # Command worker with its default parameters
+            debug: false  # override debug for Worker & Runner
+
+    All runners
+        .. code-block:: yaml
+
+            runner:
+                debug: false
+                parallel: 0  # maximum number of parallel Workers. 0 means no limit
+                sleep: 0.1  # sleep time in s between polling
+                logfile: runner.log
+
+
+        | :py:class:`profit.run.Runner`
+
+    Fork runner
+        .. code-block:: yaml
+
+            runner:
+                class: fork  # For fast local execution
+                parallel: all  # Number of CPUs used. 'all' infers the number of available CPUs
+
+        | :py:class:`profit.run.local.ForkRunner`
 
     Local runner
         .. code-block:: yaml
 
             runner:
                 class: local  # For local execution.
-                parallel: all  # Number of CPUs used.
-                sleep: 0  # Seconds to wait between runs.
-                fork: True  # Forks the worker, thereby having less overhead (especially with a custom python Worker).
+                parallel: all  # Number of CPUs used. 'all' infers the number of available CPUs
+                command: profit-worker  # override command to start the Worker
 
-        | :py:class:`profit.run.default.LocalRunner`
-        .. autoraw:: profit.run.default.LocalRunner
+        | :py:class:`profit.run.local.LocalRunner`
 
     Slurm runner
         .. code-block:: yaml
 
             runner:
                 class: slurm  # For clusters with SLURM interface.
-                parallel: None  # Number of runs that should be scheduled in parallel.
-                sleep: 0  # Seconds to wait after polling the scheduler.
-                poll: 60  # Seconds to wait between polling the scheduler.
                 path: slurm.bash  # Path to SLURM script which is generated.
                 custom: False  # Use a custom script instead.
-                prefix: srun  # Prefix used before the actual command.
-                OpenMP: False  # Insert OpenMP options in SLURM script.
-                cpus: 1  # Number of CPUs used.
+                openmp: False  # Insert OpenMP options in SLURM script.
+                cpus: 1  # Number of CPUs to allocate per Worker
                 options:  # SLURM options.
                     job-name: profit
 
         | :py:class:`profit.run.slurm.SlurmRunner`
-        .. autoraw:: profit.run.slurm.SlurmRunner
-
 
     Memmap interface
         .. code-block:: yaml
@@ -215,47 +203,60 @@ Run config
                 path: interface.npy  # Path to interface file.
 
 
-        | :py:class:`profit.run.default.MemmapRunnerInterface`
-        | :py:class:`profit.run.default.MemmapInterface`
-        .. autoraw:: profit.run.default.MemmapRunnerInterface
+        | :py:class:`profit.run.local.MemmapRunnerInterface`
+        | :py:class:`profit.run.local.MemmapWorkerInterface`
 
     ZeroMQ interface
         .. code-block:: yaml
 
             interface:
                 class: zeromq  # Using a lightweight message queue (with ZeroMQ).
-                transport: tcp  # Protocoll used.
-                port: 9000  # Port used.
-                address: None  # Runner interface address.
-                connect: None  # Address of runner interface. None: Get from environment variable or localhost.
-                timeout: 2500  # Milliseconds to wait before next polling.
-                retries: 3  # Nr. of retries to connect to runner interface, before worker is aborted.
-                retry-sleep: 1  # Seconds to sleep between retries.
+                transport: tcp  # ZeroMQ transport protocol
+                port: 9000  # port of the Runner Interface
+                timeout: 4  # connection timeout when waiting for an answer in seconds (Worker)
+                retries: 3  # number of tries to establish a connection (Worker)
+                retry_sleep: 1  # sleep time in seconds between each retry (Worker)
+                address: ~  # override ip address or hostname of the Runner Interface (default: localhost, automatic with Slurm)
+                connection: ~  # override for the ZeroMQ connection spec (Worker side)
+                bind: ~  # override for the ZeroMQ bind spec (Runner side)
 
         | :py:class:`profit.run.zeromq.ZeroMQRunnerInterface`
-        | :py:class:`profit.run.zeromq.ZeroMQInterface`
-        .. autoraw:: profit.run.zeromq.ZeroMQRunnerInterface
+        | :py:class:`profit.run.zeromq.ZeroMQWorkerInterface`
+
+    Command Worker
+        .. code-block:: yaml
+
+            worker:
+                class: command
+                command: ./simulation
+                pre: template  # Preprocessor
+                post: numpytxt  # Postprocessor
+                stdout: stdout  # path to log of the simulation's stdout.
+                stderr: ~  # path to log of the simulation's stderr. None means output as Worker stderr
+                debug: false
+                log_path: log
+
+        | :py:class:`profit.run.command.CommandWorker`
 
     Template preprocessor
         .. code-block:: yaml
 
-            pre:
-                class: template  # Variables are inserted into the template files.
-                path: template  # Path to template directory
-                param_files: None  # List of relevant files for variable replacement. None: Search all.
+                pre:
+                    class: template  # Variables are inserted into the template files.
+                    clean: true  # whether to clean the run directory after completion
+                    path: template  # Path to template directory
+                    param_files: None  # List of relevant files for variable replacement. None: Search all.
 
-        | :py:class:`profit.run.default.TemplatePreprocessor`
-        .. autoraw:: profit.run.default.TemplatePreprocessor
+        | :py:class:`profit.run.command.TemplatePreprocessor`
 
     JSON postprocessor
         .. code-block:: yaml
 
-            post:
-                class: json  # Reads output from a json formatted file.
-                path: stdout  # Path to simulation output
+                post:
+                    class: json  # Reads output from a json formatted file.
+                    path: stdout  # Path to simulation output
 
-        | :py:class:`profit.run.default.JSONPostprocessor`
-        .. autoraw:: profit.run.default.JSONPostprocessor
+        | :py:class:`profit.run.command.JSONPostprocessor`
 
     Numpytxt postprocessor
         .. code-block:: yaml
@@ -263,22 +264,20 @@ Run config
             post:
                 class: numpytxt  # Reads output from a tabular text file (e.g. csv, tsv) with numpy genfromtxt.
                 path: stdout  # Path to simulation output
-                names: all  # Collect only these variable names from output file.
+                names: ~  # Collect only these variable names from output file.
                 options:  # Options for numpy genfromtxt.
                     deletechars: ""
 
-        | :py:class:`profit.run.default.NumpytxtPostprocessor`
-        .. autoraw:: profit.run.default.NumpytxtPostprocessor
+        | :py:class:`profit.run.command.NumpytxtPostprocessor`
 
     HDF5 postprocessor
         .. code-block:: yaml
 
-            post:
-                class: hdf5  # Reads output from an hdf5 file.
-                path: output.hdf5  # Path to simulation output
+                post:
+                    class: hdf5  # Reads output from an hdf5 file.
+                    path: output.hdf5  # Path to simulation output
 
-        | :py:class:`profit.run.default.HDF5Postprocessor`
-        .. autoraw:: profit.run.default.HDF5Postprocessor
+        | :py:class:`profit.run.command.HDF5Postprocessor`
 
 Fit config
 ..........
@@ -439,32 +438,3 @@ UI config
             plot: False  # Directly show figure after executing `profit fit`. Only possible for <= 2D.
 
     | :py:class:`profit.ui.app`
-
-
-Environment variables
----------------------
-
-proFit uses environment variables internally to configure ``profit-worker``. Users don't have to deal with them.
-
-.. list-table:: Environment variables
-    :widths: 25 80 25
-    :header-rows: 1
-
-    * - VARIABLE
-      - Description
-      - Required/optional
-    * - ``PROFIT_CONFIG_PATH``
-      - path to the config file
-      - required
-    * - ``PROFIT_BASE_DIR``
-      - path to the base directory
-      - unused
-    * - ``PROFIT_RUN_ID``
-      - designated run id
-      - required
-    * - ``PROFIT_ARRAY_ID``
-      - modifier of the designated run id for arrays of runs
-      - optional
-    * - ``PROFIT_RUNNER_ADDRESS``
-      - address on which the runner can be reached
-      - optional

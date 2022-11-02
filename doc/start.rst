@@ -3,7 +3,14 @@
 Getting Started
 ===============
 
-This guide aims to give a rough overview over a full proFit workflow. Further examples of the configuration can be found in ``examples/`` and in ``tests/integration_tests/``.
+This guide aims to give a rough overview over a full proFit workflow. Further examples of the configuration can be found in ``examples/`` and in ``tests/integration_tests/``. If you want to just use a few features have a look at ``examples/api/``, ``tests`` and the :ref:`autapi`.
+
+.. toctree::
+   :maxdepth:: 1
+   :caption: Example API Notebooks:
+
+   example-run
+   example-fit
 
 .. figure:: pics/profit_workflow.png
    :width: 600
@@ -50,7 +57,7 @@ proFit currently distinguishes two types of simulations:
     | proFit can wrap this function using a custom ``Worker``
 
 
-For both of these, the first step is usually ensuring that they are installed properly and run within a dedicated working directory. Find out which environment variables need to be set and link all relevant files. This directory will become the template directory which proFit will (usually) copy for each run of the simulation. Furthermore the simulation will just inherit the environment proFit was started in. A typical directory structure could look like this:
+For executable simulations, the first step is usually ensuring that they are installed properly and run within a dedicated working directory. Find out which environment variables need to be set and link all relevant files. This directory will become the template directory which proFit will (usually) copy for each run of the simulation. Furthermore the simulation will just inherit the environment proFit was started in. A typical directory structure could look like this:
 
 .. code-block::
 
@@ -60,6 +67,7 @@ For both of these, the first step is usually ensuring that they are installed pr
        simulation.x  ->  /path/to/simulation/executable.x
        params.txt
 
+Function simulations can be run without any run directories.
 
 Variables
 ---------
@@ -75,7 +83,7 @@ The configuration file usually begins with ``ntrain:`` which set the desired num
       v: Uniform(0.55, 0.6)
       n: 10000
       f: Output
- 
+
 
 Pre- & Postprocessor
 --------------------
@@ -84,18 +92,20 @@ An executable simulation needs a ``Preprocessor`` and ``Postprocessor`` to prepa
 
 The recommended Preprocessor is the :py:class:`profit.run.default.TemplatePreprocessor` which will fill placeholders in the template directory with the corresponding values.
 
-For the output values proFit currently supports JSON, HDF5 and CSV/TSV via three different Postprocessors. All the configuration options are given in :ref:`config`. A possible configuration is given below:
+For the output values proFit currently supports JSON, HDF5 and CSV/TSV via three different Postprocessors. In addition it is easy to add a custom Postprocessor, see :ref:`extensions`. All the configuration options are given in :ref:`config`. A possible configuration is given below:
 
 .. code-block:: yaml
 
     run:
-      command: ./simulation
-      pre:
-        class: template
-        path: ./path/to/template_directory
-        param_files:
-          - params.txt
-      post: json
+      worker:
+        class: command
+        command: ./simulation
+        pre:
+          class: template
+          path: ./path/to/template_directory  # relative to the base directory
+          param_files:
+            - params.txt
+        post: json
 
 
 The contents of ``params.txt`` could look like this:
@@ -150,4 +160,3 @@ Everything should be ready to run now:
 
 
 There is a wide variety of configuration options to customize the run system, the surrogate fitting and the active learning algorithm. Please have a look at the documentation on the :ref:`config` and don't hestitate to contact the developers if you encounter any bugs.
-
