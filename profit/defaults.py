@@ -54,6 +54,7 @@ active_learning = {'algorithm': 'simple',
                    }
 
 al_algorithm_simple = {'class': 'simple',
+                       'searchtype': 'grid',
                        'acquisition_function': 'simple_exploration',
                        'save': True}
 al_algorithm_mcmc = {'class': 'mcmc',

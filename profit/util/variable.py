@@ -391,16 +391,21 @@ class InputVariable(Variable):
     def parse_entries(cls, entries):
         return {'constraints': entries}
 
-    def create_Xpred(self, size):
+    def create_Xpred(self, size, spacing=None):
+        """creates an array of suitably spaced X-values for prediction
+        
+        spacing (shape: size) can be used to override the default linear spacing"""
+        assert spacing is None or spacing.shape == size
         if not isinstance(size, tuple):
             size = (size, 1)
+        if spacing is None:
+            spacing = np.linspace(0, 1, size[0]).reshape(size)
         if 'log' in self.kind.lower():
-            return self.constraints[0] * np.exp((np.log(self.constraints[1]) - np.log(self.constraints[0]))
-                                                           * np.linspace(0, 1, size[0])).reshape(size)
+            return self.constraints[0] * np.exp((np.log(self.constraints[1]) - np.log(self.constraints[0])) * spacing)
         elif 'constant' in self.kind.lower():
-            return self.value[0]
+            return np.full(size, self.value[0])
         else:
-            return np.linspace(*self.constraints, size[0]).reshape(size)
+            return self.constraints[0] + (self.constraints[1] - self.constraints[0]) * spacing
 
 
 @Variable.register("independent")
@@ -431,14 +436,19 @@ class ActiveLearningVariable(InputVariable):
     def generate_values(self, halton_seq=None):
         return check_ndim(np.full(self.size, np.nan))
 
-    def create_Xpred(self, size):
+    def create_Xpred(self, size, spacing=None):
+        """creates an array of suitably spaced X-values for prediction
+        
+        spacing (shape: size) can be used to override the default linear spacing"""
+        assert spacing is None or spacing.shape == size
         if not isinstance(size, tuple):
             size = (size, 1)
+        if spacing is None:
+            spacing = np.linspace(0, 1, size[0]).reshape(size)
         if self.distr.lower() == 'log':
-            return self.constraints[0] * np.exp((np.log(self.constraints[1]) - np.log(self.constraints[0]))
-                                                           * np.linspace(0, 1, size[0])).reshape(size)
+            return self.constraints[0] * np.exp((np.log(self.constraints[1]) - np.log(self.constraints[0])) * spacing)
         else:
-            return np.linspace(*self.constraints, size[0]).reshape(size)
+            return self.constraints[0] + (self.constraints[1] - self.constraints[0]) * spacing
 
 
 @Variable.register("output")

@@ -3,6 +3,7 @@ import numpy as np
 from profit.al import ActiveLearning
 from profit.defaults import active_learning as base_defaults
 from profit.defaults import al_algorithm_simple as defaults
+from profit.util.halton import halton
 
 
 @ActiveLearning.register("simple")
@@ -22,7 +23,8 @@ class SimpleAL(ActiveLearning):
     def __init__(self, runner, variables, surrogate, ntrain, nwarmup=base_defaults['nwarmup'],
                  batch_size=base_defaults['batch_size'], acquisition_function=defaults['acquisition_function'],
                  convergence_criterion=base_defaults['convergence_criterion'], nsearch=base_defaults['nsearch'],
-                 make_plot=base_defaults['make_plot']):
+                 make_plot=base_defaults['make_plot'],
+                 searchtype=defaults['searchtype']):
         from profit.al.aquisition_functions import AcquisitionFunction
 
         super().__init__(runner, variables, ntrain, nwarmup, batch_size, convergence_criterion, nsearch, make_plot)
@@ -31,8 +33,15 @@ class SimpleAL(ActiveLearning):
         self.search_space = {var.name: np.linspace(*var.constraints, nsearch)
                              for var in variables.list if var.kind.lower() in 'activelearning'}
 
-        Xpred = [var.create_Xpred((nsearch, 1)) for var in variables.input_list]
-        self.Xpred = np.hstack([xi.flatten().reshape(-1, 1) for xi in np.meshgrid(*Xpred)])
+        if searchtype.lower() == "grid":
+            Xpred = [var.create_Xpred((nsearch, 1)) for var in variables.input_list]
+            self.Xpred = np.hstack([xi.flatten().reshape(-1, 1) for xi in np.meshgrid(*Xpred)])
+        elif searchtype.lower() == "halton":
+            self.Xpred = halton(nsearch, len(variables.input_list))
+            for v, var in enumerate(variables.input_list):
+                self.Xpred[:, v] = var.create_Xpred((nsearch,), self.Xpred[:, v])
+        else:
+            raise ValueError(f"unknown 'searchtype' configuration '{searchtype}'")
 
         if issubclass(acquisition_function.__class__, AcquisitionFunction):
             self.acquisition_function = acquisition_function
@@ -143,4 +152,4 @@ class SimpleAL(ActiveLearning):
         return cls(runner, variables, surrogate, ntrain=base_config['ntrain'], nwarmup=config['nwarmup'],
                    batch_size=config['batch_size'], acquisition_function=config['algorithm']['acquisition_function'],
                    convergence_criterion=config['convergence_criterion'], nsearch=config['nsearch'],
-                   make_plot=base_config['ui']['plot'])
+                   make_plot=base_config['ui']['plot'], searchtype=config['algorithm']['searchtype'])
