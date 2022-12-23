@@ -23,7 +23,7 @@ sys.path.insert(0, os.path.abspath('..'))
 
 
 project = 'profit'
-copyright = '2022, The RedMod Team'
+copyright = '2018-2022, The RedMod Team'
 author = 'The RedMod Team'
 
 # credit: https://pypi.org/project/setuptools-scm/

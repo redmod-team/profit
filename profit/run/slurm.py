@@ -51,7 +51,7 @@ class SlurmRunner(Runner, label="slurm"):
 
         super().__init__(interface=interface, **kwargs)
 
-        with self.change_tmp_dir():
+        with self.change_work_dir():
             if self.custom:
                 if not os.path.exists(self.path):
                     self.logger.error(
@@ -106,7 +106,7 @@ class SlurmRunner(Runner, label="slurm"):
         env["SBATCH_EXPORT"] = "ALL"
         submit = subprocess.run(
             ["sbatch", "--parsable", self.path],
-            cwd=self.tmp_dir,
+            cwd=self.work_dir,
             env=env,
             capture_output=True,
             text=True,
@@ -137,7 +137,7 @@ class SlurmRunner(Runner, label="slurm"):
             array_str += f"%{self.parallel}"
         submit = subprocess.run(
             ["sbatch", "--parsable", array_str, self.path],
-            cwd=self.tmp_dir,
+            cwd=self.work_dir,
             env=env,
             capture_output=True,
             text=True,
@@ -178,7 +178,7 @@ class SlurmRunner(Runner, label="slurm"):
 
         # remove slurm-logs for completed runs which did not fail
         if not self.debug:
-            with self.change_tmp_dir():
+            with self.change_work_dir():
                 for path in os.listdir():
                     match = re.fullmatch(r"slurm-([\d_]+)\.out", path)
                     if match is not None:
@@ -207,7 +207,7 @@ class SlurmRunner(Runner, label="slurm"):
         super().clean()
         if not self.custom and os.path.exists(self.path):
             os.remove(self.path)
-        with self.change_tmp_dir():
+        with self.change_work_dir():
             for path in os.listdir():
                 if re.fullmatch(r"slurm-([\d_]+)\.out", path):
                     os.remove(path)

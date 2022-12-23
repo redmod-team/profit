@@ -22,7 +22,7 @@ Paths & Directories
 
 The run system contains two major components: the *Runner* and many *Workers*. Additionally the *Interface* connects these two layers.
 *proFit* is started from some *base directory* (``base_dir``), which contains the configuration and simulation files. The generated data will be written to this directory.
-The *Runner* can be configured to use a different *temporary directory* (``tmp_dir``) which will contain temporary files (e.g. used by the *Interface*, logs and the individual run directories). Most temporary files are deleted upon successful completion, but the logs will remain. Using ``profit clean --all`` will delete the logs as well as the input and output data.
+The *Runner* can be configured to use a different *temporary directory* (``work_dir``) which will contain temporary files (e.g. used by the *Interface*, logs and the individual run directories). Most temporary files are deleted upon successful completion, but the logs will remain. Using ``profit clean --all`` will delete the logs as well as the input and output data.
 
 The *Command-Worker* will create *individual run directories* within the temporary directory for each spawned *Worker* by copying a template directory and replacing template expressions with parameter values. Unless ``clean: false`` is set for the *TemplatePreprocessor*, the individual run directories will be deleted after the run has completed successfully.
 

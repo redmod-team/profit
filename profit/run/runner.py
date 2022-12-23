@@ -24,14 +24,14 @@ class Runner(Component):
         *,
         interface: RunnerInterface = "memmap",
         worker: Mapping = "command",
-        tmp_dir=".",
+        work_dir=".",
         debug=False,
         parallel=0,
         sleep=0.1,
         logfile="runner.log",
         logger=None,
     ):
-        self.tmp_dir = tmp_dir
+        self.work_dir = work_dir
         self.debug = debug
         self.parallel = parallel
         assert parallel >= 0  # parallel: 0 means infinite
@@ -39,11 +39,11 @@ class Runner(Component):
         assert sleep >= 0
         self.logfile = logfile
 
-        if not os.path.exists(tmp_dir):
-            os.path.mkdir(tmp_dir)
+        if not os.path.exists(work_dir):
+            os.path.mkdir(work_dir)
 
         os.environ["PROFIT_BASE_DIR"] = os.path.abspath(os.getcwd())
-        with self.change_tmp_dir():
+        with self.change_work_dir():
             if logger is None:
                 self.logger = logging.getLogger("Runner")
                 self.logger.setLevel(logging.DEBUG)
@@ -140,7 +140,7 @@ class Runner(Component):
         if "command" in run_config and isinstance(run_config["command"], str):
             kwargs["worker"]["class"] = "command"
             kwargs["worker"]["command"] = run_config["command"]
-        kwargs["tmp_dir"] = base_config["run_dir"]
+        kwargs["work_dir"] = base_config["run_dir"]
         return cls[label](**kwargs)
 
     def __repr__(self):
@@ -151,7 +151,7 @@ class Runner(Component):
     @property
     def config(self):
         return {
-            "tmp_dir": self.tmp_dir,
+            "work_dir": self.work_dir,
             "debug": self.debug,
             "parallel": self.parallel,
             "sleep": self.sleep,
@@ -159,10 +159,10 @@ class Runner(Component):
         }
 
     @contextmanager
-    def change_tmp_dir(self):
+    def change_work_dir(self):
         origin = os.getcwd()
         try:
-            os.chdir(self.tmp_dir)
+            os.chdir(self.work_dir)
             yield
         finally:
             os.chdir(origin)
@@ -271,7 +271,7 @@ class Runner(Component):
         from shutil import rmtree
 
         self.logger.debug("cleaning")
-        with self.change_tmp_dir():
+        with self.change_work_dir():
             self.interface.clean()
             for path in os.listdir():
                 if re.fullmatch(r"run_\d+", path) or path == self.worker.get(

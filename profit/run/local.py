@@ -54,7 +54,7 @@ class LocalRunner(Runner, label="local"):
         env["PROFIT_WORKER"] = json.dumps(self.worker)
         env["PROFIT_INTERFACE"] = json.dumps(self.interface.config)
         self.runs[self.next_run_id] = subprocess.Popen(
-            self.command, shell=True, env=env, cwd=self.tmp_dir
+            self.command, shell=True, env=env, cwd=self.work_dir
         )
         if wait:
             self.wait(self.next_run_id)
@@ -85,7 +85,7 @@ class ForkRunner(Runner, label="fork"):
         super().spawn(params, wait)
 
         def work():
-            with self.change_tmp_dir():
+            with self.change_work_dir():
                 worker = Worker.from_config(
                     self.worker, self.interface.config, self.next_run_id
                 )
