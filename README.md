@@ -1,7 +1,10 @@
 [![DOI](https://zenodo.org/badge/168945305.svg)](https://zenodo.org/badge/latestdoi/168945305)
 [![PyPI](https://img.shields.io/pypi/v/profit)](https://pypi.org/project/profit/)
 [![Python Versions](https://img.shields.io/pypi/pyversions/profit)](https://pypi.org/project/profit/)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+
 [![Coverage Status](https://coveralls.io/repos/github/redmod-team/profit/badge.svg)](https://coveralls.io/github/redmod-team/profit)
+[![pre-commit.ci status](https://results.pre-commit.ci/badge/github/redmod-team/profit/master.svg)](https://results.pre-commit.ci/latest/github/redmod-team/profit/master)
 
 [![Documentation Status](https://readthedocs.org/projects/profit/badge/?version=latest)](https://profit.readthedocs.io/en/latest/?badge=latest)
 [![Install & Test Status](https://github.com/redmod-team/profit/actions/workflows/install-and-test.yml/badge.svg?)](https://github.com/redmod-team/profit/actions/workflows/install-and-test.yml)

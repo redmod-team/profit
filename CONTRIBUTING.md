@@ -52,6 +52,8 @@ Starting with the development for `v0.6`, proFit uses *pre-commit* to ensure con
 [black](https://github.com/psf/black) and clean jupyter notebooks.
 Pre-commit is configured with `.pre-commit-config.yaml` and needs to be activated with `pre-commit install`.
 To run the hooks on all files (e.g. after adding new hooks), use `pre-commit run --all-files`.
+The [pre-commit ci](https://pre-commit.ci/) is used to enforce the hooks for all pull requests.
+Currently pre-commit is configured to ignore everything in `draft`.
 
 ## Installing
 Install proFit from your git repository using the editable install: `pip install -e .[docs,dev]`.

@@ -33,3 +33,6 @@ filterwarnings = [
    "ignore::DeprecationWarning:scipy.*:",
    "ignore::DeprecationWarning:paramz.*:",
 ]
+
+[tool.black]
+extend-exclude = draft
