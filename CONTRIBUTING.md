@@ -5,12 +5,12 @@ Contributions to proFit are always welcome.
 * repository on [github](https://github.com/redmod-team/profit)
   * [issue tracker](https://github.com/redmod-team/profit/issues)
   * pull requests
-  * feature planning via *Projects*
+  * feature planning via *Projects* and *Discussions*
   * automation via *Actions*
   * managing releases
 * documentation on [readthedocs.io](https://profit.readthedocs.io/en/latest)
 * meeting log on [HedgeDoc](https://pad.gwdg.de/lOiz56TIS4e5E9-92q-2MQ?view)
-* archived on [zenodo.org](https://zenodo.org/record/6563463#.Yo9PjiNBxQo) with DOI `10.5281/zenodo.3580488`
+* archived on [zenodo.org](https://zenodo.org/record/3580488) with DOI [`10.5281/zenodo.3580488`](https://doi.org/10.5281/zenodo.3580488)
 * python package published on [PyPI](https://pypi.org/project/profit/)
 * test coverage on [coveralls.io](https://coveralls.io/github/redmod-team/profit)
 
@@ -52,6 +52,8 @@ Starting with the development for `v0.6`, proFit uses *pre-commit* to ensure con
 [black](https://github.com/psf/black) and clean jupyter notebooks.
 Pre-commit is configured with `.pre-commit-config.yaml` and needs to be activated with `pre-commit install`.
 To run the hooks on all files (e.g. after adding new hooks), use `pre-commit run --all-files`.
+The [pre-commit ci](https://pre-commit.ci/) is used to enforce the hooks for all pull requests.
+Currently pre-commit is configured to ignore everything in `draft`.
 
 ## Installing
 Install proFit from your git repository using the editable install: `pip install -e .[docs,dev]`.
@@ -79,7 +81,7 @@ The release candidate should be tagged as *pre-release* in GitHub. It will not b
 
 Releases are created with the GitHub interface and trigger workflows to automate the publishing and packaging. In particular:
 * A python package is created an uploaded to [PyPI](https://pypi.org/project/profit/)
-* The repository is archived and a new version added to [zenodo](https://zenodo.org/record/6563463#.Yo9PjiNBxQo)
+* The repository is archived and a new version added to [zenodo](https://zenodo.org/record/3580488)
 * A new version of the documentation is created on [readthedocs](https://profit.readthedocs.io)
 
 Before creating a version, check the metadata in `setup.cfg` (for the python package) and `.zenodo.json` (for zenodo).

@@ -8,8 +8,10 @@ variables:
     g: Output(r)
 
 run:
+    pre:
+        class: template
+        clean: false
     post:
         class: hdf5
         path: mockup.out
     command: python3 mockup.py
-    clean: false

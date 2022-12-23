@@ -60,16 +60,14 @@ class Surrogate(CustomABC):
         self.output_encoders = []
 
     def encode_training_data(self):
-        """Encodes the input and output training data.
-        """
+        """Encodes the input and output training data."""
         for enc in self.input_encoders:
             self.Xtrain = enc.encode(self.Xtrain)
         for enc in self.output_encoders:
             self.ytrain = enc.encode(self.ytrain)
 
     def decode_training_data(self):
-        """Applies the decoding function of the encoder in reverse order on the input and output training data.
-        """
+        """Applies the decoding function of the encoder in reverse order on the input and output training data."""
         for enc in self.input_encoders[::-1]:
             self.Xtrain = enc.decode(self.Xtrain)
         for enc in self.output_encoders[::-1]:
@@ -123,7 +121,7 @@ class Surrogate(CustomABC):
         self.output_encoders.append(encoder)
 
     @abstractmethod
-    def train(self, X, y, fixed_sigma_n=defaults['fixed_sigma_n']):
+    def train(self, X, y, fixed_sigma_n=defaults["fixed_sigma_n"]):
         r"""Trains the surrogate on input points X and model outputs y.
 
         Depending on the surrogate, the signature can vary.
@@ -147,13 +145,19 @@ class Surrogate(CustomABC):
         if X.ndim == 1:
             X = X.reshape(-1, 1)
         elif X.ndim != 2:
-            raise ValueError(f"X should have shape (n,) or (n, d) but has shape {X.shape}")
+            raise ValueError(
+                f"X should have shape (n,) or (n, d) but has shape {X.shape}"
+            )
         if y.ndim == 1:
             y = y.reshape(-1, 1)
         elif y.ndim != 2:
-            raise ValueError(f"y should have shape (n,) or (n, D) but has shape {y.shape}")
+            raise ValueError(
+                f"y should have shape (n,) or (n, D) but has shape {y.shape}"
+            )
         if X.shape[0] != y.shape[0]:
-            raise ValueError(f"mismatched number of data points for X and y: {X.shape[0]} != {y.shape[0]}")
+            raise ValueError(
+                f"mismatched number of data points for X and y: {X.shape[0]} != {y.shape[0]}"
+            )
         self.Xtrain, self.ytrain = X, y
 
         self.encode_training_data()
@@ -202,12 +206,18 @@ class Surrogate(CustomABC):
             Xpred = Xpred.reshape(-1, 1)
         elif Xpred.ndim != 2:
             if self.ndim == 1:
-                raise ValueError(f"Xpred should have shape (n,) or (n, 1) but has shape {Xpred.shape}")
-            raise ValueError(f"Xpred should have shape (n, {self.ndim}) but has shape {Xpred.shape}")
-        
+                raise ValueError(
+                    f"Xpred should have shape (n,) or (n, 1) but has shape {Xpred.shape}"
+                )
+            raise ValueError(
+                f"Xpred should have shape (n, {self.ndim}) but has shape {Xpred.shape}"
+            )
+
         Xpred = self.encode_predict_data(Xpred)
         if Xpred.shape[1] != self.ndim:
-            raise ValueError(f"Xpred should have shape (n, {self.ndim}) but has shape {Xpred.shape}")
+            raise ValueError(
+                f"Xpred should have shape (n, {self.ndim}) but has shape {Xpred.shape}"
+            )
         return Xpred
 
     @abstractmethod
@@ -233,7 +243,7 @@ class Surrogate(CustomABC):
         Returns:
             profit.sur.Surrogate: Instantiated surrogate model.
         """
-        label = defaults['surrogate']
+        label = defaults["surrogate"]
         for f in filter(lambda l: l in path, cls.labels):
             if len(f) > len(label):
                 label = f
@@ -250,23 +260,35 @@ class Surrogate(CustomABC):
         """
         from .encoders import Encoder
 
-        child = cls[config['surrogate']]
+        child = cls[config["surrogate"]]
 
-        if config.get('load'):
-            child_instance = child.load_model(config['load'])
+        if config.get("load"):
+            child_instance = child.load_model(config["load"])
         else:
             child_instance = child.from_config(config, base_config)
             # Set global attributes
-            child_instance.ndim = len(base_config['input'])
-            child_instance.output_ndim = len(base_config['output'])
-            child_instance.fixed_sigma_n = config['fixed_sigma_n']
-            for enc in config['_input_encoders']:
-                child_instance.add_input_encoder(Encoder[enc['class']](enc['columns'], enc['parameters']))
-            for enc in config['_output_encoders']:
-                child_instance.add_output_encoder(Encoder[enc['class']](enc['columns'], enc['parameters']))
+            child_instance.ndim = len(base_config["input"])
+            child_instance.output_ndim = len(base_config["output"])
+            child_instance.fixed_sigma_n = config["fixed_sigma_n"]
+            for enc in config["_input_encoders"]:
+                child_instance.add_input_encoder(
+                    Encoder[enc["class"]](enc["columns"], enc["parameters"])
+                )
+            for enc in config["_output_encoders"]:
+                child_instance.add_output_encoder(
+                    Encoder[enc["class"]](enc["columns"], enc["parameters"])
+                )
         return child_instance
 
-    def plot(self, Xpred=None, independent=None, show=False, ref=None, add_data_variance=True, axes=None):
+    def plot(
+        self,
+        Xpred=None,
+        independent=None,
+        show=False,
+        ref=None,
+        add_data_variance=True,
+        axes=None,
+    ):
         r"""Simple plotting for dimensions <= 2.
 
         Fore more sophisticated plots use the command 'profit ui'.
@@ -282,6 +304,7 @@ class Surrogate(CustomABC):
         """
 
         import matplotlib.pyplot as plt
+
         if Xpred is None:
             Xpred = self.default_Xpred()
         ypred, yvarpred = self.predict(Xpred, add_data_variance=add_data_variance)
@@ -289,37 +312,71 @@ class Surrogate(CustomABC):
         if independent:
             # 2D with one input parameter and one independent variable.
             if self.ndim == 1 and ypred.ndim == 2:
-                ax = axes or plt.axes(projection='3d')
-                xind = np.hstack([v['value'] for v in independent.values()])
+                ax = axes or plt.axes(projection="3d")
+                xind = np.hstack([v["value"] for v in independent.values()])
                 xtgrid = np.meshgrid(*[xind, self.Xtrain])
                 xgrid = np.meshgrid(*[xind, Xpred])
                 for i in range(self.Xtrain.shape[0]):
-                    ax.plot(xtgrid[0][i], xtgrid[1][i], self.ytrain[i], color='blue', linewidth=2)
-                ax.plot_surface(xgrid[0], xgrid[1], ypred, color='red', alpha=0.8)
-                ax.plot_surface(xgrid[0], xgrid[1], ypred + 2 * ystd_pred, color='grey', alpha=0.6)
-                ax.plot_surface(xgrid[0], xgrid[1], ypred - 2 * ystd_pred, color='grey', alpha=0.6)
+                    ax.plot(
+                        xtgrid[0][i],
+                        xtgrid[1][i],
+                        self.ytrain[i],
+                        color="blue",
+                        linewidth=2,
+                    )
+                ax.plot_surface(xgrid[0], xgrid[1], ypred, color="red", alpha=0.8)
+                ax.plot_surface(
+                    xgrid[0], xgrid[1], ypred + 2 * ystd_pred, color="grey", alpha=0.6
+                )
+                ax.plot_surface(
+                    xgrid[0], xgrid[1], ypred - 2 * ystd_pred, color="grey", alpha=0.6
+                )
             else:
-                raise NotImplementedError("Plotting is only implemented for dimensions <= 2. Use profit ui instead.")
+                raise NotImplementedError(
+                    "Plotting is only implemented for dimensions <= 2. Use profit ui instead."
+                )
         else:
             if self.ndim == 1 and ypred.shape[-1] == 1:
                 # Only one input parameter to plot.
                 ax = axes or plt.axes()
                 if ref:
-                    ax.plot(Xpred, ref(Xpred), color='red')
+                    ax.plot(Xpred, ref(Xpred), color="red")
                 ax.plot(Xpred, ypred)
-                ax.scatter(self.Xtrain, self.ytrain, marker='x', s=50, c='k')
-                ax.fill_between(Xpred.flatten(),
-                                ypred.flatten() + 2 * ystd_pred.flatten(), ypred.flatten() - 2 * ystd_pred.flatten(),
-                                color='grey', alpha=0.6)
+                ax.scatter(self.Xtrain, self.ytrain, marker="x", s=50, c="k")
+                ax.fill_between(
+                    Xpred.flatten(),
+                    ypred.flatten() + 2 * ystd_pred.flatten(),
+                    ypred.flatten() - 2 * ystd_pred.flatten(),
+                    color="grey",
+                    alpha=0.6,
+                )
             elif self.ndim == 2 and ypred.shape[-1] == 1:
                 # Two fitted input variables.
-                ax = axes or plt.axes(projection='3d')
+                ax = axes or plt.axes(projection="3d")
                 ypred = ypred.flatten()
                 ystd_pred = ystd_pred.flatten()
-                ax.scatter(self.Xtrain[:, 0], self.Xtrain[:, 1], self.ytrain, color='red', alpha=0.8)
-                ax.plot_trisurf(Xpred[:, 0], Xpred[:, 1], ypred, color='red', alpha=0.8)
-                ax.plot_trisurf(Xpred[:, 0], Xpred[:, 1], ypred + 2 * ystd_pred, color='grey', alpha=0.6)
-                ax.plot_trisurf(Xpred[:, 0], Xpred[:, 1], ypred - 2 * ystd_pred, color='grey', alpha=0.6)
+                ax.scatter(
+                    self.Xtrain[:, 0],
+                    self.Xtrain[:, 1],
+                    self.ytrain,
+                    color="red",
+                    alpha=0.8,
+                )
+                ax.plot_trisurf(Xpred[:, 0], Xpred[:, 1], ypred, color="red", alpha=0.8)
+                ax.plot_trisurf(
+                    Xpred[:, 0],
+                    Xpred[:, 1],
+                    ypred + 2 * ystd_pred,
+                    color="grey",
+                    alpha=0.6,
+                )
+                ax.plot_trisurf(
+                    Xpred[:, 0],
+                    Xpred[:, 1],
+                    ypred - 2 * ystd_pred,
+                    color="grey",
+                    alpha=0.6,
+                )
             elif self.ndim == 1 and self.output_ndim == 2:
                 # One input variable and two outputs
                 ax = axes or plt.axes()
@@ -328,9 +385,13 @@ class Surrogate(CustomABC):
                     ystd_p = ystd_pred[:, d]
                     ax.scatter(self.Xtrain, self.ytrain[:, d], alpha=0.8)
                     ax.plot(Xpred, yp)
-                    ax.fill_between(Xpred.flatten(), yp + 2 * ystd_p, yp - 2 * ystd_p, alpha=0.6)
+                    ax.fill_between(
+                        Xpred.flatten(), yp + 2 * ystd_p, yp - 2 * ystd_p, alpha=0.6
+                    )
             else:
-                raise NotImplementedError("Plotting is only implemented for dimension <= 2. Use profit ui instead.")
+                raise NotImplementedError(
+                    "Plotting is only implemented for dimension <= 2. Use profit ui instead."
+                )
 
         if show:
             plt.show()
@@ -348,7 +409,12 @@ class Surrogate(CustomABC):
             minval = self.Xtrain.min(axis=0)
             maxval = self.Xtrain.max(axis=0)
             npoints = [50] * len(minval)
-            xpred = [np.linspace(minv, maxv, n) for minv, maxv, n in zip(minval, maxval, npoints)]
-            return np.hstack([xi.flatten().reshape(-1, 1) for xi in np.meshgrid(*xpred)])
+            xpred = [
+                np.linspace(minv, maxv, n)
+                for minv, maxv, n in zip(minval, maxval, npoints)
+            ]
+            return np.hstack(
+                [xi.flatten().reshape(-1, 1) for xi in np.meshgrid(*xpred)]
+            )
         else:
             raise RuntimeError("Require x for prediction in > 3 dimensions!")

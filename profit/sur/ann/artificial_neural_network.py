@@ -31,38 +31,39 @@ class ANN(Surrogate, ABC):
         pass
 
 
-@Surrogate.register('ANN')
+@Surrogate.register("ANN")
 class ANNSurrogate(Surrogate):
     from tensorflow.keras.models import Sequential
     from tensorflow.keras.layers import Dense
+
     """ TODO: Port to PyTorch """
+
     def __init__(self):
         super().__init__()
 
     def train(self, x, y):
         """Fits a artificial neural network to input points x and
-           model outputs y with scale sigma_f and noise sigma_n"""
+        model outputs y with scale sigma_f and noise sigma_n"""
 
         self.model = Sequential()
-        self.model.add(Dense(64, input_dim=1, activation='relu'))
-        self.model.add(Dense(64, activation='relu'))
-        self.model.add(Dense(1, activation='linear'))
+        self.model.add(Dense(64, input_dim=1, activation="relu"))
+        self.model.add(Dense(64, activation="relu"))
+        self.model.add(Dense(1, activation="linear"))
 
-        self.model.compile(optimizer='adam', loss='mse', metrics=['mse'])
+        self.model.compile(optimizer="adam", loss="mse", metrics=["mse"])
         self.model.fit(x, y, epochs=128, batch_size=16)
         self.trained = True
 
-
     def add_training_data(self, x, y, sigma=None):
         """Adds input points x and model outputs y with std. deviation sigma
-           and updates the inverted covariance matrix for the GP via the
-           Sherman-Morrison-Woodbury formula"""
+        and updates the inverted covariance matrix for the GP via the
+        Sherman-Morrison-Woodbury formula"""
 
         raise NotImplementedError()
 
     def predict(self, x):
         if not self.trained:
-            raise RuntimeError('Need to train() before predict()')
+            raise RuntimeError("Need to train() before predict()")
 
         fpred = []
         fpred.append(self.model.predict(x))
@@ -78,12 +79,13 @@ import torch.optim as optim
 
 class Autoencoder(Surrogate, nn.Module):
     """Nonlinear autoencoder with activation functions"""
+
     def __init__(self, D, d):
         super().__init__()
-        self.enc1 = nn.Linear(in_features=D, out_features=D//2)
-        self.enc2 = nn.Linear(in_features=D//2, out_features=d)
-        self.dec1 = nn.Linear(in_features=d, out_features=D//2)
-        self.dec2 = nn.Linear(in_features=D//2, out_features=D)
+        self.enc1 = nn.Linear(in_features=D, out_features=D // 2)
+        self.enc2 = nn.Linear(in_features=D // 2, out_features=d)
+        self.dec1 = nn.Linear(in_features=d, out_features=D // 2)
+        self.dec2 = nn.Linear(in_features=D // 2, out_features=D)
 
     def forward(self, x):
         x = F.tanh(self.enc1(x))

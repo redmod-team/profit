@@ -6,9 +6,6 @@ variables:
     f: Output
 
 run:
-    pre:
-        class: template
-        path: ../template_1D
     worker: mockup_worker2
 
 files:

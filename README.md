@@ -1,38 +1,40 @@
 [![DOI](https://zenodo.org/badge/168945305.svg)](https://zenodo.org/badge/latestdoi/168945305)
 [![PyPI](https://img.shields.io/pypi/v/profit)](https://pypi.org/project/profit/)
 [![Python Versions](https://img.shields.io/pypi/pyversions/profit)](https://pypi.org/project/profit/)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Coverage Status](https://coveralls.io/repos/github/redmod-team/profit/badge.svg)](https://coveralls.io/github/redmod-team/profit)
 
 [![Documentation Status](https://readthedocs.org/projects/profit/badge/?version=latest)](https://profit.readthedocs.io/en/latest/?badge=latest)
 [![Install & Test Status](https://github.com/redmod-team/profit/actions/workflows/install-and-test.yml/badge.svg?)](https://github.com/redmod-team/profit/actions/workflows/install-and-test.yml)
+[![pre-commit.ci status](https://results.pre-commit.ci/badge/github/redmod-team/profit/master.svg)](https://results.pre-commit.ci/latest/github/redmod-team/profit/master)
 [![Publish to PyPI Status](https://github.com/redmod-team/profit/actions/workflows/publish-to-pypi.yml/badge.svg)](https://github.com/redmod-team/profit/actions/workflows/publish-to-pypi.yml)
 
 <img src="https://raw.githubusercontent.com/redmod-team/profit/master/logo.png" width="208.5px">
 
 # Probabilistic Response Model Fitting with Interactive Tools
 
-This is a collection of tools for studying parametric dependencies of 
-black-box simulation codes or experiments and construction of reduced 
-order response models over input parameter space. 
+This is a collection of tools for studying parametric dependencies of
+black-box simulation codes or experiments and construction of reduced
+order response models over input parameter space.
 
-proFit can be fed with a number of data points consisting of different 
-input parameter combinations and the resulting output of the simulation under 
-investigation. It then fits a response-surface through the point cloud 
+proFit can be fed with a number of data points consisting of different
+input parameter combinations and the resulting output of the simulation under
+investigation. It then fits a response-surface through the point cloud
 using Gaussian process regression (GPR) models.
-This probabilistic response model allows to predict ("interpolate") the output 
-at yet unexplored parameter combinations including uncertainty estimates. 
-It can also tell you where to put more training points to gain maximum new 
+This probabilistic response model allows to predict ("interpolate") the output
+at yet unexplored parameter combinations including uncertainty estimates.
+It can also tell you where to put more training points to gain maximum new
 information (experimental design) and automatically generate and start
-new simulation runs locally or on a cluster. Results can be explored and checked 
+new simulation runs locally or on a cluster. Results can be explored and checked
 visually in a web frontend.
 
 Telling proFit how to interact with your existing simulations is easy
-and requires no changes in your existing code. Current functionality covers 
-starting simulations locally or on a cluster via [Slurm](https://slurm.schedmd.com), subsequent 
-surrogate modelling using [GPy](https://github.com/SheffieldML/GPy), 
-[scikit-learn](https://github.com/scikit-learn/scikit-learn), 
+and requires no changes in your existing code. Current functionality covers
+starting simulations locally or on a cluster via [Slurm](https://slurm.schedmd.com), subsequent
+surrogate modelling using [GPy](https://github.com/SheffieldML/GPy),
+[scikit-learn](https://github.com/scikit-learn/scikit-learn),
 as well as an active learning algorithm to iteratively sample at interesting
-points and a Markov-Chain-Monte-Carlo (MCMC) algorithm. The web frontend to interactively explore the point cloud 
+points and a Markov-Chain-Monte-Carlo (MCMC) algorithm. The web frontend to interactively explore the point cloud
 and surrogate is based on [plotly/dash](https://github.com/plotly/dash).
 
 ## Features
@@ -48,7 +50,7 @@ and surrogate is based on [plotly/dash](https://github.com/plotly/dash).
 
 ## Installation
 
-Currently, the code is under heavy development, so it should be cloned 
+Currently, the code is under heavy development, so it should be cloned
 from GitHub via Git and pulled regularly.
 
 ### Requirements
@@ -76,7 +78,7 @@ All dependencies are configured in `setup.cfg` and should be installed automatic
 Automatic tests use `pytest`.
 
 ### Windows 10
-To install proFit under Windows 10 we recommend using *Windows Subsystem 
+To install proFit under Windows 10 we recommend using *Windows Subsystem
 for Linux (WSL2)* with the Ubuntu 20.04 LTS distribution ([install guide](https://docs.microsoft.com/en-us/windows/wsl/install-win10)).
 
 After the installation of WSL2 execute the following steps in your Linux terminal (when asked press `y` to continue):
@@ -125,14 +127,19 @@ Certain surrogates require a compiled Fortran backend. To enable compilation of 
 ```bash
 python3 -m pip install -e . --user
 ```
-3. If pip warns you about PATH or proFit is not found close and reopen the terminal 
+3. If pip warns you about PATH or proFit is not found close and reopen the terminal
    and type `profit --help` to check if the installation was successful.
 
 
 ### Documentation using *Sphinx*
 Install requirements for building the documentation using `sphinx`
 
-    pip install .[docs] 
+    pip install .[docs]
+
+Additionally `pandoc` is required on a system level:
+
+    sudo apt install pandoc
+
 
 ## HowTo
 
@@ -158,18 +165,18 @@ Also, the integration tests under `tests/integration_tests/` may be informative 
 ### Steps
 
 1. Create and enter a directory (e.g. `study`) containing `profit.yaml` for your run.
-    If your code is based on text configuration files for each run, copy the according directory to `template` and 
+    If your code is based on text configuration files for each run, copy the according directory to `template` and
     replace values of parameters to be varied within UQ/surrogate models by placeholders `{param}`.
-  
-2. Running the simulations: 
+
+2. Running the simulations:
    ```bash
    profit run
    ```
-   to start simulations at all the points. Per default the generated input variables are written to `input.txt` and the 
+   to start simulations at all the points. Per default the generated input variables are written to `input.txt` and the
    output data is collected in `output.txt`.
-   
+
    For each run of the simulation, proFit creates a run directory, fills the templates with the generated input data and
-   collects the results. Each step can be customized with the 
+   collects the results. Each step can be customized with the
    [configuration file](https://profit.readthedocs.io/en/latest/config.html).
 
 3. To fit the model:
@@ -177,8 +184,8 @@ Also, the integration tests under `tests/integration_tests/` may be informative 
    profit fit
    ```
    Customization can be done with `profit.yaml` again.
-   
-4. Explore data graphically: 
+
+4. Explore data graphically:
    ```bash
    profit ui
    ```
@@ -194,7 +201,7 @@ proFit supports scheduling the runs on a cluster using *slurm*. This is done ent
 the usage doesn't change.
 
 `profit ui` starts a *dash* server and it is possible to remotely connect to it (e.g. via *ssh port forwarding*)
-  
+
 ## User-supplied files
 
 * a [configuration file](https://profit.readthedocs.io/en/latest/config.html): (default: `profit.yaml`)
@@ -202,7 +209,7 @@ the usage doesn't change.
   * Set paths and filenames
   * Configure the run backend (how to interact with the simulation)
   * Configure the fit / surrogate model
-  
+
 * the `template` directory
   * containing everything a simulation run needs (scripts, links to executables, input files, etc)
   * input files use a template format where `{variable_name}` is substituted with the generated values

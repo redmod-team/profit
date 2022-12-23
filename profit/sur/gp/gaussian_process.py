@@ -71,8 +71,14 @@ class GaussianProcess(Surrogate):
         self.kernel = None
         self.hyperparameters = {}
 
-    def pre_train(self, X, y, kernel=defaults['kernel'], hyperparameters=defaults['hyperparameters'],
-                  fixed_sigma_n=base_defaults['fixed_sigma_n']):
+    def pre_train(
+        self,
+        X,
+        y,
+        kernel=defaults["kernel"],
+        hyperparameters=defaults["hyperparameters"],
+        fixed_sigma_n=base_defaults["fixed_sigma_n"],
+    ):
         """Check the training data, initialize the hyperparameters and set the kernel either from the given parameter,
         from config or from the default values.
 
@@ -91,7 +97,9 @@ class GaussianProcess(Surrogate):
         super().pre_train(X, y)
 
         # Set attributes either from config, the given parameters or from defaults
-        self.set_attributes(fixed_sigma_n=fixed_sigma_n, kernel=kernel, hyperparameters=hyperparameters)
+        self.set_attributes(
+            fixed_sigma_n=fixed_sigma_n, kernel=kernel, hyperparameters=hyperparameters
+        )
 
         # Set hyperparameter inferred values
         inferred_hyperparameters = self.infer_hyperparameters()
@@ -115,19 +123,28 @@ class GaussianProcess(Surrogate):
 
     def infer_hyperparameters(self):
         # Infer hyperparameters from data
-        dist = np.linalg.norm(self.Xtrain[:, None, :] - self.Xtrain[None, :, :], axis=-1)
+        dist = np.linalg.norm(
+            self.Xtrain[:, None, :] - self.Xtrain[None, :, :], axis=-1
+        )
         std = np.std(self.ytrain, axis=0)
         spread = np.abs(self.ytrain.max(axis=0) - self.ytrain.min(axis=0))
-        if not hasattr(self, 'ARD'):
+        if not hasattr(self, "ARD"):
             dist, std, spread = np.mean(dist), np.mean(std), np.mean(spread)
         length_scale = np.array([0.5 * dist])
         sigma_f = np.array([std])
         sigma_n = 1e-2 * np.array([spread])
-        return {'length_scale': length_scale, 'sigma_f': sigma_f, 'sigma_n': sigma_n}
+        return {"length_scale": length_scale, "sigma_f": sigma_f, "sigma_n": sigma_n}
 
     @abstractmethod
-    def train(self, X, y, kernel=defaults['kernel'], hyperparameters=defaults['hyperparameters'],
-              fixed_sigma_n=base_defaults['fixed_sigma_n'], return_hess_inv=False):
+    def train(
+        self,
+        X,
+        y,
+        kernel=defaults["kernel"],
+        hyperparameters=defaults["hyperparameters"],
+        fixed_sigma_n=base_defaults["fixed_sigma_n"],
+        return_hess_inv=False,
+    ):
         """Trains the model on the dataset.
 
         After initializing the model with a kernel function and initial hyperparameters,
@@ -186,8 +203,8 @@ class GaussianProcess(Surrogate):
         """
 
         self = cls()
-        self.kernel = config['kernel']
-        self.hyperparameters = config['hyperparameters']
+        self.kernel = config["kernel"]
+        self.hyperparameters = config["hyperparameters"]
         return self
 
     def select_kernel(self, kernel):
@@ -206,10 +223,10 @@ class GaussianProcess(Surrogate):
         """Decodes the hyperparameters, as encoded ones are used in the surrogate model."""
         for key, value in self.hyperparameters.items():
             new_value = value
-            if key == 'length_scale':
+            if key == "length_scale":
                 for enc in self.input_encoders[::-1]:
                     new_value = enc.decode_hyperparameters(new_value)
-            if key in ('sigma_f', 'sigma_n'):
+            if key in ("sigma_f", "sigma_n"):
                 for enc in self.output_encoders[::-1]:
                     new_value = enc.decode_hyperparameters(new_value)
             new_value = self.special_hyperparameter_decoding(key, new_value)
@@ -225,7 +242,7 @@ class GaussianProcess(Surrogate):
             prefix (str): Usually 'Initialized', 'Loaded' or 'Optimized' to identify the state of the hyperparameters.
         """
 
-        #hyperparameter_str = ["{} hyperparameters:".format(prefix)]
-        #hyperparameter_str += ["{k}: {v}".format(k=key, v=value) for key, value in self.hyperparameters.items()]
-        #print('\n'.join(hyperparameter_str))
+        # hyperparameter_str = ["{} hyperparameters:".format(prefix)]
+        # hyperparameter_str += ["{k}: {v}".format(k=key, v=value) for key, value in self.hyperparameters.items()]
+        # print('\n'.join(hyperparameter_str))
         pass  # TODO: Include in DEBUG logging.

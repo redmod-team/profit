@@ -16,3 +16,23 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools_scm]
 # infers current version from git tag + commit
 # includes all file tracked by git in the source distribution
+
+[tool.pytest.ini_options]
+addopts = "--verbose --cov=profit"
+log_cli = true
+log_cli_level = "WARNING"
+log_cli_format = "%(asctime)s %(levelname)8s %(name)s: %(message)s"
+log_format = "%(asctime)s %(levelname)8s %(name)s: %(message)s"
+testpaths = [
+   "tests/unit_tests",
+   "tests/integration_tests",
+]
+filterwarnings = [
+   "ignore::DeprecationWarning:pyparsing.*:",
+   "ignore::DeprecationWarning:matplotlib.*:",
+   "ignore::DeprecationWarning:scipy.*:",
+   "ignore::DeprecationWarning:paramz.*:",
+]
+
+[tool.black]
+extend-exclude = "draft"

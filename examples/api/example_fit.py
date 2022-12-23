@@ -5,7 +5,8 @@ from profit.sur.gp.gpy_surrogate import GPySurrogate
 
 
 # Original model
-def f(u): return u + cos(10*u)
+def f(u):
+    return u + cos(10 * u)
 
 
 # Training response surface model
@@ -13,13 +14,13 @@ def f(u): return u + cos(10*u)
 xtrain = quasirand(npoint=10, ndim=1)
 ytrain = f(xtrain)  # original response
 fresp = GPySurrogate()
-fresp.train(xtrain, ytrain, kernel='Matern52')  # fit profit model
+fresp.train(xtrain, ytrain, kernel="Matern52")  # fit profit model
 
 # Evaluating response surface model
-xtest  = linspace(0, 1, 100).reshape(-1, 1)  # points where to test
+xtest = linspace(0, 1, 100).reshape(-1, 1)  # points where to test
 y, yvar = fresp.predict(xtest)  # prediction and variance
 
 # Plot reference and response model fit
-plot(xtest, f(xtest), color='k')
+plot(xtest, f(xtest), color="k")
 fresp.plot(xtest)
 show()

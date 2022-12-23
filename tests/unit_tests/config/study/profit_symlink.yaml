@@ -11,8 +11,8 @@ run:
     pre:
         class: template
         param_files: [mockup.in, symlink_link.txt]
+        clean: false
     post:
         class: numpytxt
         path: mockup.out
     command: python3 mockup.py
-    clean: false

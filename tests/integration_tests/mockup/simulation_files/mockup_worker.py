@@ -11,4 +11,3 @@ def rosenbrock(x, y, a, b):
 @Worker.wrap("mockup")
 def mockup(r, u, v, a, b) -> "f":
     return rosenbrock((r - 0.5) + u - 5, 1 + 3 * (v - 0.6), a, b)
-

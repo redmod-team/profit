@@ -2,8 +2,10 @@ import numpy as np
 from profit.sur.gp.backend.gp_functions import solve_cholesky
 from profit.sur.gp.backend.python_kernels import RBF
 
+
 def f(x):
     return np.sin(x)
+
 
 nx = 100
 train_every = 10
@@ -14,6 +16,7 @@ ytrain = f(xtrain)
 nxtrain = len(xtrain)
 
 a = np.array([1.0, 1.0])
+
 
 def test_gp_1D():
 

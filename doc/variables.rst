@@ -10,14 +10,14 @@ Variables
     * `Uniform` distribution
     * `LogUniform`: uniformly distributed in log-space
     * `Normal` distribution
-    
+
     Fixed values:
-    
+
     * `Linear`: linearly spaced values
     * `Constant` (excluded from the fit)
-    
+
     Special:
-    
+
     * `ActiveLearning`: succesively inserted according to a specified optimization strategy
 * `Independent` variables
     The user can bind an independent variable to an output variable, if the simulation outputs a (known) vector over linear supporting points. This

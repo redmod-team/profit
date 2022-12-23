@@ -7,6 +7,8 @@ variables:
 
 include: ../template/mockup_mcmc.py
 run:
+    runner: fork
+    interface: memmap
     worker: mockup_mcmc
 
 files:

@@ -1,9 +1,9 @@
 # same as profit.yaml but using the SlurmRunner
 ntrain: 30
+include: ../mockup.py
 variables:
     u: Uniform(4.7, 5.3)
     v: Uniform(0.55, 0.6)
-    r: Independent
     f: Output
 run:
     runner:
@@ -16,5 +16,4 @@ run:
     interface:
         class: zeromq
         port: 9100
-    include: ../mockup.py
     worker: mockup

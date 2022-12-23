@@ -4,7 +4,7 @@ from profit.sur.gp import GaussianProcess
 from profit.defaults import fit_gaussian_process as defaults, fit as base_defaults
 
 
-@Surrogate.register('Sklearn')
+@Surrogate.register("Sklearn")
 class SklearnGPSurrogate(GaussianProcess):
     """Surrogate for https://github.com/scikit-learn/scikit-learn Gaussian process.
 
@@ -16,12 +16,21 @@ class SklearnGPSurrogate(GaussianProcess):
         super().__init__()
         self.model = None
 
-    def train(self, X, y, kernel=defaults['kernel'], hyperparameters=defaults['hyperparameters'],
-              fixed_sigma_n=base_defaults['fixed_sigma_n'], **kwargs):
+    def train(
+        self,
+        X,
+        y,
+        kernel=defaults["kernel"],
+        hyperparameters=defaults["hyperparameters"],
+        fixed_sigma_n=base_defaults["fixed_sigma_n"],
+        **kwargs
+    ):
         from sklearn.gaussian_process import GaussianProcessRegressor
 
         self.pre_train(X, y, kernel, hyperparameters, fixed_sigma_n)
-        numeric_noise = self.hyperparameters['sigma_n'].item() ** 2 if self.fixed_sigma_n else 1e-5
+        numeric_noise = (
+            self.hyperparameters["sigma_n"].item() ** 2 if self.fixed_sigma_n else 1e-5
+        )
 
         # Instantiate the model
         self.model = GaussianProcessRegressor(kernel=self.kernel, alpha=numeric_noise)
@@ -58,9 +67,9 @@ class SklearnGPSurrogate(GaussianProcess):
         Xpred = self.pre_predict(Xpred)
 
         ymean, ystd = self.model.predict(Xpred, return_std=True)
-        yvar = ystd.reshape(-1, 1)**2
+        yvar = ystd.reshape(-1, 1) ** 2
         if add_data_variance:
-            yvar = yvar + self.hyperparameters['sigma_n'] ** 2
+            yvar = yvar + self.hyperparameters["sigma_n"] ** 2
         ymean, yvar = self.decode_predict_data(ymean, yvar)
         return ymean, yvar
 
@@ -73,7 +82,8 @@ class SklearnGPSurrogate(GaussianProcess):
         """
 
         from pickle import dump
-        dump(self.model, open(path, 'wb'))
+
+        dump(self.model, open(path, "wb"))
 
     @classmethod
     def load_model(cls, path):
@@ -89,7 +99,7 @@ class SklearnGPSurrogate(GaussianProcess):
         from pickle import load
 
         self = cls()
-        self.model = load(open(path, 'rb'))
+        self.model = load(open(path, "rb"))
         self.Xtrain = self.model.X_train_
         self.ytrain = self.model.y_train_
         self.kernel = self.model.kernel_
@@ -128,12 +138,18 @@ class SklearnGPSurrogate(GaussianProcess):
 
         from re import split
         from sklearn.gaussian_process import kernels as sklearn_kernels
-        full_str = split('([+*])', kernel)
+
+        full_str = split("([+*])", kernel)
         try:
             kernel = []
             for key in full_str:
-                kernel += [key if key in ('+', '*') else
-                           getattr(sklearn_kernels, key)(length_scale=self.hyperparameters['length_scale'])]
+                kernel += [
+                    key
+                    if key in ("+", "*")
+                    else getattr(sklearn_kernels, key)(
+                        length_scale=self.hyperparameters["length_scale"]
+                    )
+                ]
         except AttributeError:
             raise RuntimeError("Kernel {} is not implemented.".format(kernel))
 
@@ -141,12 +157,16 @@ class SklearnGPSurrogate(GaussianProcess):
             kernel = kernel[0]
         else:
             kernel = [str(key) if not isinstance(key, str) else key for key in kernel]
-            kernel = eval(''.join(kernel))
+            kernel = eval("".join(kernel))
 
         # Add scale and noise to kernel
-        kernel *= sklearn_kernels.ConstantKernel(constant_value=1/self.hyperparameters['sigma_f'].item() ** 2)
+        kernel *= sklearn_kernels.ConstantKernel(
+            constant_value=1 / self.hyperparameters["sigma_f"].item() ** 2
+        )
         if not self.fixed_sigma_n:
-            kernel += sklearn_kernels.WhiteKernel(noise_level=self.hyperparameters['sigma_n'].item() ** 2)
+            kernel += sklearn_kernels.WhiteKernel(
+                noise_level=self.hyperparameters["sigma_n"].item() ** 2
+            )
 
         return kernel
 
@@ -157,30 +177,48 @@ class SklearnGPSurrogate(GaussianProcess):
         Currently this is only stable for single kernels and not for Sum and Prod kernels.
         """
         if self.fixed_sigma_n:
-            self.hyperparameters['length_scale'] = np.atleast_1d(self.model.kernel_.k1.length_scale)
-            self.hyperparameters['sigma_f'] = np.sqrt(np.atleast_1d(1 / self.model.kernel_.k2.constant_value))
-            self.hyperparameters['sigma_n'] = np.sqrt(np.atleast_1d(self.model.alpha))
+            self.hyperparameters["length_scale"] = np.atleast_1d(
+                self.model.kernel_.k1.length_scale
+            )
+            self.hyperparameters["sigma_f"] = np.sqrt(
+                np.atleast_1d(1 / self.model.kernel_.k2.constant_value)
+            )
+            self.hyperparameters["sigma_n"] = np.sqrt(np.atleast_1d(self.model.alpha))
         else:
-            self.hyperparameters['length_scale'] = np.atleast_1d(self.model.kernel_.k1.k1.length_scale)
-            self.hyperparameters['sigma_f'] = np.sqrt(np.atleast_1d(1 / self.model.kernel_.k1.k2.constant_value))
-            self.hyperparameters['sigma_n'] = np.sqrt(np.atleast_1d(self.model.kernel_.k2.noise_level))
+            self.hyperparameters["length_scale"] = np.atleast_1d(
+                self.model.kernel_.k1.k1.length_scale
+            )
+            self.hyperparameters["sigma_f"] = np.sqrt(
+                np.atleast_1d(1 / self.model.kernel_.k1.k2.constant_value)
+            )
+            self.hyperparameters["sigma_n"] = np.sqrt(
+                np.atleast_1d(self.model.kernel_.k2.noise_level)
+            )
         self.decode_hyperparameters()
 
 
 # Draft for Scikit-learn implementation of LinearEmbedding kernel of Garnett (2014)
-from sklearn.gaussian_process.kernels import Kernel, Hyperparameter, StationaryKernelMixin, NormalizedKernelMixin
-class LinearEmbedding(StationaryKernelMixin, NormalizedKernelMixin, Kernel):
+from sklearn.gaussian_process.kernels import (
+    Kernel,
+    Hyperparameter,
+    StationaryKernelMixin,
+    NormalizedKernelMixin,
+)
 
-    def __init__(self, dims, length_scale=np.array([1.0]), length_scale_bounds=(1e-5, 1e5)):
+
+class LinearEmbedding(StationaryKernelMixin, NormalizedKernelMixin, Kernel):
+    def __init__(
+        self, dims, length_scale=np.array([1.0]), length_scale_bounds=(1e-5, 1e5)
+    ):
         self.length_scale = length_scale
         self.dims = dims
         self.length_scale_bounds = length_scale_bounds
 
     @property
     def hyperparameter_length_scale(self):
-        return Hyperparameter("length_scale", "numeric",
-                              self.length_scale_bounds,
-                              len(self.length_scale))
+        return Hyperparameter(
+            "length_scale", "numeric", self.length_scale_bounds, len(self.length_scale)
+        )
 
     def __call__(self, X, Y=None, eval_gradient=False):
         X = np.atleast_2d(X)
@@ -191,10 +229,11 @@ class LinearEmbedding(StationaryKernelMixin, NormalizedKernelMixin, Kernel):
         dX_sq = np.linalg.norm(dX, axis=-1) ** 2
         K = np.exp(-0.5 * dX_sq)
         if eval_gradient:
-            K_gradient = np.einsum('ijk,kl', dX ** 2, R) * K[..., np.newaxis]
+            K_gradient = np.einsum("ijk,kl", dX**2, R) * K[..., np.newaxis]
             return K, K_gradient
         return K
 
     def __repr__(self):
-        return "{0}(length_scale=[{1}])".format(self.__class__.__name__, ", ".join(map("{0:.3g}".format,
-                                                                                       self.length_scale)))
+        return "{0}(length_scale=[{1}])".format(
+            self.__class__.__name__, ", ".join(map("{0:.3g}".format, self.length_scale))
+        )

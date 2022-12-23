@@ -5,8 +5,10 @@ variables:
     f: Output
 
 run:
-    command: python3 ../simulation_files/mockup_custom_worker1.py
-    custom: true
+    runner:
+        class: local
+        command: python3 ../simulation_files/mockup_custom_worker1.py
+    worker: mockup1
 
 files:
     input: input_custom_worker1.hdf5

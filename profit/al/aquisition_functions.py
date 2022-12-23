@@ -12,14 +12,15 @@
 from profit.util.base_class import CustomABC
 import numpy as np
 
-from profit.defaults import \
-    al_acquisition_function_simple_exploration as se_defaults, \
-    al_acquisition_function_exploration_with_distance_penalty as edp_defaults, \
-    al_acquisition_function_weighted_exploration as we_defaults, \
-    al_acquisition_function_probability_of_improvement as poi_defaults, \
-    al_acquisition_function_expected_improvement as ei_defaults, \
-    al_acquisition_function_expected_improvement_2 as ei2_defaults, \
-    al_acquisition_function_alternating_exploration as ae_defaults
+from profit.defaults import (
+    al_acquisition_function_simple_exploration as se_defaults,
+    al_acquisition_function_exploration_with_distance_penalty as edp_defaults,
+    al_acquisition_function_weighted_exploration as we_defaults,
+    al_acquisition_function_probability_of_improvement as poi_defaults,
+    al_acquisition_function_expected_improvement as ei_defaults,
+    al_acquisition_function_expected_improvement_2 as ei2_defaults,
+    al_acquisition_function_alternating_exploration as ae_defaults,
+)
 
 
 class AcquisitionFunction(CustomABC):
@@ -31,6 +32,7 @@ class AcquisitionFunction(CustomABC):
         variables (profit.util.variable.VariableGroup): Variables.
         parameters (dict): Miscellaneous parameters for the specified function. E.g. 'exploration_factor'.
     """
+
     labels = {}
     al_parameters = {}
 
@@ -74,7 +76,9 @@ class AcquisitionFunction(CustomABC):
     def normalize(self, value, min=None):
         minval = value.min(axis=0)
         maxval = value.max(axis=0)
-        normalized_value = (value - minval) / np.maximum((maxval - minval), self.EPSILON)
+        normalized_value = (value - minval) / np.maximum(
+            (maxval - minval), self.EPSILON
+        )
         if min is not None:
             return np.maximum(normalized_value, min)
         return normalized_value
@@ -84,15 +88,30 @@ class AcquisitionFunction(CustomABC):
 class SimpleExploration(AcquisitionFunction):
     """Minimizes the local variance, which means the next points are generated at points of high variance."""
 
-    def __init__(self, Xpred, surrogate, variables, use_marginal_variance=se_defaults['use_marginal_variance'], **parameters):
-        super().__init__(Xpred, surrogate, variables, use_marginal_variance=use_marginal_variance, **parameters)
+    def __init__(
+        self,
+        Xpred,
+        surrogate,
+        variables,
+        use_marginal_variance=se_defaults["use_marginal_variance"],
+        **parameters,
+    ):
+        super().__init__(
+            Xpred,
+            surrogate,
+            variables,
+            use_marginal_variance=use_marginal_variance,
+            **parameters,
+        )
 
     def calculate_loss(self):
-        if self.parameters['use_marginal_variance']:
-            if hasattr(self.surrogate, 'get_marginal_variance'):
+        if self.parameters["use_marginal_variance"]:
+            if hasattr(self.surrogate, "get_marginal_variance"):
                 variance = self.surrogate.get_marginal_variance(self.Xpred)
             else:
-                print("Surrogate has no method 'get_marginal_variance'. Using predictive variance instead.")
+                print(
+                    "Surrogate has no method 'get_marginal_variance'. Using predictive variance instead."
+                )
                 _, variance = self.surrogate.predict(self.Xpred)
         else:
             _, variance = self.surrogate.predict(self.Xpred)
@@ -108,16 +127,32 @@ class ExplorationWithDistancePenalty(SimpleExploration):
         weight (float): Exponential penalty factor: $penalty = 1 - exp(c1 * |X_{pred} - X_{last}|)$.
     """
 
-    def __init__(self, Xpred, surrogate, variables, use_marginal_variance=edp_defaults['use_marginal_variance'],
-                 weight=edp_defaults['weight']):
-        super().__init__(Xpred, surrogate, variables, use_marginal_variance=use_marginal_variance, weight=weight)
+    def __init__(
+        self,
+        Xpred,
+        surrogate,
+        variables,
+        use_marginal_variance=edp_defaults["use_marginal_variance"],
+        weight=edp_defaults["weight"],
+    ):
+        super().__init__(
+            Xpred,
+            surrogate,
+            variables,
+            use_marginal_variance=use_marginal_variance,
+            weight=weight,
+        )
 
     def calculate_loss(self):
-        c1 = self.parameters['weight']
+        c1 = self.parameters["weight"]
         loss = super().calculate_loss()
         loss_scale = loss.max(axis=0)
-        last_point = self.variables.input[np.sum(~np.isnan(self.variables.input), axis=0).min() - 1]
-        loss += loss_scale * (1.0 - np.exp(-c1 * np.linalg.norm(self.Xpred - last_point, axis=1)))
+        last_point = self.variables.input[
+            np.sum(~np.isnan(self.variables.input), axis=0).min() - 1
+        ]
+        loss += loss_scale * (
+            1.0 - np.exp(-c1 * np.linalg.norm(self.Xpred - last_point, axis=1))
+        )
         loss /= 2
         return loss
 
@@ -130,19 +165,33 @@ class WeightedExploration(AcquisitionFunction):
         weight (float): Factor to favor maximization of the target function over exploration.
     """
 
-    def __init__(self, Xpred, surrogate, variables, weight=we_defaults['weight'],
-                 use_marginal_variance=we_defaults['use_marginal_variance']):
-        super().__init__(Xpred, surrogate, variables, weight=weight, use_marginal_variance=use_marginal_variance)
+    def __init__(
+        self,
+        Xpred,
+        surrogate,
+        variables,
+        weight=we_defaults["weight"],
+        use_marginal_variance=we_defaults["use_marginal_variance"],
+    ):
+        super().__init__(
+            Xpred,
+            surrogate,
+            variables,
+            weight=weight,
+            use_marginal_variance=use_marginal_variance,
+        )
 
     def calculate_loss(self, mu):
-        weight = self.parameters['weight']
+        weight = self.parameters["weight"]
 
         _, variance = self.surrogate.predict(self.Xpred)
-        if self.parameters['use_marginal_variance']:
-            if hasattr(self.surrogate, 'get_marginal_variance'):
+        if self.parameters["use_marginal_variance"]:
+            if hasattr(self.surrogate, "get_marginal_variance"):
                 variance = self.surrogate.get_marginal_variance(self.Xpred)
             else:
-                print("Surrogate has no method 'get_marginal_variance'. Using predictive variance instead.")
+                print(
+                    "Surrogate has no method 'get_marginal_variance'. Using predictive variance instead."
+                )
         variance = self.normalize(variance)
         loss = weight * mu + (1 - weight) * variance
         loss = np.sum(loss, axis=1)
@@ -162,8 +211,12 @@ class ProbabilityOfImprovement(AcquisitionFunction):
 
     def calculate_loss(self, mu):
         _, variance = self.surrogate.predict(self.Xpred)
-        improvement = np.maximum(mu + np.sqrt(variance) * np.random.standard_normal(mu.shape) -
-                                 self.variables.output.max(axis=0), 0)
+        improvement = np.maximum(
+            mu
+            + np.sqrt(variance) * np.random.standard_normal(mu.shape)
+            - self.variables.output.max(axis=0),
+            0,
+        )
         return np.sum(improvement, axis=1)
 
     def find_next_candidates(self, batch_size):
@@ -184,9 +237,21 @@ class ExpectedImprovement(AcquisitionFunction):
 
     SIGMA_EPSILON = 1e-10
 
-    def __init__(self, Xpred, surrogate, variables, exploration_factor=ei_defaults['exploration_factor'],
-                 find_min=ei_defaults['find_min']):
-        super().__init__(Xpred, surrogate, variables, exploration_factor=exploration_factor, find_min=find_min)
+    def __init__(
+        self,
+        Xpred,
+        surrogate,
+        variables,
+        exploration_factor=ei_defaults["exploration_factor"],
+        find_min=ei_defaults["find_min"],
+    ):
+        super().__init__(
+            Xpred,
+            surrogate,
+            variables,
+            exploration_factor=exploration_factor,
+            find_min=find_min,
+        )
 
     def calculate_loss(self, improvement):
         from scipy.stats import norm
@@ -197,9 +262,9 @@ class ExpectedImprovement(AcquisitionFunction):
         return np.sum(expected_improvement, axis=1)
 
     def mu_part(self):
-        xi = self.parameters['exploration_factor']
+        xi = self.parameters["exploration_factor"]
         mu, _ = self.surrogate.predict(self.Xpred)
-        if self.parameters['find_min']:
+        if self.parameters["find_min"]:
             mu *= -1
         improvement = np.maximum(mu - np.nanmax(self.variables.output, axis=0), 0)
         improvement = self.normalize(improvement) - xi
@@ -222,15 +287,28 @@ class ExpectedImprovement2(AcquisitionFunction):
     while the others are found using the minimization of local variance acquisition function.
     """
 
-    def __init__(self, Xpred, surrogate, variables, exploration_factor=ei2_defaults['exploration_factor'],
-                 find_min=ei2_defaults['find_min']):
-        super().__init__(Xpred, surrogate, variables, exploration_factor=exploration_factor, find_min=find_min)
+    def __init__(
+        self,
+        Xpred,
+        surrogate,
+        variables,
+        exploration_factor=ei2_defaults["exploration_factor"],
+        find_min=ei2_defaults["find_min"],
+    ):
+        super().__init__(
+            Xpred,
+            surrogate,
+            variables,
+            exploration_factor=exploration_factor,
+            find_min=find_min,
+        )
 
     def calculate_loss(self):
         from scipy.stats import norm
-        xi = self.parameters['exploration_factor']
+
+        xi = self.parameters["exploration_factor"]
         mu, variance = self.surrogate.predict(self.Xpred)
-        if self.parameters['find_min']:
+        if self.parameters["find_min"]:
             mu *= -1
         sigma = np.maximum(np.sqrt(variance), 1e-10)
         improvement = mu - np.nanmax(self.variables.output, axis=0) - xi
@@ -247,32 +325,50 @@ class ExpectedImprovement2(AcquisitionFunction):
         mu_candidate = self.surrogate.predict(candidates[0].reshape(1, -1))
         self.surrogate.add_training_data(candidates[0].reshape(1, -1), mu_candidate)
 
-        simple_exploration = SimpleExploration(self.Xpred, self.surrogate, self.variables)
+        simple_exploration = SimpleExploration(
+            self.Xpred, self.surrogate, self.variables
+        )
         for n in range(1, batch_size):
             loss = simple_exploration.calculate_loss()
             idx = np.argmax(loss)
             candidates[n] = self.Xpred[idx.flatten()]
             mu_candidate = self.surrogate.predict(candidates[n].reshape(1, -1))
-            simple_exploration.surrogate.add_training_data(candidates[n].reshape(1, -1), mu_candidate)
+            simple_exploration.surrogate.add_training_data(
+                candidates[n].reshape(1, -1), mu_candidate
+            )
         return candidates
 
 
 @AcquisitionFunction.register("alternating_exploration")
 class AlternatingAF(AcquisitionFunction):
 
-    al_parameters = {'krun': 0}
+    al_parameters = {"krun": 0}
 
-    def __init__(self, Xpred, surrogate, variables, use_marginal_variance=ae_defaults['use_marginal_variance'],
-                 exploration_factor=ae_defaults['exploration_factor'],
-                 find_min=ae_defaults['find_min'], alternating_freq=ae_defaults['alternating_freq']):
+    def __init__(
+        self,
+        Xpred,
+        surrogate,
+        variables,
+        use_marginal_variance=ae_defaults["use_marginal_variance"],
+        exploration_factor=ae_defaults["exploration_factor"],
+        find_min=ae_defaults["find_min"],
+        alternating_freq=ae_defaults["alternating_freq"],
+    ):
         super().__init__(Xpred, surrogate, variables, alternating_freq=alternating_freq)
-        self.exploration = SimpleExploration(Xpred, surrogate, variables, use_marginal_variance=use_marginal_variance)
-        self.expected_improvement = ExpectedImprovement(Xpred, surrogate, variables,
-                                                        exploration_factor=exploration_factor, find_min=find_min)
+        self.exploration = SimpleExploration(
+            Xpred, surrogate, variables, use_marginal_variance=use_marginal_variance
+        )
+        self.expected_improvement = ExpectedImprovement(
+            Xpred,
+            surrogate,
+            variables,
+            exploration_factor=exploration_factor,
+            find_min=find_min,
+        )
         self.current_af = self.exploration
 
     def find_next_candidates(self, batch_size):
-        if not self.al_parameters['krun'] % self.parameters['alternating_freq']:
+        if not self.al_parameters["krun"] % self.parameters["alternating_freq"]:
             if self.current_af == self.exploration:
                 self.current_af = self.expected_improvement
             else:

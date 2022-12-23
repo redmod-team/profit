@@ -5,7 +5,15 @@ Collection of functions for the Custom GPSurrogate.
 import numpy as np
 
 
-def optimize(xtrain, ytrain, a0, kernel, fixed_sigma_n=False, eval_gradient=False, return_hess_inv=False):
+def optimize(
+    xtrain,
+    ytrain,
+    a0,
+    kernel,
+    fixed_sigma_n=False,
+    eval_gradient=False,
+    return_hess_inv=False,
+):
     r"""Finds optimal hyperparameters from initial array a0, sorted as [length_scale, scale, noise].
 
     The objective function, which is minimized, is the negative log likelihood.
@@ -48,7 +56,14 @@ def optimize(xtrain, ytrain, a0, kernel, fixed_sigma_n=False, eval_gradient=Fals
     if sigma_n is not None:
         args.append(sigma_n)
 
-    opt_result = minimize(negative_log_likelihood, a0, method='bfgs', args=tuple(args), bounds=None, jac=eval_gradient)
+    opt_result = minimize(
+        negative_log_likelihood,
+        a0,
+        method="bfgs",
+        args=tuple(args),
+        bounds=None,
+        jac=eval_gradient,
+    )
     if return_hess_inv:
         return 10**opt_result.x, opt_result.hess_inv
     return 10**opt_result.x
@@ -75,12 +90,19 @@ def solve_cholesky(L, b):
     """
 
     from scipy.linalg import solve_triangular
-    alpha = solve_triangular(L.T, solve_triangular(L, b, lower=True, check_finite=False),
-                             lower=False, check_finite=False)
+
+    alpha = solve_triangular(
+        L.T,
+        solve_triangular(L, b, lower=True, check_finite=False),
+        lower=False,
+        check_finite=False,
+    )
     return alpha
 
 
-def negative_log_likelihood_cholesky(hyp, X, y, kernel, eval_gradient=False, log_scale_hyp=False, fixed_sigma_n=False):
+def negative_log_likelihood_cholesky(
+    hyp, X, y, kernel, eval_gradient=False, log_scale_hyp=False, fixed_sigma_n=False
+):
     r"""Computes the negative log likelihood using the Cholesky decomposition of the covariance matrix.
 
     The calculation follows Rasmussen&Williams 2006, p. 19, 113-114.
@@ -120,7 +142,11 @@ def negative_log_likelihood_cholesky(hyp, X, y, kernel, eval_gradient=False, log
 
     L = np.linalg.cholesky(Ky)
     alpha = solve_cholesky(L, y)
-    nll = 0.5 * y.T @ alpha + np.sum(np.log(L.diagonal())) + len(X) * 0.5 * np.log(2.0 * np.pi)
+    nll = (
+        0.5 * y.T @ alpha
+        + np.sum(np.log(L.diagonal()))
+        + len(X) * 0.5 * np.log(2.0 * np.pi)
+    )
     if not eval_gradient:
         return nll.item()
     KyinvaaT = invert_cholesky(L)
@@ -135,8 +161,17 @@ def negative_log_likelihood_cholesky(hyp, X, y, kernel, eval_gradient=False, log
     return nll.item(), dnll
 
 
-def negative_log_likelihood(hyp, X, y, kernel, eval_gradient=False, log_scale_hyp=False,
-                            fixed_sigma_n_value=None, neig=0, max_iter=1000):
+def negative_log_likelihood(
+    hyp,
+    X,
+    y,
+    kernel,
+    eval_gradient=False,
+    log_scale_hyp=False,
+    fixed_sigma_n_value=None,
+    neig=0,
+    max_iter=1000,
+):
     r"""Computes the negative log likelihood either by a Cholesky- or an Eigendecomposition.
 
     First, the Cholesky decomposition is tried. If this results in a LinAlgError, the biggest eigenvalues are
@@ -182,7 +217,9 @@ def negative_log_likelihood(hyp, X, y, kernel, eval_gradient=False, log_scale_hy
         hyp = np.append(hyp, fixed_sigma_n_value)
 
     clip_eig = max(1e-3 * min(abs(hyp[:-2])), 1e-10)
-    Ky = kernel(X, X, hyp[:-2], *hyp[-2:], eval_gradient=eval_gradient)  # Construct covariance matrix
+    Ky = kernel(
+        X, X, hyp[:-2], *hyp[-2:], eval_gradient=eval_gradient
+    )  # Construct covariance matrix
 
     if eval_gradient:
         dKy = Ky[1]
@@ -192,13 +229,24 @@ def negative_log_likelihood(hyp, X, y, kernel, eval_gradient=False, log_scale_hy
     iteration = 0
     neig = max(neig, 1)
     while not converged:
-        if not neig or neig > 0.05 * len(X):  # First try with Cholesky decomposition if neig is big
+        if not neig or neig > 0.05 * len(
+            X
+        ):  # First try with Cholesky decomposition if neig is big
             try:
-                return negative_log_likelihood_cholesky(hyp, X, y, kernel, eval_gradient=eval_gradient,
-                                                        log_scale_hyp=log_scale_hyp, fixed_sigma_n=fixed_sigma_n)
+                return negative_log_likelihood_cholesky(
+                    hyp,
+                    X,
+                    y,
+                    kernel,
+                    eval_gradient=eval_gradient,
+                    log_scale_hyp=log_scale_hyp,
+                    fixed_sigma_n=fixed_sigma_n,
+                )
             except np.linalg.LinAlgError:
                 print("Warning! Fallback to eig solver!")
-        w, Q = eigsh(Ky, neig, tol=clip_eig)  # Otherwise, calculate the first neig eigenvalues and eigenvectors
+        w, Q = eigsh(
+            Ky, neig, tol=clip_eig
+        )  # Otherwise, calculate the first neig eigenvalues and eigenvectors
         if iteration >= max_iter:
             print("Reached max. iterations!")
             break
@@ -208,7 +256,9 @@ def negative_log_likelihood(hyp, X, y, kernel, eval_gradient=False, log_scale_hy
     # Calculate the NLL with these eigenvalues and eigenvectors
     w = np.maximum(w, 1e-10)
     alpha = Q @ (np.diag(1.0 / w) @ (Q.T @ y))
-    nll = 0.5 * (y.T @ alpha + np.sum(np.log(w)) + min(neig, len(X)) * np.log(2 * np.pi))
+    nll = 0.5 * (
+        y.T @ alpha + np.sum(np.log(w)) + min(neig, len(X)) * np.log(2 * np.pi)
+    )
     if not eval_gradient:
         return nll.item()
 
@@ -238,8 +288,12 @@ def invert_cholesky(L):
     """
     from scipy.linalg import solve_triangular
 
-    return solve_triangular(L.T, solve_triangular(L, np.eye(L.shape[0]), lower=True, check_finite=False),
-                            lower=False, check_finite=False)
+    return solve_triangular(
+        L.T,
+        solve_triangular(L, np.eye(L.shape[0]), lower=True, check_finite=False),
+        lower=False,
+        check_finite=False,
+    )
 
 
 def invert(K, neig=0, tol=1e-10, eps=1e-6, max_iter=1000):
@@ -268,7 +322,7 @@ def invert(K, neig=0, tol=1e-10, eps=1e-6, max_iter=1000):
         try:
             return invert_cholesky(L)
         except np.linalg.LinAlgError:
-            print('Warning! Fallback to eig solver!')
+            print("Warning! Fallback to eig solver!")
 
     # Otherwise, calculate the first neig eigenvalues and eigenvectors
     w, Q = eigsh(K, neig, tol=tol)
@@ -293,8 +347,17 @@ def invert(K, neig=0, tol=1e-10, eps=1e-6, max_iter=1000):
     return K_inv
 
 
-def marginal_variance_BBQ(Xtrain, ytrain, Xpred, kernel, hyperparameters, hess_inv, fixed_sigma_n=False,
-                          alpha=None, predictive_variance=0):
+def marginal_variance_BBQ(
+    Xtrain,
+    ytrain,
+    Xpred,
+    kernel,
+    hyperparameters,
+    hess_inv,
+    fixed_sigma_n=False,
+    alpha=None,
+    predictive_variance=0,
+):
     r"""Calculates the marginal variance to infer the next point in active learning.
 
     The calculation follows Osborne (2012).
@@ -327,7 +390,9 @@ def marginal_variance_BBQ(Xtrain, ytrain, Xpred, kernel, hyperparameters, hess_i
     """
 
     # TODO: Add full derivatives as in Osborne (2021) and Garnett (2014)
-    ordered_hyperparameters = [hyperparameters[key] for key in ('length_scale', 'sigma_f', 'sigma_n')]
+    ordered_hyperparameters = [
+        hyperparameters[key] for key in ("length_scale", "sigma_f", "sigma_n")
+    ]
 
     # If no Hessian is available, use only the predictive variance.
     if hess_inv is None:
@@ -339,13 +404,17 @@ def marginal_variance_BBQ(Xtrain, ytrain, Xpred, kernel, hyperparameters, hess_i
 
     # Kernels and their derivatives
     Ky, dKy = kernel(Xtrain, Xtrain, *ordered_hyperparameters, eval_gradient=True)
-    Kstar, dKstar = kernel(Xpred, Xtrain, *ordered_hyperparameters[:-1], eval_gradient=True)
+    Kstar, dKstar = kernel(
+        Xpred, Xtrain, *ordered_hyperparameters[:-1], eval_gradient=True
+    )
     Kyinv = invert(Ky)
     if alpha is None:
         alpha = Kyinv @ ytrain
     dalpha_dl = -Kyinv @ (dKy[..., 0] @ alpha)
     dalpha_dsigma_f = -Kyinv @ (dKy[..., 1] @ alpha)
-    dalpha_dsigma_n = -Kyinv @ (2 * hyperparameters['sigma_n'] * np.eye(Xtrain.shape[0]) @ alpha)
+    dalpha_dsigma_n = -Kyinv @ (
+        2 * hyperparameters["sigma_n"] * np.eye(Xtrain.shape[0]) @ alpha
+    )
 
     dm = np.empty((Xpred.shape[0], len(ordered_hyperparameters), 1))
     dm[:, 0, :] = dKstar[..., 0] @ alpha + Kstar @ dalpha_dl
@@ -387,7 +456,7 @@ def predict_f(hyp, x, y, xtest, kernel, return_full_cov=False, neig=0):
     Ky = kernel(x, x, hyp[:-2], *hyp[-2:])
     Kstar = kernel(x, xtest, hyp[:-2], hyp[-2])
     Kstarstar = kernel(xtest, xtest, *hyp)
-    Kyinv = invert(Ky, neig, 1e-6*hyp[-1])
+    Kyinv = invert(Ky, neig, 1e-6 * hyp[-1])
     fstar = Kstar.T @ (Kyinv @ y)
     vstar = Kstarstar - Kstar.T @ (invert(Ky) @ Kstar)
     vstar = np.maximum(vstar, 1e-10)  # Assure a positive variance
