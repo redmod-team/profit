@@ -6,7 +6,8 @@ repos:
     files: \.ipynb$
     exclude: ^draft/
     stages: [commit]
-    language: system
+    language: python
+    additional_dependencies: ['nbconvert']
     entry: python3 -m nbconvert --ClearOutputPreprocessor.enabled=True --inplace
 - repo: https://github.com/pre-commit/pre-commit-hooks
   rev: v2.3.0
