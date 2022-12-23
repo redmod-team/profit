@@ -15,10 +15,14 @@ class ChaospyLinReg(LinearRegression):
         # ToDo
     """
 
-    def __init__(self, model=defaults['model'],
-                 order=defaults['order'],
-                 model_kwargs=defaults['model_kwargs'],
-                 sigma_n=defaults['sigma_n'], sigma_p=defaults['sigma_p']):
+    def __init__(
+        self,
+        model=defaults["model"],
+        order=defaults["order"],
+        model_kwargs=defaults["model_kwargs"],
+        sigma_n=defaults["sigma_n"],
+        sigma_p=defaults["sigma_p"],
+    ):
         super().__init__()
         self._model = None
         self.set_model(model, order, model_kwargs)
@@ -34,7 +38,7 @@ class ChaospyLinReg(LinearRegression):
 
     @model.setter
     def model(self, model_name):
-        self.set_model(model_name, defaults['order'])   # ToDo: set order
+        self.set_model(model_name, defaults["order"])  # ToDo: set order
 
     def set_model(self, model, order, model_kwargs=None):
         """Sets model parameters for surrogate
@@ -52,13 +56,13 @@ class ChaospyLinReg(LinearRegression):
 
         if model == "monomial":
             self._model = chaospy.monomial
-            if 'start' not in self.model_kwargs:
-                self.model_kwargs['start'] = 0
-            if 'stop' not in self.model_kwargs:
-                self.model_kwargs['stop'] = self.order
+            if "start" not in self.model_kwargs:
+                self.model_kwargs["start"] = 0
+            if "stop" not in self.model_kwargs:
+                self.model_kwargs["stop"] = self.order
         else:
             self._model = getattr(chaospy.expansion, model)
-            self.model_kwargs['order'] = self.order
+            self.model_kwargs["order"] = self.order
 
     def transform(self, X):
         """Transforms input data on selected basis functions
@@ -120,11 +124,21 @@ class ChaospyLinReg(LinearRegression):
         # ToDo
 
         """
-        attrs = ('model',  'order', 'model_kwargs', 'sigma_n', 'sigma_p', 'ndim',
-                 'n_features', 'trained', 'coeff_mean', 'coeff_cov')
+        attrs = (
+            "model",
+            "order",
+            "model_kwargs",
+            "sigma_n",
+            "sigma_p",
+            "ndim",
+            "n_features",
+            "trained",
+            "coeff_mean",
+            "coeff_cov",
+        )
         sur_dict = {attr: getattr(self, attr) for attr in attrs}
-        sur_dict['input_encoders'] = str([enc.repr for enc in self.input_encoders])
-        sur_dict['output_encoders'] = str([enc.repr for enc in self.output_encoders])
+        sur_dict["input_encoders"] = str([enc.repr for enc in self.input_encoders])
+        sur_dict["output_encoders"] = str([enc.repr for enc in self.output_encoders])
         return sur_dict
 
     def save_model(self, path):
@@ -136,9 +150,9 @@ class ChaospyLinReg(LinearRegression):
         from profit.util.file_handler import FileHandler
 
         sur_dict = self.as_dict()
-        sur_dict['input_encoders'] = str([enc.repr for enc in self.input_encoders])
-        sur_dict['output_encoders'] = str([enc.repr for enc in self.output_encoders])
-        FileHandler.save(path, sur_dict, as_type='dict')
+        sur_dict["input_encoders"] = str([enc.repr for enc in self.input_encoders])
+        sur_dict["output_encoders"] = str([enc.repr for enc in self.output_encoders])
+        FileHandler.save(path, sur_dict, as_type="dict")
 
     @classmethod
     def load_model(cls, path):
@@ -156,34 +170,37 @@ class ChaospyLinReg(LinearRegression):
         from numpy import array  # needed for eval of arrays
 
         self = cls()
-        sur_dict = FileHandler.load(path, as_type='dict')
+        sur_dict = FileHandler.load(path, as_type="dict")
         # TODO: test for empty model_kwargs
-        self.set_model(sur_dict['model'], sur_dict['order'], sur_dict['model_kwargs'])
-        self.sigma_n = sur_dict['sigma_n']
-        self.sigma_p = sur_dict['sigma_p']
-        self.trained = sur_dict['trained']
-        self.ndim = int(sur_dict['ndim'])
-        self.n_features = sur_dict['n_features']
-        self.coeff_mean = sur_dict['coeff_mean']
-        self.coeff_cov = sur_dict['coeff_cov']
+        self.set_model(sur_dict["model"], sur_dict["order"], sur_dict["model_kwargs"])
+        self.sigma_n = sur_dict["sigma_n"]
+        self.sigma_p = sur_dict["sigma_p"]
+        self.trained = sur_dict["trained"]
+        self.ndim = int(sur_dict["ndim"])
+        self.n_features = sur_dict["n_features"]
+        self.coeff_mean = sur_dict["coeff_mean"]
+        self.coeff_cov = sur_dict["coeff_cov"]
 
-        for enc in eval(sur_dict['input_encoders']):
+        for enc in eval(sur_dict["input_encoders"]):
             self.add_input_encoder(
-                Encoder[enc['class']](enc['columns'], enc['parameters']))
-        for enc in eval(sur_dict['output_encoders']):
+                Encoder[enc["class"]](enc["columns"], enc["parameters"])
+            )
+        for enc in eval(sur_dict["output_encoders"]):
             self.add_output_encoder(
-                Encoder[enc['class']](enc['columns'], enc['parameters']))
+                Encoder[enc["class"]](enc["columns"], enc["parameters"])
+            )
         # ToDo: print something useful
         return self
 
     @classmethod
     def from_config(cls, config, base_config):
         self = cls()
-        self.sigma_n = config["sigma_n"] if "sigma_n" in config else defaults[
-            "sigma_n"]
-        self.sigma_p = config["sigma_p"] if "sigma_p" in config else defaults[
-            "sigma_p"]
-        self.model_kwargs = config["model_kwargs"] if "model_kwargs" in config else defaults[
-            "model_kwargs"]
+        self.sigma_n = config["sigma_n"] if "sigma_n" in config else defaults["sigma_n"]
+        self.sigma_p = config["sigma_p"] if "sigma_p" in config else defaults["sigma_p"]
+        self.model_kwargs = (
+            config["model_kwargs"]
+            if "model_kwargs" in config
+            else defaults["model_kwargs"]
+        )
         self.set_model(config["model"], config["order"])
         return self

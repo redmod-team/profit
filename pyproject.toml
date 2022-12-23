@@ -35,4 +35,4 @@ filterwarnings = [
 ]
 
 [tool.black]
-extend-exclude = draft
+extend-exclude = "draft"

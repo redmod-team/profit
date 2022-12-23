@@ -366,4 +366,3 @@ For customization it is possible to use ``CSS`` stylesheets for the entire inter
 
 The graphs itself is based on the above mentioned ``plotly.js`` library
 (see `github <https://github.com/plotly/plotly.js>`_). This graphic library maintained by Plotly.
-

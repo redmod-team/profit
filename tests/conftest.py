@@ -13,4 +13,3 @@ def logger(caplog):
     caplog.set_level(logging.DEBUG)
     logger = logging.getLogger()
     yield logger
-

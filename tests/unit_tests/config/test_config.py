@@ -33,23 +33,23 @@ CLEAN_TIMEOUT = 5  # seconds
 def clean(config):
     """Delete run directories and input/output files after the test."""
 
-    for krun in range(config.get('ntrain')):
-        single_dir = path.join(config.get('run_dir'), f'run_{krun:03d}')
+    for krun in range(config.get("ntrain")):
+        single_dir = path.join(config.get("run_dir"), f"run_{krun:03d}")
         if path.exists(single_dir):
             rmtree(single_dir)
-    if path.exists('./study/interface.npy'):
-        remove('./study/interface.npy')
-    if path.exists(config['files'].get('input')):
-        remove(config['files'].get('input'))
-    if path.exists(config['files'].get('output')):
-        remove(config['files'].get('output'))
+    if path.exists("./study/interface.npy"):
+        remove("./study/interface.npy")
+    if path.exists(config["files"].get("input")):
+        remove(config["files"].get("input"))
+    if path.exists(config["files"].get("output")):
+        remove(config["files"].get("output"))
 
 
 def test_yaml_py_config():
     """Tests if .yaml and .py configuration files are equal by comparing dict keys and values."""
 
-    yaml_file = 'study/profit.yaml'
-    py_file = 'study/profit_config.py'
+    yaml_file = "study/profit.yaml"
+    py_file = "study/profit_config.py"
     config_yaml = BaseConfig.from_file(yaml_file)
     config_py = BaseConfig.from_file(py_file)
 
@@ -65,7 +65,7 @@ def test_yaml_py_config():
                 for v1, v2 in zip(value1, value2):
                     if type(value1) is dict:
                         assert_dict(v1.items(), v2.items())
-            elif key1 not in ['config_path', 'variable_group']:
+            elif key1 not in ["config_path", "variable_group"]:
                 assert value1 == value2
 
     assert_dict(config_yaml.items(), config_py.items())
@@ -74,10 +74,10 @@ def test_yaml_py_config():
 def test_txt_input():
     """Tests if the input files in the single run directories are created from the template."""
 
-    config_file = 'study/profit.yaml'
+    config_file = "study/profit.yaml"
     config = BaseConfig.from_file(config_file)
     run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
-    assert path.isfile('./study/run_000/mockup.in')
+    assert path.isfile("./study/run_000/mockup.in")
     clean(config)
     run(f"profit clean --all {config_file}", shell=True, timeout=CLEAN_TIMEOUT)
 
@@ -85,14 +85,14 @@ def test_txt_input():
 def test_txt_json_input():
     """Checks if the numpy arrays resulting from a text and a json input are equal."""
 
-    config_file = 'study/profit_json.yaml'
+    config_file = "study/profit_json.yaml"
     config = BaseConfig.from_file(config_file)
     try:
         run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
-        with open(path.join(config['run_dir'], 'run_000', 'mockup_json.in')) as jf:
+        with open(path.join(config["run_dir"], "run_000", "mockup_json.in")) as jf:
             json_input = jload(jf)
         json_input = array([float(val) for val in json_input.values()])
-        with open(path.join(config['run_dir'], 'run_000', 'mockup.in')) as tf:
+        with open(path.join(config["run_dir"], "run_000", "mockup.in")) as tf:
             txt_input = genfromtxt(tf)
         assert json_input.dtype == txt_input.dtype
         assert json_input.shape == txt_input.shape
@@ -104,13 +104,13 @@ def test_txt_json_input():
 def test_hdf5_input_output():
     """Checks the data inside a .hdf5 input file."""
 
-    config_file = 'study/profit_hdf5.yaml'
+    config_file = "study/profit_hdf5.yaml"
     config = BaseConfig.from_file(config_file)
     try:
         run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
-        data_in = FileHandler.load(config['files'].get('input'))
+        data_in = FileHandler.load(config["files"].get("input"))
         assert data_in.shape == (2, 1)
-        assert data_in.dtype.names == ('u', 'v', 'w')
+        assert data_in.dtype.names == ("u", "v", "w")
     finally:
         clean(config)
         run(f"profit clean --all {config_file}", shell=True, timeout=CLEAN_TIMEOUT)
@@ -119,43 +119,51 @@ def test_hdf5_input_output():
 def test_symlinks():
     """Checks if relative symbolic links are handled correctly."""
 
-    config_file = 'study/profit_symlink.yaml'
+    config_file = "study/profit_symlink.yaml"
     config = BaseConfig.from_file(config_file)
-    base_file = './study/run_000/mockup.in'
-    link_file = './study/run_000/some_subdir/symlink_link.txt'
+    base_file = "./study/run_000/mockup.in"
+    link_file = "./study/run_000/some_subdir/symlink_link.txt"
     try:
         run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
-        with open(link_file, 'r') as link:
-            with open(base_file, 'r') as base:
+        with open(link_file, "r") as link:
+            with open(base_file, "r") as base:
                 link_data = link.read()
                 base_data = base.read()
-                assert link_data == base_data and not link_data.startswith('{')
+                assert link_data == base_data and not link_data.startswith("{")
     finally:
         clean(config)
         run(f"profit clean --all {config_file}", shell=True, timeout=CLEAN_TIMEOUT)
 
 
 def test_default_values():
-    """ Tests the default values of the configuration file. First with a simple configuration
-    and then with some parameters customized, to check if missing dict entries are set correctly. """
+    """Tests the default values of the configuration file. First with a simple configuration
+    and then with some parameters customized, to check if missing dict entries are set correctly."""
 
     from profit import defaults
 
     # First with simple configuration
-    config_file = 'study/profit_default.yaml'
+    config_file = "study/profit_default.yaml"
     config = BaseConfig.from_file(config_file)
-    assert config.get('base_dir') == path.abspath('study')
-    assert config.get('run_dir') == config.get('base_dir')
-    assert config['files'].get('input') == path.join(config.get('base_dir'), defaults.files['input'])
-    assert config['files'].get('output') == path.join(config.get('base_dir'), defaults.files['output'])
-    assert config['fit'].get('surrogate') == defaults.fit['surrogate']
-    assert config['fit'].get('kernel') == defaults.fit_gaussian_process['kernel']
+    assert config.get("base_dir") == path.abspath("study")
+    assert config.get("run_dir") == config.get("base_dir")
+    assert config["files"].get("input") == path.join(
+        config.get("base_dir"), defaults.files["input"]
+    )
+    assert config["files"].get("output") == path.join(
+        config.get("base_dir"), defaults.files["output"]
+    )
+    assert config["fit"].get("surrogate") == defaults.fit["surrogate"]
+    assert config["fit"].get("kernel") == defaults.fit_gaussian_process["kernel"]
 
     # Now check when dicts are only partially set
-    config_file = 'study/profit_default_2.yaml'
+    config_file = "study/profit_default_2.yaml"
     config = BaseConfig.from_file(config_file)
-    assert config['files'].get('input') == path.join(config.get('base_dir'), 'custom_input.in')
-    assert config['files'].get('output') == path.join(config.get('base_dir'), defaults.files['output'])
-    assert config['fit'].get('surrogate') == defaults.fit['surrogate']
-    assert config['fit'].get('kernel') == defaults.fit_gaussian_process['kernel']
-    assert config['ui'].get('plot') is True
+    assert config["files"].get("input") == path.join(
+        config.get("base_dir"), "custom_input.in"
+    )
+    assert config["files"].get("output") == path.join(
+        config.get("base_dir"), defaults.files["output"]
+    )
+    assert config["fit"].get("surrogate") == defaults.fit["surrogate"]
+    assert config["fit"].get("kernel") == defaults.fit_gaussian_process["kernel"]
+    assert config["ui"].get("plot") is True

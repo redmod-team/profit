@@ -1,5 +1,6 @@
 from abc import ABC
 
+
 class CustomABC(ABC):
 
     labels = {}
@@ -15,12 +16,14 @@ class CustomABC(ABC):
     @classmethod
     def register(cls, label):
         """Decorator to register new classes."""
+
         def decorator(obj):
             if label in cls.labels:
                 print(f"registering duplicate label '{label}' for {cls.__name__}.")
-                #raise KeyError(f"registering duplicate label '{label}' for {cls.__name__}.")
+                # raise KeyError(f"registering duplicate label '{label}' for {cls.__name__}.")
             cls.labels[label] = obj
             return obj
+
         return decorator
 
     def __class_getitem__(cls, item):

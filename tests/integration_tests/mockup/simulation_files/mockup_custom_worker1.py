@@ -16,11 +16,11 @@ def f(u):
 class MockupWorker(Worker, label="mockup1"):
     def work(self):
         self.interface.retrieve()
-        self.interface.output['f'] = f(self.interface.input['u'])
+        self.interface.output["f"] = f(self.interface.input["u"])
         self.interface.transmit()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     worker = MockupWorker.from_env()
     worker.work()
     worker.clean()

@@ -4,7 +4,7 @@ from profit.sur.gp import GaussianProcess
 from profit.defaults import fit_gaussian_process as defaults, fit as base_defaults
 
 
-@Surrogate.register('Custom')
+@Surrogate.register("Custom")
 class GPSurrogate(GaussianProcess):
     """Custom GP model made from scratch.
 
@@ -44,8 +44,16 @@ class GPSurrogate(GaussianProcess):
         except np.linalg.LinAlgError:
             return np.linalg.lstsq(self.Ky, self.ytrain, rcond=1e-15)[0]
 
-    def train(self, X, y, kernel=defaults['kernel'], hyperparameters=defaults['hyperparameters'],
-              fixed_sigma_n=base_defaults['fixed_sigma_n'], eval_gradient=True, return_hess_inv=False):
+    def train(
+        self,
+        X,
+        y,
+        kernel=defaults["kernel"],
+        hyperparameters=defaults["hyperparameters"],
+        fixed_sigma_n=base_defaults["fixed_sigma_n"],
+        eval_gradient=True,
+        return_hess_inv=False,
+    ):
         """After initializing the model with a kernel function and initial hyperparameters,
         it can be trained on input data X and observed output data y by optimizing the model's hyperparameters.
         This is done by minimizing the negative log likelihood.
@@ -68,11 +76,17 @@ class GPSurrogate(GaussianProcess):
         """
         self.pre_train(X, y, kernel, hyperparameters, fixed_sigma_n)
         if self.input_encoders or self.output_encoders:
-            print("For now, encoding is not supported for this surrogate. The model is created without encoding.")
+            print(
+                "For now, encoding is not supported for this surrogate. The model is created without encoding."
+            )
             self.decode_training_data()
 
         # Find best hyperparameters
-        self.optimize(fixed_sigma_n=self.fixed_sigma_n, eval_gradient=eval_gradient, return_hess_inv=return_hess_inv)
+        self.optimize(
+            fixed_sigma_n=self.fixed_sigma_n,
+            eval_gradient=eval_gradient,
+            return_hess_inv=return_hess_inv,
+        )
         self.post_train()
 
     def post_train(self):
@@ -85,16 +99,24 @@ class GPSurrogate(GaussianProcess):
             Xpred = enc.decode(Xpred)
 
         # Skip data noise sigma_n in hyperparameters
-        prediction_hyperparameters = {key: value for key, value in self.hyperparameters.items() if key != 'sigma_n'}
+        prediction_hyperparameters = {
+            key: value
+            for key, value in self.hyperparameters.items()
+            if key != "sigma_n"
+        }
 
         # Calculate conditional mean and covariance functions
         Kstar = self.kernel(self.Xtrain, Xpred, **prediction_hyperparameters)
-        Kstarstar_diag = np.diag(self.kernel(Xpred, Xpred, **prediction_hyperparameters))
+        Kstarstar_diag = np.diag(
+            self.kernel(Xpred, Xpred, **prediction_hyperparameters)
+        )
         fstar = Kstar.T @ self.alpha
-        vstar = Kstarstar_diag - np.diag((Kstar.T @ (self.gp_functions.invert(self.Ky) @ Kstar)))
+        vstar = Kstarstar_diag - np.diag(
+            (Kstar.T @ (self.gp_functions.invert(self.Ky) @ Kstar))
+        )
         vstar = np.maximum(vstar, 1e-10)  # Assure a positive variance
         if add_data_variance:
-            vstar = vstar + self.hyperparameters['sigma_n']**2
+            vstar = vstar + self.hyperparameters["sigma_n"] ** 2
         return fstar, vstar.reshape(-1, 1)  # Return predictive mean and variance
 
     def add_training_data(self, X, y):
@@ -121,14 +143,24 @@ class GPSurrogate(GaussianProcess):
 
     def get_marginal_variance(self, Xpred):
         from .backend.gp_functions import marginal_variance_BBQ
-        self.optimize(fixed_sigma_n=self.fixed_sigma_n, eval_gradient=True,
-                      return_hess_inv=True)
+
+        self.optimize(
+            fixed_sigma_n=self.fixed_sigma_n, eval_gradient=True, return_hess_inv=True
+        )
         assert self.hess_inv is not None
 
         _, fvar = self.predict(Xpred)
-        return marginal_variance_BBQ(self.Xtrain, self.ytrain, Xpred, self.kernel,
-                                     self.hyperparameters, self.hess_inv, self.fixed_sigma_n,
-                                     alpha=self.alpha, predictive_variance=fvar)
+        return marginal_variance_BBQ(
+            self.Xtrain,
+            self.ytrain,
+            Xpred,
+            self.kernel,
+            self.hyperparameters,
+            self.hess_inv,
+            self.fixed_sigma_n,
+            alpha=self.alpha,
+            predictive_variance=fvar,
+        )
 
     def save_model(self, path):
         """Saves the model as dict to a .hdf5 file.
@@ -138,12 +170,20 @@ class GPSurrogate(GaussianProcess):
         """
         from profit.util.file_handler import FileHandler
 
-        saved_attrs = ('trained', 'fixed_sigma_n', 'Xtrain', 'ytrain', 'ndim', 'kernel', 'hyperparameters')
+        saved_attrs = (
+            "trained",
+            "fixed_sigma_n",
+            "Xtrain",
+            "ytrain",
+            "ndim",
+            "kernel",
+            "hyperparameters",
+        )
         save_dict = {attr: getattr(self, attr) for attr in saved_attrs}
 
         # Convert the kernel class object to a string, to be able to save it in the .hdf5 file
-        if not isinstance(save_dict['kernel'], str):
-            save_dict['kernel'] = self.kernel.__name__
+        if not isinstance(save_dict["kernel"], str):
+            save_dict["kernel"] = self.kernel.__name__
         FileHandler.save(path, save_dict)
 
     @classmethod
@@ -159,7 +199,7 @@ class GPSurrogate(GaussianProcess):
 
         from profit.util.file_handler import FileHandler
 
-        sur_dict = FileHandler.load(path, as_type='dict')
+        sur_dict = FileHandler.load(path, as_type="dict")
         self = cls()
 
         for attr, value in sur_dict.items():
@@ -197,7 +237,12 @@ class GPSurrogate(GaussianProcess):
             except AttributeError:
                 raise RuntimeError(f"Kernel {kernel} not implemented.")
 
-    def optimize(self, fixed_sigma_n=base_defaults['fixed_sigma_n'], eval_gradient=False, return_hess_inv=False):
+    def optimize(
+        self,
+        fixed_sigma_n=base_defaults["fixed_sigma_n"],
+        eval_gradient=False,
+        return_hess_inv=False,
+    ):
         r"""Optimize the hyperparameters length_scale $l$, scale $\sigma_f$ and noise $\sigma_n$.
 
         As a backend, the scipy minimize optimizer is used.
@@ -209,11 +254,17 @@ class GPSurrogate(GaussianProcess):
             return_hess_inv (bool): Whether to set the inverse Hessian attribute hess_inv which is used to calculate the
                 marginal variance in active learning.
         """
-        ordered_hyp_keys = ('length_scale', 'sigma_f', 'sigma_n')
+        ordered_hyp_keys = ("length_scale", "sigma_f", "sigma_n")
         a0 = np.concatenate([self.hyperparameters[key] for key in ordered_hyp_keys])
-        opt_hyperparameters = self.gp_functions.optimize(self.Xtrain, self.ytrain, a0, self.kernel,
-                                                         fixed_sigma_n=self.fixed_sigma_n or fixed_sigma_n,
-                                                         eval_gradient=eval_gradient, return_hess_inv=return_hess_inv)
+        opt_hyperparameters = self.gp_functions.optimize(
+            self.Xtrain,
+            self.ytrain,
+            a0,
+            self.kernel,
+            fixed_sigma_n=self.fixed_sigma_n or fixed_sigma_n,
+            eval_gradient=eval_gradient,
+            return_hess_inv=return_hess_inv,
+        )
         if return_hess_inv:
             self.hess_inv = opt_hyperparameters[1]
             opt_hyperparameters = opt_hyperparameters[0]
@@ -223,27 +274,42 @@ class GPSurrogate(GaussianProcess):
     def _set_hyperparameters_from_model(self, model_hyperparameters):
         # Set optimized hyperparameters
         last_idx = -1 if self.fixed_sigma_n else -2
-        self.hyperparameters['length_scale'] = np.atleast_1d(model_hyperparameters[:last_idx])
-        self.hyperparameters['sigma_f'] = np.atleast_1d(model_hyperparameters[last_idx])
+        self.hyperparameters["length_scale"] = np.atleast_1d(
+            model_hyperparameters[:last_idx]
+        )
+        self.hyperparameters["sigma_f"] = np.atleast_1d(model_hyperparameters[last_idx])
         if not self.fixed_sigma_n:
-            self.hyperparameters['sigma_n'] = np.atleast_1d(model_hyperparameters[-1])
+            self.hyperparameters["sigma_n"] = np.atleast_1d(model_hyperparameters[-1])
 
 
 @Surrogate.register("CustomMultiOutputGP")
 class MultiOutputGPSurrogate(GaussianProcess):
-
     def __init__(self, child=GPSurrogate):
         super().__init__()
         self.child = child
         self.models = []
 
-    def train(self, X, y, kernel=defaults['kernel'], hyperparameters=defaults['hyperparameters'],
-              fixed_sigma_n=base_defaults['fixed_sigma_n'], return_hess_inv=False):
+    def train(
+        self,
+        X,
+        y,
+        kernel=defaults["kernel"],
+        hyperparameters=defaults["hyperparameters"],
+        fixed_sigma_n=base_defaults["fixed_sigma_n"],
+        return_hess_inv=False,
+    ):
         self.pre_train(X, y)
         self.models = [self.child() for _ in range(self.output_ndim)]
         for dim, m in enumerate(self.models):
-            m.train(self.Xtrain, self.ytrain[:, [dim]], self.kernel, self.hyperparameters, self.fixed_sigma_n,
-                    False, return_hess_inv)
+            m.train(
+                self.Xtrain,
+                self.ytrain[:, [dim]],
+                self.kernel,
+                self.hyperparameters,
+                self.fixed_sigma_n,
+                False,
+                return_hess_inv,
+            )
         self._set_hyperparameters_from_model()
         self.post_train()
 
@@ -251,9 +317,15 @@ class MultiOutputGPSurrogate(GaussianProcess):
         for m in self.models:
             for k, v in m.hyperparameters.items():
                 self.hyperparameters[k] = np.concatenate([self.hyperparameters[k], v])
-        self.hyperparameters['length_scale'] = np.atleast_1d(np.linalg.norm(self.hyperparameters['length_scale']))
-        self.hyperparameters['sigma_f'] = np.atleast_1d(np.max(self.hyperparameters['sigma_f']))
-        self.hyperparameters['sigma_n'] = np.atleast_1d(np.max(self.hyperparameters['sigma_n']))
+        self.hyperparameters["length_scale"] = np.atleast_1d(
+            np.linalg.norm(self.hyperparameters["length_scale"])
+        )
+        self.hyperparameters["sigma_f"] = np.atleast_1d(
+            np.max(self.hyperparameters["sigma_f"])
+        )
+        self.hyperparameters["sigma_n"] = np.atleast_1d(
+            np.max(self.hyperparameters["sigma_n"])
+        )
         self.decode_hyperparameters()
 
     def predict(self, Xpred, add_data_variance=True):
@@ -268,7 +340,9 @@ class MultiOutputGPSurrogate(GaussianProcess):
 
     def add_training_data(self, X, y):
         start = self.Xtrain.shape[0]
-        self.Xtrain, self.ytrain = np.concatenate([self.Xtrain, X], axis=0), np.concatenate([self.ytrain, y], axis=0)
+        self.Xtrain, self.ytrain = np.concatenate(
+            [self.Xtrain, X], axis=0
+        ), np.concatenate([self.ytrain, y], axis=0)
         self.encode_training_data()
         for dim, m in enumerate(self.models):
             m.add_training_data(self.Xtrain[start:], self.ytrain[start:, [dim]])
@@ -288,17 +362,36 @@ class MultiOutputGPSurrogate(GaussianProcess):
         """
 
         from profit.util.file_handler import FileHandler
-        save_dict = {attr: getattr(self, attr) for attr in ('Xtrain', 'ytrain', 'trained', 'output_ndim', 'hyperparameters')}
-        save_dict['input_encoders'] = str([enc.repr for enc in self.input_encoders])
-        save_dict['output_encoders'] = str([enc.repr for enc in self.output_encoders])
+
+        save_dict = {
+            attr: getattr(self, attr)
+            for attr in (
+                "Xtrain",
+                "ytrain",
+                "trained",
+                "output_ndim",
+                "hyperparameters",
+            )
+        }
+        save_dict["input_encoders"] = str([enc.repr for enc in self.input_encoders])
+        save_dict["output_encoders"] = str([enc.repr for enc in self.output_encoders])
         for i, m in enumerate(self.models):
-            save_dict[i] = {attr: getattr(m, attr)
-                            for attr in
-                            ('trained', 'fixed_sigma_n', 'Xtrain', 'ytrain',
-                             'ndim', 'output_ndim', 'kernel', 'hyperparameters')}
+            save_dict[i] = {
+                attr: getattr(m, attr)
+                for attr in (
+                    "trained",
+                    "fixed_sigma_n",
+                    "Xtrain",
+                    "ytrain",
+                    "ndim",
+                    "output_ndim",
+                    "kernel",
+                    "hyperparameters",
+                )
+            }
             # Convert the kernel class object to a string, to be able to save it in the .hdf5 file
-            if not isinstance(save_dict[i]['kernel'], str):
-                save_dict[i]['kernel'] = m.kernel.__name__
+            if not isinstance(save_dict[i]["kernel"], str):
+                save_dict[i]["kernel"] = m.kernel.__name__
         FileHandler.save(path, save_dict)
 
     @classmethod
@@ -307,17 +400,21 @@ class MultiOutputGPSurrogate(GaussianProcess):
         from profit.sur.encoders import Encoder
         from numpy import array  # needed for eval of arrays
 
-        load_dict = FileHandler.load(path, as_type='dict')
+        load_dict = FileHandler.load(path, as_type="dict")
         self = cls()
-        self.trained = load_dict['trained']
-        self.output_ndim = load_dict['output_ndim']
-        self.Xtrain, self.ytrain = load_dict['Xtrain'], load_dict['ytrain']
-        self.hyperparameters = load_dict['hyperparameters']
+        self.trained = load_dict["trained"]
+        self.output_ndim = load_dict["output_ndim"]
+        self.Xtrain, self.ytrain = load_dict["Xtrain"], load_dict["ytrain"]
+        self.hyperparameters = load_dict["hyperparameters"]
 
-        for enc in eval(load_dict['input_encoders']):
-            self.add_input_encoder(Encoder[enc['class']](enc['columns'], enc['parameters']))
-        for enc in eval(load_dict['output_encoders']):
-            self.add_output_encoder(Encoder[enc['class']](enc['columns'], enc['parameters']))
+        for enc in eval(load_dict["input_encoders"]):
+            self.add_input_encoder(
+                Encoder[enc["class"]](enc["columns"], enc["parameters"])
+            )
+        for enc in eval(load_dict["output_encoders"]):
+            self.add_output_encoder(
+                Encoder[enc["class"]](enc["columns"], enc["parameters"])
+            )
 
         # Initialize the encoder by encoding and decoding the training data once.
         self.encode_training_data()
@@ -339,7 +436,11 @@ class MultiOutputGPSurrogate(GaussianProcess):
 
     def special_hyperparameter_decoding(self, key, value):
         if len(value) > 1:
-            return np.atleast_1d(np.linalg.norm(value)) if key == 'length_scale' else np.atleast_1d(np.max(value))
+            return (
+                np.atleast_1d(np.linalg.norm(value))
+                if key == "length_scale"
+                else np.atleast_1d(np.max(value))
+            )
         return value
 
     def get_marginal_variance(self, Xpred):

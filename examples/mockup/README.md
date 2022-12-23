@@ -12,7 +12,7 @@ The input is read from an input file `mockup.in`. After computation, the output 
 
 ## Parameter study via console scripts
 We want to do a parameter study by varying `u` and `v`. First we enter the `study` directory and
-edit the file `profit.yaml`. 
+edit the file `profit.yaml`.
 
 
 Now we can start runs with
@@ -20,7 +20,7 @@ Now we can start runs with
 profit run
 ```
 This will generate run directories `run` where `u` and `v` are replaced by quasi-random values
-inside the domain of interest. In addition a file `input.txt` containing all parameter 
+inside the domain of interest. In addition a file `input.txt` containing all parameter
 combinations for runs is generated. Then runs are started.
 
 Results from run folders are collected yielding a file `output.txt` with the entries from `run` directories.

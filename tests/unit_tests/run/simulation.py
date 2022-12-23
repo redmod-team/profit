@@ -22,4 +22,3 @@ if __name__ == "__main__":
     params = np.loadtxt("input.csv", delimiter=",")
     data = simulation(*params)
     np.savetxt("output.csv")
-

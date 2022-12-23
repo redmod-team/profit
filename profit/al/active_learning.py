@@ -29,11 +29,20 @@ class ActiveLearning(CustomABC):
     Attributes:
         krun (int): Current training cycle.
     """
+
     labels = {}
 
-    def __init__(self, runner, variables, ntrain, nwarmup=defaults['nwarmup'], batch_size=defaults['batch_size'],
-                 convergence_criterion=defaults['convergence_criterion'], nsearch=defaults['nsearch'],
-                 make_plot=defaults['make_plot']):
+    def __init__(
+        self,
+        runner,
+        variables,
+        ntrain,
+        nwarmup=defaults["nwarmup"],
+        batch_size=defaults["batch_size"],
+        convergence_criterion=defaults["convergence_criterion"],
+        nsearch=defaults["nsearch"],
+        make_plot=defaults["make_plot"],
+    ):
         self.runner = runner
         self.variables = variables
 
@@ -46,20 +55,27 @@ class ActiveLearning(CustomABC):
 
         self.batch_size = batch_size
         if (ntrain - nwarmup) % batch_size:
-            raise RuntimeError("Number of learning points ({}) and batch size ({}) for AL not compatible!"
-                               .format(ntrain - nwarmup, batch_size))
+            raise RuntimeError(
+                "Number of learning points ({}) and batch size ({}) for AL not compatible!".format(
+                    ntrain - nwarmup, batch_size
+                )
+            )
 
         self.convergence_criterion = convergence_criterion
         self.make_plot = make_plot
         self.krun = 0
 
     @abstractmethod
-    def warmup(self, save_intermediate=defaults['save_intermediate']):
+    def warmup(self, save_intermediate=defaults["save_intermediate"]):
         """Warmup cycle before the actual learning starts."""
         pass
 
     @abstractmethod
-    def learn(self, resume_from=defaults['resume_from'], save_intermediate=defaults['save_intermediate']):
+    def learn(
+        self,
+        resume_from=defaults["resume_from"],
+        save_intermediate=defaults["save_intermediate"],
+    ):
         """Main loop for active learning."""
         pass
 
@@ -98,15 +114,19 @@ class ActiveLearning(CustomABC):
 
     def save_intermediate(self, model_path=None, input_path=None, output_path=None):
         from profit.util.file_handler import FileHandler
+
         if model_path:
             self.save(model_path)
         if input_path:
             FileHandler.save(input_path, self.variables.named_input)
         if output_path:
-            formatted_output_data = self.variables.formatted_output \
-                if output_path.endswith('.txt') else self.variables.named_output
+            formatted_output_data = (
+                self.variables.formatted_output
+                if output_path.endswith(".txt")
+                else self.variables.named_output
+            )
             FileHandler.save(output_path, formatted_output_data)
-        print('Saved intermediate results.')
+        print("Saved intermediate results.")
 
     @abstractmethod
     def plot(self):
@@ -127,6 +147,6 @@ class ActiveLearning(CustomABC):
             profit.al.active_learning.ActiveLearning: AL instance.
         """
 
-        child = cls[config['algorithm']['class']]
+        child = cls[config["algorithm"]["class"]]
         child_instance = child.from_config(runner, variables, config, base_config)
         return child_instance

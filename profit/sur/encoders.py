@@ -20,7 +20,11 @@ class Encoder(CustomABC):
 
     def __init__(self, columns, parameters=None):
         self.label = self.__class__.get_label()
-        self.parameters = {key: np.array(values) for key, values in parameters.items()} if parameters else {}
+        self.parameters = (
+            {key: np.array(values) for key, values in parameters.items()}
+            if parameters
+            else {}
+        )
         self.columns = columns
 
     @property
@@ -36,7 +40,11 @@ class Encoder(CustomABC):
                 parameters_dict[key] = values.tolist()
             except AttributeError:
                 parameters_dict[key] = [values]
-        return {'class': self.label, 'columns': self.columns, 'parameters': parameters_dict}
+        return {
+            "class": self.label,
+            "columns": self.columns,
+            "parameters": parameters_dict,
+        }
 
     def encode(self, x):
         """Applies the encoding function on given columns.
@@ -103,17 +111,17 @@ class ExcludeEncoder(Encoder):
     """
 
     def encode(self, x):
-        self.parameters['excluded_values'] = x[:, self.columns]
+        self.parameters["excluded_values"] = x[:, self.columns]
         return x[:, [i for i in range(x.shape[-1]) if i not in self.columns]]
 
     def decode(self, x):
         for idx, col in enumerate(self.columns):
-            insert_x = self.parameters['excluded_values'][:, idx]
+            insert_x = self.parameters["excluded_values"][:, idx]
             x = np.insert(x, col, insert_x, axis=1)
         return x
 
 
-@Encoder.register('Log10')
+@Encoder.register("Log10")
 class Log10Encoder(Encoder):
     r"""Transforms the specified columns with $log_{10}$. This is done for LogUniform variables by default."""
 
@@ -124,7 +132,7 @@ class Log10Encoder(Encoder):
         return 10**x
 
 
-@Encoder.register('Normalization')
+@Encoder.register("Normalization")
 class Normalization(Encoder):
     r"""Normalization of the specified columns. Usually this is done for all input and output,
         so the surrogate can fit on a (0, 1)^n cube with zero mean and unit variance.
@@ -146,30 +154,35 @@ class Normalization(Encoder):
     """
 
     def encode(self, x):
-        if self.parameters.get('xmean') is None:
-            self.parameters['xmean'] = x[:, self.columns].mean(axis=0)
-        if self.parameters.get('xstd') is None:
-            self.parameters['xstd'] = np.maximum(x[:, self.columns].std(axis=0), 1e-10)
-        if self.parameters.get('xmax') is None:
-            self.parameters['xmax'] = x[:, self.columns].max(axis=0)
-        self.parameters['xmax_centered'] = (self.parameters['xmax'] - self.parameters['xmean']) / \
-                                           self.parameters['xstd']
-        if self.parameters.get('xmin') is None:
-            self.parameters['xmin'] = x[:, self.columns].min(axis=0)
-        self.parameters['xmin_centered'] = (self.parameters['xmin'] - self.parameters['xmean']) / \
-                                           self.parameters['xstd']
+        if self.parameters.get("xmean") is None:
+            self.parameters["xmean"] = x[:, self.columns].mean(axis=0)
+        if self.parameters.get("xstd") is None:
+            self.parameters["xstd"] = np.maximum(x[:, self.columns].std(axis=0), 1e-10)
+        if self.parameters.get("xmax") is None:
+            self.parameters["xmax"] = x[:, self.columns].max(axis=0)
+        self.parameters["xmax_centered"] = (
+            self.parameters["xmax"] - self.parameters["xmean"]
+        ) / self.parameters["xstd"]
+        if self.parameters.get("xmin") is None:
+            self.parameters["xmin"] = x[:, self.columns].min(axis=0)
+        self.parameters["xmin_centered"] = (
+            self.parameters["xmin"] - self.parameters["xmean"]
+        ) / self.parameters["xstd"]
         return super().encode(x)
 
     def encode_func(self, x):
-        _x = (x - self.parameters['xmean']) / self.parameters['xstd']
-        _x = (_x - self.parameters['xmin_centered']) / \
-             np.maximum(self.parameters['xmax_centered'] - self.parameters['xmin_centered'], 1e-10)
+        _x = (x - self.parameters["xmean"]) / self.parameters["xstd"]
+        _x = (_x - self.parameters["xmin_centered"]) / np.maximum(
+            self.parameters["xmax_centered"] - self.parameters["xmin_centered"], 1e-10
+        )
         return _x
 
     def decode_func(self, x):
-        _x = x * (self.parameters['xmax_centered'] - self.parameters['xmin_centered']) + \
-             self.parameters['xmin_centered']
-        _x = _x * self.parameters['xstd'] + self.parameters['xmean']
+        _x = (
+            x * (self.parameters["xmax_centered"] - self.parameters["xmin_centered"])
+            + self.parameters["xmin_centered"]
+        )
+        _x = _x * self.parameters["xstd"] + self.parameters["xmean"]
         return _x
 
     def decode_hyperparameters(self, value):
@@ -181,28 +194,32 @@ class Normalization(Encoder):
         Returns:
             np.array: Decoded value.
         """
-        _value = value * (self.parameters['xmax_centered'] - self.parameters['xmin_centered'])
-        _value = _value * self.parameters['xstd']
+        _value = value * (
+            self.parameters["xmax_centered"] - self.parameters["xmin_centered"]
+        )
+        _value = _value * self.parameters["xstd"]
         return _value
 
     def decode_variance(self, variance):
-        _variance = variance * (self.parameters['xmax_centered'] - self.parameters['xmin_centered']) ** 2
-        _variance = _variance * self.parameters['xstd']**2
+        _variance = (
+            variance
+            * (self.parameters["xmax_centered"] - self.parameters["xmin_centered"]) ** 2
+        )
+        _variance = _variance * self.parameters["xstd"] ** 2
         return _variance
 
 
 @Encoder.register("PCA")
 class PCA(Encoder):
-
     def __init__(self, columns=(), parameters=None):
         if parameters is None:
             parameters = {}
-        if 'tol' not in parameters:
-            parameters['tol'] = 1e-2
+        if "tol" not in parameters:
+            parameters["tol"] = 1e-2
 
         super().__init__(columns, parameters)
-        if self.parameters.get('ytrain') is not None:
-            self.init_eigvalues(self.parameters['ytrain'])
+        if self.parameters.get("ytrain") is not None:
+            self.init_eigvalues(self.parameters["ytrain"])
         else:
             self.ymean = None
             self.dy = None
@@ -211,11 +228,12 @@ class PCA(Encoder):
 
     def init_eigvalues(self, y):
         from scipy.linalg import eigh
-        self.parameters['ytrain'] = y
+
+        self.parameters["ytrain"] = y
         self.ymean = np.mean(y, 0)
         self.dy = y - self.ymean
         w, Q = eigh(self.dy.T @ self.dy)
-        condi = w > self.parameters['tol']
+        condi = w > self.parameters["tol"]
         self.w = w[condi]
         self.Q = Q[:, condi]
 
@@ -227,7 +245,7 @@ class PCA(Encoder):
         Returns:
             Expansion coefficients of y in eigenbasis.
         """
-        if 'ytrain' not in self.parameters:
+        if "ytrain" not in self.parameters:
             self.init_eigvalues(y)
         return (y - self.ymean) @ self.Q
 
@@ -262,7 +280,6 @@ class PCA(Encoder):
 
 @Encoder.register("KarhunenLoeve")
 class KarhunenLoeve(PCA):
-
     def encode(self, y):
         """
         Parameters:
@@ -271,23 +288,24 @@ class KarhunenLoeve(PCA):
         Returns:
             Expansion coefficients of y in eigenbasis.
         """
-        if 'ytrain' not in self.parameters:
+        if "ytrain" not in self.parameters:
             self.init_eigvalues(y)
         ntrain = self.dy.shape[0]
         ntest = y.shape[0]
         b = np.empty((ntrain, ntest))
         for i in range(ntrain):
-            b[i,:] = (y - self.ymean) @ self.dy[i]
-        yres = np.diag(1.0/self.w) @ self.Q.T @ b
+            b[i, :] = (y - self.ymean) @ self.dy[i]
+        yres = np.diag(1.0 / self.w) @ self.Q.T @ b
         return yres.T
 
     def init_eigvalues(self, y):
         from scipy.linalg import eigh
-        self.parameters['ytrain'] = y
+
+        self.parameters["ytrain"] = y
         self.ymean = np.mean(y, 0)
         self.dy = y - self.ymean
         w, Q = eigh(self.dy @ self.dy.T)
-        condi = w > self.parameters['tol']
+        condi = w > self.parameters["tol"]
         self.w = w[condi]
         self.Q = Q[:, condi]
 
@@ -311,6 +329,8 @@ class KarhunenLoeve(PCA):
             var_dec = np.empty((variance.shape[0], self.ymean.shape[0]))
             for row, var_enc in enumerate(variance):
                 I = np.eye(var_enc.shape[0], var_enc.shape[0])
-                var_dec[row, :] = np.diag((self.dy.T @ self.Q) @ (var_enc * I @ (self.dy.T @ self.Q).T))
+                var_dec[row, :] = np.diag(
+                    (self.dy.T @ self.Q) @ (var_enc * I @ (self.dy.T @ self.Q).T)
+                )
             return var_dec
         return np.full_like(variance, np.nan)
