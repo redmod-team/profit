@@ -10,14 +10,14 @@ repos:
     additional_dependencies: ['nbconvert']
     entry: python3 -m nbconvert --ClearOutputPreprocessor.enabled=True --inplace
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v2.3.0
+  rev: v4.4.0
   hooks:
   - id: end-of-file-fixer
     exclude: ^draft/
   - id: trailing-whitespace
     exclude: ^draft/
 - repo: https://github.com/psf/black
-  rev: 22.3.0
+  rev: 22.12.0
   hooks:
   - id: black-jupyter
     exclude: ^draft/
