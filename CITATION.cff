@@ -1,0 +1,102 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: >-
+  proFit: Probabilistic Response Model Fitting with
+  Interactive Tools
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file. To cite a specific version of
+  DESC, please cite the correct version from Zenodo at
+  https://zenodo.org/search?page=1&size=20&q=conceptrecid:%223580488%22&sort=-version&all_versions=True
+type: software
+license: MIT
+authors:
+  - given-names: Christopher
+    family-names: ' Albert'
+    affiliation: Technische Universität Graz
+    orcid: 'https://orcid.org/0000-0003-4773-416X'
+    email: albert@tugraz.at
+  - given-names: Maximilian
+    family-names: Kendler
+    affiliation: Technische Universität Graz
+  - given-names: Robert
+    family-names: Babin
+    affiliation: Technische Universität Graz
+  - given-names: Michael
+    family-names: Hadwiger
+    affiliation: Technische Universität Graz
+  - given-names: Richard
+    family-names: Hofmeister
+    affiliation: Helmholtz-Zentrum Geesthacht
+  - given-names: Manal
+    family-names: Khallaayoune
+    affiliation: Max-Planck-Institut für Plasmaphysik
+  - given-names: Francesco
+    family-names: Kramp
+    affiliation: Technische Universität Graz
+  - given-names: Katharina
+    family-names: Rath
+    affiliation: Max-Planck-Institut für Plasmaphysik
+    orcid: 'https://orcid.org/0000-0002-4962-5656'
+  - given-names: Baptiste
+    family-names: Rubino-Moyner
+    affiliation: Max-Planck-Institut für Plasmaphysik
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.3580488
+    description: >-
+      Main DOI, represents all versions and resolves to the
+      latest one.
+repository-code: 'https://github.com/redmod-team/profit'
+url: 'https://profit.readthedocs.io/'
+keywords:
+  - Parameter Study
+  - Gaussian Process
+  - Regression
+  - HPC
+  - Active Learning
+abstract: >-
+  <p>proFit is a collection of tools for studying parametric
+  dependencies of black-box simulation codes or experiments
+  and construction of reduced order response models over
+  input parameter space.</p><p>proFit can be fed with a
+  number of data points consisting of different input
+  parameter combinations and the resulting output of the
+  simulation under investigation. It then fits a
+  response-surface through the point cloud using Gaussian
+  process regression (GPR) models. This probabilistic
+  response model allows to predict (interpolate) the output
+  at yet unexplored parameter combinations including
+  uncertainty estimates. It can also tell you where to put
+  more training points to gain maximum new information
+  (experimental design) and automatically generate and start
+  new simulation runs locally or on a cluster. Results can
+  be explored and checked visually in a web
+  frontend.</p><p>Telling proFit how to interact with your
+  existing simulations is easy and requires no changes in
+  your existing code. Current functionality covers starting
+  simulations locally or on a cluster via <a
+  href=\"https://slurm.schedmd.com\">Slurm</a>, subsequent
+  surrogate modelling using <a
+  href=\"https://github.com/SheffieldML/GPy\">GPy</a>, <a
+  href=\"https://github.com/scikit-learn/scikit-learn\">scikit-learn</a>,
+  as well as an active learning algorithm to iteratively
+  sample at interesting points and a
+  Markov-Chain-Monte-Carlo (MCMC) algorithm. The web
+  frontend to interactively explore the point cloud and
+  surrogate is based on <a
+  href=\"https://github.com/plotly/dash\">plotly/dash</a>.</p><p>Features
+  include: <ul><li>Compute evaluation points (e.g. from a
+  random distribution) to run simulation</li><li>Template
+  replacement and automatic generation of run
+  directories</li><li>Starting parallel runs locally or on
+  the cluster (SLURM)</li><li>Collection of result output
+  and postprocessing</li><li>Response-model fitting using
+  Gaussian Process Regression and Linear
+  Regression</li><li>Active learning to reduce number of
+  samples needed</li><li>MCMC to find a posterior parameter
+  distribution (similar to active
+  learning)</li><li>Graphical user interface to explore the
+  results</li></ul></p>",
