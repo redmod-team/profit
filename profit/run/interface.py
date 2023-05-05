@@ -33,7 +33,11 @@ class RunnerInterface(Component):
             self.logger.parent = logger_parent
 
         self.input_vars = [
-            (variable, spec["dtype"].__name__)
+            (
+                variable,
+                spec["dtype"].__name__,
+                () if "size" not in spec or spec["size"] == (1, 1) else (spec["size"][-1],),
+            )
             for variable, spec in input_config.items()
         ]
         self.output_vars = [
