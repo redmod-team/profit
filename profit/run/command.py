@@ -500,3 +500,21 @@ def HDF5Postprocessor(self, data):
         for key in f.keys():
             if key in data.dtype.names:
                 data[key] = f[key][:]
+
+
+# --- netCDF Postprocessor --- #
+
+
+@Postprocessor.wrap("netcdf", config=dict(path="stdout"))
+def NetCDFPostprocessor(self, data):
+    """Postprocessor to read output from a HDF5 file
+
+    - variables are assumed to be stored with the correct key and able to be converted immediately
+    - not extensively tested
+    """
+    import xarray as xr
+
+    ds = xr.open_dataset(self.path)
+    for key in ds.keys():
+        if key in data.dtype.names:
+            data[key] = ds[key]

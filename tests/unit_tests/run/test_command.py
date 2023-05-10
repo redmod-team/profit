@@ -25,11 +25,12 @@ def chdir_pytest():
 # === initialization === #
 
 
-POSTPROCESSORS = ["numpytxt", "json", "hdf5"]
+POSTPROCESSORS = ["numpytxt", "json", "hdf5", "netcdf"]
 INPUT_DTYPE = [("u", float), ("v", float)]
 OUTPUTS = {"f": [1.4, 1.3, 1.2], "g": 10}
 OUTPUT_DTYPE = [("f", float, (3,)), ("g", float)]
 OPTIONS = {"numpytxt": {"names": ["f", "g"]}}
+POST_EXTENSION = {"netcdf": "nc"}
 
 
 @pytest.fixture
@@ -43,7 +44,9 @@ def postprocessor(request, logger):
     from profit.run.command import Postprocessor
 
     return Postprocessor[label](
-        path=f"{label}.post", **OPTIONS.get(label, {}), logger_parent=logger
+        path=f"post.{POST_EXTENSION.get(label, label)}",
+        **OPTIONS.get(label, {}),
+        logger_parent=logger,
     )
 
 
