@@ -22,6 +22,7 @@ import functools
 import numpy as np
 import time
 import subprocess
+import f90nml
 
 from .worker import Component, Worker, Interface
 
@@ -200,7 +201,7 @@ class TemplatePreprocessor(Preprocessor, label="template"):
     def template_path(self):
         return os.path.join(os.environ.get("PROFIT_BASE_DIR", "."), self.path)
 
-    def prepare(self, data: Mapping):
+    def prepare(self, data: np.ndarray):
         # No call to super()! overrides the default directory creation
         if os.path.exists(self.run_dir):
             self.logger.error(f"run directory '{self.run_dir}' already exists")
@@ -228,7 +229,7 @@ class TemplatePreprocessor(Preprocessor, label="template"):
             os.path.exists(run_dir_single) and not ignore_path_exists
         ):  # ToDo: make ignore_path_exists default
             if overwrite:
-                rmtree(run_dir_single)
+                shutil.rmtree(run_dir_single)
             else:
                 raise RuntimeError("Run directory not empty: {}".format(run_dir_single))
         self.copy_template(template_dir, run_dir_single)
@@ -319,6 +320,71 @@ class TemplatePreprocessor(Preprocessor, label="template"):
             )
             pre, post = "{{", "}}"
         return content.format_map(SafeDict.from_params(params, pre=pre, post=post))
+
+
+# --- Fortran Namelist Preprocessor --- #
+
+
+class NamelistPreprocessor(TemplatePreprocessor, label="namelist"):
+    """Preprocessor for Fortran Namelists
+
+    This Preprocessor copies a given template directory (specified by `template`)
+    for each run and modifies the namelist file (specified by `file`) by setting the
+    input parameters in the namelist specified by `namelist`.
+
+    Parameters:
+        run_dir (str/path): [Internal] path to the run directory to be filled
+        clean (bool): flag whether to remove the run directory upon completion
+        template (str/path): path to the template directory to copy for each run
+            (relative to the base directory)
+        file (str/path): path to / name of the namelist file into which the parameters
+            are inserted (relative to the template directory)
+        namelist (str): identifier for the namelist within the file
+    """
+
+    def __init__(
+        self,
+        run_dir: str,
+        *,
+        clean=True,
+        template="template",
+        file="input.nml",
+        namelist="indata",
+        logger_parent=None,
+    ):
+        Preprocessor.__init__(
+            self, run_dir=run_dir, clean=clean, logger_parent=logger_parent
+        )
+        self.template = template
+        self.file = file
+        self.namelist = namelist
+
+    @property
+    def path(self):
+        """required by TemplatePreprocessor"""
+        return self.template
+
+    @property
+    def param_files(self):
+        """required by TemplatePreprocessor"""
+        return [self.file]
+
+    def prepare(self, data: np.ndarray):
+        super().prepare(data)
+        if self.param_files is None:
+            return
+        if len(self.param_files) > 1:
+            raise ValueError(
+                "Namelist Preprocessor can only handle a single file for now!"
+            )
+        with open(self.file) as f:
+            nml = f90nml.read(f)
+            for key in data.dtype.names:
+                if data[key].size > 1:
+                    nml[self.namelist][key] = list(data[key])
+                else:
+                    nml[self.namelist][key] = data[key]
+        f90nml.write(nml, self.file, force=True)
 
 
 # === Postprocessor Component === #

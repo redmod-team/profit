@@ -9,6 +9,7 @@ import numpy as np
 import logging
 import json
 import os
+import f90nml
 
 
 @pytest.fixture(autouse=True)
@@ -33,7 +34,7 @@ OPTIONS = {"numpytxt": {"names": ["f", "g"]}}
 
 @pytest.fixture
 def inputs():
-    return {key: np.random.random() for key, dtype in INPUT_DTYPE}
+    return np.random.random(1).astype(INPUT_DTYPE)[0]
 
 
 @pytest.fixture(params=POSTPROCESSORS)
@@ -58,7 +59,7 @@ def MockWorkerInterface(inputs):
 
         def retrieve(self):
             self.input = np.zeros(1, dtype=INPUT_DTYPE)[0]
-            for key in inputs:
+            for key in inputs.dtype.names:
                 self.input[key] = inputs[key]
             self.output = np.zeros(1, dtype=OUTPUT_DTYPE)[0]
             self.retrieved = True
@@ -86,7 +87,7 @@ def MockPreprocessor(inputs):
             self.posted = False
 
         def prepare(self, data):
-            for key in inputs:
+            for key in inputs.dtype.names:
                 assert np.all(data[key] == inputs[key])
             self.prepared = True
 
@@ -131,7 +132,7 @@ def test_register():
     assert CommandWorker.label in Worker.labels
     assert Worker[CommandWorker.label] is CommandWorker
     # all Preprocessors should be tested
-    assert Preprocessor.labels == {"template"}
+    assert Preprocessor.labels == {"template", "namelist"}
     # all Postprocessors should be tested
     assert Postprocessor.labels == set(POSTPROCESSORS)
 
@@ -161,9 +162,26 @@ def test_template(inputs, logger):
         data_csv = np.loadtxt("template.csv", delimiter=",", dtype=INPUT_DTYPE)
         with open("template.json") as f:
             data_json = json.load(f)
-        for key, value in inputs.items():
-            assert np.all(value == data_csv[key])
-            assert np.all(value == data_json[key])
+        for key in inputs.dtype.names:
+            assert np.all(inputs[key] == data_csv[key])
+            assert np.all(inputs[key] == data_json[key])
+    finally:
+        preprocessor.post()
+
+
+def test_namelist(inputs, logger):
+    from profit.run.command import Preprocessor
+
+    preprocessor = Preprocessor["namelist"](
+        "run_test", clean=True, logger_parent=logger
+    )
+    try:
+        preprocessor.prepare(inputs)
+        assert os.path.basename(os.getcwd()) == "run_test"
+        with open("input.nml") as f:
+            data = f90nml.read(f)["indata"]
+            for key in inputs.dtype.names:
+                assert np.all(inputs[key] == data[key])
     finally:
         preprocessor.post()
 
