@@ -222,9 +222,6 @@ class SlurmRunner(Runner, label="slurm"):
             if value is not None:
                 text += f"\n#SBATCH --{key}={value}"
 
-        text += """
-#SBATCH --ntasks=1
-"""
         if self.cpus == "all" or self.cpus == 0:
             text += """
 #SBATCH --nodes=1

@@ -517,4 +517,4 @@ def NetCDFPostprocessor(self, data):
     ds = xr.open_dataset(self.path)
     for key in ds.keys():
         if key in data.dtype.names:
-            data[key] = ds[key]
+            data[key] = ds[key].values.flatten()
