@@ -54,7 +54,10 @@ def params2map(params: Union[None, MutableMapping, np.ndarray, np.void]):
     if isinstance(params, MutableMapping):
         return params
     try:
-        return {key: params[key] for key in params.dtype.names}
+        return {
+            key: params[key].item() if params[key].size == 1 else params[key]
+            for key in params.dtype.names
+        }
     except AttributeError:
         pass
     raise TypeError("params are not a Mapping")
