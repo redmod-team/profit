@@ -9,7 +9,6 @@ import numpy as np
 
 
 def safe_path(arg, default, valid_extensions=(".yaml", ".py")):
-
     if path.isfile(arg):
         if arg.endswith(valid_extensions):
             return path.abspath(arg)

@@ -121,6 +121,7 @@ def test_interface(
     runner_interface, worker_interface, runid, inputs, outputs, time, reraise
 ):
     """send & receive with default values"""
+
     # send & receive
     def run():
         for i in range(5):

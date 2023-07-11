@@ -2,7 +2,6 @@ from abc import ABC
 
 
 class CustomABC(ABC):
-
     labels = {}
 
     @classmethod

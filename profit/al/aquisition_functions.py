@@ -341,7 +341,6 @@ class ExpectedImprovement2(AcquisitionFunction):
 
 @AcquisitionFunction.register("alternating_exploration")
 class AlternatingAF(AcquisitionFunction):
-
     al_parameters = {"krun": 0}
 
     def __init__(

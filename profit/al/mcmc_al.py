@@ -51,7 +51,6 @@ class McmcAL(ActiveLearning):
         last_percent=defaults["last_percent"],
         delayed_acceptance=defaults["delayed_acceptance"],
     ):
-
         super().__init__(
             runner,
             variables,
