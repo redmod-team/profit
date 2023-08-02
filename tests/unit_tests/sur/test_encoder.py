@@ -13,7 +13,6 @@ from profit.sur.encoders import Encoder
 
 
 def test_exclude():
-
     COLUMNS = [2]
     CONFIG = {"class": "Exclude", "columns": COLUMNS, "parameters": {}}
     SIZE = (10, 4)
@@ -48,7 +47,6 @@ def test_log10():
 
 
 def test_normalization():
-
     COLUMNS = [0, 1, 2, 3]
     CONFIG = {"class": "Normalization", "columns": COLUMNS, "parameters": {}}
     SIZE = (10, 4)

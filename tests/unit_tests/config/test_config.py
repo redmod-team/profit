@@ -137,7 +137,8 @@ def test_symlinks():
 
 def test_default_values():
     """Tests the default values of the configuration file. First with a simple configuration
-    and then with some parameters customized, to check if missing dict entries are set correctly."""
+    and then with some parameters customized, to check if missing dict entries are set correctly.
+    """
 
     from profit import defaults
 

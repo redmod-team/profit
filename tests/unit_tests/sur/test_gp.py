@@ -19,7 +19,6 @@ a = np.array([1.0, 1.0])
 
 
 def test_gp_1D():
-
     Ky = RBF(xtrain, xtrain, *a)
 
     assert np.array_equal(Ky, Ky.T)
