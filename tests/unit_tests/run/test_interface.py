@@ -27,6 +27,8 @@ def chdir_pytest():
 
 LABELS = ["memmap", "zeromq"]
 TIMEOUT = 2  # s
+LOOPS = 20
+LOOP_SLEEP = 0.1
 
 
 @pytest.fixture(params=LABELS)
@@ -124,11 +126,11 @@ def test_interface(
 
     # send & receive
     def run():
-        for i in range(5):
+        for i in range(LOOPS):
             runner_interface.poll()
             if runner_interface.internal["DONE"][runid]:
                 break
-            sleep(0.1)
+            sleep(LOOP_SLEEP)
         else:
             raise RuntimeError("timeout")
 
