@@ -13,7 +13,9 @@ files:
     input: input_linreg.txt
     output: output_linreg.txt
 fit:
-    surrogate: ChaospyLinReg
-    model: monomial
-    order: 3
+    surrogate: SklearnLinReg
+    expansion: legendre
+    expansion_kwargs:
+        max_degree: 3
+        cross_truncation: 1.0
     save: model_linreg.hdf5

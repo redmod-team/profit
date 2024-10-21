@@ -6,6 +6,7 @@ from os import path
 from typing import Union
 from collections.abc import MutableMapping, Mapping
 import numpy as np
+import inspect
 
 
 def safe_path(arg, default, valid_extensions=(".yaml", ".py")):
@@ -90,3 +91,49 @@ def flatten_struct(struct_array: np.ndarray):
             for row in struct_array
         ]
     )
+
+def check_custom_expansion(custom_expansion, **expansion_kwargs):
+    """
+    Validates the provided custom expansion function to ensure it behaves correctly.
+
+    Parameters:
+        custom_expansion (callable): The custom function that generates basis functions.
+        expansion_kwargs (dict): Additional keyword arguments for the custom expansion.
+
+    Raises:
+        ValueError: If the custom_expansion is not a valid callable or doesn't return
+                    a valid basis expansion ndarray of shape (n_train, n_features).
+    """
+    if not callable(custom_expansion):
+        raise ValueError(f"Provided custom_expansion is not callable.")
+
+    # Check function signature to ensure it accepts at least one argument
+    sig = inspect.signature(custom_expansion)
+    params = sig.parameters
+    if len(params) == 0 or list(params.values())[0].kind not in {
+        inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.VAR_POSITIONAL}:
+        raise ValueError(
+            f"custom_expansion must accept at least one positional argument for input data (X).")
+
+    # Test the custom function with a sample input to validate its behavior
+    try:
+        X_test = np.random.rand(5, 3)  # Sample input: (n_train=5, n_dim=3)
+        expansion_test = custom_expansion(X_test, **expansion_kwargs)
+
+        if not isinstance(expansion_test, np.ndarray):
+            raise ValueError(
+                f"custom_expansion must return a NumPy ndarray, but got {type(expansion_test)} instead.")
+
+        # Check the output shape to ensure it has (n_train, n_features)
+        if expansion_test.shape[0] != X_test.shape[0]:
+            raise ValueError(
+                f"custom_expansion must return an ndarray with the same number of rows as the input data (X). "
+                f"Got {expansion_test.shape[0]} rows, expected {X_test.shape[0]}.")
+
+        if len(expansion_test.shape) != 2:
+            raise ValueError(
+                f"custom_expansion must return a 2D ndarray with shape (n_train, n_features). "
+                f"Got {expansion_test.shape} instead.")
+
+    except Exception as e:
+        raise ValueError(f"Error while validating custom_expansion: {e}")
