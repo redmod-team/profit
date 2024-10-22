@@ -92,6 +92,7 @@ def flatten_struct(struct_array: np.ndarray):
         ]
     )
 
+
 def check_custom_expansion(custom_expansion, **expansion_kwargs):
     """
     Validates the provided custom expansion function to ensure it behaves correctly.
@@ -111,9 +112,12 @@ def check_custom_expansion(custom_expansion, **expansion_kwargs):
     sig = inspect.signature(custom_expansion)
     params = sig.parameters
     if len(params) == 0 or list(params.values())[0].kind not in {
-        inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.VAR_POSITIONAL}:
+        inspect.Parameter.POSITIONAL_OR_KEYWORD,
+        inspect.Parameter.VAR_POSITIONAL,
+    }:
         raise ValueError(
-            f"custom_expansion must accept at least one positional argument for input data (X).")
+            f"custom_expansion must accept at least one positional argument for input data (X)."
+        )
 
     # Test the custom function with a sample input to validate its behavior
     try:
@@ -122,18 +126,21 @@ def check_custom_expansion(custom_expansion, **expansion_kwargs):
 
         if not isinstance(expansion_test, np.ndarray):
             raise ValueError(
-                f"custom_expansion must return a NumPy ndarray, but got {type(expansion_test)} instead.")
+                f"custom_expansion must return a NumPy ndarray, but got {type(expansion_test)} instead."
+            )
 
         # Check the output shape to ensure it has (n_train, n_features)
         if expansion_test.shape[0] != X_test.shape[0]:
             raise ValueError(
                 f"custom_expansion must return an ndarray with the same number of rows as the input data (X). "
-                f"Got {expansion_test.shape[0]} rows, expected {X_test.shape[0]}.")
+                f"Got {expansion_test.shape[0]} rows, expected {X_test.shape[0]}."
+            )
 
         if len(expansion_test.shape) != 2:
             raise ValueError(
                 f"custom_expansion must return a 2D ndarray with shape (n_train, n_features). "
-                f"Got {expansion_test.shape} instead.")
+                f"Got {expansion_test.shape} instead."
+            )
 
     except Exception as e:
         raise ValueError(f"Error while validating custom_expansion: {e}")
