@@ -215,7 +215,7 @@ def test_karhunenloeve():
 
 
 def test_gpy():
-    """Test the Chaospy Linear Regression on a Rosenbrock 2D function."""
+    """Test the GPy on a Rosenbrock 2D function."""
 
     config_file = "study_gpy/profit_gpy.yaml"
     config = BaseConfig.from_file(config_file)
@@ -238,8 +238,8 @@ def test_gpy():
         run(f"profit clean --all {config_file}", shell=True, timeout=TIMEOUT)
 
 
-def test_linreg_chaospy():
-    """Test the Chaospy Linear Regression on a Rosenbrock 2D function."""
+def test_linreg_sklearn():
+    """Test the SklearnLinReg class on a Rosenbrock 2D function."""
 
     config_file = "study_linreg/profit_linreg.yaml"
     config = BaseConfig.from_file(config_file)
@@ -248,19 +248,30 @@ def test_linreg_chaospy():
         run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
         run(f"profit fit {config_file}", shell=True, timeout=TIMEOUT)
         sur = Surrogate.load_model(model_file)
-        assert sur.get_label() == "ChaospyLinReg"
+        assert sur.get_label() == "SklearnLinReg"
+        assert sur.expansion == "legendre"
+        assert sur.expansion_kwargs["max_degree"] == 3
+        assert sur.expansion_kwargs["cross_truncation"] == 1
         assert sur.trained
-        assert sur.model == "monomial"
-        assert sur.order == 3
-        assert sur.ndim == 2
-        assert sur.n_features == 6
-        assert sur.sigma_n == 0.1
-        assert sur.sigma_p == 10
         assert allclose(
-            sur.coeff_mean.flatten(),
-            [-0.16878038, 1.13322473, -1.24807956, 0.72796502, 0.34113983, 0.1707707],
+            sur.model.coef_,
+            [
+                -0.12181017,
+                0.66619358,
+                0.07090632,
+                -0.00596116,
+                0.18766917,
+                0.61387504,
+                -0.01844688,
+                -0.07218312,
+                -0.16231409,
+                -0.26258838,
+            ],
         )
-        mean, cov = sur.predict([[0.25, 5.0, 0.57, 1, 3]])
-        assert allclose(mean[0, 0], 3.70979048) and allclose(cov[0, 0], 0.00202274)
+        assert allclose(sur.model.alpha_, 422753.725561761)
+        assert allclose(sur.model.lambda_, 9.299655048538948)
+        ymean, yvar = sur.predict([[0.25, 5.0, 0.57, 1, 3]])
+        assert allclose(ymean[0, 0], 3.71727175)
+        assert allclose(yvar[0, 0], 2.0401987e-06)
     finally:
         run(f"profit clean --all {config_file}", shell=True, timeout=TIMEOUT)

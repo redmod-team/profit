@@ -36,12 +36,22 @@ fit_gaussian_process = {
 }
 
 fit_linear_regression = {
-    "surrogate": "ChaospyLinreg",
-    "model": "monomial",
-    "order": 2,
-    "model_kwargs": None,
-    "sigma_n": 0.1,
-    "sigma_p": 10,
+    "surrogate": "SklearnLinreg",
+    "expansion": "legendre",
+    "expansion_kwargs": {},  # default for from_config
+    "poly_kwargs": {
+        "max_degree": 4,  # default polynomial kwargs
+        "cross_truncation": 1.0,
+        "alpha": None,
+        "beta": None,
+    },
+    "rbf_kwargs": {
+        "rbf_type": "gaussian",  # default rbf kwargs
+        "method": "grid",
+        "grid_size": 5,
+        "epsilon": 1.0,
+    },
+    "regressor": "BayesianRidge",
 }
 
 # Active Learning Config
