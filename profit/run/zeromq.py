@@ -269,7 +269,8 @@ class ZeroMQWorkerInterface(WorkerInterface, label="zeromq"):
                     if request == "READY":
                         input_descr, input_data, output_descr = response
                         input_descr = [
-                            tuple(column) for column in json.loads(input_descr.decode())
+                            tuple(column[:2] + [tuple(column[2])])
+                            for column in json.loads(input_descr.decode())
                         ]
                         output_descr = [
                             tuple(column[:2] + [tuple(column[2])])

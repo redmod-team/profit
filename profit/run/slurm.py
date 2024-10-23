@@ -66,13 +66,12 @@ class SlurmRunner(Runner, label="slurm"):
 
     def __repr__(self):
         return (
-            f"<{self.__class__.__name__} (" + f", {self.cpus} cpus" + ", OpenMP"
-            if self.openmp
-            else "" + ", debug"
-            if self.debug
-            else "" + ", custom script"
-            if self.custom
-            else "" + ")>"
+            f"<{self.__class__.__name__} ("
+            + f", {self.cpus} cpus"
+            + (", OpenMP" if self.openmp else "")
+            + (", debug" if self.debug else "")
+            + (", custom script" if self.custom else "")
+            + ")>"
         )
 
     @property
@@ -222,9 +221,6 @@ class SlurmRunner(Runner, label="slurm"):
             if value is not None:
                 text += f"\n#SBATCH --{key}={value}"
 
-        text += """
-#SBATCH --ntasks=1
-"""
         if self.cpus == "all" or self.cpus == 0:
             text += """
 #SBATCH --nodes=1
