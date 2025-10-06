@@ -1,8 +1,8 @@
-""" Local Runner & Memory-map Interface
+"""Local Runner & Memory-map Interface
 
- * LocalRunner: start Workers locally via the shell (subprocess.Popen)
- * ForkRunner: start Workers locally with forking (multiprocessing.Process)
- * MemmapInterface: share date using a memory-mapped, structured array (using numpy)
+* LocalRunner: start Workers locally via the shell (subprocess.Popen)
+* ForkRunner: start Workers locally with forking (multiprocessing.Process)
+* MemmapInterface: share date using a memory-mapped, structured array (using numpy)
 """
 
 import subprocess
@@ -35,9 +35,11 @@ class LocalRunner(Runner, label="local"):
         return (
             f"<{self.__class__.__name__} (" + ", debug"
             if self.debug
-            else "" + f", {self.command}"
-            if self.command != "profit-worker"
-            else "" + ")>"
+            else (
+                "" + f", {self.command}"
+                if self.command != "profit-worker"
+                else "" + ")>"
+            )
         )
 
     @property

@@ -1,4 +1,4 @@
-""" zeromq Interface
+"""zeromq Interface
 
 Ideas & Help from the 0MQ Guide (zguide.zeromq.org, examples are licensed with MIT)
 """

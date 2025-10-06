@@ -1,4 +1,4 @@
-""" Component Base Class
+"""Component Base Class
 
 abstract base class to register subclasses
 """
