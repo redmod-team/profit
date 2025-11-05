@@ -13,7 +13,7 @@ from ..util.component import Component
 
 
 class RunnerInterface(Component):
-    internal_vars = [("DONE", np.bool8), ("TIME", np.uint32)]
+    internal_vars = [("DONE", np.bool_), ("TIME", np.uint32)]
 
     def __init__(
         self, size, input_config, output_config, *, logger_parent: logging.Logger = None
