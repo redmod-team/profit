@@ -142,15 +142,38 @@ def negative_log_likelihood_cholesky(
 
     L = np.linalg.cholesky(Ky)
     alpha = solve_cholesky(L, y)
-    nll = (
-        0.5 * y.T @ alpha
-        + np.sum(np.log(L.diagonal()))
-        + len(X) * 0.5 * np.log(2.0 * np.pi)
-    )
+
+    # Handle both single-output and multi-output cases
+    if alpha.ndim == 1:
+        # Single output
+        nll = (
+            0.5 * (y.T @ alpha)
+            + np.sum(np.log(L.diagonal()))
+            + len(X) * 0.5 * np.log(2.0 * np.pi)
+        )
+    else:
+        # Multi-output: sum log-likelihoods over output dimensions
+        n_outputs = alpha.shape[1]
+        nll = (
+            0.5 * np.sum(y * alpha)  # Sum over all elements
+            + n_outputs * np.sum(np.log(L.diagonal()))  # Multiply by number of outputs
+            + len(X) * n_outputs * 0.5 * np.log(2.0 * np.pi)  # Multiply by number of outputs
+        )
+
     if not eval_gradient:
         return nll.item()
+
     KyinvaaT = invert_cholesky(L)
-    KyinvaaT -= np.outer(alpha, alpha)
+    # Handle both single-output and multi-output cases
+    if alpha.ndim == 1:
+        KyinvaaT -= np.outer(alpha, alpha)
+    else:
+        # Multi-output case: alpha has shape (n, m), need (n, n) result
+        # For m independent outputs: gradient = sum_i (K^{-1} - alpha_i @ alpha_i.T)
+        # = m * K^{-1} - alpha @ alpha.T
+        n_outputs = alpha.shape[1]
+        KyinvaaT = n_outputs * KyinvaaT - alpha @ alpha.T
+
     dnll = 0.5 * np.trace(KyinvaaT @ dKy)  # Rasmussen&Williams p. 114, eq. 5.9
     if fixed_sigma_n:
         dnll = dnll[:-1]
