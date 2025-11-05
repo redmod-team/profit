@@ -433,4 +433,10 @@ def HDF5Postprocessor(self, data):
     with h5py.File(self.path, "r") as f:
         for key in f.keys():
             if key in data.dtype.names:
-                data[key] = f[key][:]
+                value = f[key][()]
+                # Handle mismatch between HDF5 arrays and scalar fields
+                # If target is scalar but value is array, extract the scalar
+                if data[key].shape == () and hasattr(value, 'shape') and value.shape:
+                    data[key] = value.flat[0]
+                else:
+                    data[key] = value
