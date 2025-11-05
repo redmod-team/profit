@@ -157,7 +157,10 @@ def negative_log_likelihood_cholesky(
         nll = (
             0.5 * np.sum(y * alpha)  # Sum over all elements
             + n_outputs * np.sum(np.log(L.diagonal()))  # Multiply by number of outputs
-            + len(X) * n_outputs * 0.5 * np.log(2.0 * np.pi)  # Multiply by number of outputs
+            + len(X)
+            * n_outputs
+            * 0.5
+            * np.log(2.0 * np.pi)  # Multiply by number of outputs
         )
 
     if not eval_gradient:

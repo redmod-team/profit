@@ -96,7 +96,9 @@ class McmcAL(ActiveLearning):
         if delayed_acceptance:
             from profit.sur import Surrogate
 
-            self.delayed_acceptance_surrogate = Surrogate["Custom"]()  # Changed from GPy to Custom for numpy 2.x compatibility
+            self.delayed_acceptance_surrogate = Surrogate[
+                "Custom"
+            ]()  # Changed from GPy to Custom for numpy 2.x compatibility
             self.accepted_sur = np.zeros((self.ntrain, self.ndim), dtype=bool)
             self.log_random_sur = np.log(np.random.random((self.ntrain, self.ndim)))
         else:
