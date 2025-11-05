@@ -7,6 +7,7 @@ import pytest
 try:
     import GPy
     from profit.sur.gp import GPySurrogate
+
     HAS_GPY = True
 except ImportError:
     HAS_GPY = False

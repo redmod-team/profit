@@ -18,6 +18,7 @@ from pytest import fixture, mark
 
 try:
     import GPy
+
     HAS_GPY = True
 except ImportError:
     HAS_GPY = False

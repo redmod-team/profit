@@ -5,6 +5,7 @@ import pytest
 try:
     from profit.sur.gp import GPySurrogate
     import GPy
+
     HAS_GPY = True
 except ImportError:
     HAS_GPY = False
@@ -53,6 +54,7 @@ def test_select_kernel():
 
     if HAS_GPY:
         from GPy.kern import RBF as gRBF
+
         sur = Surrogate["GPy"]()
         sur.ndim = 2
         assert type(sur.select_kernel("RBF")) == gRBF
@@ -79,7 +81,9 @@ def test_set_hyperparameters():
     assert sur.hyperparameters == expected_hyperparameters
 
     # Product kernel
-    sur.model = GPy.models.GPRegression(Xtrain, ytrain, kernel=GPy.kern.RBF(1) * GPy.kern.Matern52(1))
+    sur.model = GPy.models.GPRegression(
+        Xtrain, ytrain, kernel=GPy.kern.RBF(1) * GPy.kern.Matern52(1)
+    )
     sur._set_hyperparameters_from_model()
     assert sur.hyperparameters == expected_hyperparameters
 

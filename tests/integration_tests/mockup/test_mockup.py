@@ -26,6 +26,7 @@ from typing import Mapping
 
 try:
     import GPy
+
     HAS_GPY = True
 except ImportError:
     HAS_GPY = False
@@ -55,9 +56,13 @@ def test_1D():
         run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
         run(f"profit fit {config_file}", shell=True, timeout=TIMEOUT)
         sur = Surrogate.load_model(model_file)
-        assert sur.get_label() == "Custom"  # Changed from GPy to Custom (numpy 2.x compatible)
+        assert (
+            sur.get_label() == "Custom"
+        )  # Changed from GPy to Custom (numpy 2.x compatible)
         assert sur.trained
-        assert sur.kernel.__name__ == "RBF"  # Changed from sur.model.kern.name for Custom surrogate
+        assert (
+            sur.kernel.__name__ == "RBF"
+        )  # Changed from sur.model.kern.name for Custom surrogate
         assert allclose(
             sur.hyperparameters["length_scale"], 0.23521412, rtol=PARAM_RTOL
         )
@@ -163,10 +168,16 @@ def test_2D():
         run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
         run(f"profit fit {config_file}", shell=True, timeout=TIMEOUT)
         sur = Surrogate.load_model(model_file)
-        assert sur.get_label() == "Custom"  # Changed from GPy to Custom (numpy 2.x compatible)
+        assert (
+            sur.get_label() == "Custom"
+        )  # Changed from GPy to Custom (numpy 2.x compatible)
         assert sur.trained
-        assert sur.kernel.__name__ == "RBF"  # Changed from sur.model.kern.name for Custom surrogate
-        assert sur.ndim == 2  # Changed from sur.model.kern.input_dim for Custom surrogate
+        assert (
+            sur.kernel.__name__ == "RBF"
+        )  # Changed from sur.model.kern.name for Custom surrogate
+        assert (
+            sur.ndim == 2
+        )  # Changed from sur.model.kern.input_dim for Custom surrogate
         assert allclose(
             sur.hyperparameters["length_scale"], 0.47321765, rtol=PARAM_RTOL
         )
@@ -186,10 +197,16 @@ def test_2D_independent():
         run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
         run(f"profit fit {config_file}", shell=True, timeout=TIMEOUT)
         sur = Surrogate.load_model(model_file)
-        assert sur.get_label() == "Custom"  # Changed from GPy to Custom (numpy 2.x compatible)
+        assert (
+            sur.get_label() == "Custom"
+        )  # Changed from GPy to Custom (numpy 2.x compatible)
         assert sur.trained
-        assert sur.kernel.__name__ == "RBF"  # Changed from sur.model.kern.name for Custom surrogate
-        assert sur.ndim == 1  # Changed from sur.model.kern.input_dim for Custom surrogate
+        assert (
+            sur.kernel.__name__ == "RBF"
+        )  # Changed from sur.model.kern.name for Custom surrogate
+        assert (
+            sur.ndim == 1
+        )  # Changed from sur.model.kern.input_dim for Custom surrogate
         assert allclose(
             sur.hyperparameters["length_scale"], 0.25102422, rtol=PARAM_RTOL
         )
