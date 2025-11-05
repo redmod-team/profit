@@ -2,8 +2,14 @@
 # coding: utf-8
 
 import numpy as np
+import pytest
 
-from profit.sur.gp import GPySurrogate
+try:
+    import GPy
+    from profit.sur.gp import GPySurrogate
+    HAS_GPY = True
+except ImportError:
+    HAS_GPY = False
 
 
 def f(x):
@@ -21,6 +27,7 @@ nxtrain = len(xtrain)
 a = np.array([1.0, 1.0])
 
 
+@pytest.mark.skipif(not HAS_GPY, reason="GPy not installed (requires numpy<2.0)")
 def test_sur():
     gps = GPySurrogate()
     gps.train(x, y)
