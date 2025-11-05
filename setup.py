@@ -47,4 +47,5 @@ if __name__ == "__main__":
     else:
         # Use regular setuptools when Fortran is not needed
         from setuptools import setup
+
         setup()
