@@ -1,4 +1,4 @@
-""" mockup 1D integrated directly into the worker
+"""mockup 1D integrated directly into the worker
 
 the custom worker directly replaces the main function, disabling all pre and post steps
 thereby all configuration for pre and post has no effect (actually it might have an effect on the runner)

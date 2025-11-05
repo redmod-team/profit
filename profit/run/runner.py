@@ -1,4 +1,4 @@
-""" Runner & Runner Interface """
+"""Runner & Runner Interface"""
 
 import os
 import sys

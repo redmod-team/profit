@@ -1,4 +1,4 @@
-""" Command Worker
+"""Command Worker
 
 The default Worker to run an executable simulation.
 The Preprocessor allows for a customized preparation of the environment for the simulation.

@@ -1,4 +1,4 @@
-""" Scheduling runs on a HPC cluster with SLURM
+"""Scheduling runs on a HPC cluster with SLURM
 
 * targeted towards aCluster@tugraz.at
 * each run is submitted as a job using a slurm batch script
@@ -68,11 +68,11 @@ class SlurmRunner(Runner, label="slurm"):
         return (
             f"<{self.__class__.__name__} (" + f", {self.cpus} cpus" + ", OpenMP"
             if self.openmp
-            else "" + ", debug"
-            if self.debug
-            else "" + ", custom script"
-            if self.custom
-            else "" + ")>"
+            else (
+                "" + ", debug"
+                if self.debug
+                else "" + ", custom script" if self.custom else "" + ")>"
+            )
         )
 
     @property
