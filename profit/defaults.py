@@ -15,7 +15,7 @@ run = {"runner": "fork", "interface": "memmap", "worker": "command"}
 
 # Fit Config
 fit = {
-    "surrogate": "GPy",
+    "surrogate": "Custom",  # Changed from GPy to Custom for numpy 2.x compatibility
     "save": "./model.hdf5",
     "load": False,
     "fixed_sigma_n": False,
@@ -26,7 +26,7 @@ fit = {
 }
 
 fit_gaussian_process = {
-    "surrogate": "GPy",
+    "surrogate": "Custom",  # Changed from GPy to Custom for numpy 2.x compatibility
     "kernel": "RBF",
     "hyperparameters": {
         "length_scale": None,  # Hyperparameters are inferred from training data

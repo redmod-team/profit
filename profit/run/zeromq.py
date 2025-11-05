@@ -129,7 +129,7 @@ class ZeroMQRunnerInterface(RunnerInterface, label="zeromq"):
                 self.internal["FLAGS"][run_id] |= 0x08
                 self.socket.send_multipart([address, b"", b"ACK"])  # acknowledge
             elif msg[0] == b"TIME":
-                self.internal["TIME"][run_id] = np.frombuffer(msg[1], dtype=np.uint)
+                self.internal["TIME"][run_id] = np.frombuffer(msg[1], dtype=np.uint)[0]
                 self.logger.debug(
                     f"run {run_id} TIME: {np.frombuffer(msg[1], dtype=np.uint)[0]}"
                 )

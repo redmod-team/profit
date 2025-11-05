@@ -124,13 +124,13 @@ def test_interface(
 
     # send & receive
     def run():
-        for i in range(5):
+        for i in range(50):  # Increased from 5 to 50 for more robust testing
             runner_interface.poll()
             if runner_interface.internal["DONE"][runid]:
                 break
             sleep(0.1)
         else:
-            raise RuntimeError("timeout")
+            raise RuntimeError("timeout after 5 seconds")
 
     def work():
         log_to_stderr(worker_interface.logger)

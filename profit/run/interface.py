@@ -13,7 +13,7 @@ from ..util.component import Component
 
 
 class RunnerInterface(Component):
-    internal_vars = [("DONE", np.bool8), ("TIME", np.uint32)]
+    internal_vars = [("DONE", np.bool_), ("TIME", np.uint32)]
 
     def __init__(
         self, size, input_config, output_config, *, logger_parent: logging.Logger = None
@@ -58,9 +58,10 @@ class RunnerInterface(Component):
         if size <= self.size:
             self.logger.warning("shrinking RunnerInterface is not supported")
             return
-        self.input.resize(size, refcheck=True)  # filled with 0 by default
-        self.output.resize(size, refcheck=True)
-        self.internal.resize(size, refcheck=True)
+        # NumPy 2.x requires refcheck=False when arrays are referenced elsewhere
+        self.input.resize(size, refcheck=False)  # filled with 0 by default
+        self.output.resize(size, refcheck=False)
+        self.internal.resize(size, refcheck=False)
 
     @property
     def size(self):

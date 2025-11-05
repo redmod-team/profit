@@ -14,7 +14,14 @@ from os import path, remove, chdir, getcwd
 from subprocess import run
 from numpy import allclose
 from shutil import rmtree
-from pytest import fixture
+from pytest import fixture, mark
+
+try:
+    import GPy
+
+    HAS_GPY = True
+except ImportError:
+    HAS_GPY = False
 
 
 @fixture(autouse=True)
@@ -78,6 +85,7 @@ def test_2D():
         run(f"profit clean --all {config_file}", shell=True, timeout=CLEAN_TIMEOUT)
 
 
+@mark.skipif(not HAS_GPY, reason="GPy not installed (requires numpy<2.0)")
 def test_log():
     """Test a log function f(u) = log10(u) * sin(10 / u) with a log-transformed AL search space."""
 

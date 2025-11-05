@@ -7,6 +7,7 @@ __pycache__
 *.so
 *.dll
 *.pickle
+*.pkl
 .ipynb_checkpoints/
 *.hdf5
 *.mod
