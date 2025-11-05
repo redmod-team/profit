@@ -436,7 +436,7 @@ def HDF5Postprocessor(self, data):
                 value = f[key][()]
                 # Handle mismatch between HDF5 arrays and scalar fields
                 # If target is scalar but value is array, extract the scalar
-                if data[key].shape == () and hasattr(value, 'shape') and value.shape:
+                if data[key].shape == () and hasattr(value, "shape") and value.shape:
                     data[key] = value.flat[0]
                 else:
                     data[key] = value
