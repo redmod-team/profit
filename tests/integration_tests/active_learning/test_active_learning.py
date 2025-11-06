@@ -17,11 +17,12 @@ from shutil import rmtree
 from pytest import fixture, mark
 
 try:
-    import GPy
+    import torch
+    import gpytorch
 
-    HAS_GPY = True
+    HAS_GPYTORCH = True
 except ImportError:
-    HAS_GPY = False
+    HAS_GPYTORCH = False
 
 
 @fixture(autouse=True)

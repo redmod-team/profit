@@ -12,8 +12,8 @@ files:
     output: output_log.hdf5
 
 fit:
-    surrogate: GPy
-    save: model_log.hdf5
+    surrogate: GPyTorch
+    save: model_log.pkl
 
 active_learning:
     algorithm:

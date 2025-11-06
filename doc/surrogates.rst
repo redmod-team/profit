@@ -9,18 +9,18 @@ Overview
 Fitting the data with the command ``profit fit`` is accomplished by
 Gaussian process regression (GPR) surrogate models.
 
-Currently, there are three such models implemented in proFit, which differences are explained further below:
+Currently, there are four such models implemented in proFit, which differences are explained further below:
 
 * Custom (built from scratch in proFit)
-* GPySurrogate (based on `GPy <https://github.com/SheffieldML/GPy>`_)
+* GPyTorchSurrogate (based on `GPyTorch <https://github.com/cornellius-gp/gpytorch>`_) **[Recommended]**
 * SklearnGPSurrogate (based on `scikit-learn <https://github.com/scikit-learn/scikit-learn>`_)
 
 There are also two multi-output models:
 
 * CustomMultiOutputGP (based on the Custom surrogate)
     Implements simple, independent GPs in every output dimension.
-* CoregionalizedGPy (based on the GPySurrogate)
-    Uses the coregionalization kernel from GPy to model dependencies between outputs.
+* MultiOutputGPyTorch (based on the GPyTorchSurrogate)
+    Uses independent GPyTorch models for each output dimension with GPU acceleration support.
 
 
 Under development:
@@ -87,9 +87,11 @@ most important of which for the use in proFit are displayed in the following tab
 |                      | | Customizable optimization (Laplace approximation,     |
 |                      | |   include derivatives, etc.).                         |
 +----------------------+---------------------------------------------------------+
-| | GPySurrogate       | | Large number of selectable models and kernels.        |
-| | (GPy)              | | Multi-output models with coregionalization available. |
-|                      | | Small package size.                                   |
+| | GPyTorchSurrogate  | | GPU acceleration support via PyTorch.                 |
+| | (GPyTorch)         | | Modern automatic differentiation.                     |
+|                      | | Scalable to large datasets.                           |
+|                      | | Active development and maintenance.                   |
+|                      | | Multi-output models available.                        |
 +----------------------+---------------------------------------------------------+
 | | SklearnGPSurrogate | | Low level customization possible.                     |
 | | (Sklearn)          | | Good integration with other scikit-learn libraries.   |
@@ -97,15 +99,15 @@ most important of which for the use in proFit are displayed in the following tab
 
 Kernels
 -------
-For the ``GPySurrogate`` and the ``SklearnGPSurrogate`` the respective kernels of their packages can be
+For the ``GPyTorchSurrogate`` and the ``SklearnGPSurrogate`` the respective kernels of their packages can be
 called by their corresponding class name.
 The kernels of the custom ``GPSurrogate`` are implemented by default in Python and Fortran,
 where the `RBF <https://en.wikipedia.org/wiki/Radial_basis_function_kernel>`_,
 `Matern32 <https://en.wikipedia.org/wiki/Mat%C3%A9rn_covariance_function>`_ and
 `Matern52` kernels are available as of now.
 
-The automatic relevance detection (ARD) feature of the GPy kernels can be used
-for dimensionality reduction, as dimensions with large length-scales are excluded from the fit which
+GPyTorch provides a wide range of kernels and supports automatic relevance detection (ARD) for
+dimensionality reduction, as dimensions with large length-scales are excluded from the fit which
 makes the model less complex.
 
 Encoders
@@ -151,10 +153,10 @@ Examples
 .. code-block:: yaml
 
     fit:
-        surrogate: GPy
-        save: model.hdf5  # Automatically becomes model_GPy.hdf5 for identification.
+        surrogate: GPyTorch  # Default and recommended surrogate
+        save: model.pkl
         fixed_sigma_n: False  # Fix noise in the beginning.
-        kernel: RBF  # Also possible, e.g.: `Matern32`, `Matern52`, etc.
+        kernel: RBF  # Also possible: `Matern32`, `Matern52`, etc.
         hyperparameters:  # Initial hyperparameters. Inferred from training data if not given.
             length_scale: 0.1
             sigma_f: 1.0
@@ -167,8 +169,8 @@ Examples
 .. code-block:: yaml
 
     fit:
-        surrogate: CoregionalizedGPy  # Use coregionalization multi-output surrogate.
-        save: model_CoregionalizedGPy.pkl  # Only saving to `.pkl` is implemented for this surrogate.
+        surrogate: MultiOutputGPyTorch  # Multi-output surrogate with GPU support.
+        save: model_MultiOutputGPyTorch.pkl
         encoder:
             - Log10(input)  # Transform all input variables.
             - KarhunenLoeve(output)  # Use dimensionality reduction encoder on output.
@@ -177,5 +179,5 @@ Examples
 .. code-block:: yaml
 
     fit:
-        surrogate: GPy
-        load: model_1.hdf5  # Load already trained model.
+        surrogate: GPyTorch
+        load: model_1.pkl  # Load already trained model.

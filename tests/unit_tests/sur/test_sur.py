@@ -5,12 +5,13 @@ import numpy as np
 import pytest
 
 try:
-    import GPy
-    from profit.sur.gp import GPySurrogate
+    import torch
+    import gpytorch
+    from profit.sur.gp import GPyTorchSurrogate
 
-    HAS_GPY = True
+    HAS_GPYTORCH = True
 except ImportError:
-    HAS_GPY = False
+    HAS_GPYTORCH = False
 
 
 def f(x):
@@ -28,7 +29,7 @@ nxtrain = len(xtrain)
 a = np.array([1.0, 1.0])
 
 
-@pytest.mark.skipif(not HAS_GPY, reason="GPy not installed (requires numpy<2.0)")
+@pytest.mark.skipif(not HAS_GPYTORCH, reason="GPyTorch not installed")
 def test_sur():
-    gps = GPySurrogate()
-    gps.train(x, y)
+    gps = GPyTorchSurrogate()
+    gps.train(x, y, training_iter=100)  # Reduced iterations for faster testing

@@ -31,7 +31,7 @@ visually in a web frontend.
 Telling proFit how to interact with your existing simulations is easy
 and requires no changes in your existing code. Current functionality covers
 starting simulations locally or on a cluster via [Slurm](https://slurm.schedmd.com), subsequent
-surrogate modelling using [GPy](https://github.com/SheffieldML/GPy),
+surrogate modelling using [GPyTorch](https://github.com/cornellius-gp/gpytorch),
 [scikit-learn](https://github.com/scikit-learn/scikit-learn),
 as well as an active learning algorithm to iteratively sample at interesting
 points and a Markov-Chain-Monte-Carlo (MCMC) algorithm. The web frontend to interactively explore the point cloud
@@ -65,13 +65,13 @@ sudo apt install gfortran
 ### Dependencies
 * numpy, scipy, matplotlib, sympy, pandas
 * [ChaosPy](https://github.com/jonathf/chaospy)
-* GPy
+* torch, [GPyTorch](https://github.com/cornellius-gp/gpytorch) - default surrogate with GPU support
 * scikit-learn
 * h5py
 * [plotly/dash](https://github.com/plotly/dash) - for the UI
 * [ZeroMQ](https://github.com/zeromq/pyzmq) - for messaging
 * sphinx - for documentation, only needed when `docs` is specified
-* torch, GPyTorch - only needed when `gpu` is specified
+* f90wrap - for Fortran extensions, only needed when building with `USE_FORTRAN=1`
 
 All dependencies are configured in `setup.cfg` and should be installed automatically when using `pip`.
 

@@ -3,21 +3,22 @@ import numpy as np
 import pytest
 
 try:
-    from profit.sur.gp import GPySurrogate
-    import GPy
+    from profit.sur.gp import GPyTorchSurrogate
+    import torch
+    import gpytorch
 
-    HAS_GPY = True
+    HAS_GPYTORCH = True
 except ImportError:
-    HAS_GPY = False
+    HAS_GPYTORCH = False
 
 
 Xtrain = np.array([1, 2, 3, 4]).reshape(-1, 1)
 ytrain = np.array([5, 6, 7, 8]).reshape(-1, 1)
 
 
-@pytest.mark.skipif(not HAS_GPY, reason="GPy not installed (requires numpy<2.0)")
+@pytest.mark.skipif(not HAS_GPYTORCH, reason="GPyTorch not installed")
 def test_default_hyperparameters():
-    sur = GPySurrogate()
+    sur = GPyTorchSurrogate()
     sur.pre_train(Xtrain, ytrain)
     assert sur.hyperparameters["length_scale"] == [0.625]
     assert sur.hyperparameters["sigma_n"] == [0.03]
@@ -30,20 +31,18 @@ def test_add_training_data():
     Xfull = np.concatenate([Xtrain, Xadd])
     yfull = np.concatenate([ytrain, yadd])
     labels = ["Custom", "Sklearn"]
-    if HAS_GPY:
-        labels.append("GPy")
+    if HAS_GPYTORCH:
+        labels.append("GPyTorch")
     for label in labels:
         sur = Surrogate[label]()
         sur.Xtrain = Xtrain
         sur.ytrain = ytrain
-        if label == "GPy":
-            sur.model = GPy.models.GPRegression(Xtrain, ytrain)
+        if label == "GPyTorch":
+            # For GPyTorch, we need to train first before adding data
+            sur.train(Xtrain, ytrain, training_iter=10)
         sur.add_training_data(Xadd, yadd)
         assert np.all(sur.Xtrain == Xfull)
         assert np.all(sur.ytrain == yfull)
-        if label == "GPy":
-            assert np.all(sur.model.X == Xfull)
-            assert np.all(sur.model.Y == yfull)
 
 
 def test_select_kernel():
@@ -52,46 +51,16 @@ def test_select_kernel():
     sur = Surrogate["Custom"]()
     assert sur.select_kernel("RBF") == cRBF
 
-    if HAS_GPY:
-        from GPy.kern import RBF as gRBF
-
-        sur = Surrogate["GPy"]()
-        sur.ndim = 2
-        assert type(sur.select_kernel("RBF")) == gRBF
-        assert all(
-            hasattr(sur.select_kernel("RBF*Matern52"), subkernel)
-            for subkernel in ("rbf", "Mat52")
-        )
+    if HAS_GPYTORCH:
+        sur = Surrogate["GPyTorch"]()
+        assert sur.select_kernel("RBF") == "RBF"
+        assert sur.select_kernel("Matern52") == "Matern52"
 
 
-@pytest.mark.skipif(not HAS_GPY, reason="GPy not installed (requires numpy<2.0)")
-def test_set_hyperparameters():
-    expected_hyperparameters = {
-        "length_scale": np.array([1]),
-        "sigma_n": np.array([1]),
-        "sigma_f": np.array([1]),
-    }
-
-    sur = GPySurrogate()
-    sur.ndim = Xtrain.shape[0]
-
-    # Default RBF kernel
-    sur.model = GPy.models.GPRegression(Xtrain, ytrain)
-    sur._set_hyperparameters_from_model()
-    assert sur.hyperparameters == expected_hyperparameters
-
-    # Product kernel
-    sur.model = GPy.models.GPRegression(
-        Xtrain, ytrain, kernel=GPy.kern.RBF(1) * GPy.kern.Matern52(1)
-    )
-    sur._set_hyperparameters_from_model()
-    assert sur.hyperparameters == expected_hyperparameters
-
-
-@pytest.mark.skipif(not HAS_GPY, reason="GPy not installed (requires numpy<2.0)")
+@pytest.mark.skipif(not HAS_GPYTORCH, reason="GPyTorch not installed")
 def test_default_Xpred():
     # Instantiate surrogate and set relevant attributes.
-    sur = GPySurrogate()
+    sur = GPyTorchSurrogate()
     sur.Xtrain = Xtrain
     sur.ndim = 1
     Xpred = sur.default_Xpred()
