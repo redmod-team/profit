@@ -104,8 +104,8 @@ def generate_all_surrogates_comparison():
         )
         ax.fill_between(
             X_test.flatten(),
-            y_pred.flatten() - 2*std,
-            y_pred.flatten() + 2*std,
+            y_pred.flatten() - 2 * std,
+            y_pred.flatten() + 2 * std,
             color=colors[sur_name],
             alpha=0.15,
             label=f"{sur_name} ±2σ",
@@ -171,8 +171,8 @@ def generate_gpytorch_vs_custom():
     ax1.plot(X_test, y_pred_gpytorch, "b-", linewidth=2, label="GPyTorch", alpha=0.8)
     ax1.fill_between(
         X_test.flatten(),
-        y_pred_gpytorch.flatten() - 2*np.sqrt(y_var_gpytorch.flatten()),
-        y_pred_gpytorch.flatten() + 2*np.sqrt(y_var_gpytorch.flatten()),
+        y_pred_gpytorch.flatten() - 2 * np.sqrt(y_var_gpytorch.flatten()),
+        y_pred_gpytorch.flatten() + 2 * np.sqrt(y_var_gpytorch.flatten()),
         color="blue",
         alpha=0.15,
         label="GPyTorch ±2σ",
@@ -180,8 +180,8 @@ def generate_gpytorch_vs_custom():
     ax1.plot(X_test, y_pred_custom, "g--", linewidth=2, label="Custom", alpha=0.8)
     ax1.fill_between(
         X_test.flatten(),
-        y_pred_custom.flatten() - 2*np.sqrt(y_var_custom.flatten()),
-        y_pred_custom.flatten() + 2*np.sqrt(y_var_custom.flatten()),
+        y_pred_custom.flatten() - 2 * np.sqrt(y_var_custom.flatten()),
+        y_pred_custom.flatten() + 2 * np.sqrt(y_var_custom.flatten()),
         color="green",
         alpha=0.15,
         label="Custom ±2σ",
@@ -281,8 +281,8 @@ def generate_kernel_comparison():
         )
         ax.fill_between(
             X_test.flatten(),
-            y_pred.flatten() - 2*std,
-            y_pred.flatten() + 2*std,
+            y_pred.flatten() - 2 * std,
+            y_pred.flatten() + 2 * std,
             color=colors[kernel_name],
             alpha=0.12,
         )
@@ -355,8 +355,8 @@ def generate_gpytorch_accuracy():
     )
     ax1.fill_between(
         X_test.flatten(),
-        y_pred.flatten() - 2*std,
-        y_pred.flatten() + 2*std,
+        y_pred.flatten() - 2 * std,
+        y_pred.flatten() + 2 * std,
         color="blue",
         alpha=0.2,
         label="±2σ confidence",

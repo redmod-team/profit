@@ -371,8 +371,8 @@ class TestSurrogateComparison:
             )
             ax1.fill_between(
                 X_test.flatten(),
-                y_pred_gpytorch.flatten() - 2*np.sqrt(y_var_gpytorch.flatten()),
-                y_pred_gpytorch.flatten() + 2*np.sqrt(y_var_gpytorch.flatten()),
+                y_pred_gpytorch.flatten() - 2 * np.sqrt(y_var_gpytorch.flatten()),
+                y_pred_gpytorch.flatten() + 2 * np.sqrt(y_var_gpytorch.flatten()),
                 color="blue",
                 alpha=0.15,
                 label="GPyTorch ±2σ",
@@ -382,8 +382,8 @@ class TestSurrogateComparison:
             )
             ax1.fill_between(
                 X_test.flatten(),
-                y_pred_custom.flatten() - 2*np.sqrt(y_var_custom.flatten()),
-                y_pred_custom.flatten() + 2*np.sqrt(y_var_custom.flatten()),
+                y_pred_custom.flatten() - 2 * np.sqrt(y_var_custom.flatten()),
+                y_pred_custom.flatten() + 2 * np.sqrt(y_var_custom.flatten()),
                 color="green",
                 alpha=0.15,
                 label="Custom ±2σ",
