@@ -237,12 +237,20 @@ class GPyTorchSurrogate(GaussianProcess):
         """
         self.ytrain = np.atleast_2d(y.copy())
 
-        # Re-normalize
+        # Re-normalize both X and y (X normalization should already be correct,
+        # but recalculate to be safe)
+        self.Xmean = np.mean(self.Xtrain, axis=0)
+        self.Xscale = np.std(self.Xtrain, axis=0)
+        self.Xscale[self.Xscale < 1e-10] = 1.0
+
         self.ymean = np.mean(self.ytrain)
         self.yscale = np.std(self.ytrain)
         if self.yscale < 1e-10:
             self.yscale = 1.0
 
+        # Normalize both X and y before setting training data
+        Xtrain_normalized = (self.Xtrain - self.Xmean) / self.Xscale
+        Xtrain_torch = torch.from_numpy(Xtrain_normalized).float().to(self.device)
         ytrain_torch = (
             torch.from_numpy((self.ytrain - self.ymean) / self.yscale)
             .float()
@@ -250,8 +258,7 @@ class GPyTorchSurrogate(GaussianProcess):
         )
         ytrain_torch = ytrain_torch.squeeze()
 
-        # Update only the targets
-        Xtrain_torch = torch.from_numpy(self.Xtrain).float().to(self.device)
+        # Update training data with normalized inputs and outputs
         self.model.set_train_data(Xtrain_torch, ytrain_torch, strict=False)
 
     def predict(self, Xpred, add_data_variance=True):
