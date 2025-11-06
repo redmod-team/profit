@@ -293,9 +293,18 @@ class GPyTorchSurrogate(GaussianProcess):
 
         Parameters:
             path (str): Path including the file name, where the model should be saved.
+                       Will be saved as .pkl regardless of extension provided.
         """
         from profit.util.file_handler import FileHandler
         import pickle
+        import os
+
+        # GPyTorch models are always saved as pickle, not HDF5
+        # Replace .hdf5 extension with .pkl if present
+        if path.endswith('.hdf5'):
+            path = path[:-5] + '.pkl'
+        elif not path.endswith('.pkl'):
+            path = path + '.pkl'
 
         save_dict = {
             "model_state": self.model.state_dict(),
@@ -329,15 +338,24 @@ class GPyTorchSurrogate(GaussianProcess):
         Returns:
             GPyTorchSurrogate: Instantiated surrogate model.
         """
-        # Backward compatibility: if .hdf5 file, load with Custom surrogate instead
-        if path.endswith(".hdf5"):
-            from profit.sur.gp.custom_surrogate import GPSurrogate
-
-            return GPSurrogate.load_model(path)
-
+        import os
         from profit.sur.encoders import Encoder
         import pickle
         from numpy import array  # needed for eval of arrays
+
+        # GPyTorch models are saved as .pkl, but path might have .hdf5 extension
+        # Try to find the corresponding .pkl file first
+        pkl_path = path
+        if path.endswith('.hdf5'):
+            pkl_path = path[:-5] + '.pkl'
+
+        # If .pkl file exists, use it
+        if os.path.exists(pkl_path):
+            path = pkl_path
+        # Otherwise, if original path is .hdf5 and exists, it's an old Custom model
+        elif path.endswith('.hdf5') and os.path.exists(path):
+            from profit.sur.gp.custom_surrogate import GPSurrogate
+            return GPSurrogate.load_model(path)
 
         with open(path, "rb") as f:
             save_dict = pickle.load(f)
@@ -420,9 +438,7 @@ class GPyTorchSurrogate(GaussianProcess):
         training_iter = opt_kwargs.get("training_iter", 1000)
         lr = opt_kwargs.get("lr", 0.1)
 
-        self.model.train()
-        self.likelihood.train()
-
+        # Normalize training data
         Xtrain_normalized = (self.Xtrain - self.Xmean) / self.Xscale
         Xtrain_torch = torch.from_numpy(Xtrain_normalized).float().to(self.device)
         ytrain_torch = (
@@ -431,6 +447,12 @@ class GPyTorchSurrogate(GaussianProcess):
             .to(self.device)
         )
         ytrain_torch = ytrain_torch.squeeze()
+
+        # Update model's training data
+        self.model.set_train_data(Xtrain_torch, ytrain_torch, strict=False)
+
+        self.model.train()
+        self.likelihood.train()
 
         mll = gpytorch.mlls.ExactMarginalLogLikelihood(self.likelihood, self.model)
         optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
@@ -604,6 +626,13 @@ class MultiOutputGPyTorchSurrogate(GaussianProcess):
         from profit.util.file_handler import FileHandler
         import pickle
 
+        # GPyTorch models are always saved as pickle, not HDF5
+        # Replace .hdf5 extension with .pkl if present
+        if path.endswith('.hdf5'):
+            path = path[:-5] + '.pkl'
+        elif not path.endswith('.pkl'):
+            path = path + '.pkl'
+
         save_dict = {
             "output_ndim": self.output_ndim,
             "Xtrain": self.Xtrain,
@@ -631,15 +660,24 @@ class MultiOutputGPyTorchSurrogate(GaussianProcess):
     @classmethod
     def load_model(cls, path, device="cpu"):
         """Load all models from file."""
-        # Backward compatibility: if .hdf5 file, load with Custom surrogate instead
-        if path.endswith(".hdf5"):
-            from profit.sur.gp.custom_surrogate import MultiOutputGPSurrogate
-
-            return MultiOutputGPSurrogate.load_model(path)
-
+        import os
         from profit.sur.encoders import Encoder
         import pickle
         from numpy import array
+
+        # GPyTorch models are saved as .pkl, but path might have .hdf5 extension
+        # Try to find the corresponding .pkl file first
+        pkl_path = path
+        if path.endswith('.hdf5'):
+            pkl_path = path[:-5] + '.pkl'
+
+        # If .pkl file exists, use it
+        if os.path.exists(pkl_path):
+            path = pkl_path
+        # Otherwise, if original path is .hdf5 and exists, it's an old Custom model
+        elif path.endswith('.hdf5') and os.path.exists(path):
+            from profit.sur.gp.custom_surrogate import MultiOutputGPSurrogate
+            return MultiOutputGPSurrogate.load_model(path)
 
         with open(path, "rb") as f:
             save_dict = pickle.load(f)
