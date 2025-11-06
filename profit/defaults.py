@@ -34,6 +34,7 @@ fit_gaussian_process = {
         "sigma_n": None,
         "sigma_f": None,
     },
+    "training_iter": 1000,  # Number of training iterations for GPyTorch
 }
 
 fit_linear_regression = {

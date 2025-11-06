@@ -16,3 +16,5 @@ run = {
     "command": "python3 mockup.py",
     "clean": False,
 }
+
+fit = {"surrogate": "MultiOutputGPyTorch", "training_iter": 100}

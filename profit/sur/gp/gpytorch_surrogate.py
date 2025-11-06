@@ -55,6 +55,27 @@ class GPyTorchSurrogate(GaussianProcess):
         self.device = torch.device(device)
         self.ymean = None
         self.yscale = None
+        self.training_iter = 1000  # Default value
+        self.lr = 0.1  # Default learning rate
+
+    @classmethod
+    def from_config(cls, config, base_config):
+        """Instantiate GPyTorch model from configuration.
+
+        Parameters:
+            config (dict): Fit configuration dict.
+            base_config (dict): Full configuration.
+
+        Returns:
+            GPyTorchSurrogate: Configured surrogate instance.
+        """
+        self = super().from_config(config, base_config)
+        # Store training parameters from config
+        if "training_iter" in config:
+            self.training_iter = config["training_iter"]
+        if "lr" in config:
+            self.lr = config["lr"]
+        return self
 
     def train(
         self,
@@ -63,8 +84,8 @@ class GPyTorchSurrogate(GaussianProcess):
         kernel=defaults["kernel"],
         hyperparameters=defaults["hyperparameters"],
         fixed_sigma_n=base_defaults["fixed_sigma_n"],
-        training_iter=1000,
-        lr=0.1,
+        training_iter=None,
+        lr=None,
     ):
         """Train the GPyTorch model.
 
@@ -77,7 +98,23 @@ class GPyTorchSurrogate(GaussianProcess):
             training_iter (int): Number of training iterations.
             lr (float): Learning rate for Adam optimizer.
         """
+        # Use instance attributes if parameters not provided
+        if training_iter is None:
+            training_iter = self.training_iter
+        if lr is None:
+            lr = self.lr
+
         self.pre_train(X, y, kernel, hyperparameters, fixed_sigma_n)
+
+        # Check that this is single-output data
+        if self.ytrain.shape[-1] != 1:
+            raise ValueError(
+                f"GPyTorchSurrogate only supports single-output data. "
+                f"Got ytrain with shape {self.ytrain.shape} (expected shape (n, 1)). "
+                f"For multi-output data with {self.ytrain.shape[-1]} outputs, "
+                f"use MultiOutputGPyTorchSurrogate instead by setting "
+                f"surrogate='MultiOutputGPyTorch' in your configuration."
+            )
 
         # Normalize X and y for numerical stability
         self.Xmean = np.mean(self.Xtrain, axis=0)
@@ -441,6 +478,27 @@ class MultiOutputGPyTorchSurrogate(GaussianProcess):
         self.device = device
         self.models = []
         self.output_ndim = None
+        self.training_iter = 1000  # Default value
+        self.lr = 0.1  # Default learning rate
+
+    @classmethod
+    def from_config(cls, config, base_config):
+        """Instantiate MultiOutputGPyTorch model from configuration.
+
+        Parameters:
+            config (dict): Fit configuration dict.
+            base_config (dict): Full configuration.
+
+        Returns:
+            MultiOutputGPyTorchSurrogate: Configured surrogate instance.
+        """
+        self = super().from_config(config, base_config)
+        # Store training parameters from config
+        if "training_iter" in config:
+            self.training_iter = config["training_iter"]
+        if "lr" in config:
+            self.lr = config["lr"]
+        return self
 
     def train(
         self,
@@ -454,6 +512,12 @@ class MultiOutputGPyTorchSurrogate(GaussianProcess):
         """Train independent GP models for each output dimension."""
         self.pre_train(X, y, kernel, hyperparameters, fixed_sigma_n)
         self.output_ndim = self.ytrain.shape[-1]
+
+        # Use instance attributes if not in kwargs
+        if "training_iter" not in kwargs:
+            kwargs["training_iter"] = self.training_iter
+        if "lr" not in kwargs:
+            kwargs["lr"] = self.lr
 
         self.models = [
             GPyTorchSurrogate(device=self.device) for _ in range(self.output_ndim)

@@ -13,3 +13,19 @@ def logger(caplog):
     caplog.set_level(logging.DEBUG)
     logger = logging.getLogger()
     yield logger
+
+
+@pytest.fixture
+def reraise():
+    """Context manager that re-raises exceptions for multiprocessing tests"""
+    from contextlib import contextmanager
+
+    @contextmanager
+    def _reraise():
+        try:
+            yield
+        except Exception as e:
+            # Re-raise the exception so it can be caught by the test
+            raise
+
+    return _reraise()
