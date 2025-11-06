@@ -44,15 +44,14 @@ if __name__ == "__main__":
                 ),
             ]
 
-            setup(
-                ext_modules=ext_modules,
-                cmdclass=build_ext_cmdclass()
-            )
+            setup(ext_modules=ext_modules, cmdclass=build_ext_cmdclass())
         except ImportError:
             print("Warning: f90wrap not available, falling back to setuptools")
             from setuptools import setup
+
             setup()
     else:
         # Use regular setuptools when Fortran is not needed
         from setuptools import setup
+
         setup()

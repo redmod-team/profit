@@ -12,16 +12,16 @@ class ExactGPModel(gpytorch.models.ExactGP):
     This model uses a configurable mean function and covariance kernel.
     """
 
-    def __init__(self, train_x, train_y, likelihood, kernel_type='RBF'):
+    def __init__(self, train_x, train_y, likelihood, kernel_type="RBF"):
         super(ExactGPModel, self).__init__(train_x, train_y, likelihood)
         self.mean_module = gpytorch.means.ZeroMean()
 
         # Select kernel based on type
-        if kernel_type == 'RBF':
+        if kernel_type == "RBF":
             base_kernel = gpytorch.kernels.RBFKernel()
-        elif kernel_type == 'Matern32':
+        elif kernel_type == "Matern32":
             base_kernel = gpytorch.kernels.MaternKernel(nu=1.5)
-        elif kernel_type == 'Matern52':
+        elif kernel_type == "Matern52":
             base_kernel = gpytorch.kernels.MaternKernel(nu=2.5)
         else:
             # Default to RBF for unknown kernels
@@ -48,7 +48,7 @@ class GPyTorchSurrogate(GaussianProcess):
         device (torch.device): Device to run computations on (CPU or CUDA).
     """
 
-    def __init__(self, device='cpu'):
+    def __init__(self, device="cpu"):
         super().__init__()
         self.model = None
         self.likelihood = None
@@ -87,7 +87,11 @@ class GPyTorchSurrogate(GaussianProcess):
 
         # Convert to torch tensors
         Xtrain_torch = torch.from_numpy(self.Xtrain).float().to(self.device)
-        ytrain_torch = torch.from_numpy((self.ytrain - self.ymean) / self.yscale).float().to(self.device)
+        ytrain_torch = (
+            torch.from_numpy((self.ytrain - self.ymean) / self.yscale)
+            .float()
+            .to(self.device)
+        )
         ytrain_torch = ytrain_torch.squeeze()
 
         # Initialize likelihood and model
@@ -96,19 +100,23 @@ class GPyTorchSurrogate(GaussianProcess):
         # Set initial noise if fixed
         if self.fixed_sigma_n:
             noise_val = self.hyperparameters["sigma_n"].item() ** 2
-            self.likelihood.noise = noise_val / (self.yscale ** 2)
+            self.likelihood.noise = noise_val / (self.yscale**2)
             self.likelihood.noise_covar.raw_noise.requires_grad = False
 
-        self.model = ExactGPModel(Xtrain_torch, ytrain_torch, self.likelihood, kernel).to(self.device)
+        self.model = ExactGPModel(
+            Xtrain_torch, ytrain_torch, self.likelihood, kernel
+        ).to(self.device)
 
         # Set initial hyperparameters if provided
         if self.hyperparameters.get("length_scale") is not None:
             length_scale = self.hyperparameters["length_scale"]
-            self.model.covar_module.base_kernel.lengthscale = torch.tensor(length_scale).float()
+            self.model.covar_module.base_kernel.lengthscale = torch.tensor(
+                length_scale
+            ).float()
 
         if self.hyperparameters.get("sigma_f") is not None:
             sigma_f = self.hyperparameters["sigma_f"].item()
-            self.model.covar_module.outputscale = torch.tensor(sigma_f ** 2).float()
+            self.model.covar_module.outputscale = torch.tensor(sigma_f**2).float()
 
         # Train the model
         self.model.train()
@@ -128,10 +136,12 @@ class GPyTorchSurrogate(GaussianProcess):
             optimizer.step()
 
             if (i + 1) % 100 == 0 or i == 0:
-                print(f'Iter {i + 1}/{training_iter} - Loss: {loss.item():.3e}   '
-                      f'lengthscale: {self.model.covar_module.base_kernel.lengthscale.mean().item():.3e}   '
-                      f'outputscale: {self.model.covar_module.outputscale.item():.3e}   '
-                      f'noise: {self.likelihood.noise.item():.3e}')
+                print(
+                    f"Iter {i + 1}/{training_iter} - Loss: {loss.item():.3e}   "
+                    f"lengthscale: {self.model.covar_module.base_kernel.lengthscale.mean().item():.3e}   "
+                    f"outputscale: {self.model.covar_module.outputscale.item():.3e}   "
+                    f"noise: {self.likelihood.noise.item():.3e}"
+                )
 
         self.post_train()
 
@@ -161,7 +171,11 @@ class GPyTorchSurrogate(GaussianProcess):
             self.yscale = 1.0
 
         Xtrain_torch = torch.from_numpy(self.Xtrain).float().to(self.device)
-        ytrain_torch = torch.from_numpy((self.ytrain - self.ymean) / self.yscale).float().to(self.device)
+        ytrain_torch = (
+            torch.from_numpy((self.ytrain - self.ymean) / self.yscale)
+            .float()
+            .to(self.device)
+        )
         ytrain_torch = ytrain_torch.squeeze()
 
         self.model.set_train_data(Xtrain_torch, ytrain_torch, strict=False)
@@ -182,7 +196,11 @@ class GPyTorchSurrogate(GaussianProcess):
         if self.yscale < 1e-10:
             self.yscale = 1.0
 
-        ytrain_torch = torch.from_numpy((self.ytrain - self.ymean) / self.yscale).float().to(self.device)
+        ytrain_torch = (
+            torch.from_numpy((self.ytrain - self.ymean) / self.yscale)
+            .float()
+            .to(self.device)
+        )
         ytrain_torch = ytrain_torch.squeeze()
 
         # Update only the targets
@@ -213,7 +231,7 @@ class GPyTorchSurrogate(GaussianProcess):
                 pred = self.model(Xpred_torch)
 
             ymean = pred.mean.cpu().numpy() * self.yscale + self.ymean
-            yvar = pred.variance.cpu().numpy() * (self.yscale ** 2)
+            yvar = pred.variance.cpu().numpy() * (self.yscale**2)
 
         ymean = ymean.reshape(-1, 1)
         yvar = yvar.reshape(-1, 1)
@@ -231,26 +249,26 @@ class GPyTorchSurrogate(GaussianProcess):
         import pickle
 
         save_dict = {
-            'model_state': self.model.state_dict(),
-            'likelihood_state': self.likelihood.state_dict(),
-            'Xtrain': self.Xtrain,
-            'ytrain': self.ytrain,
-            'ymean': self.ymean,
-            'yscale': self.yscale,
-            'kernel': self.kernel,
-            'hyperparameters': self.hyperparameters,
-            'fixed_sigma_n': self.fixed_sigma_n,
-            'ndim': self.ndim,
-            'input_encoders': str([enc.repr for enc in self.input_encoders]),
-            'output_encoders': str([enc.repr for enc in self.output_encoders]),
+            "model_state": self.model.state_dict(),
+            "likelihood_state": self.likelihood.state_dict(),
+            "Xtrain": self.Xtrain,
+            "ytrain": self.ytrain,
+            "ymean": self.ymean,
+            "yscale": self.yscale,
+            "kernel": self.kernel,
+            "hyperparameters": self.hyperparameters,
+            "fixed_sigma_n": self.fixed_sigma_n,
+            "ndim": self.ndim,
+            "input_encoders": str([enc.repr for enc in self.input_encoders]),
+            "output_encoders": str([enc.repr for enc in self.output_encoders]),
         }
 
         # Save as pickle for torch state dicts
-        with open(path, 'wb') as f:
+        with open(path, "wb") as f:
             pickle.dump(save_dict, f)
 
     @classmethod
-    def load_model(cls, path, device='cpu'):
+    def load_model(cls, path, device="cpu"):
         """Load a saved model from a file.
 
         Parameters:
@@ -264,40 +282,46 @@ class GPyTorchSurrogate(GaussianProcess):
         import pickle
         from numpy import array  # needed for eval of arrays
 
-        with open(path, 'rb') as f:
+        with open(path, "rb") as f:
             save_dict = pickle.load(f)
 
         self = cls(device=device)
-        self.Xtrain = save_dict['Xtrain']
-        self.ytrain = save_dict['ytrain']
-        self.ymean = save_dict['ymean']
-        self.yscale = save_dict['yscale']
-        self.kernel = save_dict['kernel']
-        self.hyperparameters = save_dict['hyperparameters']
-        self.fixed_sigma_n = save_dict['fixed_sigma_n']
-        self.ndim = save_dict['ndim']
+        self.Xtrain = save_dict["Xtrain"]
+        self.ytrain = save_dict["ytrain"]
+        self.ymean = save_dict["ymean"]
+        self.yscale = save_dict["yscale"]
+        self.kernel = save_dict["kernel"]
+        self.hyperparameters = save_dict["hyperparameters"]
+        self.fixed_sigma_n = save_dict["fixed_sigma_n"]
+        self.ndim = save_dict["ndim"]
 
         # Restore encoders
-        for enc in eval(save_dict['input_encoders']):
+        for enc in eval(save_dict["input_encoders"]):
             self.add_input_encoder(
-                Encoder[enc['class']](enc['columns'], enc['parameters'])
+                Encoder[enc["class"]](enc["columns"], enc["parameters"])
             )
-        for enc in eval(save_dict['output_encoders']):
+        for enc in eval(save_dict["output_encoders"]):
             self.add_output_encoder(
-                Encoder[enc['class']](enc['columns'], enc['parameters'])
+                Encoder[enc["class"]](enc["columns"], enc["parameters"])
             )
 
         # Recreate model and likelihood
         Xtrain_torch = torch.from_numpy(self.Xtrain).float().to(self.device)
-        ytrain_torch = torch.from_numpy((self.ytrain - self.ymean) / self.yscale).float().to(self.device)
+        ytrain_torch = (
+            torch.from_numpy((self.ytrain - self.ymean) / self.yscale)
+            .float()
+            .to(self.device)
+        )
         ytrain_torch = ytrain_torch.squeeze()
 
         self.likelihood = gpytorch.likelihoods.GaussianLikelihood().to(self.device)
-        self.model = ExactGPModel(Xtrain_torch, ytrain_torch, self.likelihood, self.kernel).to(self.device)
+        self.model = ExactGPModel(
+            Xtrain_torch, ytrain_torch, self.likelihood, self.kernel
+        ).to(self.device)
 
         # Load state dicts
-        self.model.load_state_dict(save_dict['model_state'])
-        self.likelihood.load_state_dict(save_dict['likelihood_state'])
+        self.model.load_state_dict(save_dict["model_state"])
+        self.likelihood.load_state_dict(save_dict["likelihood_state"])
 
         self.model.eval()
         self.likelihood.eval()
@@ -318,10 +342,10 @@ class GPyTorchSurrogate(GaussianProcess):
         Returns:
             str: Kernel type string.
         """
-        valid_kernels = ['RBF', 'Matern32', 'Matern52']
+        valid_kernels = ["RBF", "Matern32", "Matern52"]
         if kernel not in valid_kernels:
             print(f"Warning: Kernel {kernel} not recognized. Using RBF instead.")
-            return 'RBF'
+            return "RBF"
         return kernel
 
     def optimize(self, **opt_kwargs):
@@ -332,14 +356,18 @@ class GPyTorchSurrogate(GaussianProcess):
         Parameters:
             opt_kwargs: Keyword arguments for optimization (e.g., training_iter, lr).
         """
-        training_iter = opt_kwargs.get('training_iter', 1000)
-        lr = opt_kwargs.get('lr', 0.1)
+        training_iter = opt_kwargs.get("training_iter", 1000)
+        lr = opt_kwargs.get("lr", 0.1)
 
         self.model.train()
         self.likelihood.train()
 
         Xtrain_torch = torch.from_numpy(self.Xtrain).float().to(self.device)
-        ytrain_torch = torch.from_numpy((self.ytrain - self.ymean) / self.yscale).float().to(self.device)
+        ytrain_torch = (
+            torch.from_numpy((self.ytrain - self.ymean) / self.yscale)
+            .float()
+            .to(self.device)
+        )
         ytrain_torch = ytrain_torch.squeeze()
 
         mll = gpytorch.mlls.ExactMarginalLogLikelihood(self.likelihood, self.model)
@@ -359,16 +387,22 @@ class GPyTorchSurrogate(GaussianProcess):
         """Extract hyperparameters from the trained model."""
         with torch.no_grad():
             # Get lengthscale
-            lengthscale = self.model.covar_module.base_kernel.lengthscale.detach().cpu().numpy()
+            lengthscale = (
+                self.model.covar_module.base_kernel.lengthscale.detach().cpu().numpy()
+            )
             self.hyperparameters["length_scale"] = np.atleast_1d(lengthscale.squeeze())
 
             # Get output scale (sigma_f^2)
             outputscale = self.model.covar_module.outputscale.detach().cpu().item()
-            self.hyperparameters["sigma_f"] = np.atleast_1d(np.sqrt(outputscale) * self.yscale)
+            self.hyperparameters["sigma_f"] = np.atleast_1d(
+                np.sqrt(outputscale) * self.yscale
+            )
 
             # Get noise (sigma_n^2)
             noise = self.likelihood.noise.detach().cpu().item()
-            self.hyperparameters["sigma_n"] = np.atleast_1d(np.sqrt(noise) * self.yscale)
+            self.hyperparameters["sigma_n"] = np.atleast_1d(
+                np.sqrt(noise) * self.yscale
+            )
 
         self.decode_hyperparameters()
 
@@ -377,7 +411,7 @@ class GPyTorchSurrogate(GaussianProcess):
 class MultiOutputGPyTorchSurrogate(GaussianProcess):
     """Multi-output GP surrogate using independent GPyTorch models."""
 
-    def __init__(self, device='cpu'):
+    def __init__(self, device="cpu"):
         super().__init__()
         self.device = device
         self.models = []
@@ -390,13 +424,15 @@ class MultiOutputGPyTorchSurrogate(GaussianProcess):
         kernel=defaults["kernel"],
         hyperparameters=defaults["hyperparameters"],
         fixed_sigma_n=base_defaults["fixed_sigma_n"],
-        **kwargs
+        **kwargs,
     ):
         """Train independent GP models for each output dimension."""
         self.pre_train(X, y, kernel, hyperparameters, fixed_sigma_n)
         self.output_ndim = self.ytrain.shape[-1]
 
-        self.models = [GPyTorchSurrogate(device=self.device) for _ in range(self.output_ndim)]
+        self.models = [
+            GPyTorchSurrogate(device=self.device) for _ in range(self.output_ndim)
+        ]
 
         for dim, model in enumerate(self.models):
             model.train(
@@ -405,7 +441,7 @@ class MultiOutputGPyTorchSurrogate(GaussianProcess):
                 kernel,
                 hyperparameters,
                 fixed_sigma_n,
-                **kwargs
+                **kwargs,
             )
 
         self._set_hyperparameters_from_model()
@@ -480,77 +516,83 @@ class MultiOutputGPyTorchSurrogate(GaussianProcess):
         import pickle
 
         save_dict = {
-            'output_ndim': self.output_ndim,
-            'Xtrain': self.Xtrain,
-            'ytrain': self.ytrain,
-            'hyperparameters': self.hyperparameters,
-            'input_encoders': str([enc.repr for enc in self.input_encoders]),
-            'output_encoders': str([enc.repr for enc in self.output_encoders]),
+            "output_ndim": self.output_ndim,
+            "Xtrain": self.Xtrain,
+            "ytrain": self.ytrain,
+            "hyperparameters": self.hyperparameters,
+            "input_encoders": str([enc.repr for enc in self.input_encoders]),
+            "output_encoders": str([enc.repr for enc in self.output_encoders]),
         }
 
         for i, model in enumerate(self.models):
-            save_dict[f'model_{i}'] = {
-                'model_state': model.model.state_dict(),
-                'likelihood_state': model.likelihood.state_dict(),
-                'ymean': model.ymean,
-                'yscale': model.yscale,
-                'kernel': model.kernel,
-                'hyperparameters': model.hyperparameters,
+            save_dict[f"model_{i}"] = {
+                "model_state": model.model.state_dict(),
+                "likelihood_state": model.likelihood.state_dict(),
+                "ymean": model.ymean,
+                "yscale": model.yscale,
+                "kernel": model.kernel,
+                "hyperparameters": model.hyperparameters,
             }
 
-        with open(path, 'wb') as f:
+        with open(path, "wb") as f:
             pickle.dump(save_dict, f)
 
     @classmethod
-    def load_model(cls, path, device='cpu'):
+    def load_model(cls, path, device="cpu"):
         """Load all models from file."""
         from profit.sur.encoders import Encoder
         import pickle
         from numpy import array
 
-        with open(path, 'rb') as f:
+        with open(path, "rb") as f:
             save_dict = pickle.load(f)
 
         self = cls(device=device)
-        self.output_ndim = save_dict['output_ndim']
-        self.Xtrain = save_dict['Xtrain']
-        self.ytrain = save_dict['ytrain']
-        self.hyperparameters = save_dict['hyperparameters']
+        self.output_ndim = save_dict["output_ndim"]
+        self.Xtrain = save_dict["Xtrain"]
+        self.ytrain = save_dict["ytrain"]
+        self.hyperparameters = save_dict["hyperparameters"]
 
         # Restore encoders
-        for enc in eval(save_dict['input_encoders']):
+        for enc in eval(save_dict["input_encoders"]):
             self.add_input_encoder(
-                Encoder[enc['class']](enc['columns'], enc['parameters'])
+                Encoder[enc["class"]](enc["columns"], enc["parameters"])
             )
-        for enc in eval(save_dict['output_encoders']):
+        for enc in eval(save_dict["output_encoders"]):
             self.add_output_encoder(
-                Encoder[enc['class']](enc['columns'], enc['parameters'])
+                Encoder[enc["class"]](enc["columns"], enc["parameters"])
             )
 
         # Load each model
         self.models = []
         for i in range(self.output_ndim):
             model = GPyTorchSurrogate(device=device)
-            model_dict = save_dict[f'model_{i}']
+            model_dict = save_dict[f"model_{i}"]
 
-            model.ymean = model_dict['ymean']
-            model.yscale = model_dict['yscale']
-            model.kernel = model_dict['kernel']
-            model.hyperparameters = model_dict['hyperparameters']
+            model.ymean = model_dict["ymean"]
+            model.yscale = model_dict["yscale"]
+            model.kernel = model_dict["kernel"]
+            model.hyperparameters = model_dict["hyperparameters"]
             model.Xtrain = self.Xtrain
             model.ytrain = self.ytrain[:, [i]]
             model.ndim = self.Xtrain.shape[-1]
 
             # Recreate model
             Xtrain_torch = torch.from_numpy(model.Xtrain).float().to(device)
-            ytrain_torch = torch.from_numpy((model.ytrain - model.ymean) / model.yscale).float().to(device)
+            ytrain_torch = (
+                torch.from_numpy((model.ytrain - model.ymean) / model.yscale)
+                .float()
+                .to(device)
+            )
             ytrain_torch = ytrain_torch.squeeze()
 
             model.likelihood = gpytorch.likelihoods.GaussianLikelihood().to(device)
-            model.model = ExactGPModel(Xtrain_torch, ytrain_torch, model.likelihood, model.kernel).to(device)
+            model.model = ExactGPModel(
+                Xtrain_torch, ytrain_torch, model.likelihood, model.kernel
+            ).to(device)
 
-            model.model.load_state_dict(model_dict['model_state'])
-            model.likelihood.load_state_dict(model_dict['likelihood_state'])
+            model.model.load_state_dict(model_dict["model_state"])
+            model.likelihood.load_state_dict(model_dict["likelihood_state"])
 
             model.model.eval()
             model.likelihood.eval()

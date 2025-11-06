@@ -20,8 +20,10 @@ from sklearn.metrics import mean_squared_error, r2_score
 
 try:
     import matplotlib
-    matplotlib.use('Agg')  # Non-interactive backend for CI/CD
+
+    matplotlib.use("Agg")  # Non-interactive backend for CI/CD
     import matplotlib.pyplot as plt
+
     HAS_MATPLOTLIB = True
 except ImportError:
     HAS_MATPLOTLIB = False
@@ -31,6 +33,7 @@ try:
     import gpytorch
     from profit.sur.gp import GPyTorchSurrogate, MultiOutputGPyTorchSurrogate
     from profit.sur import Surrogate
+
     HAS_GPYTORCH = True
 except ImportError:
     HAS_GPYTORCH = False
@@ -85,33 +88,66 @@ class TestGPRegressionAccuracy:
 
             # Left: Fit plot
             std = np.sqrt(y_var.flatten())
-            ax1.plot(X_test, y_true, 'k-', linewidth=2, label='True function: sin(2πx)', alpha=0.8)
-            ax1.scatter(X_train, y_train, c='red', s=50, marker='o', label='Noisy training data', zorder=10, edgecolors='black')
-            ax1.plot(X_test, y_pred, 'b-', linewidth=2, label=f'GPyTorch (R²={r2:.4f}, RMSE={rmse:.4f})', alpha=0.8)
-            ax1.fill_between(X_test.flatten(),
-                           (y_pred - 2*std).flatten(),
-                           (y_pred + 2*std).flatten(),
-                           color='blue', alpha=0.2, label='±2σ confidence')
-            ax1.set_xlabel('x', fontsize=12)
-            ax1.set_ylabel('y', fontsize=12)
-            ax1.set_title('GPyTorch Sine Function Fit', fontsize=14, fontweight='bold')
-            ax1.legend(loc='best', fontsize=10)
+            ax1.plot(
+                X_test,
+                y_true,
+                "k-",
+                linewidth=2,
+                label="True function: sin(2πx)",
+                alpha=0.8,
+            )
+            ax1.scatter(
+                X_train,
+                y_train,
+                c="red",
+                s=50,
+                marker="o",
+                label="Noisy training data",
+                zorder=10,
+                edgecolors="black",
+            )
+            ax1.plot(
+                X_test,
+                y_pred,
+                "b-",
+                linewidth=2,
+                label=f"GPyTorch (R²={r2:.4f}, RMSE={rmse:.4f})",
+                alpha=0.8,
+            )
+            ax1.fill_between(
+                X_test.flatten(),
+                (y_pred - 2 * std).flatten(),
+                (y_pred + 2 * std).flatten(),
+                color="blue",
+                alpha=0.2,
+                label="±2σ confidence",
+            )
+            ax1.set_xlabel("x", fontsize=12)
+            ax1.set_ylabel("y", fontsize=12)
+            ax1.set_title("GPyTorch Sine Function Fit", fontsize=14, fontweight="bold")
+            ax1.legend(loc="best", fontsize=10)
             ax1.grid(True, alpha=0.3)
 
             # Right: Residuals plot
             residuals = (y_pred - y_true).flatten()
-            ax2.scatter(X_test, residuals, c='blue', s=30, alpha=0.6)
-            ax2.axhline(y=0, color='k', linestyle='--', linewidth=2)
-            ax2.axhline(y=2*std.mean(), color='r', linestyle=':', linewidth=1.5, label='±2σ mean')
-            ax2.axhline(y=-2*std.mean(), color='r', linestyle=':', linewidth=1.5)
-            ax2.set_xlabel('x', fontsize=12)
-            ax2.set_ylabel('Residuals (Predicted - True)', fontsize=12)
-            ax2.set_title('Residuals Analysis', fontsize=14, fontweight='bold')
-            ax2.legend(loc='best', fontsize=10)
+            ax2.scatter(X_test, residuals, c="blue", s=30, alpha=0.6)
+            ax2.axhline(y=0, color="k", linestyle="--", linewidth=2)
+            ax2.axhline(
+                y=2 * std.mean(),
+                color="r",
+                linestyle=":",
+                linewidth=1.5,
+                label="±2σ mean",
+            )
+            ax2.axhline(y=-2 * std.mean(), color="r", linestyle=":", linewidth=1.5)
+            ax2.set_xlabel("x", fontsize=12)
+            ax2.set_ylabel("Residuals (Predicted - True)", fontsize=12)
+            ax2.set_title("Residuals Analysis", fontsize=14, fontweight="bold")
+            ax2.legend(loc="best", fontsize=10)
             ax2.grid(True, alpha=0.3)
 
             plot_path = PLOT_DIR / "gpytorch_sine_accuracy.png"
-            plt.savefig(plot_path, dpi=150, bbox_inches='tight')
+            plt.savefig(plot_path, dpi=150, bbox_inches="tight")
             plt.close()
             print(f"✓ Saved GPyTorch accuracy plot: {plot_path}")
 
@@ -120,7 +156,9 @@ class TestGPRegressionAccuracy:
         np.random.seed(456)
 
         X_train = np.random.rand(50, 2)
-        y_train = test_function_2d(X_train).reshape(-1, 1) + 0.05 * np.random.randn(50, 1)
+        y_train = test_function_2d(X_train).reshape(-1, 1) + 0.05 * np.random.randn(
+            50, 1
+        )
 
         sur = Surrogate["GPyTorch"]()
         sur.train(X_train, y_train, training_iter=200)
@@ -151,8 +189,9 @@ class TestGPRegressionAccuracy:
         _, var_outside = sur.predict(X_outside)
 
         # Variance should be higher outside training region
-        assert var_outside[0, 0] > var_inside[0, 0], \
-            "Uncertainty should increase away from training data"
+        assert (
+            var_outside[0, 0] > var_inside[0, 0]
+        ), "Uncertainty should increase away from training data"
 
     def test_interpolation_vs_extrapolation(self):
         """Test interpolation is more accurate than extrapolation."""
@@ -178,8 +217,9 @@ class TestGPRegressionAccuracy:
         error_extrap = np.abs(y_extrap_true - y_extrap_pred)[0, 0]
 
         # Interpolation should be more accurate
-        assert error_interp < error_extrap, \
-            f"Interpolation error ({error_interp}) should be < extrapolation error ({error_extrap})"
+        assert (
+            error_interp < error_extrap
+        ), f"Interpolation error ({error_interp}) should be < extrapolation error ({error_extrap})"
 
 
 @pytest.mark.skipif(not HAS_GPYTORCH, reason="GPyTorch not installed")
@@ -217,41 +257,71 @@ class TestSurrogateComparison:
             assert r2 > 0.80, f"{sur_name} R² too low: {r2}"
 
         # GPyTorch should be competitive
-        assert results["GPyTorch"] > 0.85, \
-            f"GPyTorch R² ({results['GPyTorch']}) should be competitive"
+        assert (
+            results["GPyTorch"] > 0.85
+        ), f"GPyTorch R² ({results['GPyTorch']}) should be competitive"
 
         # Generate comparison plot
         if HAS_MATPLOTLIB:
             fig, ax = plt.subplots(figsize=(12, 6))
 
             # Plot true function
-            ax.plot(X_test, y_true, 'k-', linewidth=2, label='True function: sin(2πx)', alpha=0.8)
+            ax.plot(
+                X_test,
+                y_true,
+                "k-",
+                linewidth=2,
+                label="True function: sin(2πx)",
+                alpha=0.8,
+            )
 
             # Plot training data
-            ax.scatter(X_train, y_train, c='red', s=50, marker='o', label='Training data', zorder=10, edgecolors='black')
+            ax.scatter(
+                X_train,
+                y_train,
+                c="red",
+                s=50,
+                marker="o",
+                label="Training data",
+                zorder=10,
+                edgecolors="black",
+            )
 
             # Plot each surrogate's prediction with uncertainty
-            colors = {'GPyTorch': 'blue', 'Custom': 'green', 'Sklearn': 'orange'}
+            colors = {"GPyTorch": "blue", "Custom": "green", "Sklearn": "orange"}
             for sur_name in surrogates_to_test:
                 y_pred, y_var = predictions[sur_name]
                 std = np.sqrt(y_var.flatten())
 
-                ax.plot(X_test, y_pred, color=colors[sur_name], linewidth=2,
-                       label=f'{sur_name} (R²={results[sur_name]:.3f})', alpha=0.8)
-                ax.fill_between(X_test.flatten(),
-                               (y_pred - 2*std).flatten(),
-                               (y_pred + 2*std).flatten(),
-                               color=colors[sur_name], alpha=0.15,
-                               label=f'{sur_name} ±2σ')
+                ax.plot(
+                    X_test,
+                    y_pred,
+                    color=colors[sur_name],
+                    linewidth=2,
+                    label=f"{sur_name} (R²={results[sur_name]:.3f})",
+                    alpha=0.8,
+                )
+                ax.fill_between(
+                    X_test.flatten(),
+                    (y_pred - 2 * std).flatten(),
+                    (y_pred + 2 * std).flatten(),
+                    color=colors[sur_name],
+                    alpha=0.15,
+                    label=f"{sur_name} ±2σ",
+                )
 
-            ax.set_xlabel('x', fontsize=12)
-            ax.set_ylabel('y', fontsize=12)
-            ax.set_title('GP Surrogate Comparison: GPyTorch vs Custom vs Sklearn', fontsize=14, fontweight='bold')
-            ax.legend(loc='best', fontsize=10)
+            ax.set_xlabel("x", fontsize=12)
+            ax.set_ylabel("y", fontsize=12)
+            ax.set_title(
+                "GP Surrogate Comparison: GPyTorch vs Custom vs Sklearn",
+                fontsize=14,
+                fontweight="bold",
+            )
+            ax.legend(loc="best", fontsize=10)
             ax.grid(True, alpha=0.3)
 
             plot_path = PLOT_DIR / "all_surrogates_comparison.png"
-            plt.savefig(plot_path, dpi=150, bbox_inches='tight')
+            plt.savefig(plot_path, dpi=150, bbox_inches="tight")
             plt.close()
             print(f"✓ Saved comparison plot: {plot_path}")
 
@@ -277,43 +347,73 @@ class TestSurrogateComparison:
 
         # Predictions should be similar (both are GP regression)
         diff = np.abs(y_pred_gpytorch - y_pred_custom).mean()
-        assert diff < 0.2, \
-            f"GPyTorch and Custom predictions differ by {diff} (should be similar)"
+        assert (
+            diff < 0.2
+        ), f"GPyTorch and Custom predictions differ by {diff} (should be similar)"
 
         # Generate direct comparison plot
         if HAS_MATPLOTLIB:
             fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
 
             # Left plot: Both predictions overlaid
-            ax1.scatter(X_train, y_train, c='red', s=50, marker='o', label='Training data', zorder=10, edgecolors='black')
-            ax1.plot(X_test, y_pred_gpytorch, 'b-', linewidth=2, label='GPyTorch', alpha=0.8)
-            ax1.fill_between(X_test.flatten(),
-                           (y_pred_gpytorch - 2*np.sqrt(y_var_gpytorch)).flatten(),
-                           (y_pred_gpytorch + 2*np.sqrt(y_var_gpytorch)).flatten(),
-                           color='blue', alpha=0.15, label='GPyTorch ±2σ')
-            ax1.plot(X_test, y_pred_custom, 'g--', linewidth=2, label='Custom', alpha=0.8)
-            ax1.fill_between(X_test.flatten(),
-                           (y_pred_custom - 2*np.sqrt(y_var_custom)).flatten(),
-                           (y_pred_custom + 2*np.sqrt(y_var_custom)).flatten(),
-                           color='green', alpha=0.15, label='Custom ±2σ')
-            ax1.set_xlabel('x', fontsize=12)
-            ax1.set_ylabel('y', fontsize=12)
-            ax1.set_title('GPyTorch vs Custom: Linear Function', fontsize=14, fontweight='bold')
-            ax1.legend(loc='best', fontsize=10)
+            ax1.scatter(
+                X_train,
+                y_train,
+                c="red",
+                s=50,
+                marker="o",
+                label="Training data",
+                zorder=10,
+                edgecolors="black",
+            )
+            ax1.plot(
+                X_test, y_pred_gpytorch, "b-", linewidth=2, label="GPyTorch", alpha=0.8
+            )
+            ax1.fill_between(
+                X_test.flatten(),
+                (y_pred_gpytorch - 2 * np.sqrt(y_var_gpytorch)).flatten(),
+                (y_pred_gpytorch + 2 * np.sqrt(y_var_gpytorch)).flatten(),
+                color="blue",
+                alpha=0.15,
+                label="GPyTorch ±2σ",
+            )
+            ax1.plot(
+                X_test, y_pred_custom, "g--", linewidth=2, label="Custom", alpha=0.8
+            )
+            ax1.fill_between(
+                X_test.flatten(),
+                (y_pred_custom - 2 * np.sqrt(y_var_custom)).flatten(),
+                (y_pred_custom + 2 * np.sqrt(y_var_custom)).flatten(),
+                color="green",
+                alpha=0.15,
+                label="Custom ±2σ",
+            )
+            ax1.set_xlabel("x", fontsize=12)
+            ax1.set_ylabel("y", fontsize=12)
+            ax1.set_title(
+                "GPyTorch vs Custom: Linear Function", fontsize=14, fontweight="bold"
+            )
+            ax1.legend(loc="best", fontsize=10)
             ax1.grid(True, alpha=0.3)
 
             # Right plot: Difference between predictions
             diff_plot = np.abs(y_pred_gpytorch - y_pred_custom).flatten()
-            ax2.plot(X_test, diff_plot, 'r-', linewidth=2)
-            ax2.axhline(y=diff, color='k', linestyle='--', label=f'Mean diff: {diff:.4f}')
-            ax2.set_xlabel('x', fontsize=12)
-            ax2.set_ylabel('|GPyTorch - Custom|', fontsize=12)
-            ax2.set_title('Absolute Difference Between Predictions', fontsize=14, fontweight='bold')
-            ax2.legend(loc='best', fontsize=10)
+            ax2.plot(X_test, diff_plot, "r-", linewidth=2)
+            ax2.axhline(
+                y=diff, color="k", linestyle="--", label=f"Mean diff: {diff:.4f}"
+            )
+            ax2.set_xlabel("x", fontsize=12)
+            ax2.set_ylabel("|GPyTorch - Custom|", fontsize=12)
+            ax2.set_title(
+                "Absolute Difference Between Predictions",
+                fontsize=14,
+                fontweight="bold",
+            )
+            ax2.legend(loc="best", fontsize=10)
             ax2.grid(True, alpha=0.3)
 
             plot_path = PLOT_DIR / "gpytorch_vs_custom_direct.png"
-            plt.savefig(plot_path, dpi=150, bbox_inches='tight')
+            plt.savefig(plot_path, dpi=150, bbox_inches="tight")
             plt.close()
             print(f"✓ Saved GPyTorch vs Custom plot: {plot_path}")
 
@@ -367,25 +467,38 @@ class TestSerializationPreservesAccuracy:
 
         # Save and load
         import tempfile
-        with tempfile.NamedTemporaryFile(suffix='.pkl', delete=False) as f:
+
+        with tempfile.NamedTemporaryFile(suffix=".pkl", delete=False) as f:
             model_file = f.name
 
         try:
             sur.save_model(model_file)
 
             from profit.sur.gp import GPyTorchSurrogate
+
             sur_loaded = GPyTorchSurrogate.load_model(model_file)
 
             y_pred_after, var_after = sur_loaded.predict(X_test)
 
             # Should be IDENTICAL (not just close)
-            np.testing.assert_allclose(y_pred_before, y_pred_after, rtol=1e-5, atol=1e-6,
-                err_msg="Predictions changed after save/load!")
-            np.testing.assert_allclose(var_before, var_after, rtol=1e-5, atol=1e-6,
-                err_msg="Variance changed after save/load!")
+            np.testing.assert_allclose(
+                y_pred_before,
+                y_pred_after,
+                rtol=1e-5,
+                atol=1e-6,
+                err_msg="Predictions changed after save/load!",
+            )
+            np.testing.assert_allclose(
+                var_before,
+                var_after,
+                rtol=1e-5,
+                atol=1e-6,
+                err_msg="Variance changed after save/load!",
+            )
 
         finally:
             import os
+
             if os.path.exists(model_file):
                 os.remove(model_file)
 
@@ -423,35 +536,66 @@ class TestKernelEffects:
             fig, ax = plt.subplots(figsize=(14, 7))
 
             # Plot true function
-            ax.plot(X_test, y_true, 'k-', linewidth=3, label='True function: sin(2πx)', alpha=0.9, zorder=5)
+            ax.plot(
+                X_test,
+                y_true,
+                "k-",
+                linewidth=3,
+                label="True function: sin(2πx)",
+                alpha=0.9,
+                zorder=5,
+            )
 
             # Plot training data
-            ax.scatter(X_train, y_train, c='red', s=80, marker='o', label='Training data', zorder=10, edgecolors='black', linewidth=1.5)
+            ax.scatter(
+                X_train,
+                y_train,
+                c="red",
+                s=80,
+                marker="o",
+                label="Training data",
+                zorder=10,
+                edgecolors="black",
+                linewidth=1.5,
+            )
 
             # Plot predictions for each kernel
-            colors = {'RBF': 'blue', 'Matern32': 'green', 'Matern52': 'purple'}
-            linestyles = {'RBF': '-', 'Matern32': '--', 'Matern52': '-.'}
+            colors = {"RBF": "blue", "Matern32": "green", "Matern52": "purple"}
+            linestyles = {"RBF": "-", "Matern32": "--", "Matern52": "-."}
 
             for kernel_name in kernels:
                 y_pred, y_var, r2 = kernel_results[kernel_name]
                 std = np.sqrt(y_var.flatten())
 
-                ax.plot(X_test, y_pred, color=colors[kernel_name], linewidth=2,
-                       linestyle=linestyles[kernel_name],
-                       label=f'{kernel_name} (R²={r2:.3f})', alpha=0.8)
-                ax.fill_between(X_test.flatten(),
-                               (y_pred - 2*std).flatten(),
-                               (y_pred + 2*std).flatten(),
-                               color=colors[kernel_name], alpha=0.12)
+                ax.plot(
+                    X_test,
+                    y_pred,
+                    color=colors[kernel_name],
+                    linewidth=2,
+                    linestyle=linestyles[kernel_name],
+                    label=f"{kernel_name} (R²={r2:.3f})",
+                    alpha=0.8,
+                )
+                ax.fill_between(
+                    X_test.flatten(),
+                    (y_pred - 2 * std).flatten(),
+                    (y_pred + 2 * std).flatten(),
+                    color=colors[kernel_name],
+                    alpha=0.12,
+                )
 
-            ax.set_xlabel('x', fontsize=12)
-            ax.set_ylabel('y', fontsize=12)
-            ax.set_title('GPyTorch Kernel Comparison: RBF vs Matern32 vs Matern52', fontsize=14, fontweight='bold')
-            ax.legend(loc='best', fontsize=10)
+            ax.set_xlabel("x", fontsize=12)
+            ax.set_ylabel("y", fontsize=12)
+            ax.set_title(
+                "GPyTorch Kernel Comparison: RBF vs Matern32 vs Matern52",
+                fontsize=14,
+                fontweight="bold",
+            )
+            ax.legend(loc="best", fontsize=10)
             ax.grid(True, alpha=0.3)
 
             plot_path = PLOT_DIR / "kernel_comparison.png"
-            plt.savefig(plot_path, dpi=150, bbox_inches='tight')
+            plt.savefig(plot_path, dpi=150, bbox_inches="tight")
             plt.close()
             print(f"✓ Saved kernel comparison plot: {plot_path}")
 
