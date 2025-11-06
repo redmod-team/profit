@@ -58,8 +58,8 @@ def test_1D():
         run(f"profit fit {config_file}", shell=True, timeout=TIMEOUT)
         sur = Surrogate.load_model(model_file)
         assert (
-            sur.get_label() == "Custom"
-        )  # Changed from GPy to Custom (numpy 2.x compatible)
+            sur.get_label() == "GPyTorch"
+        )  # GPyTorch is now the default (replaced GPy)
         assert sur.trained
         assert (
             sur.kernel.__name__ == "RBF"
@@ -170,8 +170,8 @@ def test_2D():
         run(f"profit fit {config_file}", shell=True, timeout=TIMEOUT)
         sur = Surrogate.load_model(model_file)
         assert (
-            sur.get_label() == "Custom"
-        )  # Changed from GPy to Custom (numpy 2.x compatible)
+            sur.get_label() == "GPyTorch"
+        )  # GPyTorch is now the default (replaced GPy)
         assert sur.trained
         assert (
             sur.kernel.__name__ == "RBF"
@@ -199,8 +199,8 @@ def test_2D_independent():
         run(f"profit fit {config_file}", shell=True, timeout=TIMEOUT)
         sur = Surrogate.load_model(model_file)
         assert (
-            sur.get_label() == "Custom"
-        )  # Changed from GPy to Custom (numpy 2.x compatible)
+            sur.get_label() == "GPyTorch"
+        )  # GPyTorch is now the default (replaced GPy)
         assert sur.trained
         assert (
             sur.kernel.__name__ == "RBF"

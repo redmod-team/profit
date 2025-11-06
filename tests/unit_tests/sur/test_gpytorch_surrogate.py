@@ -202,7 +202,7 @@ class TestGPyTorchSurrogate:
 
     def test_registration(self):
         """Test surrogate is registered."""
-        assert "GPyTorch" in Surrogate._registry
+        assert "GPyTorch" in Surrogate.labels
         sur = Surrogate["GPyTorch"]()
         assert isinstance(sur, GPyTorchSurrogate)
 
@@ -307,7 +307,7 @@ class TestMultiOutputGPyTorchSurrogate:
 
     def test_registration_multi_output(self):
         """Test multi-output surrogate is registered."""
-        assert "MultiOutputGPyTorch" in Surrogate._registry
+        assert "MultiOutputGPyTorch" in Surrogate.labels
         sur = Surrogate["MultiOutputGPyTorch"]()
         assert isinstance(sur, MultiOutputGPyTorchSurrogate)
 

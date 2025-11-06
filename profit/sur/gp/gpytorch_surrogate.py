@@ -79,14 +79,19 @@ class GPyTorchSurrogate(GaussianProcess):
         """
         self.pre_train(X, y, kernel, hyperparameters, fixed_sigma_n)
 
-        # Normalize the data
+        # Normalize X and y for numerical stability
+        self.Xmean = np.mean(self.Xtrain, axis=0)
+        self.Xscale = np.std(self.Xtrain, axis=0)
+        self.Xscale[self.Xscale < 1e-10] = 1.0
+
         self.ymean = np.mean(self.ytrain)
         self.yscale = np.std(self.ytrain)
         if self.yscale < 1e-10:
             self.yscale = 1.0
 
-        # Convert to torch tensors
-        Xtrain_torch = torch.from_numpy(self.Xtrain).float().to(self.device)
+        # Convert to torch tensors with normalization
+        Xtrain_normalized = (self.Xtrain - self.Xmean) / self.Xscale
+        Xtrain_torch = torch.from_numpy(Xtrain_normalized).float().to(self.device)
         ytrain_torch = (
             torch.from_numpy((self.ytrain - self.ymean) / self.yscale)
             .float()
@@ -164,13 +169,18 @@ class GPyTorchSurrogate(GaussianProcess):
         self.Xtrain = np.concatenate([self.Xtrain, X], axis=0)
         self.ytrain = np.concatenate([self.ytrain, y], axis=0)
 
-        # Re-normalize and update model
+        # Re-normalize X and y and update model
+        self.Xmean = np.mean(self.Xtrain, axis=0)
+        self.Xscale = np.std(self.Xtrain, axis=0)
+        self.Xscale[self.Xscale < 1e-10] = 1.0
+
         self.ymean = np.mean(self.ytrain)
         self.yscale = np.std(self.ytrain)
         if self.yscale < 1e-10:
             self.yscale = 1.0
 
-        Xtrain_torch = torch.from_numpy(self.Xtrain).float().to(self.device)
+        Xtrain_normalized = (self.Xtrain - self.Xmean) / self.Xscale
+        Xtrain_torch = torch.from_numpy(Xtrain_normalized).float().to(self.device)
         ytrain_torch = (
             torch.from_numpy((self.ytrain - self.ymean) / self.yscale)
             .float()
@@ -222,7 +232,9 @@ class GPyTorchSurrogate(GaussianProcess):
         self.model.eval()
         self.likelihood.eval()
 
-        Xpred_torch = torch.from_numpy(Xpred).float().to(self.device)
+        # Normalize Xpred using training normalization
+        Xpred_normalized = (Xpred - self.Xmean) / self.Xscale
+        Xpred_torch = torch.from_numpy(Xpred_normalized).float().to(self.device)
 
         with torch.no_grad(), gpytorch.settings.fast_pred_var():
             if add_data_variance:
@@ -253,6 +265,8 @@ class GPyTorchSurrogate(GaussianProcess):
             "likelihood_state": self.likelihood.state_dict(),
             "Xtrain": self.Xtrain,
             "ytrain": self.ytrain,
+            "Xmean": self.Xmean,
+            "Xscale": self.Xscale,
             "ymean": self.ymean,
             "yscale": self.yscale,
             "kernel": self.kernel,
@@ -278,6 +292,11 @@ class GPyTorchSurrogate(GaussianProcess):
         Returns:
             GPyTorchSurrogate: Instantiated surrogate model.
         """
+        # Backward compatibility: if .hdf5 file, load with Custom surrogate instead
+        if path.endswith('.hdf5'):
+            from profit.sur.gp.custom_surrogate import GPSurrogate
+            return GPSurrogate.load_model(path)
+
         from profit.sur.encoders import Encoder
         import pickle
         from numpy import array  # needed for eval of arrays
@@ -288,6 +307,9 @@ class GPyTorchSurrogate(GaussianProcess):
         self = cls(device=device)
         self.Xtrain = save_dict["Xtrain"]
         self.ytrain = save_dict["ytrain"]
+        # Load normalization parameters (with backward compatibility)
+        self.Xmean = save_dict.get("Xmean", np.zeros(save_dict["Xtrain"].shape[-1]))
+        self.Xscale = save_dict.get("Xscale", np.ones(save_dict["Xtrain"].shape[-1]))
         self.ymean = save_dict["ymean"]
         self.yscale = save_dict["yscale"]
         self.kernel = save_dict["kernel"]
@@ -305,8 +327,9 @@ class GPyTorchSurrogate(GaussianProcess):
                 Encoder[enc["class"]](enc["columns"], enc["parameters"])
             )
 
-        # Recreate model and likelihood
-        Xtrain_torch = torch.from_numpy(self.Xtrain).float().to(self.device)
+        # Recreate model and likelihood with normalized data
+        Xtrain_normalized = (self.Xtrain - self.Xmean) / self.Xscale
+        Xtrain_torch = torch.from_numpy(Xtrain_normalized).float().to(self.device)
         ytrain_torch = (
             torch.from_numpy((self.ytrain - self.ymean) / self.yscale)
             .float()
@@ -362,7 +385,8 @@ class GPyTorchSurrogate(GaussianProcess):
         self.model.train()
         self.likelihood.train()
 
-        Xtrain_torch = torch.from_numpy(self.Xtrain).float().to(self.device)
+        Xtrain_normalized = (self.Xtrain - self.Xmean) / self.Xscale
+        Xtrain_torch = torch.from_numpy(Xtrain_normalized).float().to(self.device)
         ytrain_torch = (
             torch.from_numpy((self.ytrain - self.ymean) / self.yscale)
             .float()
@@ -528,6 +552,8 @@ class MultiOutputGPyTorchSurrogate(GaussianProcess):
             save_dict[f"model_{i}"] = {
                 "model_state": model.model.state_dict(),
                 "likelihood_state": model.likelihood.state_dict(),
+                "Xmean": model.Xmean,
+                "Xscale": model.Xscale,
                 "ymean": model.ymean,
                 "yscale": model.yscale,
                 "kernel": model.kernel,
@@ -540,6 +566,11 @@ class MultiOutputGPyTorchSurrogate(GaussianProcess):
     @classmethod
     def load_model(cls, path, device="cpu"):
         """Load all models from file."""
+        # Backward compatibility: if .hdf5 file, load with Custom surrogate instead
+        if path.endswith('.hdf5'):
+            from profit.sur.gp.custom_surrogate import MultiOutputGPSurrogate
+            return MultiOutputGPSurrogate.load_model(path)
+
         from profit.sur.encoders import Encoder
         import pickle
         from numpy import array
@@ -552,6 +583,7 @@ class MultiOutputGPyTorchSurrogate(GaussianProcess):
         self.Xtrain = save_dict["Xtrain"]
         self.ytrain = save_dict["ytrain"]
         self.hyperparameters = save_dict["hyperparameters"]
+        self.ndim = self.Xtrain.shape[-1]  # Set ndim from loaded data
 
         # Restore encoders
         for enc in eval(save_dict["input_encoders"]):
@@ -569,6 +601,9 @@ class MultiOutputGPyTorchSurrogate(GaussianProcess):
             model = GPyTorchSurrogate(device=device)
             model_dict = save_dict[f"model_{i}"]
 
+            # Load normalization parameters (with backward compatibility)
+            model.Xmean = model_dict.get("Xmean", np.zeros(self.Xtrain.shape[-1]))
+            model.Xscale = model_dict.get("Xscale", np.ones(self.Xtrain.shape[-1]))
             model.ymean = model_dict["ymean"]
             model.yscale = model_dict["yscale"]
             model.kernel = model_dict["kernel"]
@@ -577,8 +612,9 @@ class MultiOutputGPyTorchSurrogate(GaussianProcess):
             model.ytrain = self.ytrain[:, [i]]
             model.ndim = self.Xtrain.shape[-1]
 
-            # Recreate model
-            Xtrain_torch = torch.from_numpy(model.Xtrain).float().to(device)
+            # Recreate model with normalized data
+            Xtrain_normalized = (model.Xtrain - model.Xmean) / model.Xscale
+            Xtrain_torch = torch.from_numpy(Xtrain_normalized).float().to(device)
             ytrain_torch = (
                 torch.from_numpy((model.ytrain - model.ymean) / model.yscale)
                 .float()
