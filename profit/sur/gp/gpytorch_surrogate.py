@@ -663,6 +663,7 @@ class MultiOutputGPyTorchSurrogate(GaussianProcess):
             "output_ndim": self.output_ndim,
             "Xtrain": self.Xtrain,
             "ytrain": self.ytrain,
+            "kernel": self.kernel,
             "hyperparameters": self.hyperparameters,
             "input_encoders": str([enc.repr for enc in self.input_encoders]),
             "output_encoders": str([enc.repr for enc in self.output_encoders]),
@@ -713,6 +714,7 @@ class MultiOutputGPyTorchSurrogate(GaussianProcess):
         self.output_ndim = save_dict["output_ndim"]
         self.Xtrain = save_dict["Xtrain"]
         self.ytrain = save_dict["ytrain"]
+        self.kernel = save_dict.get("kernel", "RBF")  # Backward compatibility: default to RBF
         self.hyperparameters = save_dict["hyperparameters"]
         self.ndim = self.Xtrain.shape[-1]  # Set ndim from loaded data
 
@@ -766,6 +768,10 @@ class MultiOutputGPyTorchSurrogate(GaussianProcess):
             model.trained = True
 
             self.models.append(model)
+
+        # Fallback: Set kernel from first model if not already set
+        if not self.kernel and self.models:
+            self.kernel = self.models[0].kernel
 
         self.trained = True
         return self
