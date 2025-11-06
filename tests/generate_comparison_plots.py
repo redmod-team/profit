@@ -33,7 +33,7 @@ print(f"✓ Output directory: {PLOT_DIR}")
 
 
 # Test function
-def test_function_1d(x):
+def sine_1d(x):
     """Simple 1D test function: sin(2*pi*x)"""
     return np.sin(2 * np.pi * x)
 
@@ -44,10 +44,10 @@ def generate_all_surrogates_comparison():
     np.random.seed(202)
 
     X_train = np.random.rand(25, 1)
-    y_train = test_function_1d(X_train) + 0.05 * np.random.randn(25, 1)
+    y_train = sine_1d(X_train) + 0.05 * np.random.randn(25, 1)
 
     X_test = np.linspace(0, 1, 100).reshape(-1, 1)
-    y_true = test_function_1d(X_test)
+    y_true = sine_1d(X_test)
 
     surrogates_to_test = ["GPyTorch", "Custom", "Sklearn"]
     results = {}
@@ -217,10 +217,10 @@ def generate_kernel_comparison():
     np.random.seed(606)
 
     X_train = np.random.rand(25, 1)
-    y_train = test_function_1d(X_train) + 0.05 * np.random.randn(25, 1)
+    y_train = sine_1d(X_train) + 0.05 * np.random.randn(25, 1)
 
     X_test = np.linspace(0, 1, 100).reshape(-1, 1)
-    y_true = test_function_1d(X_test)
+    y_true = sine_1d(X_test)
 
     kernels = ["RBF", "Matern32", "Matern52"]
     kernel_results = {}
@@ -310,7 +310,7 @@ def generate_gpytorch_accuracy():
     np.random.seed(123)
 
     X_train = np.linspace(0, 1, 30).reshape(-1, 1)
-    y_train = test_function_1d(X_train) + 0.05 * np.random.randn(30, 1)
+    y_train = sine_1d(X_train) + 0.05 * np.random.randn(30, 1)
 
     print("   Training GPyTorch...", end="")
     sur = Surrogate["GPyTorch"]()
@@ -318,7 +318,7 @@ def generate_gpytorch_accuracy():
     print(" Done")
 
     X_test = np.linspace(0, 1, 100).reshape(-1, 1)
-    y_true = test_function_1d(X_test)
+    y_true = sine_1d(X_test)
     y_pred, y_var = sur.predict(X_test)
 
     from sklearn.metrics import mean_squared_error

@@ -43,13 +43,13 @@ PLOT_DIR = Path(__file__).parent.parent.parent / "test_output" / "gp_comparison_
 PLOT_DIR.mkdir(parents=True, exist_ok=True)
 
 
-# Known test function
-def test_function_1d(x):
+# Helper functions for tests
+def sine_1d(x):
     """Simple 1D test function: sin(2*pi*x)"""
     return np.sin(2 * np.pi * x)
 
 
-def test_function_2d(x):
+def sine_cos_2d(x):
     """2D test function: sin(x1) * cos(x2)"""
     return np.sin(x[:, 0]) * np.cos(x[:, 1])
 
@@ -64,7 +64,7 @@ class TestGPRegressionAccuracy:
 
         # Generate training data
         X_train = np.linspace(0, 1, 30).reshape(-1, 1)
-        y_train = test_function_1d(X_train) + 0.05 * np.random.randn(30, 1)
+        y_train = sine_1d(X_train) + 0.05 * np.random.randn(30, 1)
 
         # Train
         sur = Surrogate["GPyTorch"]()
@@ -72,7 +72,7 @@ class TestGPRegressionAccuracy:
 
         # Test on clean data
         X_test = np.linspace(0, 1, 100).reshape(-1, 1)
-        y_true = test_function_1d(X_test)
+        y_true = sine_1d(X_test)
         y_pred, y_var = sur.predict(X_test)
 
         # Check accuracy
@@ -156,7 +156,7 @@ class TestGPRegressionAccuracy:
         np.random.seed(456)
 
         X_train = np.random.rand(50, 2)
-        y_train = test_function_2d(X_train).reshape(-1, 1) + 0.05 * np.random.randn(
+        y_train = sine_cos_2d(X_train).reshape(-1, 1) + 0.05 * np.random.randn(
             50, 1
         )
 
@@ -164,7 +164,7 @@ class TestGPRegressionAccuracy:
         sur.train(X_train, y_train, training_iter=200)
 
         X_test = np.random.rand(30, 2)
-        y_true = test_function_2d(X_test).reshape(-1, 1)
+        y_true = sine_cos_2d(X_test).reshape(-1, 1)
         y_pred, _ = sur.predict(X_test)
 
         r2 = r2_score(y_true, y_pred)
@@ -176,7 +176,7 @@ class TestGPRegressionAccuracy:
 
         # Train on data in [0.2, 0.8]
         X_train = np.linspace(0.2, 0.8, 20).reshape(-1, 1)
-        y_train = test_function_1d(X_train)
+        y_train = sine_1d(X_train)
 
         sur = Surrogate["GPyTorch"]()
         sur.train(X_train, y_train, training_iter=100)
@@ -199,20 +199,20 @@ class TestGPRegressionAccuracy:
 
         # Train on [0.3, 0.7]
         X_train = np.linspace(0.3, 0.7, 25).reshape(-1, 1)
-        y_train = test_function_1d(X_train)
+        y_train = sine_1d(X_train)
 
         sur = Surrogate["GPyTorch"]()
         sur.train(X_train, y_train, training_iter=150)
 
         # Test interpolation (inside range)
         X_interp = np.array([[0.5]])
-        y_interp_true = test_function_1d(X_interp)
+        y_interp_true = sine_1d(X_interp)
         y_interp_pred, _ = sur.predict(X_interp)
         error_interp = np.abs(y_interp_true - y_interp_pred)[0, 0]
 
         # Test extrapolation (outside range)
         X_extrap = np.array([[0.9]])
-        y_extrap_true = test_function_1d(X_extrap)
+        y_extrap_true = sine_1d(X_extrap)
         y_extrap_pred, _ = sur.predict(X_extrap)
         error_extrap = np.abs(y_extrap_true - y_extrap_pred)[0, 0]
 
@@ -231,10 +231,10 @@ class TestSurrogateComparison:
         np.random.seed(202)
 
         X_train = np.random.rand(25, 1)
-        y_train = test_function_1d(X_train) + 0.05 * np.random.randn(25, 1)
+        y_train = sine_1d(X_train) + 0.05 * np.random.randn(25, 1)
 
         X_test = np.linspace(0, 1, 100).reshape(-1, 1)  # Dense grid for plotting
-        y_true = test_function_1d(X_test)
+        y_true = sine_1d(X_test)
 
         surrogates_to_test = ["GPyTorch", "Custom", "Sklearn"]
         results = {}
@@ -457,7 +457,7 @@ class TestSerializationPreservesAccuracy:
         np.random.seed(505)
 
         X_train = np.random.rand(30, 1)
-        y_train = test_function_1d(X_train) + 0.05 * np.random.randn(30, 1)
+        y_train = sine_1d(X_train) + 0.05 * np.random.randn(30, 1)
 
         sur = Surrogate["GPyTorch"]()
         sur.train(X_train, y_train, training_iter=150)
@@ -512,10 +512,10 @@ class TestKernelEffects:
         np.random.seed(606)
 
         X_train = np.random.rand(25, 1)
-        y_train = test_function_1d(X_train) + 0.05 * np.random.randn(25, 1)
+        y_train = sine_1d(X_train) + 0.05 * np.random.randn(25, 1)
 
         X_test = np.linspace(0, 1, 100).reshape(-1, 1)
-        y_true = test_function_1d(X_test)
+        y_true = sine_1d(X_test)
 
         kernels = ["RBF", "Matern32", "Matern52"]
         kernel_results = {}
