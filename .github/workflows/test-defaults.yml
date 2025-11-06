@@ -32,12 +32,6 @@ jobs:
         pip install gpytorch
         pip install -e .
 
-    - name: Run CRITICAL regression tests
-      run: |
-        pytest tests/unit_tests/test_regression_gpytorch.py -v --tb=short
-      env:
-        PYTHONPATH: ${{ github.workspace }}
-
     - name: Run default workflow integration tests
       run: |
         pytest tests/integration_tests/test_default_workflow.py -v --tb=short

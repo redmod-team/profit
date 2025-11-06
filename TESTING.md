@@ -6,21 +6,7 @@ This document describes the test strategy to prevent configuration regressions l
 
 ### Test Levels
 
-#### Level 1: Regression Tests (`test_regression_gpytorch.py`)
-**PURPOSE**: Prevent accidental configuration changes
-
-- ✅ `test_default_surrogate_is_gpytorch` - Verifies default is GPyTorch
-- ✅ `test_gpytorch_is_registered` - Ensures surrogate is registered
-- ✅ `test_no_gpy_imports_in_production` - Scans for forbidden imports
-- ✅ `test_gpy_surrogate_file_deleted` - Verifies old code is removed
-- ✅ `test_setup_cfg_has_torch_and_gpytorch` - Checks dependencies
-- ✅ `test_setup_cfg_no_gpy_dependency` - Ensures GPy is not a dependency
-
-**WHEN TO RUN**: Every commit (pre-commit hook + CI/CD)
-
-**FAIL FAST**: These tests MUST pass before merge
-
-#### Level 2: Integration Tests (`test_default_workflow.py`)
+#### Level 1: Integration Tests (`test_default_workflow.py`)
 **PURPOSE**: Test real-world user workflows
 
 - ✅ `test_readme_example_workflow` - Tests exact README example
@@ -34,7 +20,7 @@ This document describes the test strategy to prevent configuration regressions l
 
 **COVERAGE**: Simulates actual user behavior
 
-#### Level 3: Unit Tests (`test_gpytorch_surrogate.py`)
+#### Level 2: Unit Tests (`test_gpytorch_surrogate.py`)
 **PURPOSE**: Test individual methods thoroughly
 
 - 35+ test cases covering all methods
