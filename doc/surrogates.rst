@@ -53,9 +53,8 @@ algorithms:
     Predicts the output at test input points $X_*$ by building the posterior mean
     and covariance using previously trained data.
 * ``save_model``
-    Saves the model and used encoding as Python dictionary to a `.hdf5` file. For
-    the coregionalization multi-output surrogate from GPySurrogate , a `.pkl`
-    file is used instead.
+    Saves the model and used encoding as Python dictionary. GPyTorch models use
+    `.pkl` files for serialization.
 * ``load_model``
     Loads a saved model from a `.hdf5` (or `.pkl`) file, updates its attributes and
     restores the encoding.
