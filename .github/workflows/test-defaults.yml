@@ -30,6 +30,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
         pip install gpytorch
+        pip install pytest pytest-cov
         pip install -e .
 
     - name: Run default workflow integration tests
@@ -41,7 +42,7 @@ jobs:
     - name: Verify defaults in code
       run: |
         python -c "from profit.defaults import fit; assert fit['surrogate'] == 'GPyTorch', 'Default surrogate is not GPyTorch!'"
-        python -c "from profit.sur import Surrogate; assert 'GPyTorch' in Surrogate._registry, 'GPyTorch not registered!'"
+        python -c "from profit.sur import Surrogate; assert 'GPyTorch' in Surrogate.labels, 'GPyTorch not registered!'"
 
   test-without-gpytorch:
     name: Test graceful degradation without GPyTorch
