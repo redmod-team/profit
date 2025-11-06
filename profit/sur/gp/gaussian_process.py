@@ -49,7 +49,7 @@ class GaussianProcess(Surrogate):
             As default, they are inferred from the training data.
 
     Default parameters:
-        surrogate: GPy
+        surrogate: GPyTorch
         kernel: RBF
 
     Default hyperparameters:

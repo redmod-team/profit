@@ -86,13 +86,13 @@ def test_2D():
         run(f"profit clean --all {config_file}", shell=True, timeout=CLEAN_TIMEOUT)
 
 
-@mark.skipif(not HAS_GPY, reason="GPy not installed (requires numpy<2.0)")
+@mark.skipif(not HAS_GPYTORCH, reason="GPyTorch not installed")
 def test_log():
     """Test a log function f(u) = log10(u) * sin(10 / u) with a log-transformed AL search space."""
 
     config_file = "study_log/profit_log.yaml"
     config = BaseConfig.from_file(config_file)
-    model_file = "./study_log/model_log_GPy.hdf5"
+    model_file = "./study_log/model_log_GPyTorch.pkl"
     try:
         run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
         sur = Surrogate.load_model(model_file)
