@@ -1,7 +1,7 @@
 from numpy import cos, linspace
 from matplotlib.pyplot import plot, show
 from profit.util import quasirand
-from profit.sur.gp.gpy_surrogate import GPySurrogate
+from profit.sur.gp import GPyTorchSurrogate
 
 
 # Original model
@@ -13,8 +13,8 @@ def f(u):
 # on space-filling quasi-random set of points
 xtrain = quasirand(npoint=10, ndim=1)
 ytrain = f(xtrain)  # original response
-fresp = GPySurrogate()
-fresp.train(xtrain, ytrain, kernel="Matern52")  # fit profit model
+fresp = GPyTorchSurrogate()
+fresp.train(xtrain, ytrain, kernel="Matern52", training_iter=200)  # fit profit model
 
 # Evaluating response surface model
 xtest = linspace(0, 1, 100).reshape(-1, 1)  # points where to test
