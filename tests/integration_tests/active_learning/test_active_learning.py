@@ -100,12 +100,15 @@ def test_log():
     try:
         run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
         sur = Surrogate.load_model(model_file)
-        # Note: GPyTorch uses different optimization than GPy, so hyperparameters
-        # will differ. We just verify the model was trained successfully.
+        assert sur.get_label() == "GPyTorch"
         assert sur.trained
-        assert sur.hyperparameters["length_scale"] is not None
-        assert sur.hyperparameters["sigma_f"] is not None
-        assert sur.hyperparameters["sigma_n"] is not None
+        assert sur.kernel == "RBF"
+        # GPyTorch hyperparameters after active learning convergence
+        assert allclose(
+            sur.hyperparameters["length_scale"], 7.29520498, rtol=PARAM_RTOL
+        )
+        assert allclose(sur.hyperparameters["sigma_f"], 4.16591073e-08, rtol=PARAM_RTOL)
+        assert allclose(sur.hyperparameters["sigma_n"], 2.86050770e-03, rtol=PARAM_RTOL)
     finally:
         if path.exists(model_file):
             remove(model_file)
