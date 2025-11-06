@@ -19,6 +19,7 @@ from pathlib import Path
 try:
     import torch
     import gpytorch
+
     HAS_GPYTORCH = True
 except ImportError:
     HAS_GPYTORCH = False
@@ -83,7 +84,7 @@ fit:
     save: ./test_model.pkl
 """
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
             f.write(config_content)
             config_file = f.name
 
@@ -93,11 +94,14 @@ fit:
 
             # Get surrogate from config (should use default: GPyTorch)
             from profit.defaults import fit_gaussian_process
-            surrogate_type = config.get("fit", {}).get("surrogate", fit_gaussian_process["surrogate"])
 
-            assert surrogate_type == "GPyTorch", (
-                f"Config didn't use GPyTorch default, got {surrogate_type}"
+            surrogate_type = config.get("fit", {}).get(
+                "surrogate", fit_gaussian_process["surrogate"]
             )
+
+            assert (
+                surrogate_type == "GPyTorch"
+            ), f"Config didn't use GPyTorch default, got {surrogate_type}"
 
             # Create and test
             sur = Surrogate[surrogate_type]()
@@ -118,7 +122,7 @@ fit:
 
         # Train a model
         np.random.seed(456)
-        X = np.linspace(0, 2*np.pi, 25).reshape(-1, 1)
+        X = np.linspace(0, 2 * np.pi, 25).reshape(-1, 1)
         y = np.sin(X) + 0.1 * np.random.randn(25, 1)
 
         sur = Surrogate["GPyTorch"]()
@@ -129,7 +133,7 @@ fit:
         ymean_before, yvar_before = sur.predict(X_test)
 
         # Save
-        with tempfile.NamedTemporaryFile(suffix='.pkl', delete=False) as f:
+        with tempfile.NamedTemporaryFile(suffix=".pkl", delete=False) as f:
             model_file = f.name
 
         try:
@@ -137,6 +141,7 @@ fit:
 
             # Load
             from profit.sur.gp import GPyTorchSurrogate
+
             sur_loaded = GPyTorchSurrogate.load_model(model_file)
 
             # Get predictions after load
@@ -185,7 +190,7 @@ fit:
 
         np.random.seed(101)
         X = np.random.rand(20, 1)
-        y = np.sin(5*X) + 0.1*np.random.randn(20, 1)
+        y = np.sin(5 * X) + 0.1 * np.random.randn(20, 1)
 
         for kernel_name in kernels_to_test:
             sur = Surrogate["GPyTorch"]()

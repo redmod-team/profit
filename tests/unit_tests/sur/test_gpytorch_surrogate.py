@@ -39,7 +39,7 @@ class TestGPyTorchSurrogate:
         sur = GPyTorchSurrogate()
         assert sur.model is None
         assert sur.likelihood is None
-        assert sur.device.type == 'cpu'
+        assert sur.device.type == "cpu"
 
     def test_train_1d(self):
         """Test training on 1D data."""
@@ -50,9 +50,9 @@ class TestGPyTorchSurrogate:
         assert sur.model is not None
         assert sur.likelihood is not None
         assert sur.ndim == 1
-        assert 'length_scale' in sur.hyperparameters
-        assert 'sigma_f' in sur.hyperparameters
-        assert 'sigma_n' in sur.hyperparameters
+        assert "length_scale" in sur.hyperparameters
+        assert "sigma_f" in sur.hyperparameters
+        assert "sigma_n" in sur.hyperparameters
 
     def test_train_2d(self):
         """Test training on 2D data."""
@@ -82,31 +82,33 @@ class TestGPyTorchSurrogate:
         ymean_without, yvar_without = sur.predict(X_test, add_data_variance=False)
 
         assert np.allclose(ymean_with, ymean_without)
-        assert np.all(yvar_with >= yvar_without)  # With noise should have higher variance
+        assert np.all(
+            yvar_with >= yvar_without
+        )  # With noise should have higher variance
 
     def test_kernel_rbf(self):
         """Test RBF kernel."""
         sur = GPyTorchSurrogate()
-        sur.train(X_train_1d, y_train_1d, kernel='RBF', training_iter=30)
+        sur.train(X_train_1d, y_train_1d, kernel="RBF", training_iter=30)
 
         assert sur.trained
-        assert sur.kernel == 'RBF'
+        assert sur.kernel == "RBF"
 
     def test_kernel_matern32(self):
         """Test Matern32 kernel."""
         sur = GPyTorchSurrogate()
-        sur.train(X_train_1d, y_train_1d, kernel='Matern32', training_iter=30)
+        sur.train(X_train_1d, y_train_1d, kernel="Matern32", training_iter=30)
 
         assert sur.trained
-        assert sur.kernel == 'Matern32'
+        assert sur.kernel == "Matern32"
 
     def test_kernel_matern52(self):
         """Test Matern52 kernel."""
         sur = GPyTorchSurrogate()
-        sur.train(X_train_1d, y_train_1d, kernel='Matern52', training_iter=30)
+        sur.train(X_train_1d, y_train_1d, kernel="Matern52", training_iter=30)
 
         assert sur.trained
-        assert sur.kernel == 'Matern52'
+        assert sur.kernel == "Matern52"
 
     def test_fixed_noise(self):
         """Test training with fixed noise."""
@@ -148,7 +150,7 @@ class TestGPyTorchSurrogate:
         ymean_before, yvar_before = sur.predict(X_test)
 
         # Save model
-        with tempfile.NamedTemporaryFile(suffix='.pkl', delete=False) as f:
+        with tempfile.NamedTemporaryFile(suffix=".pkl", delete=False) as f:
             temp_path = f.name
 
         try:
@@ -179,29 +181,29 @@ class TestGPyTorchSurrogate:
         sur.train(X_train_1d, y_train_1d, training_iter=30)
 
         # Get hyperparameters before optimization
-        length_scale_before = sur.hyperparameters['length_scale'].copy()
+        length_scale_before = sur.hyperparameters["length_scale"].copy()
 
         # Re-optimize
         sur.optimize(training_iter=20)
 
         # Hyperparameters should exist (may or may not change)
-        assert 'length_scale' in sur.hyperparameters
+        assert "length_scale" in sur.hyperparameters
 
     def test_select_kernel(self):
         """Test kernel selection."""
         sur = GPyTorchSurrogate()
 
-        assert sur.select_kernel('RBF') == 'RBF'
-        assert sur.select_kernel('Matern32') == 'Matern32'
-        assert sur.select_kernel('Matern52') == 'Matern52'
+        assert sur.select_kernel("RBF") == "RBF"
+        assert sur.select_kernel("Matern32") == "Matern32"
+        assert sur.select_kernel("Matern52") == "Matern52"
 
         # Unknown kernel should default to RBF
-        assert sur.select_kernel('UnknownKernel') == 'RBF'
+        assert sur.select_kernel("UnknownKernel") == "RBF"
 
     def test_registration(self):
         """Test surrogate is registered."""
-        assert 'GPyTorch' in Surrogate._registry
-        sur = Surrogate['GPyTorch']()
+        assert "GPyTorch" in Surrogate._registry
+        sur = Surrogate["GPyTorch"]()
         assert isinstance(sur, GPyTorchSurrogate)
 
     def test_hyperparameter_initialization(self):
@@ -209,16 +211,21 @@ class TestGPyTorchSurrogate:
         sur = GPyTorchSurrogate()
 
         initial_hyperparams = {
-            'length_scale': np.array([0.5]),
-            'sigma_f': np.array([1.0]),
-            'sigma_n': np.array([0.1])
+            "length_scale": np.array([0.5]),
+            "sigma_f": np.array([1.0]),
+            "sigma_n": np.array([0.1]),
         }
 
-        sur.train(X_train_1d, y_train_1d, hyperparameters=initial_hyperparams, training_iter=30)
+        sur.train(
+            X_train_1d,
+            y_train_1d,
+            hyperparameters=initial_hyperparams,
+            training_iter=30,
+        )
 
         assert sur.trained
         # Check hyperparameters were used (they will be optimized, so may differ)
-        assert 'length_scale' in sur.hyperparameters
+        assert "length_scale" in sur.hyperparameters
 
 
 @pytest.mark.skipif(not HAS_GPYTORCH, reason="GPyTorch not installed")
@@ -280,7 +287,7 @@ class TestMultiOutputGPyTorchSurrogate:
 
         ymean_before, _ = sur.predict(X_test_2d)
 
-        with tempfile.NamedTemporaryFile(suffix='.pkl', delete=False) as f:
+        with tempfile.NamedTemporaryFile(suffix=".pkl", delete=False) as f:
             temp_path = f.name
 
         try:
@@ -300,8 +307,8 @@ class TestMultiOutputGPyTorchSurrogate:
 
     def test_registration_multi_output(self):
         """Test multi-output surrogate is registered."""
-        assert 'MultiOutputGPyTorch' in Surrogate._registry
-        sur = Surrogate['MultiOutputGPyTorch']()
+        assert "MultiOutputGPyTorch" in Surrogate._registry
+        sur = Surrogate["MultiOutputGPyTorch"]()
         assert isinstance(sur, MultiOutputGPyTorchSurrogate)
 
 
