@@ -1,0 +1,81 @@
+# GP Accuracy Tests with Visual Comparison Plots
+# Generates visual comparisons of GPyTorch vs Custom vs Sklearn surrogates
+# Uploads plots as downloadable artifacts
+
+name: GP Accuracy Tests & Plots
+
+on:
+  push:
+    branches: [ master, main ]
+    paths:
+      - 'profit/sur/gp/**'
+      - 'tests/unit_tests/sur/test_gpytorch_accuracy.py'
+      - 'tests/generate_comparison_plots.py'
+  pull_request:
+    branches: [ master, main ]
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  test-gp-accuracy-and-plots:
+    name: GP Accuracy Tests with Plots
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+        pip install gpytorch
+        pip install matplotlib
+        pip install -e .
+
+    - name: Run GP accuracy tests (generates plots)
+      run: |
+        pytest tests/unit_tests/sur/test_gpytorch_accuracy.py -v --tb=short
+      env:
+        PYTHONPATH: ${{ github.workspace }}
+
+    - name: Generate standalone comparison plots
+      run: |
+        python tests/generate_comparison_plots.py
+      continue-on-error: true  # Don't fail if plot generation has issues
+
+    - name: List generated plots
+      run: |
+        echo "Generated plot files:"
+        ls -lh tests/test_output/gp_comparison_plots/ || echo "No plots generated"
+      if: always()
+
+    - name: Upload GP comparison plots
+      uses: actions/upload-artifact@v3
+      if: always()  # Upload even if tests fail
+      with:
+        name: gp-comparison-plots
+        path: tests/test_output/gp_comparison_plots/*.png
+        retention-days: 90
+        if-no-files-found: warn
+
+    - name: Generate summary
+      if: always()
+      run: |
+        echo "### GP Comparison Plots Generated 📊" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "Visual comparison plots have been generated and uploaded as artifacts." >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Download the plots:**" >> $GITHUB_STEP_SUMMARY
+        echo "1. Go to the 'Summary' tab of this workflow run" >> $GITHUB_STEP_SUMMARY
+        echo "2. Scroll down to 'Artifacts' section" >> $GITHUB_STEP_SUMMARY
+        echo "3. Download 'gp-comparison-plots.zip'" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Generated plots:**" >> $GITHUB_STEP_SUMMARY
+        echo "- \`gpytorch_sine_accuracy.png\` - GPyTorch accuracy on sine function with residuals" >> $GITHUB_STEP_SUMMARY
+        echo "- \`all_surrogates_comparison.png\` - GPyTorch vs Custom vs Sklearn side-by-side" >> $GITHUB_STEP_SUMMARY
+        echo "- \`gpytorch_vs_custom_direct.png\` - Direct comparison with difference plot" >> $GITHUB_STEP_SUMMARY
+        echo "- \`kernel_comparison.png\` - RBF vs Matern32 vs Matern52 kernels" >> $GITHUB_STEP_SUMMARY
