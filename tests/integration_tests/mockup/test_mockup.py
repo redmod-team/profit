@@ -67,7 +67,7 @@ def test_1D():
         assert allclose(
             sur.hyperparameters["length_scale"], 6.57021493e-01, rtol=PARAM_RTOL
         )
-        assert allclose(sur.hyperparameters["sigma_f"], 1.20641699e+00, rtol=PARAM_RTOL)
+        assert allclose(sur.hyperparameters["sigma_f"], 1.20641699e00, rtol=PARAM_RTOL)
         assert allclose(sur.hyperparameters["sigma_n"], 7.60947958e-03, rtol=PARAM_RTOL)
     finally:
         run(f"profit clean --all {config_file}", shell=True, timeout=TIMEOUT)
@@ -179,7 +179,9 @@ def test_2D():
         )  # Changed from sur.model.kern.input_dim for Custom surrogate
         # GPyTorch hyperparameters (regression test)
         assert allclose(
-            sur.hyperparameters["length_scale"], [1.43766708, 0.12560814], rtol=PARAM_RTOL
+            sur.hyperparameters["length_scale"],
+            [1.43766708, 0.12560814],
+            rtol=PARAM_RTOL,
         )
         assert allclose(sur.hyperparameters["sigma_f"], 4.70619688e-01, rtol=PARAM_RTOL)
         assert allclose(sur.hyperparameters["sigma_n"], 1.76784577e-03, rtol=PARAM_RTOL)
@@ -195,7 +197,9 @@ def test_2D_independent():
     model_file = config["fit"].get("save")
     try:
         run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
-        run(f"profit fit {config_file}", shell=True, timeout=TIMEOUT_LONG)  # 100 models need more time
+        run(
+            f"profit fit {config_file}", shell=True, timeout=TIMEOUT_LONG
+        )  # 100 models need more time
         sur = Surrogate.load_model(model_file)
         assert (
             sur.get_label() == "MultiOutputGPyTorch"
@@ -209,7 +213,9 @@ def test_2D_independent():
         # Multi-output GP: check first model hyperparameters (regression test)
         assert len(sur.models) == 100
         assert allclose(
-            sur.models[0].hyperparameters["length_scale"], 1.22259116e+00, rtol=PARAM_RTOL
+            sur.models[0].hyperparameters["length_scale"],
+            1.22259116e00,
+            rtol=PARAM_RTOL,
         )
         assert allclose(
             sur.models[0].hyperparameters["sigma_f"], 4.08912837e-01, rtol=PARAM_RTOL
@@ -241,7 +247,9 @@ def test_karhunenloeve():
         assert len(sur.models) == 3
         # Component 0
         assert allclose(
-            sur.models[0].hyperparameters["length_scale"], 4.08509001e-02, rtol=PARAM_RTOL
+            sur.models[0].hyperparameters["length_scale"],
+            4.08509001e-02,
+            rtol=PARAM_RTOL,
         )
         assert allclose(
             sur.models[0].hyperparameters["sigma_f"], 9.81539973e-02, rtol=PARAM_RTOL
@@ -251,7 +259,9 @@ def test_karhunenloeve():
         )
         # Component 1
         assert allclose(
-            sur.models[1].hyperparameters["length_scale"], 4.81495887e-01, rtol=PARAM_RTOL
+            sur.models[1].hyperparameters["length_scale"],
+            4.81495887e-01,
+            rtol=PARAM_RTOL,
         )
         assert allclose(
             sur.models[1].hyperparameters["sigma_f"], 2.15956646e-01, rtol=PARAM_RTOL
@@ -261,10 +271,12 @@ def test_karhunenloeve():
         )
         # Component 2
         assert allclose(
-            sur.models[2].hyperparameters["length_scale"], 1.82794392e+00, rtol=PARAM_RTOL
+            sur.models[2].hyperparameters["length_scale"],
+            1.82794392e00,
+            rtol=PARAM_RTOL,
         )
         assert allclose(
-            sur.models[2].hyperparameters["sigma_f"], 1.50553787e+00, rtol=PARAM_RTOL
+            sur.models[2].hyperparameters["sigma_f"], 1.50553787e00, rtol=PARAM_RTOL
         )
         assert allclose(
             sur.models[2].hyperparameters["sigma_n"], 3.16923685e-03, rtol=PARAM_RTOL
@@ -290,7 +302,9 @@ def test_gpytorch():
         assert sur.kernel == "RBF"
         # GPyTorch hyperparameters (regression test)
         assert allclose(
-            sur.hyperparameters["length_scale"], [1.43766708, 0.12560814], rtol=PARAM_RTOL
+            sur.hyperparameters["length_scale"],
+            [1.43766708, 0.12560814],
+            rtol=PARAM_RTOL,
         )
         assert allclose(sur.hyperparameters["sigma_f"], 4.70619688e-01, rtol=PARAM_RTOL)
         assert allclose(sur.hyperparameters["sigma_n"], 1.76784577e-03, rtol=PARAM_RTOL)
