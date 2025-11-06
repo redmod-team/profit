@@ -301,10 +301,10 @@ class GPyTorchSurrogate(GaussianProcess):
 
         # GPyTorch models are always saved as pickle, not HDF5
         # Replace .hdf5 extension with .pkl if present
-        if path.endswith('.hdf5'):
-            path = path[:-5] + '.pkl'
-        elif not path.endswith('.pkl'):
-            path = path + '.pkl'
+        if path.endswith(".hdf5"):
+            path = path[:-5] + ".pkl"
+        elif not path.endswith(".pkl"):
+            path = path + ".pkl"
 
         save_dict = {
             "model_state": self.model.state_dict(),
@@ -346,15 +346,16 @@ class GPyTorchSurrogate(GaussianProcess):
         # GPyTorch models are saved as .pkl, but path might have .hdf5 extension
         # Try to find the corresponding .pkl file first
         pkl_path = path
-        if path.endswith('.hdf5'):
-            pkl_path = path[:-5] + '.pkl'
+        if path.endswith(".hdf5"):
+            pkl_path = path[:-5] + ".pkl"
 
         # If .pkl file exists, use it
         if os.path.exists(pkl_path):
             path = pkl_path
         # Otherwise, if original path is .hdf5 and exists, it's an old Custom model
-        elif path.endswith('.hdf5') and os.path.exists(path):
+        elif path.endswith(".hdf5") and os.path.exists(path):
             from profit.sur.gp.custom_surrogate import GPSurrogate
+
             return GPSurrogate.load_model(path)
 
         with open(path, "rb") as f:
@@ -628,10 +629,10 @@ class MultiOutputGPyTorchSurrogate(GaussianProcess):
 
         # GPyTorch models are always saved as pickle, not HDF5
         # Replace .hdf5 extension with .pkl if present
-        if path.endswith('.hdf5'):
-            path = path[:-5] + '.pkl'
-        elif not path.endswith('.pkl'):
-            path = path + '.pkl'
+        if path.endswith(".hdf5"):
+            path = path[:-5] + ".pkl"
+        elif not path.endswith(".pkl"):
+            path = path + ".pkl"
 
         save_dict = {
             "output_ndim": self.output_ndim,
@@ -668,15 +669,16 @@ class MultiOutputGPyTorchSurrogate(GaussianProcess):
         # GPyTorch models are saved as .pkl, but path might have .hdf5 extension
         # Try to find the corresponding .pkl file first
         pkl_path = path
-        if path.endswith('.hdf5'):
-            pkl_path = path[:-5] + '.pkl'
+        if path.endswith(".hdf5"):
+            pkl_path = path[:-5] + ".pkl"
 
         # If .pkl file exists, use it
         if os.path.exists(pkl_path):
             path = pkl_path
         # Otherwise, if original path is .hdf5 and exists, it's an old Custom model
-        elif path.endswith('.hdf5') and os.path.exists(path):
+        elif path.endswith(".hdf5") and os.path.exists(path):
             from profit.sur.gp.custom_surrogate import MultiOutputGPSurrogate
+
             return MultiOutputGPSurrogate.load_model(path)
 
         with open(path, "rb") as f:
