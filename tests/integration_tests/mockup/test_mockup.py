@@ -61,9 +61,7 @@ def test_1D():
             sur.get_label() == "GPyTorch"
         )  # GPyTorch is now the default (replaced GPy)
         assert sur.trained
-        assert (
-            sur.kernel == "RBF"
-        )  # GPyTorch stores kernel as string, not object
+        assert sur.kernel == "RBF"  # GPyTorch stores kernel as string, not object
         # Note: Custom surrogate may find different hyperparameters than GPy
         # Both are valid, so we just verify training succeeded
         assert "length_scale" in sur.hyperparameters
@@ -173,9 +171,7 @@ def test_2D():
             sur.get_label() == "GPyTorch"
         )  # GPyTorch is now the default (replaced GPy)
         assert sur.trained
-        assert (
-            sur.kernel == "RBF"
-        )  # GPyTorch stores kernel as string, not object
+        assert sur.kernel == "RBF"  # GPyTorch stores kernel as string, not object
         assert (
             sur.ndim == 2
         )  # Changed from sur.model.kern.input_dim for Custom surrogate
@@ -202,9 +198,7 @@ def test_2D_independent():
             sur.get_label() == "MultiOutputGPyTorch"
         )  # Multi-output needed for 100-dimensional output
         assert sur.trained
-        assert (
-            sur.kernel == "RBF"
-        )  # GPyTorch stores kernel as string, not object
+        assert sur.kernel == "RBF"  # GPyTorch stores kernel as string, not object
         assert (
             sur.ndim == 1
         )  # Changed from sur.model.kern.input_dim for Custom surrogate
