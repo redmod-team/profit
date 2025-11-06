@@ -293,8 +293,9 @@ class GPyTorchSurrogate(GaussianProcess):
             GPyTorchSurrogate: Instantiated surrogate model.
         """
         # Backward compatibility: if .hdf5 file, load with Custom surrogate instead
-        if path.endswith('.hdf5'):
+        if path.endswith(".hdf5"):
             from profit.sur.gp.custom_surrogate import GPSurrogate
+
             return GPSurrogate.load_model(path)
 
         from profit.sur.encoders import Encoder
@@ -567,8 +568,9 @@ class MultiOutputGPyTorchSurrogate(GaussianProcess):
     def load_model(cls, path, device="cpu"):
         """Load all models from file."""
         # Backward compatibility: if .hdf5 file, load with Custom surrogate instead
-        if path.endswith('.hdf5'):
+        if path.endswith(".hdf5"):
             from profit.sur.gp.custom_surrogate import MultiOutputGPSurrogate
+
             return MultiOutputGPSurrogate.load_model(path)
 
         from profit.sur.encoders import Encoder
