@@ -714,7 +714,9 @@ class MultiOutputGPyTorchSurrogate(GaussianProcess):
         self.output_ndim = save_dict["output_ndim"]
         self.Xtrain = save_dict["Xtrain"]
         self.ytrain = save_dict["ytrain"]
-        self.kernel = save_dict.get("kernel", "RBF")  # Backward compatibility: default to RBF
+        self.kernel = save_dict.get(
+            "kernel", "RBF"
+        )  # Backward compatibility: default to RBF
         self.hyperparameters = save_dict["hyperparameters"]
         self.ndim = self.Xtrain.shape[-1]  # Set ndim from loaded data
 
