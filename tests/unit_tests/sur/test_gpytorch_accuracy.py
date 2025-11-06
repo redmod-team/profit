@@ -156,9 +156,7 @@ class TestGPRegressionAccuracy:
         np.random.seed(456)
 
         X_train = np.random.rand(50, 2)
-        y_train = sine_cos_2d(X_train).reshape(-1, 1) + 0.05 * np.random.randn(
-            50, 1
-        )
+        y_train = sine_cos_2d(X_train).reshape(-1, 1) + 0.05 * np.random.randn(50, 1)
 
         sur = Surrogate["GPyTorch"]()
         sur.train(X_train, y_train, training_iter=200)
