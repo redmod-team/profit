@@ -629,6 +629,24 @@ class MultiOutputGPyTorchSurrogate(GaussianProcess):
         )
         self.decode_hyperparameters()
 
+    def select_kernel(self, kernel):
+        """Get the kernel type string.
+
+        For GPyTorch, we store the kernel type as a string and construct
+        the actual kernel in the ExactGPModel.
+
+        Parameters:
+            kernel (str): Kernel string such as 'RBF', 'Matern32', 'Matern52'.
+
+        Returns:
+            str: Kernel type string.
+        """
+        valid_kernels = ["RBF", "Matern32", "Matern52"]
+        if kernel not in valid_kernels:
+            print(f"Warning: Kernel {kernel} not recognized. Using RBF instead.")
+            return "RBF"
+        return kernel
+
     def save_model(self, path):
         """Save all models."""
         from profit.util.file_handler import FileHandler
