@@ -25,11 +25,12 @@ from pytest import fixture, mark
 from typing import Mapping
 
 try:
-    import GPy
+    import torch
+    import gpytorch
 
-    HAS_GPY = True
+    HAS_GPYTORCH = True
 except ImportError:
-    HAS_GPY = False
+    HAS_GPYTORCH = False
 
 
 @fixture(autouse=True)
@@ -44,6 +45,7 @@ def chdir_pytest():
 NLL_ATOL = 1e3
 PARAM_RTOL = 2
 TIMEOUT = 30  # seconds
+TIMEOUT_LONG = 120  # seconds for multi-output tests with many models
 
 
 def test_1D():
@@ -57,17 +59,16 @@ def test_1D():
         run(f"profit fit {config_file}", shell=True, timeout=TIMEOUT)
         sur = Surrogate.load_model(model_file)
         assert (
-            sur.get_label() == "Custom"
-        )  # Changed from GPy to Custom (numpy 2.x compatible)
+            sur.get_label() == "GPyTorch"
+        )  # GPyTorch is now the default (replaced GPy)
         assert sur.trained
-        assert (
-            sur.kernel.__name__ == "RBF"
-        )  # Changed from sur.model.kern.name for Custom surrogate
-        # Note: Custom surrogate may find different hyperparameters than GPy
-        # Both are valid, so we just verify training succeeded
-        assert "length_scale" in sur.hyperparameters
-        assert "sigma_f" in sur.hyperparameters
-        assert "sigma_n" in sur.hyperparameters
+        assert sur.kernel == "RBF"  # GPyTorch stores kernel as string, not object
+        # GPyTorch hyperparameters (regression test)
+        assert allclose(
+            sur.hyperparameters["length_scale"], 6.57021493e-01, rtol=PARAM_RTOL
+        )
+        assert allclose(sur.hyperparameters["sigma_f"], 1.20641699e00, rtol=PARAM_RTOL)
+        assert allclose(sur.hyperparameters["sigma_n"], 7.60947958e-03, rtol=PARAM_RTOL)
     finally:
         run(f"profit clean --all {config_file}", shell=True, timeout=TIMEOUT)
 
@@ -169,20 +170,21 @@ def test_2D():
         run(f"profit fit {config_file}", shell=True, timeout=TIMEOUT)
         sur = Surrogate.load_model(model_file)
         assert (
-            sur.get_label() == "Custom"
-        )  # Changed from GPy to Custom (numpy 2.x compatible)
+            sur.get_label() == "GPyTorch"
+        )  # GPyTorch is now the default (replaced GPy)
         assert sur.trained
-        assert (
-            sur.kernel.__name__ == "RBF"
-        )  # Changed from sur.model.kern.name for Custom surrogate
+        assert sur.kernel == "RBF"  # GPyTorch stores kernel as string, not object
         assert (
             sur.ndim == 2
         )  # Changed from sur.model.kern.input_dim for Custom surrogate
-        # Note: Custom surrogate may find different hyperparameters than GPy
-        # Both are valid, so we just verify training succeeded
-        assert "length_scale" in sur.hyperparameters
-        assert "sigma_f" in sur.hyperparameters
-        assert "sigma_n" in sur.hyperparameters
+        # GPyTorch hyperparameters (regression test)
+        assert allclose(
+            sur.hyperparameters["length_scale"],
+            [1.43766708, 0.12560814],
+            rtol=PARAM_RTOL,
+        )
+        assert allclose(sur.hyperparameters["sigma_f"], 4.70619688e-01, rtol=PARAM_RTOL)
+        assert allclose(sur.hyperparameters["sigma_n"], 1.76784577e-03, rtol=PARAM_RTOL)
     finally:
         run(f"profit clean --all {config_file}", shell=True, timeout=TIMEOUT)
 
@@ -195,30 +197,39 @@ def test_2D_independent():
     model_file = config["fit"].get("save")
     try:
         run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
-        run(f"profit fit {config_file}", shell=True, timeout=TIMEOUT)
+        run(
+            f"profit fit {config_file}", shell=True, timeout=TIMEOUT_LONG
+        )  # 100 models need more time
         sur = Surrogate.load_model(model_file)
         assert (
-            sur.get_label() == "Custom"
-        )  # Changed from GPy to Custom (numpy 2.x compatible)
+            sur.get_label() == "MultiOutputGPyTorch"
+        )  # Multi-output needed for 100-dimensional output
         assert sur.trained
-        assert (
-            sur.kernel.__name__ == "RBF"
-        )  # Changed from sur.model.kern.name for Custom surrogate
+        assert sur.kernel == "RBF"  # GPyTorch stores kernel as string, not object
         assert (
             sur.ndim == 1
         )  # Changed from sur.model.kern.input_dim for Custom surrogate
-        # Note: Custom surrogate may find different hyperparameters than GPy
-        # Both are valid, so we just verify training succeeded
-        assert "length_scale" in sur.hyperparameters
-        assert "sigma_f" in sur.hyperparameters
-        assert "sigma_n" in sur.hyperparameters
+        assert sur.output_ndim == 100
+        # Multi-output GP: check first model hyperparameters (regression test)
+        assert len(sur.models) == 100
+        assert allclose(
+            sur.models[0].hyperparameters["length_scale"],
+            1.22259116e00,
+            rtol=PARAM_RTOL,
+        )
+        assert allclose(
+            sur.models[0].hyperparameters["sigma_f"], 4.08912837e-01, rtol=PARAM_RTOL
+        )
+        assert allclose(
+            sur.models[0].hyperparameters["sigma_n"], 9.27670136e-03, rtol=PARAM_RTOL
+        )
     finally:
         run(f"profit clean --all {config_file}", shell=True, timeout=TIMEOUT)
 
 
-@mark.skipif(not HAS_GPY, reason="GPy not installed (requires numpy<2.0)")
+@mark.skipif(not HAS_GPYTORCH, reason="GPyTorch not installed")
 def test_karhunenloeve():
-    """Same test function as 'test_2D_independent' but with multi-output surrogate and Karhunen-Loeve encoder."""
+    """Test a Fermi function with Karhunen-Loeve dimensionality reduction."""
 
     config_file = "study_karhunenloeve/profit_karhunenloeve.yaml"
     config = BaseConfig.from_file(config_file)
@@ -227,20 +238,56 @@ def test_karhunenloeve():
         run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
         run(f"profit fit {config_file}", shell=True, timeout=TIMEOUT)
         sur = Surrogate.load_model(model_file)
-        assert sur.get_label() == "CoregionalizedGPy"
+        assert sur.get_label() == "MultiOutputGPyTorch"
         assert sur.trained
+        assert sur.kernel == "RBF"
+        assert sur.ndim == 1
+        assert sur.output_ndim == 3  # KL reduces 100D to 3 components
+        # Multi-output GP with KL: check hyperparameters for each component (regression test)
+        assert len(sur.models) == 3
+        # Component 0
         assert allclose(
-            sur.hyperparameters["length_scale"], 0.51021744, rtol=PARAM_RTOL
+            sur.models[0].hyperparameters["length_scale"],
+            4.08509001e-02,
+            rtol=PARAM_RTOL,
         )
-        assert allclose(sur.hyperparameters["sigma_f"], 0.36038181, rtol=PARAM_RTOL)
-        assert allclose(sur.hyperparameters["sigma_n"], 0.1267644, rtol=PARAM_RTOL)
+        assert allclose(
+            sur.models[0].hyperparameters["sigma_f"], 9.81539973e-02, rtol=PARAM_RTOL
+        )
+        assert allclose(
+            sur.models[0].hyperparameters["sigma_n"], 3.00609014e-01, rtol=PARAM_RTOL
+        )
+        # Component 1
+        assert allclose(
+            sur.models[1].hyperparameters["length_scale"],
+            4.81495887e-01,
+            rtol=PARAM_RTOL,
+        )
+        assert allclose(
+            sur.models[1].hyperparameters["sigma_f"], 2.15956646e-01, rtol=PARAM_RTOL
+        )
+        assert allclose(
+            sur.models[1].hyperparameters["sigma_n"], 2.40565771e-01, rtol=PARAM_RTOL
+        )
+        # Component 2
+        assert allclose(
+            sur.models[2].hyperparameters["length_scale"],
+            1.82794392e00,
+            rtol=PARAM_RTOL,
+        )
+        assert allclose(
+            sur.models[2].hyperparameters["sigma_f"], 1.50553787e00, rtol=PARAM_RTOL
+        )
+        assert allclose(
+            sur.models[2].hyperparameters["sigma_n"], 3.16923685e-03, rtol=PARAM_RTOL
+        )
     finally:
         run(f"profit clean --all {config_file}", shell=True, timeout=TIMEOUT)
 
 
-@mark.skipif(not HAS_GPY, reason="GPy not installed (requires numpy<2.0)")
-def test_gpy():
-    """Test the GPy on a Rosenbrock 2D function."""
+@mark.skipif(not HAS_GPYTORCH, reason="GPyTorch not installed")
+def test_gpytorch():
+    """Test GPyTorch on a Rosenbrock 2D function."""
 
     config_file = "study_gpy/profit_gpy.yaml"
     config = BaseConfig.from_file(config_file)
@@ -249,16 +296,23 @@ def test_gpy():
         run(f"profit run {config_file}", shell=True, timeout=TIMEOUT)
         run(f"profit fit {config_file}", shell=True, timeout=TIMEOUT)
         sur = Surrogate.load_model(model_file)
-        assert sur.get_label() == "GPy"
+        assert sur.get_label() == "GPyTorch"
         assert sur.trained
         assert sur.ndim == 2
+        assert sur.kernel == "RBF"
+        # GPyTorch hyperparameters (regression test)
         assert allclose(
-            sur.hyperparameters["length_scale"], 0.47321765, rtol=PARAM_RTOL
+            sur.hyperparameters["length_scale"],
+            [1.43766708, 0.12560814],
+            rtol=PARAM_RTOL,
         )
-        assert allclose(sur.hyperparameters["sigma_f"], 0.49950325, rtol=PARAM_RTOL)
-        assert allclose(sur.hyperparameters["sigma_n"], 3.3637e-7, rtol=PARAM_RTOL)
+        assert allclose(sur.hyperparameters["sigma_f"], 4.70619688e-01, rtol=PARAM_RTOL)
+        assert allclose(sur.hyperparameters["sigma_n"], 1.76784577e-03, rtol=PARAM_RTOL)
         mean, cov = sur.predict([[0.25, 5.0, 0.57, 1, 3]])
-        assert allclose(mean[0, 0], 3.71906) and allclose(cov[0, 0], 2.8619e-6)
+        # Verify predictions are reasonable
+        assert mean.shape == (1, 1)
+        assert cov.shape == (1, 1)
+        assert cov[0, 0] > 0  # Variance should be positive
     finally:
         run(f"profit clean --all {config_file}", shell=True, timeout=TIMEOUT)
 

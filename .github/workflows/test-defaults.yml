@@ -1,0 +1,73 @@
+# CRITICAL: CI/CD workflow to test default configuration
+# This prevents regressions in default surrogate configuration
+
+name: Test Default Configuration
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  test-defaults:
+    name: Test Default Surrogate Configuration
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.9', '3.10', '3.11', '3.12']
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+        pip install gpytorch
+        pip install pytest pytest-cov
+        pip install -e .
+
+    - name: Run default workflow integration tests
+      run: |
+        pytest tests/integration_tests/test_default_workflow.py -v --tb=short
+      env:
+        PYTHONPATH: ${{ github.workspace }}
+
+    - name: Verify defaults in code
+      run: |
+        python -c "from profit.defaults import fit; assert fit['surrogate'] == 'GPyTorch', 'Default surrogate is not GPyTorch!'"
+        python -c "from profit.sur import Surrogate; assert 'GPyTorch' in Surrogate.labels, 'GPyTorch not registered!'"
+
+  test-without-gpytorch:
+    name: Test graceful degradation without GPyTorch
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install minimal dependencies (no GPyTorch)
+      run: |
+        python -m pip install --upgrade pip
+        # Install everything EXCEPT torch/gpytorch
+        pip install numpy scipy matplotlib sympy pyyaml chaospy scikit-learn pandas h5py dash tqdm pyzmq
+
+    - name: Test imports work without GPyTorch
+      run: |
+        python -c "from profit.sur import Surrogate; print('Import successful even without GPyTorch')"
+        python -c "from profit.defaults import fit; print(f'Default: {fit[\"surrogate\"]}')"
+
+    - name: Verify Custom and Sklearn still work
+      run: |
+        python -c "from profit.sur import Surrogate; Surrogate['Custom'](); print('Custom works')"
+        python -c "from profit.sur import Surrogate; Surrogate['Sklearn'](); print('Sklearn works')"

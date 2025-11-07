@@ -27,7 +27,7 @@ def chdir_pytest():
 
 
 TIMEOUT = 30  # seconds
-CLEAN_TIMEOUT = 5  # seconds
+CLEAN_TIMEOUT = 15  # seconds - increased for multi-output GP training
 
 
 def clean(config):

@@ -19,8 +19,8 @@ files:
     input: input_independent.txt
     output: output_independent.txt
 fit:
-    surrogate: CoregionalizedGPy
-    save: model_independent.hdf5
+    surrogate: MultiOutputGPyTorch
+    save: model_independent.pkl
     encoder:
         - Normalization(all)
         - KarhunenLoeve(output)

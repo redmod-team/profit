@@ -10,8 +10,8 @@ variables:
 run:
     worker: mockup
 files:
-    input: input_gpy.txt
-    output: output_gpy.txt
+    input: input_gpytorch.txt
+    output: output_gpytorch.txt
 fit:
-    surrogate: GPy
-    save: model_gpy.hdf5
+    surrogate: GPyTorch
+    save: model_gpytorch.pkl

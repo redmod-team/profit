@@ -67,6 +67,7 @@ class SklearnGPSurrogate(GaussianProcess):
         Xpred = self.pre_predict(Xpred)
 
         ymean, ystd = self.model.predict(Xpred, return_std=True)
+        ymean = ymean.reshape(-1, 1)  # Ensure 2D shape
         yvar = ystd.reshape(-1, 1) ** 2
         if add_data_variance:
             yvar = yvar + self.hyperparameters["sigma_n"] ** 2

@@ -51,3 +51,4 @@ a.out
 *.S
 *.npy
 .idea
+tests/test_output/

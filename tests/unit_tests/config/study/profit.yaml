@@ -20,3 +20,7 @@ run:
         class: hdf5
         path: mockup.out
     command: python3 mockup.py
+
+fit:
+    surrogate: MultiOutputGPyTorch
+    training_iter: 100  # Reduced for faster tests

@@ -5,7 +5,7 @@ Class structure:
 - Surrogate
     - GaussianProcess
         - GPSurrogate (Custom)
-        - GPySurrogate (GPy)
+        - GPyTorchSurrogate (GPyTorch) - Recommended
         - SklearnGPSurrogate (Sklearn)
     - ANN
         - ANNSurrogate (Pytorch)
@@ -35,8 +35,8 @@ class Surrogate(CustomABC):
         output_encoders (list of profit.sur.encoders.Encoder): Encoding used on output data.
 
     Default parameters:
-        surrogate: GPy
-        save: ./model_{surrogate label}.hdf5
+        surrogate: GPyTorch
+        save: ./model_{surrogate label}.pkl
         load: False
         fixed_sigma_n: False
         input_encoders: [{'class': 'exclude', 'columns': {constant columns}

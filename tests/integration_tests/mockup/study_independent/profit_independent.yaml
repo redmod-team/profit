@@ -18,4 +18,6 @@ files:
     input: input_independent.txt
     output: output_independent.txt
 fit:
+    surrogate: MultiOutputGPyTorch
+    training_iter: 100
     save: model_independent.hdf5
