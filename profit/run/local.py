@@ -84,7 +84,9 @@ class LocalRunner(Runner, label="local"):
         super().spawn(params, wait)
         env = os.environ.copy()
         if self.worker_command != self.command:
-            repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+            repo_root = os.path.abspath(
+                os.path.join(os.path.dirname(__file__), "..", "..")
+            )
             env["PYTHONPATH"] = os.pathsep.join(
                 p for p in [repo_root, env.get("PYTHONPATH")] if p
             )

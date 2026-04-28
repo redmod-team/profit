@@ -11,6 +11,7 @@ files = {"input": "input.txt", "output": "output.txt"}
 ntrain = 10
 variables = {}
 
+
 # Run Config
 def platform_run_defaults(platform=os_name):
     if platform == "nt":
