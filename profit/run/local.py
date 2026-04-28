@@ -11,6 +11,8 @@ from time import sleep
 import logging
 import numpy as np
 import os
+import shutil
+import sys
 from shutil import rmtree
 import json
 
@@ -22,12 +24,35 @@ from .worker import Worker
 # === Local Runner === #
 
 
+def available_cpus():
+    try:
+        return len(os.sched_getaffinity(0))
+    except AttributeError:
+        return os.cpu_count() or 1
+
+
+def run_worker_in_directory(worker_config, interface_config, run_id, work_dir):
+    from profit.util import load_includes
+
+    if os.environ.get("PROFIT_INCLUDES"):
+        load_includes(json.loads(os.environ["PROFIT_INCLUDES"]))
+
+    return_dir = os.getcwd()
+    os.chdir(work_dir)
+    try:
+        worker = Worker.from_config(worker_config, interface_config, run_id)
+        worker.work()
+        worker.clean()
+    finally:
+        os.chdir(return_dir)
+
+
 class LocalRunner(Runner, label="local"):
     """start Workers locally via the shell"""
 
     def __init__(self, command="profit-worker", parallel="all", **kwargs):
         if parallel == "all":  # parallel: 'all' infers the number of available CPUs
-            parallel = len(os.sched_getaffinity(0))
+            parallel = available_cpus()
         self.command = command
         super().__init__(parallel=parallel, **kwargs)
 
@@ -49,14 +74,27 @@ class LocalRunner(Runner, label="local"):
         }
         return {**super().config, **config}  # super().config | config in python3.9
 
+    @property
+    def worker_command(self):
+        if self.command == "profit-worker" and shutil.which(self.command) is None:
+            return f'{sys.executable} -c "from profit.run.worker import main; main()"'
+        return self.command
+
     def spawn(self, params=None, wait=False):
         super().spawn(params, wait)
         env = os.environ.copy()
+        if self.worker_command != self.command:
+            repo_root = os.path.abspath(
+                os.path.join(os.path.dirname(__file__), "..", "..")
+            )
+            env["PYTHONPATH"] = os.pathsep.join(
+                p for p in [repo_root, env.get("PYTHONPATH")] if p
+            )
         env["PROFIT_RUN_ID"] = str(self.next_run_id)
         env["PROFIT_WORKER"] = json.dumps(self.worker)
         env["PROFIT_INTERFACE"] = json.dumps(self.interface.config)
         self.runs[self.next_run_id] = subprocess.Popen(
-            self.command, shell=True, env=env, cwd=self.work_dir
+            self.worker_command, shell=True, env=env, cwd=self.work_dir
         )
         if wait:
             self.wait(self.next_run_id)
@@ -80,21 +118,15 @@ class ForkRunner(Runner, label="fork"):
 
     def __init__(self, parallel="all", **kwargs):
         if parallel == "all":  # parallel: 'all' infers the number of available CPUs
-            parallel = len(os.sched_getaffinity(0))
+            parallel = available_cpus()
         super().__init__(parallel=parallel, **kwargs)
 
     def spawn(self, params=None, wait=False):
         super().spawn(params, wait)
-
-        def work():
-            with self.change_work_dir():
-                worker = Worker.from_config(
-                    self.worker, self.interface.config, self.next_run_id
-                )
-                worker.work()
-                worker.clean()
-
-        process = Process(target=work)
+        process = Process(
+            target=run_worker_in_directory,
+            args=(self.worker, self.interface.config, self.next_run_id, self.work_dir),
+        )
         self.runs[self.next_run_id] = process
         process.start()
         if wait:

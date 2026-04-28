@@ -168,3 +168,18 @@ def test_default_values():
     assert config["fit"].get("surrogate") == defaults.fit["surrogate"]
     assert config["fit"].get("kernel") == defaults.fit_gaussian_process["kernel"]
     assert config["ui"].get("plot") is True
+
+
+def test_platform_run_defaults():
+    from profit import defaults
+
+    assert defaults.platform_run_defaults("nt") == {
+        "runner": "local",
+        "interface": "zeromq",
+        "worker": "command",
+    }
+    assert defaults.platform_run_defaults("posix") == {
+        "runner": "fork",
+        "interface": "memmap",
+        "worker": "command",
+    }

@@ -95,6 +95,24 @@ not the Windows system.
 To configure the Python interpreter available in your Linux distribution in pycharm
 (tested with professional edition) follow this [guide](https://www.jetbrains.com/help/pycharm/using-wsl-as-a-remote-interpreter.html).
 
+Native Windows runs should avoid the Unix-oriented default of forked workers
+and memory-mapped ``interface.npy`` files. On Windows, proFit defaults to a
+subprocess runner with ZeroMQ communication:
+
+```yaml
+run:
+  runner:
+    class: local
+  interface:
+    class: zeromq
+  worker:
+    class: command
+```
+
+This avoids multiprocessing ``fork`` semantics, concurrent access to
+``interface.npy``, and template symlink creation. If a template contains
+symbolic links, Windows copies the linked files into each run directory.
+
 ### Installation from PyPI
 To install the latest stable version of proFit, use
 ```bash

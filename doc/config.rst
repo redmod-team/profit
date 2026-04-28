@@ -145,10 +145,14 @@ Run config
     .. code-block:: yaml
 
         run:
-            runner: fork  # Local runner with its default parameters (see below).
-            interface: memmap  # Numpy memmap interface with its default parameters.
+            runner: fork  # POSIX default. On Windows the default is local.
+            interface: memmap  # POSIX default. On Windows the default is zeromq.
             worker: command  # Command worker with its default parameters
             debug: false  # override debug for Worker & Runner
+
+        On Windows, the default run configuration is ``runner: local`` and
+        ``interface: zeromq``. This avoids multiprocessing ``fork`` semantics,
+        concurrent access to ``interface.npy`` and template symlink creation.
 
     All runners
         .. code-block:: yaml
