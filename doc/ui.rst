@@ -53,7 +53,7 @@ In this section of the layout the following three different types of options can
 Graph-type
 ----------
 
-There are four different graph-types available:
+There are five different graph-types available:
 
 * 1D (scatter & line)
     | input: x
@@ -67,8 +67,11 @@ There are four different graph-types available:
 * 3D (scatter & isosurface)
     | input: x | y | z
     | output: color
+* conditional histograms
+    | overlays marginal histograms for all numeric input and output variables
+    | filter-table ranges define the conditioned subset
 
-The four graph-types are shown below with sample data and a sample response model:
+The graph-types are shown below with sample data and a sample response model:
 
 .. figure:: pics/ex_1D_fit.png
   :width: 600
@@ -268,6 +271,12 @@ soon as an option is changed.
 In the 2D contour plot a fit surface of the 2D graph is shown from above. In addition all points in this area are displayed.
 Because all points (even the points with non-axis parameters far off the fit parameters) are displayed it is
 recommended to limit the span of the non-axis parameters via the **filter-table**.
+
+Conditional histograms
+----------------------
+The conditional histogram view overlays the marginal distribution of every numeric input and output variable with
+the subset selected by the active entries in the **filter-table**. This supports interactive exploration of
+high-dimensional data: restrict one or more input variables and inspect how the remaining marginals change.
 
 .. _filter options:
 Filter options
