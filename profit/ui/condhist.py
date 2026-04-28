@@ -1,118 +1,85 @@
-import dash
-import dash_core_components as dcc
-import dash_html_components as html
-from dash.dependencies import Input, Output
-from textwrap import dedent as d
+from math import ceil
 
-import pandas as pd
-
-# df = pd.read_hdf(r'..\examples\algae\MC\mc_out_allyears_sigma1.h5')
-df = pd.read_csv(
-    r"..\examples\algae\MC\mc_out_allyears_sigma1.dat", delim_whitespace=True
-)
-data = df.values
-param = data[:, 0:8]
+import numpy as np
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 
-def generate_table():
-    data = dict()
-    for l in range(4):
-        for k in range(2):
-            data[k + 2 * l] = [{"x": df.iloc[::100, k + 2 * l], "type": "histogram"}]
-    return html.Table(
-        [
-            html.Tr(
-                [
-                    html.Td(
-                        dcc.Graph(
-                            id="hist{}".format(k + 2 * l),
-                            figure={"data": data[k + 2 * l], "layout": {}},
-                        ),
-                        style={"width": "500px"},
-                    )
-                    for k in range(2)
-                ],
-                style={"height": "300px"},
-            )
-            for l in range(4)
-        ],
+def structured_numeric_columns(*arrays):
+    columns = {}
+    for array in arrays:
+        for name in array.dtype.names:
+            values = np.asarray(array[name]).reshape(-1)
+            if np.issubdtype(values.dtype, np.number):
+                key = name if name not in columns else f"output:{name}"
+                columns[key] = values
+    return columns
+
+
+def finite_values(values):
+    values = np.asarray(values).reshape(-1)
+    return values[np.isfinite(values)]
+
+
+def checked_mask(mask, size):
+    if mask is None:
+        return np.ones(size, dtype=bool)
+    mask = np.asarray(mask, dtype=bool).reshape(-1)
+    if len(mask) != size:
+        raise ValueError("mask length must match column length")
+    return mask
+
+
+def conditional_histogram_figure(columns, mask=None, bins=30, max_cols=3):
+    if not columns:
+        return go.Figure()
+
+    first = next(iter(columns.values()))
+    mask = checked_mask(mask, len(first))
+
+    names = list(columns)
+    ncols = min(max_cols, len(names))
+    nrows = ceil(len(names) / ncols)
+    fig = make_subplots(rows=nrows, cols=ncols, subplot_titles=names)
+
+    for index, name in enumerate(names):
+        values = np.asarray(columns[name]).reshape(-1)
+        all_values = finite_values(values)
+        selected_values = finite_values(values[mask])
+        row = index // ncols + 1
+        col = index % ncols + 1
+        showlegend = index == 0
+
+        fig.add_trace(
+            go.Histogram(
+                x=all_values,
+                nbinsx=bins,
+                histnorm="probability",
+                name="all",
+                marker_color="rgba(110, 110, 110, 0.35)",
+                showlegend=showlegend,
+            ),
+            row=row,
+            col=col,
+        )
+        fig.add_trace(
+            go.Histogram(
+                x=selected_values,
+                nbinsx=bins,
+                histnorm="probability",
+                name="filtered",
+                marker_color="rgba(28, 93, 153, 0.75)",
+                showlegend=showlegend,
+            ),
+            row=row,
+            col=col,
+        )
+
+    fig.update_layout(
+        title="Conditional marginal distributions",
+        barmode="overlay",
+        height=max(360, 300 * nrows),
+        margin=dict(l=50, r=20, t=70, b=45),
     )
-
-
-external_stylesheets = ["https://codepen.io/chriddyp/pen/bWLwgP.css"]
-
-app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
-
-app.layout = html.Div(
-    children=[
-        html.H1(children="Conditional probability distributions"),
-        html.Div(
-            [
-                dcc.Markdown(
-                    d(
-                        """
-            **Click** on bars in one histogram to plot conditional
-            probability distribution for other variables.
-        """
-                    )
-                ),
-                html.Button("Reset", id="reset", n_clicks_timestamp=0),
-                # html.Pre(id='click-data'),
-            ]
-        ),
-        generate_table(),
-    ]
-)
-
-# @app.callback(
-#    Output('click-data', 'children'),
-#    [Input('hist0', 'clickData')])
-# def display_click_data(clickData):
-# return json.dumps(clickData['points'][0], indent=2)
-#    try:
-#        return json.dumps(clickData['points'][0]['binNumber'])
-#    except:
-#        return 0
-
-
-def gen_callback(k):
-    from numpy import array
-
-    def update_figure(*args):
-        defaultdata = {"data": [{"x": df.iloc[::100, k], "type": "histogram"}]}
-
-        # Find out who triggered the callback,
-        # see https://github.com/plotly/dash/issues/291
-        ctx = dash.callback_context
-
-        # Update was not triggered at all
-        if not ctx.triggered:
-            return defaultdata
-        trigger = ctx.triggered[0]
-
-        # Reset button triggered update
-        if trigger["prop_id"] == "reset.n_clicks":
-            return defaultdata
-
-        # Other component triggered update
-        try:
-            reducedset = array(trigger["value"]["points"][0]["pointNumbers"])
-        except:
-            return defaultdata
-        return {"data": [{"x": df.iloc[reducedset, k], "type": "histogram"}]}
-
-    return update_figure
-
-
-for k in range(8):
-    app.callback(
-        output=Output("hist{}".format(k), "figure"),
-        inputs=(
-            [Input("hist{}".format(l), "clickData") for l in range(8)]
-            + [Input("reset", "n_clicks")]
-        ),
-    )(gen_callback(k))
-
-
-if __name__ == "__main__":
-    app.run_server(debug=True, host="0.0.0.0")
+    fig.update_yaxes(title_text="probability")
+    return fig

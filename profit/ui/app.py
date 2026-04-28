@@ -7,6 +7,7 @@ from math import log10
 import numpy as np
 from profit.util.file_handler import FileHandler
 from profit.sur import Surrogate
+from profit.ui.condhist import conditional_histogram_figure, structured_numeric_columns
 from matplotlib import cm as colormaps
 from matplotlib.colors import to_hex as color2hex
 
@@ -81,6 +82,7 @@ def init_app(config):
                                                     "2D",
                                                     "2D contour",
                                                     "3D",
+                                                    "conditional histograms",
                                                 ]
                                             ],
                                             value="1D",
@@ -1047,6 +1049,21 @@ def init_app(config):
                 hide,
                 show,
             )
+        if graph_type == "conditional histograms":
+            return (
+                hide,
+                hide,
+                hide,
+                hide,
+                hide,
+                hide,
+                hide,
+                1,
+                hide,
+                hide,
+                hide,
+                hide,
+            )
         else:
             return (
                 show,
@@ -1146,6 +1163,11 @@ def init_app(config):
             if filter_active != [[]]:
                 if filter_active[iteration] == ["act"]:
                     sel_y = sel_y_min & sel_y_max & sel_y
+        if graph_type == "conditional histograms":
+            return conditional_histogram_figure(
+                structured_numeric_columns(indata, outdata),
+                sel_y,
+            )
         if graph_type == "1D":
             fig = go.Figure(
                 data=[
