@@ -101,6 +101,29 @@ def test_register():
     assert Runner.labels == set(LABELS)
 
 
+def test_available_cpus_without_sched_getaffinity(monkeypatch):
+    from profit.run import local
+
+    monkeypatch.delattr(local.os, "sched_getaffinity", raising=False)
+    monkeypatch.setattr(local.os, "cpu_count", lambda: 3)
+
+    assert local.available_cpus() == 3
+
+
+def test_local_runner_falls_back_to_python_worker(monkeypatch):
+    from profit.run import local
+
+    monkeypatch.setattr(local.shutil, "which", lambda command: None)
+    monkeypatch.setattr(local.sys, "executable", "python")
+
+    runner = local.LocalRunner.__new__(local.LocalRunner)
+    runner.command = "profit-worker"
+
+    assert runner.worker_command == (
+        'python -c "from profit.run.worker import main; main()"'
+    )
+
+
 @pytest.mark.depends(
     on=[f"tests/unit_tests/run/test_interface.py::test_interface[{INTERFACE}]"]
 )

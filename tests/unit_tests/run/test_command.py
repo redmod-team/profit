@@ -169,6 +169,29 @@ def test_template(inputs, logger):
         preprocessor.post()
 
 
+def test_template_copies_symlink_targets_on_windows(tmp_path, monkeypatch):
+    from profit.run.command import TemplatePreprocessor
+
+    template_dir = tmp_path / "template"
+    template_dir.mkdir()
+    target = template_dir / "target.txt"
+    target.write_text("target data")
+    (template_dir / "link.txt").symlink_to(target)
+
+    out_dir = tmp_path / "out"
+    monkeypatch.setattr(
+        TemplatePreprocessor,
+        "copy_symlinks_supported",
+        staticmethod(lambda: False),
+    )
+
+    TemplatePreprocessor.copy_template(template_dir, out_dir)
+
+    copied = out_dir / "link.txt"
+    assert copied.read_text() == "target data"
+    assert not copied.is_symlink()
+
+
 def test_command(logger, MockWorkerInterface, MockPreprocessor, MockPostprocessor):
     from profit.run.command import Worker, CommandWorker
 

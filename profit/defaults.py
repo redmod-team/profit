@@ -1,6 +1,6 @@
 """Global default configuration values."""
 
-from os import path, getcwd
+from os import name as os_name, path, getcwd
 
 # Base Config
 base_dir = path.abspath(getcwd())
@@ -12,7 +12,13 @@ ntrain = 10
 variables = {}
 
 # Run Config
-run = {"runner": "fork", "interface": "memmap", "worker": "command"}
+def platform_run_defaults(platform=os_name):
+    if platform == "nt":
+        return {"runner": "local", "interface": "zeromq", "worker": "command"}
+    return {"runner": "fork", "interface": "memmap", "worker": "command"}
+
+
+run = platform_run_defaults()
 
 # Fit Config
 fit = {

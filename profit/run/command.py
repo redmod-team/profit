@@ -239,13 +239,22 @@ class TemplatePreprocessor(Preprocessor, label="template"):
     def copy_template(cls, template_dir, out_dir, dont_copy=None):
         from shutil import copytree, ignore_patterns
 
+        copy_symlinks = cls.copy_symlinks_supported()
         if dont_copy:
             copytree(
-                template_dir, out_dir, symlinks=True, ignore=ignore_patterns(*dont_copy)
+                template_dir,
+                out_dir,
+                symlinks=copy_symlinks,
+                ignore=ignore_patterns(*dont_copy),
             )
         else:
-            copytree(template_dir, out_dir, symlinks=True)
-        cls.convert_relative_symlinks(template_dir, out_dir)
+            copytree(template_dir, out_dir, symlinks=copy_symlinks)
+        if copy_symlinks:
+            cls.convert_relative_symlinks(template_dir, out_dir)
+
+    @staticmethod
+    def copy_symlinks_supported():
+        return os.name != "nt"
 
     @staticmethod
     def convert_relative_symlinks(template_dir, out_dir):
