@@ -15,7 +15,6 @@ import tempfile
 import os
 from pathlib import Path
 
-
 try:
     import torch
     import gpytorch

@@ -5,6 +5,7 @@ Created on Mon Feb  4 08:34:52 2019
 
 @author: Christopher Albert
 """
+
 from profit.run import Worker
 
 

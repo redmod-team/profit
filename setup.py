@@ -5,7 +5,6 @@ import sys
 import os
 import site
 
-
 if __name__ == "__main__":
     # explicitly allow installation in user site in development mode
     site.ENABLE_USER_SITE = "--user" in sys.argv[1:]
