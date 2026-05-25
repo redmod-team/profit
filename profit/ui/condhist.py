@@ -48,14 +48,10 @@ app.layout = html.Div(
         html.H1(children="Conditional probability distributions"),
         html.Div(
             [
-                dcc.Markdown(
-                    d(
-                        """
+                dcc.Markdown(d("""
             **Click** on bars in one histogram to plot conditional
             probability distribution for other variables.
-        """
-                    )
-                ),
+        """)),
                 html.Button("Reset", id="reset", n_clicks_timestamp=0),
                 # html.Pre(id='click-data'),
             ]
