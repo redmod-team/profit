@@ -12,7 +12,6 @@ import os
 
 from .interface import RunnerInterface, WorkerInterface
 
-
 # === ZeroMQ Interface === #
 
 

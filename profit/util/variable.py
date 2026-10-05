@@ -3,7 +3,6 @@ from profit.util import check_ndim
 import numpy as np
 from profit.util.base_class import CustomABC
 
-
 # TODO: Sample all variables from halton.
 EXCLUDE_FROM_HALTON = (
     "output",
