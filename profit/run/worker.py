@@ -15,7 +15,6 @@ import json
 from ..util.component import Component
 from .interface import WorkerInterface as Interface
 
-
 # === Worker === #
 
 
