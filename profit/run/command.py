@@ -25,7 +25,6 @@ import subprocess
 
 from .worker import Component, Worker, Interface
 
-
 # === Command Worker === #
 
 
